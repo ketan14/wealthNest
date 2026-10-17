@@ -1,14 +1,29 @@
 import { useQuery } from '@tanstack/react-query';
-import { GetSystemStatusUseCase, SystemStatusDto } from '@wealthnest/application';
-import { Money } from '@wealthnest/domain';
+import {
+  GetSystemStatusUseCase,
+  SystemStatusDto,
+  ListAssetClassesUseCase,
+} from '@wealthnest/application';
+import { Money, AssetClassDefinition } from '@wealthnest/domain';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { CheckCircle2, Layers, Cpu, Box, Sparkles, ArrowRight } from 'lucide-react';
+import { AuthCard } from '@/components/auth/AuthCard';
+import { SupabaseAssetClassAdapter } from '@/lib/supabase/asset-class.adapter';
+import {
+  CheckCircle2,
+  Layers,
+  Cpu,
+  Box,
+  Sparkles,
+  ArrowRight,
+  Database,
+  ExternalLink,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export function HomePage() {
-  // Execute application use case via TanStack Query to verify react-query + application layer integration
+  // Query 1: System status use case
   const { data: systemStatus, isLoading } = useQuery<SystemStatusDto>({
     queryKey: ['system-status'],
     queryFn: () => {
@@ -18,6 +33,21 @@ export function HomePage() {
       return result.value;
     },
   });
+
+  // Query 2: Asset classes via Supabase adapter (Demonstrating Clean Architecture adapter integration)
+  const { data: assetClasses, isLoading: isLoadingAssetClasses } = useQuery<AssetClassDefinition[]>(
+    {
+      queryKey: ['asset-classes'],
+      queryFn: async () => {
+        const adapter = new SupabaseAssetClassAdapter();
+        const useCase = new ListAssetClassesUseCase(adapter);
+        const result = await useCase.execute();
+        if (!result.success) return [];
+        return result.value;
+      },
+      retry: 0,
+    }
+  );
 
   // Pure domain test calculation to verify domain package export boundary
   const demoMoneyA = Money.fromDecimal(150000.5, 'USD');
@@ -31,26 +61,35 @@ export function HomePage() {
         <div className="relative z-10 max-w-3xl space-y-4">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
             <Sparkles className="w-3.5 h-3.5" />
-            Phase 0 Architecture Verified & Ready
+            Phase 1: Core Database & Auth Foundation
           </div>
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
             WealthNest Core Monorepo
           </h2>
           <p className="text-base text-muted-foreground leading-relaxed">
-            Welcome to the initial production-oriented architecture for WealthNest. This modular
-            monolith provides clean separation of concerns across pure domain calculations,
-            application service contracts, reusable utilities, and a modern responsive frontend.
+            Personal wealth operating system with modular clean architecture, pure domain
+            calculations, PostgreSQL database migrations, Supabase Studio, and secure multi-tenant
+            data isolation.
           </p>
 
           <div className="flex flex-wrap gap-3 pt-2">
             <Link to="/portfolio">
               <Button className="gap-2">
-                Explore Scaffolding Modules
+                Portfolio Module
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
-            <a href="https://github.com" target="_blank" rel="noreferrer" className="inline-block">
-              <Button variant="outline">Monorepo Docs</Button>
+            <a
+              href="http://localhost:54323"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block"
+            >
+              <Button variant="secondary" className="gap-2 font-mono text-xs">
+                <Database className="w-4 h-4 text-emerald-400" />
+                Open Supabase Studio
+                <ExternalLink className="w-3 h-3 text-muted-foreground" />
+              </Button>
             </a>
           </div>
         </div>
@@ -59,7 +98,108 @@ export function HomePage() {
         <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
       </div>
 
-      {/* Domain Verification Demonstration */}
+      {/* Grid: Auth Card + Supabase Database Manager Card */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Authentication Card */}
+        <AuthCard />
+
+        {/* Database GUI (Supabase Studio) Card */}
+        <Card className="border-border/80 bg-card/60 backdrop-blur-md flex flex-col justify-between">
+          <div>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Database className="w-5 h-5 text-emerald-400" />
+                  <CardTitle className="text-base">Database GUI (Supabase Studio)</CardTitle>
+                </div>
+                <Badge variant="success">phpMyAdmin Alternative</Badge>
+              </div>
+              <CardDescription>
+                Visual PostgreSQL table browser, SQL editor, and RLS policy manager.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Supabase Studio is your local web-based database manager running at port{' '}
+                <code className="text-primary font-mono font-semibold">54323</code>. You can inspect
+                tables, edit rows directly, and test SQL queries with a spreadsheet-like GUI.
+              </p>
+              <div className="p-3 rounded-lg bg-secondary/40 border border-border/50 text-xs font-mono space-y-1">
+                <p className="text-muted-foreground">
+                  Postgres Port: <span className="text-foreground">54322</span>
+                </p>
+                <p className="text-muted-foreground">
+                  Studio URL: <span className="text-primary">http://localhost:54323</span>
+                </p>
+                <p className="text-muted-foreground">
+                  Auth API: <span className="text-foreground">http://localhost:54321</span>
+                </p>
+              </div>
+            </CardContent>
+          </div>
+          <div className="p-6 pt-0">
+            <a
+              href="http://localhost:54323"
+              target="_blank"
+              rel="noreferrer"
+              className="w-full inline-block"
+            >
+              <Button variant="outline" size="sm" className="w-full gap-2 font-mono">
+                Launch Supabase Studio
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Button>
+            </a>
+          </div>
+        </Card>
+      </div>
+
+      {/* Asset Class Taxonomy (Database Seeded Table) */}
+      <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Database className="w-5 h-5 text-primary" />
+              <CardTitle>Asset Class Taxonomy (Database Schema)</CardTitle>
+            </div>
+            <Badge variant="secondary">PostgreSQL Seed</Badge>
+          </div>
+          <CardDescription>
+            Taxonomy classes defined in{' '}
+            <code className="text-primary font-mono">
+              supabase/migrations/20260101000001_core_schema.sql
+            </code>
+            .
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoadingAssetClasses ? (
+            <p className="text-xs text-muted-foreground">Connecting to local database...</p>
+          ) : assetClasses && assetClasses.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5 pt-1">
+              {assetClasses.map((ac) => (
+                <div
+                  key={ac.id}
+                  className="p-3 rounded-lg bg-secondary/30 border border-border/50 text-center space-y-1"
+                >
+                  <span
+                    className="w-3 h-3 rounded-full inline-block"
+                    style={{ backgroundColor: ac.colorHex }}
+                  />
+                  <p className="text-xs font-semibold text-foreground truncate">{ac.name}</p>
+                  <p className="text-[10px] text-muted-foreground font-mono">{ac.id}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 rounded-lg bg-secondary/30 border border-dashed border-border/60 text-xs text-muted-foreground">
+              Run <code className="text-primary font-mono">npm run db:start</code> in your terminal
+              to start the local Supabase PostgreSQL containers and seed the taxonomy table.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pure Domain Engine Verification */}
       <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -166,16 +306,18 @@ export function HomePage() {
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
             <div className="p-3 rounded-md bg-secondary/50 border border-border/40">
-              <span className="text-muted-foreground block mb-1">Local Domain URL</span>
+              <span className="text-muted-foreground block mb-1">Local Web Domain</span>
               <span className="font-mono text-primary font-semibold">http://wealthnest.local</span>
             </div>
             <div className="p-3 rounded-md bg-secondary/50 border border-border/40">
-              <span className="text-muted-foreground block mb-1">Direct Vite Port</span>
-              <span className="font-mono text-foreground font-semibold">http://localhost:5173</span>
+              <span className="text-muted-foreground block mb-1">Supabase Studio (DB GUI)</span>
+              <span className="font-mono text-emerald-400 font-semibold">
+                http://localhost:54323
+              </span>
             </div>
             <div className="p-3 rounded-md bg-secondary/50 border border-border/40">
-              <span className="text-muted-foreground block mb-1">Docker Compose Project</span>
-              <span className="font-mono text-foreground font-semibold">wealthnest</span>
+              <span className="text-muted-foreground block mb-1">PostgreSQL Port</span>
+              <span className="font-mono text-foreground font-semibold">127.0.0.1:54322</span>
             </div>
           </div>
         </CardContent>

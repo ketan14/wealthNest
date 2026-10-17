@@ -12,7 +12,8 @@ describe('WealthNest App Shell', () => {
 
     // Validate navigation item
     expect(screen.getByText(/System Overview/i)).toBeInTheDocument();
-    expect(screen.getByText(/Portfolio/i)).toBeInTheDocument();
+    const portfolioLinks = screen.getAllByText(/Portfolio/i);
+    expect(portfolioLinks.length).toBeGreaterThan(0);
 
     // Validate local domain badge
     const domainBadges = screen.getAllByText(/wealthnest.local/i);
