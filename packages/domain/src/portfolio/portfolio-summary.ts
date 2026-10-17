@@ -34,7 +34,7 @@ export interface PortfolioSummary {
  */
 export function calculatePortfolioSummary(
   items: readonly HoldingValuationItem[],
-  currency: CurrencyCode = 'USD'
+  currency: CurrencyCode = 'INR'
 ): PortfolioSummary {
   if (items.length === 0) {
     return {

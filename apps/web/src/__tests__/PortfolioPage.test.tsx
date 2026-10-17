@@ -34,11 +34,11 @@ describe('PortfolioPage Component', () => {
     expect(screen.getByText('Asset Diversity')).toBeInTheDocument();
 
     // Asset allocation section
-    expect(screen.getByText('Asset Class Allocation')).toBeInTheDocument();
+    expect(screen.getByText(/Asset Class Allocation/i)).toBeInTheDocument();
 
     // Holdings table
     expect(screen.getByText('Portfolio Holdings')).toBeInTheDocument();
-    expect(screen.getByText('Apple Inc.')).toBeInTheDocument();
-    expect(screen.getByText('AAPL')).toBeInTheDocument();
+    expect(screen.getByText('Reliance Industries Ltd')).toBeInTheDocument();
+    expect(screen.getByText('RELIANCE')).toBeInTheDocument();
   });
 });

@@ -50,8 +50,8 @@ export function HomePage() {
   );
 
   // Pure domain test calculation to verify domain package export boundary
-  const demoMoneyA = Money.fromDecimal(150000.5, 'USD');
-  const demoMoneyB = Money.fromDecimal(49999.5, 'USD');
+  const demoMoneyA = Money.fromDecimal(150000.5, 'INR');
+  const demoMoneyB = Money.fromDecimal(49999.5, 'INR');
   const totalDemo = demoMoneyA.add(demoMoneyB);
 
   return (
@@ -222,10 +222,10 @@ export function HomePage() {
                 Holding A Value
               </span>
               <p className="text-xl font-bold font-mono text-foreground mt-1">
-                {demoMoneyA.format('en-US')}
+                {demoMoneyA.format('en-IN')}
               </p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                BigInt cents: {demoMoneyA.cents.toString()}
+                BigInt paise: {demoMoneyA.cents.toString()}
               </p>
             </div>
             <div className="p-4 rounded-lg bg-secondary/40 border border-border/50">
@@ -233,10 +233,10 @@ export function HomePage() {
                 Holding B Value
               </span>
               <p className="text-xl font-bold font-mono text-foreground mt-1">
-                {demoMoneyB.format('en-US')}
+                {demoMoneyB.format('en-IN')}
               </p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                BigInt cents: {demoMoneyB.cents.toString()}
+                BigInt paise: {demoMoneyB.cents.toString()}
               </p>
             </div>
             <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
@@ -244,7 +244,7 @@ export function HomePage() {
                 Calculated Sum (A + B)
               </span>
               <p className="text-xl font-bold font-mono text-emerald-400 mt-1">
-                {totalDemo.format('en-US')}
+                {totalDemo.format('en-IN')}
               </p>
               <p className="text-[11px] text-emerald-400/80 mt-0.5">
                 Strict ISO currency validation

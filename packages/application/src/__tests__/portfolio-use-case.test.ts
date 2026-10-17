@@ -7,21 +7,21 @@ import {
   AddHoldingUseCase,
 } from '../index.js';
 
-describe('GetPortfolioSummaryUseCase', () => {
-  it('orchestrates portfolio summary calculation via repository port', async () => {
+describe('GetPortfolioSummaryUseCase (India First)', () => {
+  it('orchestrates portfolio summary calculation via repository port in INR', async () => {
     const mockHoldings: HoldingDetailDto[] = [
       {
         holdingId: 'h-100',
         assetId: 'a-100',
-        name: 'Apple Inc.',
-        ticker: 'AAPL',
+        name: 'Reliance Industries Ltd',
+        ticker: 'RELIANCE',
         assetClassId: 'equity',
         assetClassName: 'Equities & Stocks',
         assetClassColor: '#3b82f6',
-        quantity: 10,
-        unitCostCents: 15000, // $150.00
-        currentValueCents: 180000, // $1,800.00
-        currency: 'USD',
+        quantity: 50,
+        unitCostCents: 250000, // ₹2,500.00
+        currentValueCents: 15000000, // ₹1,50,000.00 (Cost basis = 50 * 2500 = 1,25,000 -> Gain = +25,000)
+        currency: 'INR',
         updatedAt: new Date().toISOString(),
       },
     ];
@@ -33,13 +33,13 @@ describe('GetPortfolioSummaryUseCase', () => {
     };
 
     const useCase = new GetPortfolioSummaryUseCase(mockRepo);
-    const result = await useCase.execute('user-123', 'USD');
+    const result = await useCase.execute('user-123', 'INR');
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.summary.totalValue.toDecimal()).toBe(1800);
-      expect(result.value.summary.totalCostBasis.toDecimal()).toBe(1500);
-      expect(result.value.summary.unrealizedGainLoss.toDecimal()).toBe(300);
+      expect(result.value.summary.totalValue.toDecimal()).toBe(150000);
+      expect(result.value.summary.totalCostBasis.toDecimal()).toBe(125000);
+      expect(result.value.summary.unrealizedGainLoss.toDecimal()).toBe(25000);
       expect(result.value.summary.returnPercentage).toBe(20);
       expect(result.value.summary.isProfitable).toBe(true);
       expect(result.value.holdings).toHaveLength(1);
@@ -60,7 +60,7 @@ describe('AddHoldingUseCase', () => {
       userId: 'user-1',
       name: '',
       assetClassId: 'equity',
-      currency: 'USD',
+      currency: 'INR',
       quantity: 1,
       unitCostCents: 100,
       currentValueCents: 100,

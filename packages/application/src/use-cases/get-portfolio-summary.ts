@@ -21,7 +21,7 @@ export class GetPortfolioSummaryUseCase {
 
   async execute(
     userId: string,
-    currency: CurrencyCode = 'USD'
+    currency: CurrencyCode = 'INR'
   ): Promise<Result<PortfolioDataDto>> {
     const holdingsResult = await this.holdingRepo.listDetailsByUser(userId);
 

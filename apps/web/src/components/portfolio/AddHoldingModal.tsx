@@ -12,7 +12,7 @@ export interface NewHoldingFormValues {
   assetClassId: string;
   quantity: number;
   unitCost: number; // in dollars
-  currentValue: number; // in dollars
+  currentValue: number; // in rupees
   currency: string;
 }
 
@@ -24,13 +24,13 @@ interface AddHoldingModalProps {
 }
 
 const FALLBACK_ASSET_CLASSES: AssetClassDefinition[] = [
-  { id: 'equity', name: 'Equities & Stocks', colorHex: '#3b82f6', displayOrder: 1, description: '' },
-  { id: 'fixed_income', name: 'Fixed Income & Bonds', colorHex: '#8b5cf6', displayOrder: 2, description: '' },
-  { id: 'real_estate', name: 'Real Estate', colorHex: '#f59e0b', displayOrder: 3, description: '' },
-  { id: 'crypto', name: 'Digital Assets & Crypto', colorHex: '#ec4899', displayOrder: 4, description: '' },
-  { id: 'cash', name: 'Cash & Equivalents', colorHex: '#10b981', displayOrder: 5, description: '' },
-  { id: 'commodity', name: 'Commodities', colorHex: '#eab308', displayOrder: 6, description: '' },
-  { id: 'alternative', name: 'Alternative Assets', colorHex: '#6366f1', displayOrder: 7, description: '' },
+  { id: 'equity', name: 'Equities & Mutual Funds', colorHex: '#3b82f6', displayOrder: 1, description: '' },
+  { id: 'fixed_income', name: 'Fixed Income & Debt', colorHex: '#8b5cf6', displayOrder: 2, description: '' },
+  { id: 'commodity', name: 'Gold & Precious Metals', colorHex: '#eab308', displayOrder: 3, description: '' },
+  { id: 'real_estate', name: 'Real Estate & Land', colorHex: '#f59e0b', displayOrder: 4, description: '' },
+  { id: 'cash', name: 'Cash & Liquid Savings', colorHex: '#10b981', displayOrder: 5, description: '' },
+  { id: 'crypto', name: 'Digital Assets & Crypto', colorHex: '#ec4899', displayOrder: 6, description: '' },
+  { id: 'alternative', name: 'Alternative & Startups', colorHex: '#6366f1', displayOrder: 7, description: '' },
 ];
 
 export function AddHoldingModal({
@@ -45,7 +45,7 @@ export function AddHoldingModal({
   const [quantity, setQuantity] = useState('');
   const [unitCost, setUnitCost] = useState('');
   const [currentValue, setCurrentValue] = useState('');
-  const [currency] = useState('USD');
+  const [currency] = useState('INR');
   const [error, setError] = useState<string | null>(null);
 
   // Fetch asset classes from database adapter
@@ -168,7 +168,7 @@ export function AddHoldingModal({
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Apple Inc. or Vanguard S&P 500"
+                placeholder="e.g. Reliance Industries, Nifty 50 ETF, SGB 2028"
                 className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
@@ -181,7 +181,7 @@ export function AddHoldingModal({
                 type="text"
                 value={ticker}
                 onChange={(e) => setTicker(e.target.value)}
-                placeholder="AAPL"
+                placeholder="RELIANCE"
                 className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm uppercase font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
@@ -222,7 +222,7 @@ export function AddHoldingModal({
 
             <div>
               <label className="text-xs font-medium text-muted-foreground block mb-1">
-                Unit Cost (USD) <span className="text-destructive">*</span>
+                Unit Cost (INR ₹) <span className="text-destructive">*</span>
               </label>
               <input
                 type="number"
@@ -230,21 +230,21 @@ export function AddHoldingModal({
                 required
                 value={unitCost}
                 onChange={(e) => handleUnitCostChange(e.target.value)}
-                placeholder="150.00"
+                placeholder="2500.00"
                 className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
 
             <div>
               <label className="text-xs font-medium text-muted-foreground block mb-1">
-                Current Total Value
+                Current Total Value (INR ₹)
               </label>
               <input
                 type="number"
                 step="any"
                 value={currentValue}
                 onChange={(e) => setCurrentValue(e.target.value)}
-                placeholder="1750.00"
+                placeholder="28000.00"
                 className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
@@ -252,9 +252,9 @@ export function AddHoldingModal({
 
           <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 text-xs text-muted-foreground space-y-1">
             <p>
-              💡 <span className="text-foreground font-medium">Integer Precision:</span> Values will
-              be stored as exact integer cents (<code className="text-primary font-mono">bigint</code>
-              ) to prevent floating-point calculation drift.
+              💡 <span className="text-foreground font-medium">India First Integer Precision:</span> Values
+              are stored in exact integer paise (<code className="text-primary font-mono">bigint</code>
+              ) to eliminate floating-point calculation drift.
             </p>
           </div>
 

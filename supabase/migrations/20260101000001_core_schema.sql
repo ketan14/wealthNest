@@ -20,17 +20,21 @@ CREATE TABLE IF NOT EXISTS public.asset_classes (
   display_order int NOT NULL DEFAULT 0
 );
 
--- Seed standard institutional asset classes
+-- Seed standard institutional asset classes (India First taxonomy)
 INSERT INTO public.asset_classes (id, name, description, color_hex, display_order)
 VALUES
-  ('cash', 'Cash & Equivalents', 'Checking, savings accounts, money market funds', '#10b981', 1),
-  ('equity', 'Equities & Stocks', 'Publicly traded equities, index funds, and ETFs', '#3b82f6', 2),
-  ('fixed_income', 'Fixed Income & Bonds', 'Government bonds, corporate notes, certificates of deposit', '#8b5cf6', 3),
-  ('real_estate', 'Real Estate', 'Primary residence, rental property, REITs', '#f59e0b', 4),
-  ('crypto', 'Digital Assets & Crypto', 'Major cryptocurrencies and decentralized tokens', '#ec4899', 5),
-  ('commodity', 'Commodities', 'Gold, precious metals, and tangible commodities', '#eab308', 6),
-  ('alternative', 'Alternative Assets', 'Private equity, venture funds, collectibles', '#6366f1', 7)
-ON CONFLICT (id) DO NOTHING;
+  ('cash', 'Cash & Liquid Savings', 'Savings accounts, emergency fund, liquid mutual funds', '#10b981', 1),
+  ('equity', 'Equities & Mutual Funds', 'NSE/BSE stocks, mutual funds, SIPs, Nifty index ETFs', '#3b82f6', 2),
+  ('fixed_income', 'Fixed Income & Debt', 'Fixed deposits (FD), PPF, EPF, government bonds', '#8b5cf6', 3),
+  ('commodity', 'Gold & Precious Metals', 'Sovereign Gold Bonds (SGB), physical 24K gold, silver', '#eab308', 4),
+  ('real_estate', 'Real Estate & Land', 'Primary residence, commercial property, Indian REITs', '#f59e0b', 5),
+  ('crypto', 'Digital Assets & Crypto', 'Major cryptocurrencies (subject to Indian VDA tax)', '#ec4899', 6),
+  ('alternative', 'Alternative & Startups', 'Angel investments, private equity, collectibles', '#6366f1', 7)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  color_hex = EXCLUDED.color_hex,
+  display_order = EXCLUDED.display_order;
 
 -- 3. Assets Table (User asset definitions)
 CREATE TABLE IF NOT EXISTS public.assets (
@@ -39,13 +43,13 @@ CREATE TABLE IF NOT EXISTS public.assets (
   name text NOT NULL,
   ticker text,
   asset_class_id text NOT NULL REFERENCES public.asset_classes(id),
-  currency text NOT NULL DEFAULT 'USD',
+  currency text NOT NULL DEFAULT 'INR',
   notes text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- 4. Holdings Table (Quantities and integer cents valuations)
+-- 4. Holdings Table (Quantities and integer paise valuations)
 CREATE TABLE IF NOT EXISTS public.holdings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -65,7 +69,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   type text NOT NULL CHECK (type IN ('buy', 'sell', 'deposit', 'withdrawal', 'dividend', 'fee')),
   quantity numeric(20, 8),
   amount_cents bigint NOT NULL,
-  currency text NOT NULL DEFAULT 'USD',
+  currency text NOT NULL DEFAULT 'INR',
   transaction_date timestamptz NOT NULL DEFAULT now(),
   notes text,
   created_at timestamptz NOT NULL DEFAULT now()

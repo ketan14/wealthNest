@@ -35,90 +35,118 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-// Demo initial positions when running unauthenticated
+// Demo initial positions tailored for Indian investors (India First)
 const DEMO_HOLDINGS: HoldingDetailDto[] = [
   {
     holdingId: 'demo-1',
     assetId: 'asset-1',
-    name: 'Apple Inc.',
-    ticker: 'AAPL',
+    name: 'Reliance Industries Ltd',
+    ticker: 'RELIANCE',
     assetClassId: 'equity',
-    assetClassName: 'Equities & Stocks',
+    assetClassName: 'Equities & Mutual Funds',
     assetClassColor: '#3b82f6',
-    quantity: 35,
-    unitCostCents: 16500, // $165.00
-    currentValueCents: 822500, // $8,225.00 (+$2,450)
-    currency: 'USD',
+    quantity: 80,
+    unitCostCents: 250000, // ₹2,500.00
+    currentValueCents: 23600000, // ₹2,36,000.00 (+₹36,000)
+    currency: 'INR',
     updatedAt: new Date().toISOString(),
   },
   {
     holdingId: 'demo-2',
     assetId: 'asset-2',
-    name: 'Vanguard Total Stock Market ETF',
-    ticker: 'VTI',
+    name: 'Nifty 50 Index ETF',
+    ticker: 'NIFTYBEES',
     assetClassId: 'equity',
-    assetClassName: 'Equities & Stocks',
+    assetClassName: 'Equities & Mutual Funds',
     assetClassColor: '#3b82f6',
-    quantity: 80,
-    unitCostCents: 22000, // $220.00
-    currentValueCents: 2040000, // $20,400.00 (+$2,800)
-    currency: 'USD',
+    quantity: 500,
+    unitCostCents: 24000, // ₹240.00
+    currentValueCents: 14000000, // ₹1,40,000.00 (+₹20,000)
+    currency: 'INR',
     updatedAt: new Date().toISOString(),
   },
   {
     holdingId: 'demo-3',
     assetId: 'asset-3',
-    name: 'US Treasury 7-10 Year Bond ETF',
-    ticker: 'IEF',
-    assetClassId: 'fixed_income',
-    assetClassName: 'Fixed Income & Bonds',
-    assetClassColor: '#8b5cf6',
-    quantity: 120,
-    unitCostCents: 9650, // $96.50
-    currentValueCents: 1128000, // $11,280.00 (-$300)
-    currency: 'USD',
+    name: 'Tata Consultancy Services',
+    ticker: 'TCS',
+    assetClassId: 'equity',
+    assetClassName: 'Equities & Mutual Funds',
+    assetClassColor: '#3b82f6',
+    quantity: 40,
+    unitCostCents: 360000, // ₹3,600.00
+    currentValueCents: 16600000, // ₹1,66,000.00 (+₹22,000)
+    currency: 'INR',
     updatedAt: new Date().toISOString(),
   },
   {
     holdingId: 'demo-4',
     assetId: 'asset-4',
-    name: 'High-Yield Cash Treasury Reserve',
-    ticker: 'CASH',
-    assetClassId: 'cash',
-    assetClassName: 'Cash & Equivalents',
-    assetClassColor: '#10b981',
-    quantity: 25000,
-    unitCostCents: 100, // $1.00
-    currentValueCents: 2500000, // $25,000.00
-    currency: 'USD',
+    name: 'Sovereign Gold Bond 2028',
+    ticker: 'SGB-2028',
+    assetClassId: 'commodity',
+    assetClassName: 'Gold & Precious Metals',
+    assetClassColor: '#eab308',
+    quantity: 30, // grams
+    unitCostCents: 580000, // ₹5,800.00
+    currentValueCents: 22950000, // ₹2,29,500.00 (+₹55,500)
+    currency: 'INR',
     updatedAt: new Date().toISOString(),
   },
   {
     holdingId: 'demo-5',
     assetId: 'asset-5',
-    name: 'Bitcoin Cold Storage',
-    ticker: 'BTC',
-    assetClassId: 'crypto',
-    assetClassName: 'Digital Assets & Crypto',
-    assetClassColor: '#ec4899',
-    quantity: 0.35,
-    unitCostCents: 4800000, // $48,000.00
-    currentValueCents: 2450000, // $24,500.00 (+$7,700)
-    currency: 'USD',
+    name: 'Public Provident Fund (PPF)',
+    ticker: 'PPF',
+    assetClassId: 'fixed_income',
+    assetClassName: 'Fixed Income & Debt',
+    assetClassColor: '#8b5cf6',
+    quantity: 1,
+    unitCostCents: 150000000, // ₹15,00,000.00 (15 Lakhs)
+    currentValueCents: 150000000, // ₹15,00,000.00
+    currency: 'INR',
     updatedAt: new Date().toISOString(),
   },
   {
     holdingId: 'demo-6',
     assetId: 'asset-6',
-    name: 'Realty Income REIT',
-    ticker: 'O',
+    name: 'HDFC Bank Fixed Deposit',
+    ticker: 'HDFC-FD',
+    assetClassId: 'fixed_income',
+    assetClassName: 'Fixed Income & Debt',
+    assetClassColor: '#8b5cf6',
+    quantity: 1,
+    unitCostCents: 50000000, // ₹5,00,000.00 (5 Lakhs)
+    currentValueCents: 50000000, // ₹5,00,000.00
+    currency: 'INR',
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    holdingId: 'demo-7',
+    assetId: 'asset-7',
+    name: 'Emergency Bank Savings',
+    ticker: 'CASH',
+    assetClassId: 'cash',
+    assetClassName: 'Cash & Liquid Savings',
+    assetClassColor: '#10b981',
+    quantity: 1,
+    unitCostCents: 25000000, // ₹2,50,000.00 (2.5 Lakhs)
+    currentValueCents: 25000000, // ₹2,50,000.00
+    currency: 'INR',
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    holdingId: 'demo-8',
+    assetId: 'asset-8',
+    name: 'Embassy Office Parks REIT',
+    ticker: 'EMBASSY',
     assetClassId: 'real_estate',
-    assetClassName: 'Real Estate',
+    assetClassName: 'Real Estate & Land',
     assetClassColor: '#f59e0b',
-    quantity: 150,
-    unitCostCents: 5200, // $52.00
-    currentValueCents: 825000, // $8,250.00 (+$450)
-    currency: 'USD',
+    quantity: 600,
+    unitCostCents: 34000, // ₹340.00
+    currentValueCents: 23700000, // ₹2,37,000.00 (+₹33,000)
+    currency: 'INR',
     updatedAt: new Date().toISOString(),
   },
 ];
@@ -145,7 +173,7 @@ export function PortfolioPage() {
     queryFn: async () => {
       if (!user) return null;
       const useCase = new GetPortfolioSummaryUseCase(holdingAdapter);
-      const res = await useCase.execute(user.id, 'USD');
+      const res = await useCase.execute(user.id, 'INR');
       if (!res.success) throw res.error;
       return res.value;
     },
@@ -169,7 +197,7 @@ export function PortfolioPage() {
     }
 
     const valuationItems: HoldingValuationItem[] = localDemoHoldings.map((h) => {
-      const holdingCurrency = (h.currency as CurrencyCode) || 'USD';
+      const holdingCurrency = (h.currency as CurrencyCode) || 'INR';
       const totalCostCents = BigInt(Math.round(h.quantity * h.unitCostCents));
       const costBasis = Money.fromCents(totalCostCents, holdingCurrency);
       const currentValue = Money.fromCents(BigInt(h.currentValueCents), holdingCurrency);
@@ -185,7 +213,7 @@ export function PortfolioPage() {
       };
     });
 
-    return calculatePortfolioSummary(valuationItems, 'USD');
+    return calculatePortfolioSummary(valuationItems, 'INR');
   }, [user, dbPortfolioData, localDemoHoldings]);
 
   // Filter holdings based on search and selected class
@@ -213,7 +241,7 @@ export function PortfolioPage() {
           name: values.name,
           ticker: values.ticker,
           assetClassId: values.assetClassId,
-          currency: values.currency,
+          currency: values.currency || 'INR',
           quantity: values.quantity,
           unitCostCents,
           currentValueCents,
@@ -234,7 +262,7 @@ export function PortfolioPage() {
           quantity: values.quantity,
           unitCostCents,
           currentValueCents,
-          currency: values.currency,
+          currency: values.currency || 'INR',
           updatedAt: new Date().toISOString(),
         };
         setLocalDemoHoldings((prev) => [newDemoItem, ...prev]);
@@ -266,7 +294,7 @@ export function PortfolioPage() {
     },
   });
 
-  // Seed sample holdings for authenticated user if empty
+  // Seed sample Indian holdings for authenticated user if empty
   const handleSeedStarterHoldings = async () => {
     if (!user) return;
     for (const h of DEMO_HOLDINGS.slice(0, 4)) {
@@ -276,7 +304,7 @@ export function PortfolioPage() {
         name: h.name,
         ticker: h.ticker,
         assetClassId: h.assetClassId,
-        currency: h.currency,
+        currency: 'INR',
         quantity: h.quantity,
         unitCostCents: h.unitCostCents,
         currentValueCents: h.currentValueCents,
@@ -294,12 +322,15 @@ export function PortfolioPage() {
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
               Portfolio & Asset Allocation
             </h2>
+            <Badge variant="default" className="font-mono text-[10px] bg-amber-500/15 text-amber-400 border-amber-500/30">
+              India First (₹ INR)
+            </Badge>
             <Badge variant={user ? 'success' : 'secondary'} className="font-mono text-[10px]">
               {user ? 'Database Active' : 'Demo Mode'}
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Institutional-grade multi-asset balance tracking and pure domain valuation engine.
+            Indian multi-asset wealth tracker with Lakh/Crore precision and pure domain valuation engine.
           </p>
         </div>
 
@@ -320,11 +351,11 @@ export function PortfolioPage() {
             </div>
             <div>
               <p className="text-xs font-semibold text-foreground">
-                Interactive Demonstration Mode Active
+                India-First Demonstration Portfolio Active
               </p>
               <p className="text-xs text-muted-foreground">
-                You are testing the pure domain calculation engine with sample positions.
-                To save and persist your real holdings in PostgreSQL, sign in to your profile.
+                Sample portfolio featuring Indian Equities (Reliance, Nifty 50, TCS), Sovereign Gold Bonds (SGB), PPF, and FDs.
+                Sign in to save and sync your real portfolio in PostgreSQL.
               </p>
             </div>
           </div>
@@ -349,11 +380,16 @@ export function PortfolioPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono text-foreground">
-              {summary.totalValue.format('en-US')}
+              {summary.totalValue.format('en-IN')}
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1 font-mono">
-              Strict ISO: {summary.totalValue.currency}
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs font-bold font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                {summary.totalValue.formatIndianCompact()}
+              </span>
+              <span className="text-[11px] text-muted-foreground font-mono">
+                {summary.totalValue.currency}
+              </span>
+            </div>
           </CardContent>
         </Card>
 
@@ -367,11 +403,16 @@ export function PortfolioPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono text-foreground">
-              {summary.totalCostBasis.format('en-US')}
+              {summary.totalCostBasis.format('en-IN')}
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Net capital invested
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs font-bold font-mono px-2 py-0.5 rounded bg-secondary/80 text-foreground border border-border">
+                {summary.totalCostBasis.formatIndianCompact()}
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                Net capital invested
+              </span>
+            </div>
           </CardContent>
         </Card>
 
@@ -394,9 +435,9 @@ export function PortfolioPage() {
               }`}
             >
               {summary.isProfitable ? '+' : '-'}
-              {summary.unrealizedGainLoss.format('en-US')}
+              {summary.unrealizedGainLoss.format('en-IN')}
             </div>
-            <p className="text-[11px] font-mono mt-1 flex items-center gap-1">
+            <p className="text-[11px] font-mono mt-1 flex items-center gap-1.5">
               <span
                 className={`font-semibold ${
                   summary.isProfitable ? 'text-emerald-400' : 'text-rose-400'
@@ -405,7 +446,7 @@ export function PortfolioPage() {
                 {summary.isProfitable ? '+' : ''}
                 {summary.returnPercentage.toFixed(2)}%
               </span>
-              <span className="text-muted-foreground">all-time return</span>
+              <span className="text-muted-foreground">all-time yield</span>
             </p>
           </CardContent>
         </Card>
@@ -423,7 +464,7 @@ export function PortfolioPage() {
               {activeHoldings.length} Positions
             </div>
             <p className="text-[11px] text-muted-foreground mt-1">
-              Across {summary.allocations.length} distinct asset classes
+              Across {summary.allocations.length} Indian asset categories
             </p>
           </CardContent>
         </Card>
@@ -435,12 +476,12 @@ export function PortfolioPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <PieChart className="w-5 h-5 text-primary" />
-              <CardTitle className="text-base">Asset Class Allocation</CardTitle>
+              <CardTitle className="text-base">Asset Class Allocation (India Taxonomy)</CardTitle>
             </div>
             <Badge variant="secondary">Zero Float Drift</Badge>
           </div>
           <CardDescription>
-            Calculated distribution across institutional asset classes.
+            Calculated distribution across Indian financial instruments and asset classes.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -449,7 +490,7 @@ export function PortfolioPage() {
             {summary.allocations.map((alloc) => (
               <div
                 key={alloc.assetClassId}
-                title={`${alloc.name}: ${alloc.percentage.toFixed(1)}% (${alloc.totalValue.format('en-US')})`}
+                title={`${alloc.name}: ${alloc.percentage.toFixed(1)}% (${alloc.totalValue.format('en-IN')})`}
                 style={{
                   width: `${alloc.percentage}%`,
                   backgroundColor: alloc.colorHex,
@@ -460,7 +501,7 @@ export function PortfolioPage() {
           </div>
 
           {/* Asset Class Pills & Percentages */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 pt-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 pt-2">
             {summary.allocations.map((alloc) => (
               <div
                 key={alloc.assetClassId}
@@ -489,7 +530,7 @@ export function PortfolioPage() {
                     {alloc.percentage.toFixed(1)}%
                   </span>
                   <span className="text-[11px] font-mono text-muted-foreground">
-                    {alloc.totalValue.format('en-US')}
+                    {alloc.totalValue.formatIndianCompact()}
                   </span>
                 </div>
               </div>
@@ -505,7 +546,7 @@ export function PortfolioPage() {
             <div>
               <CardTitle className="text-base">Portfolio Holdings</CardTitle>
               <CardDescription>
-                Live positions with unit cost basis, current market value, and unrealized yield.
+                Positions with unit cost basis, current market value, and unrealized yield in Indian Rupees (₹).
               </CardDescription>
             </div>
 
@@ -589,17 +630,17 @@ export function PortfolioPage() {
                     const isGain = gainLossCents >= 0;
                     const returnPct = totalCostCents > 0 ? (gainLossCents / totalCostCents) * 100 : 0;
 
-                    const costBasisFormatted = (totalCostCents / 100).toLocaleString('en-US', {
+                    const costBasisFormatted = (totalCostCents / 100).toLocaleString('en-IN', {
                       style: 'currency',
-                      currency: h.currency || 'USD',
+                      currency: h.currency || 'INR',
                     });
-                    const currentValueFormatted = (h.currentValueCents / 100).toLocaleString('en-US', {
+                    const currentValueFormatted = (h.currentValueCents / 100).toLocaleString('en-IN', {
                       style: 'currency',
-                      currency: h.currency || 'USD',
+                      currency: h.currency || 'INR',
                     });
-                    const gainLossFormatted = (Math.abs(gainLossCents) / 100).toLocaleString('en-US', {
+                    const gainLossFormatted = (Math.abs(gainLossCents) / 100).toLocaleString('en-IN', {
                       style: 'currency',
-                      currency: h.currency || 'USD',
+                      currency: h.currency || 'INR',
                     });
 
                     return (
@@ -636,14 +677,14 @@ export function PortfolioPage() {
 
                         {/* Quantity */}
                         <td className="py-3.5 px-4 text-right text-foreground">
-                          {h.quantity.toLocaleString('en-US', { maximumFractionDigits: 6 })}
+                          {h.quantity.toLocaleString('en-IN', { maximumFractionDigits: 6 })}
                         </td>
 
                         {/* Cost Basis */}
                         <td className="py-3.5 px-4 text-right text-muted-foreground">
                           <div>{costBasisFormatted}</div>
                           <div className="text-[10px] text-muted-foreground/80">
-                            ${(h.unitCostCents / 100).toFixed(2)}/u
+                            ₹{(h.unitCostCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}/u
                           </div>
                         </td>
 
