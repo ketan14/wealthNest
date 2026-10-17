@@ -95,6 +95,7 @@ npm run docker:down
 ---
 
 ## Documentation Links
+- [Local Services & URLs Reference](docs/local-services.md)
 - [System Architecture](docs/architecture.md)
 - [ADR 0001: Monorepo with npm workspaces](docs/adr/0001-monorepo-npm-workspaces.md)
 - [Development Workflow](docs/development-workflow.md)
