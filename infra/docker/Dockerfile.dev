@@ -1,0 +1,27 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Ensure non-root node user permissions
+RUN chown -R node:node /app
+
+USER node
+
+# Copy workspace package manifests for dependency layer caching
+COPY --chown=node:node package*.json ./
+COPY --chown=node:node packages/shared/package*.json ./packages/shared/
+COPY --chown=node:node packages/domain/package*.json ./packages/domain/
+COPY --chown=node:node packages/application/package*.json ./packages/application/
+COPY --chown=node:node apps/web/package*.json ./apps/web/
+
+# Install workspace dependencies
+RUN npm install
+
+# Copy application source code
+COPY --chown=node:node . .
+
+# Expose internal Vite development port
+EXPOSE 5173
+
+# Launch web dev server with workspace flag
+CMD ["npm", "run", "dev"]

@@ -1,0 +1,31 @@
+{
+  "name": "wealthnest",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WealthNest — Production-Oriented Monorepo Architecture",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@wealthnest/web",
+    "build": "tsc -b && npm run build --workspace=@wealthnest/web",
+    "type-check": "tsc -b",
+    "lint": "prettier --check \"packages/*/src/**/*.{ts,tsx}\" \"apps/web/src/**/*.{ts,tsx}\"",
+    "format": "prettier --write \"packages/*/src/**/*.{ts,tsx}\" \"apps/web/src/**/*.{ts,tsx}\"",
+    "test": "npm run test --workspaces --if-present",
+    "verify": "bash scripts/verify.sh",
+    "docker:dev": "docker compose -p wealthnest -f infra/docker/docker-compose.yml up --build",
+    "docker:dev:d": "docker compose -p wealthnest -f infra/docker/docker-compose.yml up -d --build",
+    "docker:down": "docker compose -p wealthnest -f infra/docker/docker-compose.yml down",
+    "docker:logs": "docker compose -p wealthnest -f infra/docker/docker-compose.yml logs -f"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.2",
+    "typescript": "^5.8.2"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
