@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { AddHoldingModal, NewHoldingFormValues } from '@/components/portfolio/AddHoldingModal';
+import { ImportCasModal } from '@/components/portfolio/ImportCasModal';
 import {
   PieChart,
   Plus,
@@ -32,6 +33,7 @@ import {
   Database,
   Sparkles,
   Search,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -155,6 +157,7 @@ export function PortfolioPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string | null>(null);
 
@@ -335,6 +338,14 @@ export function PortfolioPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setIsImportModalOpen(true)}
+            className="gap-2 shadow-sm border-primary/20 hover:bg-primary/5 text-foreground"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-primary" />
+            Import CAS
+          </Button>
           <Button onClick={() => setIsModalOpen(true)} className="gap-2 shadow-sm">
             <Plus className="w-4 h-4" />
             Add Holding
@@ -597,6 +608,15 @@ export function PortfolioPage() {
                   <Plus className="w-4 h-4" />
                   Add Holding
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsImportModalOpen(true)}
+                  className="gap-1.5 text-xs font-mono"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-primary" />
+                  Import CAS
+                </Button>
                 {user && activeHoldings.length === 0 && (
                   <Button
                     size="sm"
@@ -741,6 +761,18 @@ export function PortfolioPage() {
           await addHoldingMutation.mutateAsync(values);
         }}
         isLoading={addHoldingMutation.isPending}
+      />
+
+      {/* Import CAS Modal Component */}
+      <ImportCasModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={() => {
+          if (user) {
+            queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
+          }
+          refetch();
+        }}
       />
     </div>
   );

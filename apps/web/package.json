@@ -12,13 +12,14 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "@tanstack/react-query": "^5.67.1",
     "@wealthnest/application": "^0.1.0",
     "@wealthnest/domain": "^0.1.0",
     "@wealthnest/shared": "^0.1.0",
-    "@supabase/supabase-js": "^2.49.1",
-    "@tanstack/react-query": "^5.67.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
+    "pdfjs-dist": "^4.10.38",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.3.0",

@@ -1,0 +1,135 @@
+import { describe, it, expect, vi } from 'vitest';
+import { ok, err } from '@wealthnest/shared';
+import {
+  ParseCasPdfUseCase,
+  ConfirmCasImportUseCase,
+  PdfExtractorPort,
+  CasImportRepositoryPort,
+} from '../index.js';
+
+describe('ParseCasPdfUseCase', () => {
+  it('rejects empty PDF buffer', async () => {
+    const mockExtractor: PdfExtractorPort = {
+      extractPages: vi.fn(),
+    };
+
+    const useCase = new ParseCasPdfUseCase(mockExtractor);
+    const result = await useCase.execute(new ArrayBuffer(0));
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.message).toContain('empty');
+    }
+  });
+
+  it('handles password requirement error gracefully', async () => {
+    const mockExtractor: PdfExtractorPort = {
+      extractPages: vi.fn().mockResolvedValue(err(new Error('Password required to decrypt document'))),
+    };
+
+    const useCase = new ParseCasPdfUseCase(mockExtractor);
+    const result = await useCase.execute(new ArrayBuffer(1024));
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.message).toContain('password protected');
+    }
+  });
+
+  it('extracts CDSL statement and maps to preview DTO', async () => {
+    const mockPages = [
+      `Central Depository Services (India) Limited
+       Statement as on : 31-Mar-2026
+       EQUITY SHARES:
+       ISIN INE002A01018 RELIANCE INDUSTRIES LTD 50 2500 125000`,
+    ];
+
+    const mockExtractor: PdfExtractorPort = {
+      extractPages: vi.fn().mockResolvedValue(ok({ pages: mockPages, totalPageCount: 1 })),
+    };
+
+    const useCase = new ParseCasPdfUseCase(mockExtractor);
+    const result = await useCase.execute(new ArrayBuffer(2048), 'MOCKPASS');
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.value.provider).toBe('CDSL');
+      expect(result.value.statementDate).toBe('2026-03-31');
+      expect(result.value.items).toHaveLength(1);
+      expect(result.value.items[0]!.isin).toBe('INE002A01018');
+      expect(result.value.items[0]!.quantity).toBe(50);
+      expect(result.value.items[0]!.currentValueCents).toBe(12500000);
+      expect(result.value.items[0]!.selected).toBe(true);
+    }
+  });
+});
+
+describe('ConfirmCasImportUseCase', () => {
+  it('validates user ID presence', async () => {
+    const mockRepo: CasImportRepositoryPort = {
+      upsertHoldingsFromCas: vi.fn(),
+    };
+
+    const useCase = new ConfirmCasImportUseCase(mockRepo);
+    const result = await useCase.execute({
+      userId: '',
+      provider: 'CDSL',
+      statementDate: '2026-03-31',
+      items: [],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('filters unselected items and calls upsert repository', async () => {
+    const mockRepo: CasImportRepositoryPort = {
+      upsertHoldingsFromCas: vi.fn().mockResolvedValue(
+        ok({
+          batchId: 'batch-1',
+          total: 2,
+          imported: 1,
+          updated: 0,
+          skipped: 1,
+          failed: 0,
+        })
+      ),
+    };
+
+    const useCase = new ConfirmCasImportUseCase(mockRepo);
+    const result = await useCase.execute({
+      userId: 'user-qa',
+      provider: 'CDSL',
+      statementDate: '2026-03-31',
+      items: [
+        {
+          isin: 'INE002A01018',
+          name: 'Reliance',
+          assetClassId: 'equity',
+          quantity: 10,
+          unitCostCents: 250000,
+          currentValueCents: 2500000,
+          currency: 'INR',
+          selected: true,
+        },
+        {
+          isin: 'INE467B01029',
+          name: 'TCS',
+          assetClassId: 'equity',
+          quantity: 5,
+          unitCostCents: 350000,
+          currentValueCents: 1750000,
+          currency: 'INR',
+          selected: false, // Deselected by user
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    expect(mockRepo.upsertHoldingsFromCas).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-qa',
+        items: [expect.objectContaining({ isin: 'INE002A01018' })],
+      })
+    );
+  });
+});
