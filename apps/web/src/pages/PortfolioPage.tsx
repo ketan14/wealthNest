@@ -1,0 +1,707 @@
+import { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  CurrencyCode,
+  Money,
+  calculatePortfolioSummary,
+  PortfolioSummary,
+  HoldingValuationItem,
+} from '@wealthnest/domain';
+import {
+  GetPortfolioSummaryUseCase,
+  AddHoldingUseCase,
+  DeleteHoldingUseCase,
+  HoldingDetailDto,
+} from '@wealthnest/application';
+import { SupabaseHoldingAdapter } from '@/lib/supabase/holding.adapter';
+import { useAuth } from '@/lib/supabase/auth-context';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { AddHoldingModal, NewHoldingFormValues } from '@/components/portfolio/AddHoldingModal';
+import {
+  PieChart,
+  Plus,
+  Trash2,
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  Scale,
+  Layers,
+  ArrowUpRight,
+  Database,
+  Sparkles,
+  Search,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+// Demo initial positions when running unauthenticated
+const DEMO_HOLDINGS: HoldingDetailDto[] = [
+  {
+    holdingId: 'demo-1',
+    assetId: 'asset-1',
+    name: 'Apple Inc.',
+    ticker: 'AAPL',
+    assetClassId: 'equity',
+    assetClassName: 'Equities & Stocks',
+    assetClassColor: '#3b82f6',
+    quantity: 35,
+    unitCostCents: 16500, // $165.00
+    currentValueCents: 822500, // $8,225.00 (+$2,450)
+    currency: 'USD',
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    holdingId: 'demo-2',
+    assetId: 'asset-2',
+    name: 'Vanguard Total Stock Market ETF',
+    ticker: 'VTI',
+    assetClassId: 'equity',
+    assetClassName: 'Equities & Stocks',
+    assetClassColor: '#3b82f6',
+    quantity: 80,
+    unitCostCents: 22000, // $220.00
+    currentValueCents: 2040000, // $20,400.00 (+$2,800)
+    currency: 'USD',
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    holdingId: 'demo-3',
+    assetId: 'asset-3',
+    name: 'US Treasury 7-10 Year Bond ETF',
+    ticker: 'IEF',
+    assetClassId: 'fixed_income',
+    assetClassName: 'Fixed Income & Bonds',
+    assetClassColor: '#8b5cf6',
+    quantity: 120,
+    unitCostCents: 9650, // $96.50
+    currentValueCents: 1128000, // $11,280.00 (-$300)
+    currency: 'USD',
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    holdingId: 'demo-4',
+    assetId: 'asset-4',
+    name: 'High-Yield Cash Treasury Reserve',
+    ticker: 'CASH',
+    assetClassId: 'cash',
+    assetClassName: 'Cash & Equivalents',
+    assetClassColor: '#10b981',
+    quantity: 25000,
+    unitCostCents: 100, // $1.00
+    currentValueCents: 2500000, // $25,000.00
+    currency: 'USD',
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    holdingId: 'demo-5',
+    assetId: 'asset-5',
+    name: 'Bitcoin Cold Storage',
+    ticker: 'BTC',
+    assetClassId: 'crypto',
+    assetClassName: 'Digital Assets & Crypto',
+    assetClassColor: '#ec4899',
+    quantity: 0.35,
+    unitCostCents: 4800000, // $48,000.00
+    currentValueCents: 2450000, // $24,500.00 (+$7,700)
+    currency: 'USD',
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    holdingId: 'demo-6',
+    assetId: 'asset-6',
+    name: 'Realty Income REIT',
+    ticker: 'O',
+    assetClassId: 'real_estate',
+    assetClassName: 'Real Estate',
+    assetClassColor: '#f59e0b',
+    quantity: 150,
+    unitCostCents: 5200, // $52.00
+    currentValueCents: 825000, // $8,250.00 (+$450)
+    currency: 'USD',
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+export function PortfolioPage() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedClassFilter, setSelectedClassFilter] = useState<string | null>(null);
+
+  // Local state for interactive demo mode when not logged in
+  const [localDemoHoldings, setLocalDemoHoldings] = useState<HoldingDetailDto[]>(DEMO_HOLDINGS);
+
+  const holdingAdapter = useMemo(() => new SupabaseHoldingAdapter(), []);
+
+  // Query authenticated holdings from Supabase via Clean Architecture Use Case
+  const {
+    data: dbPortfolioData,
+    isLoading: isLoadingDb,
+    refetch,
+  } = useQuery({
+    queryKey: ['portfolio-summary', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const useCase = new GetPortfolioSummaryUseCase(holdingAdapter);
+      const res = await useCase.execute(user.id, 'USD');
+      if (!res.success) throw res.error;
+      return res.value;
+    },
+    enabled: !!user,
+  });
+
+  // Calculate live portfolio values:
+  // If user is authenticated, use their Supabase database data.
+  // Otherwise, calculate live from local interactive demo data.
+  const activeHoldings: HoldingDetailDto[] = useMemo(() => {
+    if (user && dbPortfolioData) {
+      return [...dbPortfolioData.holdings];
+    }
+    return localDemoHoldings;
+  }, [user, dbPortfolioData, localDemoHoldings]);
+
+  // Pure Domain Summary calculation with Money value objects
+  const summary: PortfolioSummary = useMemo(() => {
+    if (user && dbPortfolioData) {
+      return dbPortfolioData.summary;
+    }
+
+    const valuationItems: HoldingValuationItem[] = localDemoHoldings.map((h) => {
+      const holdingCurrency = (h.currency as CurrencyCode) || 'USD';
+      const totalCostCents = BigInt(Math.round(h.quantity * h.unitCostCents));
+      const costBasis = Money.fromCents(totalCostCents, holdingCurrency);
+      const currentValue = Money.fromCents(BigInt(h.currentValueCents), holdingCurrency);
+
+      return {
+        holdingId: h.holdingId,
+        assetClassId: h.assetClassId,
+        assetClassName: h.assetClassName,
+        colorHex: h.assetClassColor,
+        quantity: h.quantity,
+        costBasis,
+        currentValue,
+      };
+    });
+
+    return calculatePortfolioSummary(valuationItems, 'USD');
+  }, [user, dbPortfolioData, localDemoHoldings]);
+
+  // Filter holdings based on search and selected class
+  const filteredHoldings = useMemo(() => {
+    return activeHoldings.filter((h) => {
+      const matchesSearch =
+        h.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (h.ticker && h.ticker.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesClass = !selectedClassFilter || h.assetClassId === selectedClassFilter;
+      return matchesSearch && matchesClass;
+    });
+  }, [activeHoldings, searchQuery, selectedClassFilter]);
+
+  // Mutation: Add Holding
+  const addHoldingMutation = useMutation({
+    mutationFn: async (values: NewHoldingFormValues) => {
+      const unitCostCents = Math.round(values.unitCost * 100);
+      const currentValueCents = Math.round(values.currentValue * 100);
+
+      if (user) {
+        // Authenticated: Persist to PostgreSQL database
+        const useCase = new AddHoldingUseCase(holdingAdapter);
+        const res = await useCase.execute({
+          userId: user.id,
+          name: values.name,
+          ticker: values.ticker,
+          assetClassId: values.assetClassId,
+          currency: values.currency,
+          quantity: values.quantity,
+          unitCostCents,
+          currentValueCents,
+        });
+
+        if (!res.success) throw res.error;
+        return res.value;
+      } else {
+        // Demo Mode: Add into local state
+        const newDemoItem: HoldingDetailDto = {
+          holdingId: `demo-${Date.now()}`,
+          assetId: `asset-${Date.now()}`,
+          name: values.name,
+          ticker: values.ticker,
+          assetClassId: values.assetClassId,
+          assetClassName: values.assetClassId.toUpperCase(),
+          assetClassColor: '#3b82f6',
+          quantity: values.quantity,
+          unitCostCents,
+          currentValueCents,
+          currency: values.currency,
+          updatedAt: new Date().toISOString(),
+        };
+        setLocalDemoHoldings((prev) => [newDemoItem, ...prev]);
+        return newDemoItem;
+      }
+    },
+    onSuccess: () => {
+      if (user) {
+        queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
+      }
+    },
+  });
+
+  // Mutation: Delete Holding
+  const deleteHoldingMutation = useMutation({
+    mutationFn: async (holdingId: string) => {
+      if (user) {
+        const useCase = new DeleteHoldingUseCase(holdingAdapter);
+        const res = await useCase.execute(holdingId, user.id);
+        if (!res.success) throw res.error;
+      } else {
+        setLocalDemoHoldings((prev) => prev.filter((h) => h.holdingId !== holdingId));
+      }
+    },
+    onSuccess: () => {
+      if (user) {
+        queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
+      }
+    },
+  });
+
+  // Seed sample holdings for authenticated user if empty
+  const handleSeedStarterHoldings = async () => {
+    if (!user) return;
+    for (const h of DEMO_HOLDINGS.slice(0, 4)) {
+      const useCase = new AddHoldingUseCase(holdingAdapter);
+      await useCase.execute({
+        userId: user.id,
+        name: h.name,
+        ticker: h.ticker,
+        assetClassId: h.assetClassId,
+        currency: h.currency,
+        quantity: h.quantity,
+        unitCostCents: h.unitCostCents,
+        currentValueCents: h.currentValueCents,
+      });
+    }
+    refetch();
+  };
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-300">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+              Portfolio & Asset Allocation
+            </h2>
+            <Badge variant={user ? 'success' : 'secondary'} className="font-mono text-[10px]">
+              {user ? 'Database Active' : 'Demo Mode'}
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Institutional-grade multi-asset balance tracking and pure domain valuation engine.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button onClick={() => setIsModalOpen(true)} className="gap-2 shadow-sm">
+            <Plus className="w-4 h-4" />
+            Add Holding
+          </Button>
+        </div>
+      </div>
+
+      {/* Mode Alert Banner if not authenticated */}
+      {!user && (
+        <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center text-primary shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-foreground">
+                Interactive Demonstration Mode Active
+              </p>
+              <p className="text-xs text-muted-foreground">
+                You are testing the pure domain calculation engine with sample positions.
+                To save and persist your real holdings in PostgreSQL, sign in to your profile.
+              </p>
+            </div>
+          </div>
+          <Link to="/">
+            <Button variant="default" size="sm" className="whitespace-nowrap text-xs gap-1.5">
+              Sign In to Save
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {/* Top Portfolio Valuation Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Total Net Portfolio Value */}
+        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Total Portfolio Value
+            </CardTitle>
+            <Wallet className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold font-mono text-foreground">
+              {summary.totalValue.format('en-US')}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1 font-mono">
+              Strict ISO: {summary.totalValue.currency}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Card 2: Total Cost Basis */}
+        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Total Cost Basis
+            </CardTitle>
+            <Scale className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold font-mono text-foreground">
+              {summary.totalCostBasis.format('en-US')}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Net capital invested
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Card 3: Unrealized Profit / Loss */}
+        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Unrealized Profit/Loss
+            </CardTitle>
+            {summary.isProfitable ? (
+              <TrendingUp className="h-4 w-4 text-emerald-400" />
+            ) : (
+              <TrendingDown className="h-4 w-4 text-rose-400" />
+            )}
+          </CardHeader>
+          <CardContent>
+            <div
+              className={`text-2xl font-bold font-mono ${
+                summary.isProfitable ? 'text-emerald-400' : 'text-rose-400'
+              }`}
+            >
+              {summary.isProfitable ? '+' : '-'}
+              {summary.unrealizedGainLoss.format('en-US')}
+            </div>
+            <p className="text-[11px] font-mono mt-1 flex items-center gap-1">
+              <span
+                className={`font-semibold ${
+                  summary.isProfitable ? 'text-emerald-400' : 'text-rose-400'
+                }`}
+              >
+                {summary.isProfitable ? '+' : ''}
+                {summary.returnPercentage.toFixed(2)}%
+              </span>
+              <span className="text-muted-foreground">all-time return</span>
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Card 4: Positions & Asset Classes */}
+        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Asset Diversity
+            </CardTitle>
+            <Layers className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold font-mono text-foreground">
+              {activeHoldings.length} Positions
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Across {summary.allocations.length} distinct asset classes
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Asset Allocation Breakdown */}
+      <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <PieChart className="w-5 h-5 text-primary" />
+              <CardTitle className="text-base">Asset Class Allocation</CardTitle>
+            </div>
+            <Badge variant="secondary">Zero Float Drift</Badge>
+          </div>
+          <CardDescription>
+            Calculated distribution across institutional asset classes.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Segmented allocation progress bar */}
+          <div className="w-full h-3.5 rounded-full overflow-hidden flex bg-secondary/60 p-0.5 border border-border/50">
+            {summary.allocations.map((alloc) => (
+              <div
+                key={alloc.assetClassId}
+                title={`${alloc.name}: ${alloc.percentage.toFixed(1)}% (${alloc.totalValue.format('en-US')})`}
+                style={{
+                  width: `${alloc.percentage}%`,
+                  backgroundColor: alloc.colorHex,
+                }}
+                className="h-full first:rounded-l-full last:rounded-r-full transition-all duration-300 hover:opacity-80"
+              />
+            ))}
+          </div>
+
+          {/* Asset Class Pills & Percentages */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 pt-2">
+            {summary.allocations.map((alloc) => (
+              <div
+                key={alloc.assetClassId}
+                onClick={() =>
+                  setSelectedClassFilter((prev) =>
+                    prev === alloc.assetClassId ? null : alloc.assetClassId
+                  )
+                }
+                className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
+                  selectedClassFilter === alloc.assetClassId
+                    ? 'border-primary bg-primary/10 shadow-sm'
+                    : 'border-border/60 bg-secondary/30 hover:border-border hover:bg-secondary/50'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: alloc.colorHex }}
+                  />
+                  <span className="text-xs font-medium text-foreground truncate">
+                    {alloc.name}
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between mt-1">
+                  <span className="text-sm font-bold font-mono text-foreground">
+                    {alloc.percentage.toFixed(1)}%
+                  </span>
+                  <span className="text-[11px] font-mono text-muted-foreground">
+                    {alloc.totalValue.format('en-US')}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Holdings Management Table */}
+      <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-base">Portfolio Holdings</CardTitle>
+              <CardDescription>
+                Live positions with unit cost basis, current market value, and unrealized yield.
+              </CardDescription>
+            </div>
+
+            {/* Filter and Search */}
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Filter asset or ticker..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8 pl-8 pr-3 text-xs rounded-lg bg-secondary/50 border border-border focus:outline-none focus:ring-1 focus:ring-primary w-44 md:w-56 font-mono text-foreground"
+                />
+              </div>
+
+              {selectedClassFilter && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedClassFilter(null)}
+                  className="text-xs h-8 text-primary"
+                >
+                  Clear Filter
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoadingDb ? (
+            <div className="p-12 text-center text-muted-foreground text-sm">
+              Connecting to PostgreSQL and calculating balances...
+            </div>
+          ) : filteredHoldings.length === 0 ? (
+            <div className="p-12 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-secondary/60 mx-auto flex items-center justify-center text-muted-foreground">
+                <Database className="w-6 h-6" />
+              </div>
+              <p className="text-sm font-semibold text-foreground">No holdings found</p>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                {activeHoldings.length === 0
+                  ? 'Your personal portfolio is currently empty. Add your first position or seed starter assets.'
+                  : 'No positions matched your search criteria.'}
+              </p>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <Button size="sm" onClick={() => setIsModalOpen(true)} className="gap-1.5">
+                  <Plus className="w-4 h-4" />
+                  Add Holding
+                </Button>
+                {user && activeHoldings.length === 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleSeedStarterHoldings}
+                    className="gap-1.5 text-xs font-mono"
+                  >
+                    Seed 4 Starter Assets
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-y border-border/80 bg-secondary/20 text-muted-foreground">
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">Asset / Ticker</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">Class</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Quantity</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Cost Basis</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Current Value</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Gain / Loss</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50 font-mono">
+                  {filteredHoldings.map((h) => {
+                    const totalCostCents = Math.round(h.quantity * h.unitCostCents);
+                    const gainLossCents = h.currentValueCents - totalCostCents;
+                    const isGain = gainLossCents >= 0;
+                    const returnPct = totalCostCents > 0 ? (gainLossCents / totalCostCents) * 100 : 0;
+
+                    const costBasisFormatted = (totalCostCents / 100).toLocaleString('en-US', {
+                      style: 'currency',
+                      currency: h.currency || 'USD',
+                    });
+                    const currentValueFormatted = (h.currentValueCents / 100).toLocaleString('en-US', {
+                      style: 'currency',
+                      currency: h.currency || 'USD',
+                    });
+                    const gainLossFormatted = (Math.abs(gainLossCents) / 100).toLocaleString('en-US', {
+                      style: 'currency',
+                      currency: h.currency || 'USD',
+                    });
+
+                    return (
+                      <tr key={h.holdingId} className="hover:bg-secondary/30 transition-colors">
+                        {/* Name & Ticker */}
+                        <td className="py-3.5 px-4 font-sans">
+                          <div className="font-semibold text-foreground text-sm flex items-center gap-2">
+                            {h.name}
+                            {h.ticker && (
+                              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-secondary/80 border border-border text-primary font-bold">
+                                {h.ticker}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Asset Class */}
+                        <td className="py-3.5 px-4 font-sans">
+                          <span
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium border"
+                            style={{
+                              borderColor: `${h.assetClassColor}40`,
+                              backgroundColor: `${h.assetClassColor}15`,
+                              color: h.assetClassColor,
+                            }}
+                          >
+                            <span
+                              className="w-1.5 h-1.5 rounded-full"
+                              style={{ backgroundColor: h.assetClassColor }}
+                            />
+                            {h.assetClassName}
+                          </span>
+                        </td>
+
+                        {/* Quantity */}
+                        <td className="py-3.5 px-4 text-right text-foreground">
+                          {h.quantity.toLocaleString('en-US', { maximumFractionDigits: 6 })}
+                        </td>
+
+                        {/* Cost Basis */}
+                        <td className="py-3.5 px-4 text-right text-muted-foreground">
+                          <div>{costBasisFormatted}</div>
+                          <div className="text-[10px] text-muted-foreground/80">
+                            ${(h.unitCostCents / 100).toFixed(2)}/u
+                          </div>
+                        </td>
+
+                        {/* Current Value */}
+                        <td className="py-3.5 px-4 text-right font-bold text-foreground">
+                          {currentValueFormatted}
+                        </td>
+
+                        {/* Gain / Loss */}
+                        <td className="py-3.5 px-4 text-right">
+                          <span className={isGain ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
+                            {isGain ? '+' : '-'}
+                            {gainLossFormatted}
+                          </span>
+                          <div
+                            className={`text-[10px] font-medium ${
+                              isGain ? 'text-emerald-400/80' : 'text-rose-400/80'
+                            }`}
+                          >
+                            {isGain ? '+' : ''}
+                            {returnPct.toFixed(2)}%
+                          </div>
+                        </td>
+
+                        {/* Delete Action */}
+                        <td className="py-3.5 px-4 text-center">
+                          <button
+                            onClick={() => {
+                              if (confirm(`Delete holding "${h.name}" from your portfolio?`)) {
+                                deleteHoldingMutation.mutate(h.holdingId);
+                              }
+                            }}
+                            title="Delete Position"
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add Holding Modal Component */}
+      <AddHoldingModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={async (values) => {
+          await addHoldingMutation.mutateAsync(values);
+        }}
+        isLoading={addHoldingMutation.isPending}
+      />
+    </div>
+  );
+}
+export default PortfolioPage;

@@ -5,3 +5,6 @@ export * from './ports/asset-class-repository.port.js';
 export * from './ports/auth.port.js';
 export * from './use-cases/get-system-status.js';
 export * from './use-cases/list-asset-classes.js';
+export * from './use-cases/get-portfolio-summary.js';
+export * from './use-cases/add-holding.js';
+export * from './use-cases/delete-holding.js';

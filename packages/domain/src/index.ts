@@ -5,3 +5,4 @@ export * from './models/asset.js';
 export * from './models/asset-class.js';
 export * from './models/holding.js';
 export * from './models/transaction.js';
+export * from './portfolio/portfolio-summary.js';

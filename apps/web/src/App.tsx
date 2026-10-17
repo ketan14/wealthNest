@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { HomePage } from '@/pages/HomePage';
+import { PortfolioPage } from '@/pages/PortfolioPage';
 import { PlaceholderModulePage } from '@/pages/PlaceholderModulePage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
@@ -26,16 +27,7 @@ export function App() {
           <Routes>
             <Route path="/" element={<AppShell />}>
               <Route index element={<HomePage />} />
-              <Route
-                path="portfolio"
-                element={
-                  <PlaceholderModulePage
-                    title="Portfolio Management"
-                    description="Multi-asset allocation tracking, holdings valuation, and asset class distribution."
-                    targetPhase="Phase 2"
-                  />
-                }
-              />
+              <Route path="portfolio" element={<PortfolioPage />} />
               <Route
                 path="transactions"
                 element={

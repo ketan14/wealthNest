@@ -45,3 +45,8 @@ Thumbs.db
 
 # Docker data / local volumes (if any created locally)
 .docker-data/
+
+# Supabase local CLI artifacts
+supabase/.temp/
+supabase/.branches/
+
