@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PortfolioPage } from '../pages/PortfolioPage';
@@ -40,5 +40,32 @@ describe('PortfolioPage Component', () => {
     expect(screen.getByText('Portfolio Holdings')).toBeInTheDocument();
     expect(screen.getByText('Reliance Industries Ltd')).toBeInTheDocument();
     expect(screen.getByText('RELIANCE')).toBeInTheDocument();
+  });
+
+  it('opens and closes the Import CAS modal without React hook errors', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <MemoryRouter>
+            <PortfolioPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+
+    const importBtns = screen.getAllByRole('button', { name: /Import CAS/i });
+    expect(importBtns.length).toBeGreaterThan(0);
+
+    fireEvent.click(importBtns[0]!);
+
+    expect(screen.getByText(/Import Investments from NSDL \/ CDSL CAS/i)).toBeInTheDocument();
+    expect(screen.getByText(/Load Sample CDSL CAS/i)).toBeInTheDocument();
+    expect(screen.getByText(/Load Sample NSDL CAS/i)).toBeInTheDocument();
   });
 });

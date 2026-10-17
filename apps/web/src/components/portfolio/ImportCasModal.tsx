@@ -75,8 +75,6 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
   const [items, setItems] = useState<ImportCasItemDto[]>([]);
   const [importSummary, setImportSummary] = useState<ImportSummaryResult | null>(null);
 
-  if (!isOpen) return null;
-
   // Reset state
   const handleReset = () => {
     setStep('upload');
@@ -199,6 +197,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
   };
 
   const selectedCount = items.filter((i) => i.selected).length;
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
