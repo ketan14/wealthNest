@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { HomePage } from '@/pages/HomePage';
 import { PortfolioPage } from '@/pages/PortfolioPage';
+import { TransactionsPage } from '@/pages/TransactionsPage';
 import { PlaceholderModulePage } from '@/pages/PlaceholderModulePage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
@@ -28,16 +29,7 @@ export function App() {
             <Route path="/" element={<AppShell />}>
               <Route index element={<HomePage />} />
               <Route path="portfolio" element={<PortfolioPage />} />
-              <Route
-                path="transactions"
-                element={
-                  <PlaceholderModulePage
-                    title="Transactions & Cashflow"
-                    description="Inflows, outflows, transfers, asset acquisitions, and audit log history."
-                    targetPhase="Phase 3"
-                  />
-                }
-              />
+              <Route path="transactions" element={<TransactionsPage />} />
               <Route
                 path="analytics"
                 element={
