@@ -8,6 +8,7 @@ export type ParsedAssetType = 'equity' | 'mutual_fund' | 'bond' | 'commodity' | 
 export interface ParsedCasHolding {
   readonly isin: string;
   readonly name: string;
+  readonly ticker?: string;
   readonly folioOrDemat?: string;
   readonly assetType: ParsedAssetType;
   readonly assetClassId: string;

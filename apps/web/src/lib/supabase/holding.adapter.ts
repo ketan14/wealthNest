@@ -154,13 +154,18 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
 
   async deleteHolding(holdingId: string, userId: string): Promise<Result<void>> {
     try {
+      // Demo holdings do not exist in PostgreSQL
+      if (holdingId.startsWith('demo-')) {
+        return ok(undefined);
+      }
+
       // Find asset ID to cascade delete
       const { data: holding } = await supabase
         .from('holdings')
         .select('asset_id')
         .eq('id', holdingId)
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       const { error: deleteHoldingError } = await supabase
         .from('holdings')
@@ -173,11 +178,15 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
       }
 
       if (holding?.asset_id) {
-        await supabase
-          .from('assets')
-          .delete()
-          .eq('id', holding.asset_id)
-          .eq('user_id', userId);
+        try {
+          await supabase
+            .from('assets')
+            .delete()
+            .eq('id', holding.asset_id)
+            .eq('user_id', userId);
+        } catch {
+          // Non-blocking asset cleanup
+        }
       }
 
       return ok(undefined);

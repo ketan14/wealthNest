@@ -1,4 +1,4 @@
-import { CurrencyCode, CURRENCIES } from './currency.js';
+import { CurrencyCode, CURRENCIES, BASE_FX_RATES_TO_INR } from './currency.js';
 
 /**
  * Immutable Money Value Object
@@ -56,6 +56,21 @@ export class Money {
 
   isZero(): boolean {
     return this.cents === 0n;
+  }
+
+  /**
+   * Converts money into another currency using baseline or provided exchange rate.
+   */
+  convertTo(targetCurrency: CurrencyCode, customRate?: number): Money {
+    if (this.currency === targetCurrency) return this;
+
+    const rateFrom = BASE_FX_RATES_TO_INR[this.currency] ?? 1;
+    const rateTo = BASE_FX_RATES_TO_INR[targetCurrency] ?? 1;
+    const effectiveRate = customRate ?? (rateFrom / rateTo);
+
+    const fromDecimal = this.toDecimal();
+    const convertedDecimal = fromDecimal * effectiveRate;
+    return Money.fromDecimal(convertedDecimal, targetCurrency);
   }
 
   format(locale?: string): string {

@@ -36,6 +36,37 @@ describe('ParseCasPdfUseCase', () => {
     }
   });
 
+  it('retries with uppercase password when lowercase password fails decryption', async () => {
+    const mockExtractor: PdfExtractorPort = {
+      extractPages: vi.fn().mockImplementation((_buf, pass) => {
+        if (pass === 'ABCDE1234F01011990') {
+          return Promise.resolve(
+            ok({
+              pages: [
+                `Central Depository Services (India) Limited
+                 Statement as on : 31-Mar-2026
+                 EQUITY SHARES:
+                 ISIN INE002A01018 RELIANCE INDUSTRIES LTD 50 2500 125000`,
+              ],
+              totalPageCount: 1,
+            })
+          );
+        }
+        return Promise.resolve(err(new Error('Password required to decrypt document')));
+      }),
+    };
+
+    const useCase = new ParseCasPdfUseCase(mockExtractor);
+    // User passed lowercase password with leading/trailing spaces
+    const result = await useCase.execute(new ArrayBuffer(1024), '  abcde1234f01011990  ');
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.value.provider).toBe('CDSL');
+      expect(result.value.items).toHaveLength(1);
+    }
+  });
+
   it('extracts CDSL statement and maps to preview DTO', async () => {
     const mockPages = [
       `Central Depository Services (India) Limited
@@ -57,6 +88,8 @@ describe('ParseCasPdfUseCase', () => {
       expect(result.value.statementDate).toBe('2026-03-31');
       expect(result.value.items).toHaveLength(1);
       expect(result.value.items[0]!.isin).toBe('INE002A01018');
+      expect(result.value.items[0]!.name).toBe('RELIANCE INDUSTRIES LTD');
+      expect(result.value.items[0]!.ticker).toBe('RELIANCE');
       expect(result.value.items[0]!.quantity).toBe(50);
       expect(result.value.items[0]!.currentValueCents).toBe(12500000);
       expect(result.value.items[0]!.selected).toBe(true);

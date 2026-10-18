@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PortfolioPage } from '../pages/PortfolioPage';
@@ -67,5 +67,85 @@ describe('PortfolioPage Component', () => {
     expect(screen.getByText(/Import Investments from NSDL \/ CDSL CAS/i)).toBeInTheDocument();
     expect(screen.getByText(/Load Sample CDSL CAS/i)).toBeInTheDocument();
     expect(screen.getByText(/Load Sample NSDL CAS/i)).toBeInTheDocument();
+  });
+
+  it('deletes demo holding like Sovereign Gold Bond 2028 when confirmed', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <MemoryRouter>
+            <PortfolioPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+
+    expect(screen.getByText('Sovereign Gold Bond 2028')).toBeInTheDocument();
+
+    const deleteBtns = screen.getAllByTitle('Delete Position');
+    // Sovereign Gold Bond 2028 is demo holding index 3
+    fireEvent.click(deleteBtns[3]!);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Sovereign Gold Bond 2028')).not.toBeInTheDocument();
+    });
+  });
+
+  it('updates portfolio holdings attaching security name with Asset / Ticker from Import CAS', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <MemoryRouter>
+            <PortfolioPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+
+    // Open Import CAS Modal
+    const importBtns = screen.getAllByRole('button', { name: /Import CAS/i });
+    fireEvent.click(importBtns[0]!);
+
+    // Click Load Sample CDSL CAS
+    const cdslBtn = screen.getByText(/Load Sample CDSL CAS/i);
+    fireEvent.click(cdslBtn);
+
+    // Verify preview table displays security name and attached ticker
+    await waitFor(() => {
+      expect(screen.getByText('RELIANCE INDUSTRIES LTD. - EQ')).toBeInTheDocument();
+    });
+
+    // Confirm & Import
+    const confirmBtn = screen.getByRole('button', { name: /Confirm & Import/i });
+    fireEvent.click(confirmBtn);
+
+    // Verify import completed summary
+    await waitFor(() => {
+      expect(screen.getByText(/CAS Import Completed Successfully!/i)).toBeInTheDocument();
+    });
+
+    // Click "View Updated Portfolio"
+    const viewPortfolioBtn = screen.getByRole('button', { name: /View Updated Portfolio/i });
+    fireEvent.click(viewPortfolioBtn);
+
+    // Verify modal is closed and Portfolio table now displays updated positions with security name attached to Asset / Ticker
+    await waitFor(() => {
+      expect(screen.getByText('RELIANCE INDUSTRIES LTD. - EQ')).toBeInTheDocument();
+      expect(screen.getByText('RELIANCE')).toBeInTheDocument();
+    });
   });
 });

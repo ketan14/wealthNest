@@ -34,9 +34,9 @@ export class GetPortfolioSummaryUseCase {
     // Map DTOs to pure domain calculation input using Money value objects
     const valuationItems: HoldingValuationItem[] = holdings.map((h) => {
       const holdingCurrency = (h.currency as CurrencyCode) || currency;
-      const totalCostCents = BigInt(Math.round(h.quantity * h.unitCostCents));
+      const totalCostCents = BigInt(Math.round((Number(h.quantity) || 0) * (Number(h.unitCostCents) || 0)));
       const costBasis = Money.fromCents(totalCostCents, holdingCurrency);
-      const currentValue = Money.fromCents(BigInt(h.currentValueCents), holdingCurrency);
+      const currentValue = Money.fromCents(BigInt(Math.round(Number(h.currentValueCents) || 0)), holdingCurrency);
 
       return {
         holdingId: h.holdingId,

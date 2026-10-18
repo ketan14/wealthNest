@@ -31,7 +31,7 @@ import {
 interface ImportCasModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (importedItems?: ImportCasItemDto[]) => void;
 }
 
 // Sample sanitized CDSL & NSDL text fixtures for quick testing without personal files
@@ -101,7 +101,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
       const extractor = new PdfJsTextExtractorAdapter();
       const useCase = new ParseCasPdfUseCase(extractor);
 
-      const res = await useCase.execute(arrayBuffer, password || undefined);
+      const cleanPassword = password.trim();
+      const res = await useCase.execute(arrayBuffer, cleanPassword || undefined);
       if (!res.success) throw res.error;
       return res.value;
     },
@@ -178,7 +179,9 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
       if (user) {
         queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
       }
-      if (onSuccess) onSuccess();
+      if (onSuccess) {
+        onSuccess(items.filter((i) => i.selected));
+      }
     },
     onError: (err) => {
       setError(err instanceof Error ? err.message : 'Import failed');
@@ -294,31 +297,74 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
             </div>
 
             {/* Password Input */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-primary" />
-                Document Password (if encrypted)
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="e.g. ABCDE1234F01011990 (PAN + DOB DDMMYYYY)"
-                  className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 pr-10 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            {(() => {
+              const isPasswordError = Boolean(error && error.toLowerCase().includes('password'));
+              const hasLowercase = Boolean(password && password !== password.toUpperCase());
+
+              return (
+                <div
+                  className={`space-y-2 p-3 rounded-xl border transition-all ${
+                    isPasswordError
+                      ? 'border-amber-500/60 bg-amber-500/10 ring-1 ring-amber-500/30'
+                      : 'border-border/60 bg-secondary/20'
+                  }`}
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                Tip: CDSL & NSDL PDFs are typically protected with your 10-digit PAN in uppercase + Date of Birth (DDMMYYYY).
-              </p>
-            </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                      <Lock
+                        className={`w-3.5 h-3.5 ${
+                          isPasswordError ? 'text-amber-400 animate-pulse' : 'text-primary'
+                        }`}
+                      />
+                      Document Password (if encrypted)
+                    </label>
+                    {hasLowercase && (
+                      <button
+                        type="button"
+                        onClick={() => setPassword((prev) => prev.toUpperCase())}
+                        className="text-[10px] text-primary hover:underline font-semibold tracking-wide"
+                      >
+                        Convert to UPPERCASE
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (error) setError(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && file && !parseMutation.isPending) {
+                          e.preventDefault();
+                          parseMutation.mutate();
+                        }
+                      }}
+                      placeholder="e.g. ABCDE1234F01011990 (PAN + DOB DDMMYYYY)"
+                      className="w-full h-9 rounded-lg bg-card border border-border px-3 pr-10 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      autoFocus={isPasswordError}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Tip: CDSL & NSDL PDFs are typically protected with your{' '}
+                    <span className="font-semibold text-foreground">10-digit PAN in UPPERCASE</span> +{' '}
+                    <span className="font-semibold text-foreground">Date of Birth (DDMMYYYY)</span>.
+                  </p>
+                </div>
+              );
+            })()}
 
             {/* Sample Fixtures Quick-Test Buttons */}
             <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 space-y-2">
@@ -390,10 +436,19 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
             </div>
 
             {previewData.warnings.length > 0 && (
-              <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-400 space-y-1">
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 space-y-1.5">
+                <div className="flex items-center gap-1.5 font-semibold text-amber-400">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>Statement Parser Notice ({previewData.warnings.length})</span>
+                </div>
                 {previewData.warnings.map((w, i) => (
-                  <p key={i}>⚠️ {w}</p>
+                  <p key={i} className="text-[11px] text-amber-200/90 leading-relaxed pl-5">
+                    • {w}
+                  </p>
                 ))}
+                <p className="text-[11px] text-muted-foreground pt-0.5 pl-5">
+                  Closed folios with 0 balance can be ignored safely. If you hold units in an unextracted scheme, you can still import the rest of your portfolio now and add that scheme anytime via &quot;Add Holding&quot;.
+                </p>
               </div>
             )}
 
@@ -428,7 +483,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                 <thead>
                   <tr className="border-b border-border bg-secondary/40 text-muted-foreground sticky top-0 backdrop-blur-sm">
                     <th className="py-2.5 px-3 w-10 text-center">Import</th>
-                    <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Security / ISIN</th>
+                    <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Asset / Ticker</th>
                     <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Asset Class</th>
                     <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Units</th>
                     <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Reported Value</th>
@@ -451,7 +506,14 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                         />
                       </td>
                       <td className="py-2.5 px-3 font-sans">
-                        <p className="font-semibold text-foreground text-xs">{item.name}</p>
+                        <div className="font-semibold text-foreground text-xs flex items-center gap-1.5 flex-wrap">
+                          <span>{item.name}</span>
+                          {item.ticker && (
+                            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-secondary/80 border border-border text-primary font-bold">
+                              {item.ticker}
+                            </span>
+                          )}
+                        </div>
                         <span className="font-mono text-[10px] text-muted-foreground">{item.isin}</span>
                       </td>
                       <td className="py-2.5 px-3 font-sans">

@@ -21,7 +21,24 @@ export class ParseCasPdfUseCase {
     }
 
     // 2. Extract raw text pages from PDF via port
-    const extractionResult = await this.pdfExtractor.extractPages(pdfBytes, password);
+    const trimmedPass = password?.trim();
+    let extractionResult = await this.pdfExtractor.extractPages(pdfBytes, trimmedPass || undefined);
+
+    // Fallback: If decryption failed and password contained lowercase letters, retry with uppercase
+    if (!extractionResult.success && trimmedPass && trimmedPass !== trimmedPass.toUpperCase()) {
+      const errMsg = extractionResult.error.message.toLowerCase();
+      if (
+        errMsg.includes('password') ||
+        errMsg.includes('encrypt') ||
+        errMsg.includes('needpassword') ||
+        errMsg.includes('bad decrypt')
+      ) {
+        const uppercaseRetry = await this.pdfExtractor.extractPages(pdfBytes, trimmedPass.toUpperCase());
+        if (uppercaseRetry.success) {
+          extractionResult = uppercaseRetry;
+        }
+      }
+    }
 
     if (!extractionResult.success) {
       const errMsg = extractionResult.error.message.toLowerCase();
@@ -62,13 +79,16 @@ export class ParseCasPdfUseCase {
 
     // 4. Map to preview DTO
     const items: ImportCasItemDto[] = parsed.holdings.map((h) => {
-      const unitCostCents = h.reportedNavOrPrice
+      const unitCostCents = h.unitCost
+        ? Number(h.unitCost.cents)
+        : h.reportedNavOrPrice
         ? Number(h.reportedNavOrPrice.cents)
         : Math.round(Number(h.reportedMarketValue.cents) / (h.quantity || 1));
 
       return {
         isin: h.isin,
         name: h.name,
+        ticker: h.ticker,
         assetClassId: h.assetClassId,
         quantity: h.quantity,
         unitCostCents,

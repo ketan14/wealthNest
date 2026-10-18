@@ -20,3 +20,18 @@ export const CURRENCIES: Record<CurrencyCode, CurrencyMetadata> = {
   INR: { code: 'INR', symbol: '₹', decimalPlaces: 2, name: 'Indian Rupee' },
   CHF: { code: 'CHF', symbol: 'CHF', decimalPlaces: 2, name: 'Swiss Franc' },
 };
+
+/**
+ * Baseline currency conversion rates relative to INR (1 Unit = X INR).
+ * Used for multi-currency portfolio aggregations and cross-border assets.
+ */
+export const BASE_FX_RATES_TO_INR: Record<CurrencyCode, number> = {
+  INR: 1,
+  USD: 86.5,
+  EUR: 94.0,
+  GBP: 110.0,
+  CAD: 62.0,
+  AUD: 56.0,
+  JPY: 0.58,
+  CHF: 98.0,
+};

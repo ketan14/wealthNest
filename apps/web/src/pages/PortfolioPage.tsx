@@ -34,6 +34,8 @@ import {
   Sparkles,
   Search,
   FileSpreadsheet,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -153,6 +155,16 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
   },
 ];
 
+const ASSET_CLASS_META_MAP: Record<string, { name: string; color: string }> = {
+  equity: { name: 'Equities & Mutual Funds', color: '#3b82f6' },
+  mutual_fund: { name: 'Equities & Mutual Funds', color: '#3b82f6' },
+  fixed_income: { name: 'Fixed Income & Debt', color: '#8b5cf6' },
+  commodity: { name: 'Gold & Precious Metals', color: '#eab308' },
+  real_estate: { name: 'Real Estate & Land', color: '#f59e0b' },
+  cash: { name: 'Cash & Liquid Savings', color: '#10b981' },
+  crypto: { name: 'Digital Assets & Crypto', color: '#ec4899' },
+};
+
 export function PortfolioPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -160,6 +172,8 @@ export function PortfolioPage() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Local state for interactive demo mode when not logged in
   const [localDemoHoldings, setLocalDemoHoldings] = useState<HoldingDetailDto[]>(DEMO_HOLDINGS);
@@ -201,9 +215,9 @@ export function PortfolioPage() {
 
     const valuationItems: HoldingValuationItem[] = localDemoHoldings.map((h) => {
       const holdingCurrency = (h.currency as CurrencyCode) || 'INR';
-      const totalCostCents = BigInt(Math.round(h.quantity * h.unitCostCents));
+      const totalCostCents = BigInt(Math.round((Number(h.quantity) || 0) * (Number(h.unitCostCents) || 0)));
       const costBasis = Money.fromCents(totalCostCents, holdingCurrency);
-      const currentValue = Money.fromCents(BigInt(h.currentValueCents), holdingCurrency);
+      const currentValue = Money.fromCents(BigInt(Math.round(Number(h.currentValueCents) || 0)), holdingCurrency);
 
       return {
         holdingId: h.holdingId,
@@ -282,6 +296,16 @@ export function PortfolioPage() {
   // Mutation: Delete Holding
   const deleteHoldingMutation = useMutation({
     mutationFn: async (holdingId: string) => {
+      setDeleteError(null);
+      setDeletingId(holdingId);
+
+      // 1. If it's a demo holding, immediately delete from local state
+      if (holdingId.startsWith('demo-')) {
+        setLocalDemoHoldings((prev) => prev.filter((h) => h.holdingId !== holdingId));
+        return;
+      }
+
+      // 2. If authenticated user and real database holding
       if (user) {
         const useCase = new DeleteHoldingUseCase(holdingAdapter);
         const res = await useCase.execute(holdingId, user.id);
@@ -291,9 +315,15 @@ export function PortfolioPage() {
       }
     },
     onSuccess: () => {
+      setDeletingId(null);
       if (user) {
         queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
+        refetch();
       }
+    },
+    onError: (err) => {
+      setDeletingId(null);
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete holding.');
     },
   });
 
@@ -588,6 +618,21 @@ export function PortfolioPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          {deleteError && (
+            <div className="p-3 mx-4 my-3 rounded-xl bg-destructive/15 text-destructive border border-destructive/30 text-xs flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{deleteError}</span>
+              </div>
+              <button
+                onClick={() => setDeleteError(null)}
+                className="text-xs hover:underline font-semibold cursor-pointer"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
           {isLoadingDb ? (
             <div className="p-12 text-center text-muted-foreground text-sm">
               Connecting to PostgreSQL and calculating balances...
@@ -732,15 +777,20 @@ export function PortfolioPage() {
                         {/* Delete Action */}
                         <td className="py-3.5 px-4 text-center">
                           <button
+                            disabled={deletingId === h.holdingId}
                             onClick={() => {
-                              if (confirm(`Delete holding "${h.name}" from your portfolio?`)) {
+                              if (window.confirm(`Delete holding "${h.name}" from your portfolio?`)) {
                                 deleteHoldingMutation.mutate(h.holdingId);
                               }
                             }}
                             title="Delete Position"
-                            className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            {deletingId === h.holdingId ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
                           </button>
                         </td>
                       </tr>
@@ -767,11 +817,63 @@ export function PortfolioPage() {
       <ImportCasModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
-        onSuccess={() => {
+        onSuccess={(importedItems) => {
           if (user) {
             queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
+            refetch();
           }
-          refetch();
+          if (importedItems && importedItems.length > 0) {
+            setLocalDemoHoldings((prev) => {
+              const updated = [...prev];
+              for (const item of importedItems) {
+                // Match existing holding by ticker, or name
+                const idx = updated.findIndex((h) => {
+                  const matchTicker = Boolean(
+                    item.ticker && h.ticker && h.ticker.toUpperCase() === item.ticker.toUpperCase()
+                  );
+                  const matchName =
+                    h.name.toLowerCase() === item.name.toLowerCase() ||
+                    (item.name && h.name.toLowerCase().includes(item.name.toLowerCase())) ||
+                    (item.name && item.name.toLowerCase().includes(h.name.toLowerCase()));
+                  return matchTicker || matchName;
+                });
+
+                if (idx >= 0) {
+                  // Update existing holding position: attach security name and ticker from CAS
+                  updated[idx] = {
+                    ...updated[idx]!,
+                    name: item.name,
+                    ticker: item.ticker || updated[idx]!.ticker,
+                    quantity: item.quantity,
+                    unitCostCents: item.unitCostCents,
+                    currentValueCents: item.currentValueCents,
+                    updatedAt: new Date().toISOString(),
+                  };
+                } else {
+                  // Add as a new holding position
+                  const classMeta = ASSET_CLASS_META_MAP[item.assetClassId] || {
+                    name: item.assetClassId.toUpperCase(),
+                    color: '#3b82f6',
+                  };
+                  updated.unshift({
+                    holdingId: `cas-${item.isin || Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                    assetId: `asset-${item.isin || Date.now()}`,
+                    name: item.name,
+                    ticker: item.ticker,
+                    assetClassId: item.assetClassId,
+                    assetClassName: classMeta.name,
+                    assetClassColor: classMeta.color,
+                    quantity: item.quantity,
+                    unitCostCents: item.unitCostCents,
+                    currentValueCents: item.currentValueCents,
+                    currency: item.currency || 'INR',
+                    updatedAt: new Date().toISOString(),
+                  });
+                }
+              }
+              return updated;
+            });
+          }
         }}
       />
     </div>

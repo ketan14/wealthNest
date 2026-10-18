@@ -5,6 +5,7 @@ import {
   HoldingRepositoryPort,
   HoldingDetailDto,
   AddHoldingUseCase,
+  DeleteHoldingUseCase,
 } from '../index.js';
 
 describe('GetPortfolioSummaryUseCase (India First)', () => {
@@ -69,3 +70,20 @@ describe('AddHoldingUseCase', () => {
     expect(result.success).toBe(false);
   });
 });
+
+describe('DeleteHoldingUseCase', () => {
+  it('invokes repository deleteHolding method with correct holdingId and userId', async () => {
+    const mockRepo: HoldingRepositoryPort = {
+      listDetailsByUser: vi.fn(),
+      createHoldingWithAsset: vi.fn(),
+      deleteHolding: vi.fn().mockResolvedValue(ok(undefined)),
+    };
+
+    const useCase = new DeleteHoldingUseCase(mockRepo);
+    const result = await useCase.execute('holding-123', 'user-456');
+
+    expect(result.success).toBe(true);
+    expect(mockRepo.deleteHolding).toHaveBeenCalledWith('holding-123', 'user-456');
+  });
+});
+

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { CdslCasParser } from '../cas/cdsl-cas-parser.js';
 import { NsdlCasParser } from '../cas/nsdl-cas-parser.js';
 import { CasParserRegistry } from '../cas/cas-parser-registry.js';
-import { isValidIsin, isIndianIsin, inferAssetClassFromIsin } from '../cas/isin.js';
+import { isValidIsin, isIndianIsin, inferAssetClassFromIsin, inferTickerFromSecurity } from '../cas/isin.js';
 
 describe('ISIN Validation & Asset Class Inference', () => {
   it('validates 12-character ISO 6166 ISINs', () => {
@@ -24,6 +24,15 @@ describe('ISIN Validation & Asset Class Inference', () => {
     expect(inferAssetClassFromIsin('INF209K01164', 'Nippon India Nifty BeES').assetClassId).toBe('equity');
     expect(inferAssetClassFromIsin('IN0020180017', 'Sovereign Gold Bond 2028').assetClassId).toBe('commodity');
     expect(inferAssetClassFromIsin('INE040A01034', 'Embassy Office Parks REIT').assetClassId).toBe('real_estate');
+  });
+
+  it('attaches security name with asset ticker symbol correctly', () => {
+    expect(inferTickerFromSecurity('INE002A01018', 'RELIANCE INDUSTRIES LTD. - EQ')).toBe('RELIANCE');
+    expect(inferTickerFromSecurity('INF209K01164', 'NIPPON INDIA NIFTY 50 BEES ETF')).toBe('NIFTYBEES');
+    expect(inferTickerFromSecurity('IN0020180017', 'SOVEREIGN GOLD BOND 2028-29')).toBe('SGB-2028');
+    expect(inferTickerFromSecurity('INE467B01029', 'TATA CONSULTANCY SERVICES LTD')).toBe('TCS');
+    expect(inferTickerFromSecurity('INE040A01034', 'HDFC BANK LIMITED')).toBe('HDFCBANK');
+    expect(inferTickerFromSecurity('INF740K01PX1', 'DSP FLEXI CAP FUND - REGULAR PLAN')).toBe('DSP-FLEXI');
   });
 });
 
@@ -68,6 +77,7 @@ describe('CDSL CAS Statement Parser (Sanitized Fixture)', () => {
     // Verify Reliance
     const reliance = result.holdings.find((h) => h.isin === 'INE002A01018')!;
     expect(reliance).toBeDefined();
+    expect(reliance.ticker).toBe('RELIANCE');
     expect(reliance.quantity).toBe(80);
     expect(reliance.reportedMarketValue.toDecimal()).toBe(236000);
     expect(reliance.assetClassId).toBe('equity');
@@ -75,6 +85,7 @@ describe('CDSL CAS Statement Parser (Sanitized Fixture)', () => {
     // Verify SGB
     const sgb = result.holdings.find((h) => h.isin === 'IN0020180017')!;
     expect(sgb).toBeDefined();
+    expect(sgb.ticker).toBe('SGB-2028');
     expect(sgb.quantity).toBe(30);
     expect(sgb.reportedMarketValue.toDecimal()).toBe(229500);
     expect(sgb.assetClassId).toBe('commodity');
@@ -108,17 +119,100 @@ describe('NSDL CAS Statement Parser (Sanitized Fixture)', () => {
     expect(result.holdings).toHaveLength(2);
 
     const tcs = result.holdings.find((h) => h.isin === 'INE467B01029')!;
+    expect(tcs.ticker).toBe('TCS');
     expect(tcs.quantity).toBe(40);
     expect(tcs.reportedMarketValue.toDecimal()).toBe(166000);
 
     const hdfc = result.holdings.find((h) => h.isin === 'INE040A01034')!;
+    expect(hdfc.ticker).toBe('HDFCBANK');
     expect(hdfc.quantity).toBe(50);
     expect(hdfc.reportedMarketValue.toDecimal()).toBe(80000);
 
     // Total: 1,66,000 + 80,000 = 2,46,000
     expect(result.totalReportedValue.toDecimal()).toBe(246000);
   });
+
+  it('reliably parses multi-line mutual fund schemes like INF740K01PX1', () => {
+    const multiLineMfStatement = `
+      Central Depository Services (India) Limited
+      Consolidated Account Statement (CDSL e-CAS)
+      Statement as on : 31-Mar-2026
+
+      MUTUAL FUNDS HOLDINGS:
+      DSP MUTUAL FUND
+      DSP FLEXI CAP FUND - REGULAR PLAN - GROWTH
+      ISIN: INF740K01PX1 Folio No: 1234567/89
+      1,245.500 82.450 1,02,691.48
+    `;
+
+    const parser = new CdslCasParser();
+    const result = parser.parse([multiLineMfStatement]);
+
+    expect(result.warnings).toHaveLength(0);
+    expect(result.holdings).toHaveLength(1);
+
+    const dsp = result.holdings[0]!;
+    expect(dsp.isin).toBe('INF740K01PX1');
+    expect(dsp.name).toContain('DSP FLEXI CAP FUND');
+    expect(dsp.quantity).toBe(1245.5);
+    expect(dsp.reportedMarketValue.toDecimal()).toBe(102691.48);
+    expect(dsp.assetType).toBe('mutual_fund');
+  });
+
+  it('handles explicit zero-balance closed folios with a descriptive warning', () => {
+    const zeroBalanceStatement = `
+      Central Depository Services (India) Limited
+      Statement as on : 31-Mar-2026
+
+      MUTUAL FUNDS:
+      DSP MUTUAL FUND
+      INF740K01PX1 DSP FLEXI CAP FUND
+      Units: 0.000 NAV: 82.45 Value: 0.00
+    `;
+
+    const parser = new CdslCasParser();
+    const result = parser.parse([zeroBalanceStatement]);
+
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]).toContain('reported 0 units');
+  });
+
+  it('parses real CDSL Page 12 Mutual Fund Folio table with Units, NAV, Cumulative Invested, and Valuation', () => {
+    const realCdslMfTable = `
+      Central Depository Services (India) Limited
+      Statement as on : 30-Sep-2026
+      MUTUAL FUND UNITS HELD AS ON 30-09-2026
+      Scheme Name ISIN Folio No. ARN Code Closing Bal (Units) NAV (Rs) Cumulative Amount Invested (in INR) Valuation (Rs) Average Total Expense Ratio Gross Commission Paid Unrealised Profit/Loss Unrealised Profit/Loss (%)
+      782 - DSP Mid Cap Fund - Direct Plan - Growth INF740K01PX1 4685175/66 ARN-DIRECT 625.535 165.517 60,708.71 1,03,536.68 0 .8 0 42,827.97 70.55
+      001ZG - Parag Parikh Flexi Cap Fund - Direct Plan Growth INF879O01027 10720220 ARN-DIRECT 2118.914 88.8355 1,36,000.00 1,88,234.78 0 .7 0 52,234.78 38.41
+    `;
+
+    const parser = new CdslCasParser();
+    const result = parser.parse([realCdslMfTable]);
+
+    expect(result.holdings).toHaveLength(2);
+
+    const dsp = result.holdings.find((h) => h.isin === 'INF740K01PX1')!;
+    expect(dsp).toBeDefined();
+    expect(dsp.name).toContain('DSP Mid Cap Fund');
+    expect(dsp.ticker).toBe('DSP-MIDCAP');
+    expect(dsp.quantity).toBe(625.535);
+    expect(dsp.reportedNavOrPrice?.toDecimal()).toBe(165.52);
+    expect(dsp.reportedMarketValue.toDecimal()).toBe(103536.68);
+    expect(dsp.unitCost).toBeDefined();
+    expect(dsp.folioOrDemat).toBe('4685175/66');
+
+    const ppfas = result.holdings.find((h) => h.isin === 'INF879O01027')!;
+    expect(ppfas).toBeDefined();
+    expect(ppfas.name).toContain('Parag Parikh Flexi Cap Fund');
+    expect(ppfas.ticker).toBe('PPFAS-FLEXI');
+    expect(ppfas.quantity).toBe(2118.914);
+    expect(ppfas.reportedNavOrPrice?.toDecimal()).toBe(88.84);
+    expect(ppfas.reportedMarketValue.toDecimal()).toBe(188234.78);
+    expect(ppfas.folioOrDemat).toBe('10720220');
+  });
 });
+
 
 describe('CasParserRegistry', () => {
   it('automatically routes to appropriate parser based on statement header', () => {

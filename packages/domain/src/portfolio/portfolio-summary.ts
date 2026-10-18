@@ -47,13 +47,23 @@ export function calculatePortfolioSummary(
     };
   }
 
-  // 1. Calculate overall portfolio totals
+  // 1. Calculate overall portfolio totals (converting any cross-currency assets to target currency)
   let totalValue = Money.zero(currency);
   let totalCost = Money.zero(currency);
 
   for (const item of items) {
-    totalValue = totalValue.add(item.currentValue);
-    totalCost = totalCost.add(item.costBasis);
+    const valInTarget =
+      item.currentValue.currency === currency
+        ? item.currentValue
+        : item.currentValue.convertTo(currency);
+
+    const costInTarget =
+      item.costBasis.currency === currency
+        ? item.costBasis
+        : item.costBasis.convertTo(currency);
+
+    totalValue = totalValue.add(valInTarget);
+    totalCost = totalCost.add(costInTarget);
   }
 
   // 2. Calculate unrealized gain/loss
@@ -77,14 +87,19 @@ export function calculatePortfolioSummary(
   >();
 
   for (const item of items) {
+    const valInTarget =
+      item.currentValue.currency === currency
+        ? item.currentValue
+        : item.currentValue.convertTo(currency);
+
     const existing = classMap.get(item.assetClassId);
     if (existing) {
-      existing.totalValue = existing.totalValue.add(item.currentValue);
+      existing.totalValue = existing.totalValue.add(valInTarget);
     } else {
       classMap.set(item.assetClassId, {
         name: item.assetClassName,
         colorHex: item.colorHex,
-        totalValue: item.currentValue,
+        totalValue: valInTarget,
       });
     }
   }

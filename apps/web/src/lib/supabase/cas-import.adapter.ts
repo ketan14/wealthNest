@@ -28,6 +28,15 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
 
             if (assetByIsin) {
               existingAssetId = assetByIsin.id;
+              // Ensure security name and ticker are attached/updated on the existing asset
+              await supabase
+                .from('assets')
+                .update({
+                  name: item.name,
+                  ...(item.ticker ? { ticker: item.ticker } : {}),
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', existingAssetId);
             }
           }
 
@@ -41,10 +50,16 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
 
             if (assetByName) {
               existingAssetId = assetByName.id;
-              // If found by name but missing ISIN, backfill the ISIN
-              if (item.isin) {
-                await supabase.from('assets').update({ isin: item.isin }).eq('id', existingAssetId);
-              }
+              // Ensure security name, ISIN, and ticker are attached/updated on the existing asset
+              await supabase
+                .from('assets')
+                .update({
+                  name: item.name,
+                  ...(item.isin ? { isin: item.isin } : {}),
+                  ...(item.ticker ? { ticker: item.ticker } : {}),
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', existingAssetId);
             }
           }
 
