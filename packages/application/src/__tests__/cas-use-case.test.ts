@@ -165,4 +165,59 @@ describe('ConfirmCasImportUseCase', () => {
       })
     );
   });
+
+  it('filters selected transactions and passes them to repository', async () => {
+    const mockRepo: CasImportRepositoryPort = {
+      upsertHoldingsFromCas: vi.fn().mockResolvedValue(
+        ok({
+          batchId: 'batch-2',
+          total: 1,
+          imported: 1,
+          updated: 0,
+          skipped: 0,
+          failed: 0,
+          transactionsImported: 1,
+        })
+      ),
+    };
+
+    const useCase = new ConfirmCasImportUseCase(mockRepo);
+    const result = await useCase.execute({
+      userId: 'user-qa',
+      provider: 'CDSL',
+      statementDate: '2026-09-30',
+      items: [],
+      transactions: [
+        {
+          isin: 'INF194K01V89',
+          schemeName: 'Bandhan Large & Mid Cap Fund',
+          date: '2026-09-21',
+          description: 'Redemption',
+          type: 'sell',
+          amountCents: 7000000,
+          units: 421.478,
+          currency: 'INR',
+          selected: true,
+        },
+        {
+          isin: 'INF194K01524',
+          schemeName: 'Bandhan Large & Mid Cap Fund Regular',
+          date: '2026-09-01',
+          description: 'SIP',
+          type: 'buy',
+          amountCents: 199990,
+          units: 14.104,
+          currency: 'INR',
+          selected: false, // Deselected
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    expect(mockRepo.upsertHoldingsFromCas).toHaveBeenCalledWith(
+      expect.objectContaining({
+        transactions: [expect.objectContaining({ isin: 'INF194K01V89', type: 'sell' })],
+      })
+    );
+  });
 });

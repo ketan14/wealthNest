@@ -319,6 +319,63 @@ describe('NSDL CAS Statement Parser (Sanitized Fixture)', () => {
     expect(bandhan.quantity).toBe(348.034);
     expect(bandhan.reportedMarketValue.toDecimal()).toBe(47319.4);
   });
+
+  it('parses mutual funds held with MF/RTA including transactions and closing balance', () => {
+    const rtaSnippet = `
+      Central Depository Services (India) Limited
+      Statement as on : 30-Sep-2026
+      MUTUAL FUND UNITS HELD WITH MF/RTA
+      STATEMENT OF TRANSACTIONS FOR THE PERIOD FROM 01-09-2026 TO 30-09-2026
+      IDFC Mutual Fund
+      D201 - Bandhan Large & Mid Cap Fund-Direct Plan-Growth ( Formerly Known as Bandhan Core Equity Fund-Direct Plan-Growth)
+      ISIN : INF194K01V89 UCC : MFSTCH0030
+      Date Transaction Description Amount (\`) NAV (\`) Price (\`) Units Stamp Duty (\`)
+      Opening Balance 2689.717
+      21-09-2026
+      *Redemption - Electronic Payment - via myCAMS Mobile App - IN22626624053919 209928335
+      -70000 166.084 166.084 -421.478 0 0 0
+      STT .7
+      Closing Balance 2268.239
+
+      ( ₹ ) 201 - Bandhan Large & Mid Cap Fund-Regular Plan-Growth
+      ISIN : INF194K01524 UCC : MFSTCH0030
+      Opening Balance 333.93
+      01-09-2026
+      Net Systematic Purchase - Instalment 109/988
+      1999.9 141.796 141.796 14.104 .1 0 0
+      Closing Balance 348.034
+    `;
+
+    const parser = new CdslCasParser();
+    const result = parser.parse([rtaSnippet]);
+
+    // Holdings extracted from Closing Balance
+    expect(result.holdings).toHaveLength(2);
+    const bandhanDirect = result.holdings.find((h) => h.isin === 'INF194K01V89')!;
+    expect(bandhanDirect).toBeDefined();
+    expect(bandhanDirect.name).toBe('Bandhan Large & Mid Cap Fund-Direct Plan-Growth');
+    expect(bandhanDirect.quantity).toBe(2268.239);
+    expect(bandhanDirect.reportedNavOrPrice?.toDecimal()).toBe(166.08);
+
+    // Transactions extracted
+    expect(result.transactions).toBeDefined();
+    expect(result.transactions).toHaveLength(2);
+
+    const redemption = result.transactions?.find((t) => t.type === 'sell')!;
+    expect(redemption).toBeDefined();
+    expect(redemption.isin).toBe('INF194K01V89');
+    expect(redemption.date).toBe('2026-09-21');
+    expect(redemption.amount.toDecimal()).toBe(70000);
+    expect(redemption.units).toBe(421.478);
+    expect(redemption.navOrPrice?.toDecimal()).toBe(166.08);
+
+    const sip = result.transactions?.find((t) => t.type === 'buy')!;
+    expect(sip).toBeDefined();
+    expect(sip.isin).toBe('INF194K01524');
+    expect(sip.date).toBe('2026-09-01');
+    expect(sip.amount.toDecimal()).toBe(1999.9);
+    expect(sip.units).toBe(14.104);
+  });
 });
 
 

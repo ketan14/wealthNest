@@ -4,6 +4,7 @@ import {
   ParseCasPdfUseCase,
   ConfirmCasImportUseCase,
   ImportCasItemDto,
+  ImportCasTransactionDto,
   CasPreviewDto,
 } from '@wealthnest/application';
 import { ImportSummaryResult } from '@wealthnest/domain';
@@ -73,6 +74,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
   const [error, setError] = useState<string | null>(null);
   const [previewData, setPreviewData] = useState<CasPreviewDto | null>(null);
   const [items, setItems] = useState<ImportCasItemDto[]>([]);
+  const [transactions, setTransactions] = useState<ImportCasTransactionDto[]>([]);
+  const [activeTab, setActiveTab] = useState<'holdings' | 'transactions'>('holdings');
   const [importSummary, setImportSummary] = useState<ImportSummaryResult | null>(null);
 
   // Reset state
@@ -83,6 +86,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
     setError(null);
     setPreviewData(null);
     setItems([]);
+    setTransactions([]);
+    setActiveTab('holdings');
     setImportSummary(null);
   };
 
@@ -109,7 +114,9 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
     onSuccess: (data) => {
       setPreviewData(data);
       setItems([...data.items]);
+      setTransactions([...(data.transactions || [])]);
       setStep('preview');
+      setActiveTab('holdings');
     },
     onError: (err) => {
       setError(err instanceof Error ? err.message : 'Failed to parse CAS statement.');
@@ -133,7 +140,9 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
       if (res.success) {
         setPreviewData(res.value);
         setItems([...res.value.items]);
+        setTransactions([...(res.value.transactions || [])]);
         setStep('preview');
+        setActiveTab('holdings');
       } else {
         setError(res.error.message);
       }
@@ -155,20 +164,23 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
           provider: previewData.provider,
           statementDate: previewData.statementDate,
           items,
+          transactions,
         });
 
         if (!res.success) throw res.error;
         return res.value;
       } else {
         // Demo Mode: Mock summary
-        const selectedCount = items.filter((i) => i.selected).length;
+        const selectedHoldings = items.filter((i) => i.selected).length;
+        const selectedTxs = transactions.filter((t) => t.selected).length;
         const mockSummary: ImportSummaryResult = {
           batchId: `demo-batch-${Date.now()}`,
           total: items.length,
-          imported: selectedCount,
+          imported: selectedHoldings,
           updated: 0,
-          skipped: items.length - selectedCount,
+          skipped: items.length - selectedHoldings,
           failed: 0,
+          transactionsImported: selectedTxs,
         };
         return mockSummary;
       }
@@ -178,6 +190,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
       setStep('summary');
       if (user) {
         queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['transactions', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['cashflow-summary', user.id] });
       }
       if (onSuccess) {
         onSuccess(items.filter((i) => i.selected));
@@ -188,7 +202,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
     },
   });
 
-  // Toggle selection
+  // Toggle selection for holdings
   const handleToggleSelect = (index: number) => {
     setItems((prev) =>
       prev.map((item, idx) => (idx === index ? { ...item, selected: !item.selected } : item))
@@ -199,7 +213,19 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
     setItems((prev) => prev.map((item) => ({ ...item, selected: select })));
   };
 
+  // Toggle selection for transactions
+  const handleToggleTransaction = (index: number) => {
+    setTransactions((prev) =>
+      prev.map((tx, idx) => (idx === index ? { ...tx, selected: !tx.selected } : tx))
+    );
+  };
+
+  const handleSelectAllTransactions = (select: boolean) => {
+    setTransactions((prev) => prev.map((tx) => ({ ...tx, selected: select })));
+  };
+
   const selectedCount = items.filter((i) => i.selected).length;
+  const selectedTransactionsCount = transactions.filter((t) => t.selected).length;
 
   if (!isOpen) return null;
 
@@ -459,106 +485,249 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
               </details>
             )}
 
-            {/* Select controls */}
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">
-                Found <span className="text-foreground font-semibold">{items.length}</span> holdings (
-                <span className="text-primary font-semibold">{selectedCount}</span> selected)
-              </span>
-              <div className="flex items-center gap-2">
+            {/* Tab Navigation if transactions detected */}
+            {transactions.length > 0 && (
+              <div className="flex items-center gap-2 border-b border-border/80 pb-2">
                 <button
                   type="button"
-                  onClick={() => handleSelectAll(true)}
-                  className="text-primary hover:underline font-semibold"
+                  onClick={() => setActiveTab('holdings')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
+                    activeTab === 'holdings'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-secondary/40 text-muted-foreground hover:text-foreground'
+                  }`}
                 >
-                  Select All
+                  <span>Portfolio Holdings</span>
+                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full bg-background/30 text-current font-bold">
+                    {items.length}
+                  </span>
                 </button>
-                <span className="text-muted-foreground">•</span>
                 <button
                   type="button"
-                  onClick={() => handleSelectAll(false)}
-                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => setActiveTab('transactions')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
+                    activeTab === 'transactions'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-secondary/40 text-muted-foreground hover:text-foreground'
+                  }`}
                 >
-                  Deselect All
+                  <span>Historical Transactions</span>
+                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
+                    {transactions.length}
+                  </span>
                 </button>
               </div>
-            </div>
+            )}
 
-            {/* Preview Table */}
-            <div className="min-h-[300px] max-h-[460px] flex-1 overflow-y-auto border border-border/80 rounded-xl shadow-inner">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-border bg-secondary/60 text-muted-foreground sticky top-0 backdrop-blur-md z-10">
-                    <th className="py-2.5 px-3 w-10 text-center">Import</th>
-                    <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Asset / Ticker</th>
-                    <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Asset Class</th>
-                    <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Units</th>
-                    <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Price / NAV</th>
-                    <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Reported Value</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/50 font-mono">
-                  {items.map((item, idx) => (
-                    <tr
-                      key={item.isin || idx}
-                      className={`hover:bg-secondary/30 transition-colors ${
-                        item.selected ? 'bg-secondary/15' : 'opacity-50'
-                      }`}
+            {/* Tab 1: Holdings Table */}
+            {activeTab === 'holdings' && (
+              <>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    Found <span className="text-foreground font-semibold">{items.length}</span> holdings (
+                    <span className="text-primary font-semibold">{selectedCount}</span> selected)
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectAll(true)}
+                      className="text-primary hover:underline font-semibold"
                     >
-                      <td className="py-2.5 px-3 text-center">
-                        <input
-                          type="checkbox"
-                          checked={item.selected}
-                          onChange={() => handleToggleSelect(idx)}
-                          className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
-                        />
-                      </td>
-                      <td className="py-2.5 px-3 font-sans">
-                        <div className="font-semibold text-foreground text-xs flex items-center gap-1.5 flex-wrap">
-                          <span>{item.name}</span>
-                          {item.ticker && (
-                            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20 text-primary font-bold">
-                              {item.ticker}
-                            </span>
-                          )}
-                        </div>
-                        <span className="font-mono text-[10px] text-muted-foreground">{item.isin}</span>
-                      </td>
-                      <td className="py-2.5 px-3 font-sans">
-                        {item.assetClassId === 'mutual_fund' ? (
-                          <Badge variant="outline" className="text-[10px] bg-cyan-500/10 text-cyan-400 border-cyan-500/30 font-medium">
-                            Mutual Funds
-                          </Badge>
-                        ) : item.assetClassId === 'equity' ? (
-                          <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/30 font-medium">
-                            Equities & Stocks
-                          </Badge>
-                        ) : item.assetClassId === 'commodity' ? (
-                          <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/30 font-medium">
-                            Gold & Commodities
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="capitalize text-[10px]">
-                            {item.assetClassId.replace('_', ' ')}
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-3 text-right text-foreground">
-                        {item.quantity.toLocaleString('en-IN', { maximumFractionDigits: 4 })}
-                      </td>
-                      <td className="py-2.5 px-3 text-right text-muted-foreground">
-                        {item.unitCostCents
-                          ? `₹${(item.unitCostCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                          : '—'}
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-bold text-foreground">
-                        ₹{(item.currentValueCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      Select All
+                    </button>
+                    <span className="text-muted-foreground">•</span>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectAll(false)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                </div>
+
+                <div className="min-h-[300px] max-h-[460px] flex-1 overflow-y-auto border border-border/80 rounded-xl shadow-inner">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-border bg-secondary/60 text-muted-foreground sticky top-0 backdrop-blur-md z-10">
+                        <th className="py-2.5 px-3 w-10 text-center">Import</th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Asset / Ticker</th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Asset Class</th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Units</th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Price / NAV</th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Reported Value</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/50 font-mono">
+                      {items.map((item, idx) => (
+                        <tr
+                          key={item.isin || idx}
+                          className={`hover:bg-secondary/30 transition-colors ${
+                            item.selected ? 'bg-secondary/15' : 'opacity-50'
+                          }`}
+                        >
+                          <td className="py-2.5 px-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={item.selected}
+                              onChange={() => handleToggleSelect(idx)}
+                              className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
+                            />
+                          </td>
+                          <td className="py-2.5 px-3 font-sans">
+                            <div className="font-semibold text-foreground text-xs flex items-center gap-1.5 flex-wrap">
+                              <span>{item.name}</span>
+                              {item.ticker && (
+                                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20 text-primary font-bold">
+                                  {item.ticker}
+                                </span>
+                              )}
+                            </div>
+                            <span className="font-mono text-[10px] text-muted-foreground">{item.isin}</span>
+                          </td>
+                          <td className="py-2.5 px-3 font-sans">
+                            {item.assetClassId === 'mutual_fund' ? (
+                              <Badge variant="outline" className="text-[10px] bg-cyan-500/10 text-cyan-400 border-cyan-500/30 font-medium">
+                                Mutual Funds
+                              </Badge>
+                            ) : item.assetClassId === 'equity' ? (
+                              <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/30 font-medium">
+                                Equities & Stocks
+                              </Badge>
+                            ) : item.assetClassId === 'commodity' ? (
+                              <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/30 font-medium">
+                                Gold & Commodities
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="capitalize text-[10px]">
+                                {item.assetClassId.replace('_', ' ')}
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-right text-foreground">
+                            {item.quantity.toLocaleString('en-IN', { maximumFractionDigits: 4 })}
+                          </td>
+                          <td className="py-2.5 px-3 text-right text-muted-foreground">
+                            {item.unitCostCents
+                              ? `₹${(item.unitCostCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                              : '—'}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-bold text-foreground">
+                            ₹{(item.currentValueCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            {/* Tab 2: Transactions Table */}
+            {activeTab === 'transactions' && (
+              <>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    Found <span className="text-foreground font-semibold">{transactions.length}</span> mutual fund transactions (
+                    <span className="text-emerald-400 font-semibold">{selectedTransactionsCount}</span> selected)
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectAllTransactions(true)}
+                      className="text-primary hover:underline font-semibold"
+                    >
+                      Select All
+                    </button>
+                    <span className="text-muted-foreground">•</span>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectAllTransactions(false)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                </div>
+
+                <div className="min-h-[300px] max-h-[460px] flex-1 overflow-y-auto border border-border/80 rounded-xl shadow-inner">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-border bg-secondary/60 text-muted-foreground sticky top-0 backdrop-blur-md z-10">
+                        <th className="py-2.5 px-3 w-10 text-center">Import</th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Date</th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Type</th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Scheme / Fund Name</th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Units</th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">NAV</th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/50 font-mono">
+                      {transactions.map((tx, idx) => (
+                        <tr
+                          key={idx}
+                          className={`hover:bg-secondary/30 transition-colors ${
+                            tx.selected ? 'bg-secondary/15' : 'opacity-50'
+                          }`}
+                        >
+                          <td className="py-2.5 px-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={tx.selected}
+                              onChange={() => handleToggleTransaction(idx)}
+                              className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
+                            />
+                          </td>
+                          <td className="py-2.5 px-3 font-sans text-muted-foreground whitespace-nowrap">
+                            {tx.date}
+                          </td>
+                          <td className="py-2.5 px-3 font-sans">
+                            {tx.type === 'sell' ? (
+                              <Badge variant="outline" className="text-[10px] bg-rose-500/10 text-rose-400 border-rose-500/30 uppercase font-semibold">
+                                Redemption
+                              </Badge>
+                            ) : tx.type === 'dividend' ? (
+                              <Badge variant="outline" className="text-[10px] bg-purple-500/10 text-purple-400 border-purple-500/30 uppercase font-semibold">
+                                Dividend
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30 uppercase font-semibold">
+                                Purchase (SIP)
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 font-sans">
+                            <div className="font-semibold text-foreground text-xs flex items-center gap-1.5 flex-wrap">
+                              <span>{tx.schemeName}</span>
+                              {tx.ticker && (
+                                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20 text-primary font-bold">
+                                  {tx.ticker}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-muted-foreground truncate max-w-sm mt-0.5">
+                              {tx.description}
+                            </p>
+                          </td>
+                          <td className="py-2.5 px-3 text-right text-foreground font-semibold">
+                            {tx.type === 'sell' ? '-' : '+'}{tx.units ? tx.units.toLocaleString('en-IN', { maximumFractionDigits: 4 }) : '—'}
+                          </td>
+                          <td className="py-2.5 px-3 text-right text-muted-foreground">
+                            {tx.navPriceCents
+                              ? `₹${(tx.navPriceCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
+                              : '—'}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-bold text-foreground">
+                            ₹{(tx.amountCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
 
             {/* Actions */}
             <div className="flex items-center justify-between pt-3 border-t border-border/80">
@@ -572,12 +741,12 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                 </Button>
                 <Button
                   size="sm"
-                  disabled={selectedCount === 0 || confirmMutation.isPending}
+                  disabled={(selectedCount === 0 && selectedTransactionsCount === 0) || confirmMutation.isPending}
                   onClick={() => confirmMutation.mutate()}
                   className="gap-2"
                 >
                   {confirmMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  Confirm & Import ({selectedCount})
+                  Confirm & Import ({selectedCount} positions{selectedTransactionsCount > 0 ? `, ${selectedTransactionsCount} txs` : ''})
                 </Button>
               </div>
             </div>
@@ -587,19 +756,44 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
         {/* Wizard Step 3: Import Summary */}
         {step === 'summary' && importSummary && (
           <div className="space-y-6 pt-6 text-center">
-            <div className="w-14 h-14 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto">
-              <CheckCircle2 className="w-8 h-8" />
+            <div
+              className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto ${
+                importSummary.failed > 0 && importSummary.imported === 0 && importSummary.updated === 0
+                  ? 'bg-rose-500/15 border border-rose-500/30 text-rose-400'
+                  : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
+              }`}
+            >
+              {importSummary.failed > 0 && importSummary.imported === 0 && importSummary.updated === 0 ? (
+                <AlertCircle className="w-8 h-8" />
+              ) : (
+                <CheckCircle2 className="w-8 h-8" />
+              )}
             </div>
 
             <div>
-              <h4 className="text-lg font-bold text-foreground">CAS Import Completed Successfully!</h4>
+              <h4 className="text-lg font-bold text-foreground">
+                {importSummary.failed > 0 && importSummary.imported === 0 && importSummary.updated === 0
+                  ? 'CAS Import Encountered Issues'
+                  : 'CAS Import Completed Successfully!'}
+              </h4>
               <p className="text-xs text-muted-foreground mt-1">
-                Your investment positions have been extracted, validated, and synchronized.
+                {importSummary.failed > 0 && importSummary.imported === 0 && importSummary.updated === 0
+                  ? 'Could not save positions to database. Please review the notice below.'
+                  : 'Your investment positions have been extracted, validated, and synchronized.'}
               </p>
             </div>
 
+            {importSummary.failed > 0 && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center justify-center gap-2 max-w-md mx-auto">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                <span>
+                  {importSummary.failed} position{importSummary.failed > 1 ? 's' : ''} encountered an issue during database save.
+                </span>
+              </div>
+            )}
+
             {/* Summary statistics grid */}
-            <div className="grid grid-cols-3 gap-3 max-w-md mx-auto">
+            <div className={`grid gap-3 max-w-md mx-auto ${importSummary.failed > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
                 <span className="text-2xl font-bold font-mono text-emerald-400">
                   {importSummary.imported}
@@ -618,6 +812,24 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                 </span>
                 <p className="text-[11px] text-muted-foreground mt-0.5">Skipped</p>
               </div>
+              {importSummary.failed > 0 && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                  <span className="text-2xl font-bold font-mono text-rose-400">
+                    {importSummary.failed}
+                  </span>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Failed</p>
+                </div>
+              )}
+              {Boolean(importSummary.transactionsImported) && (
+                <div className={`p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 ${importSummary.failed > 0 ? 'col-span-4' : 'col-span-3'}`}>
+                  <span className="text-2xl font-bold font-mono text-purple-400">
+                    +{importSummary.transactionsImported}
+                  </span>
+                  <p className="text-[11px] text-purple-200 mt-0.5">
+                    Historical Transactions Added to Trade Ledger
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="pt-2">

@@ -33,11 +33,13 @@ export function cleanSecurityName(rawName: string = ''): string {
   // Strip leading ISIN prefix if present
   cleaned = cleaned.replace(/^ISIN[:\s]*/i, '');
 
-  // Strip table column header leakage
+  // Strip table column header leakage and currency symbol noise like "( ₹ )", "( ` )"
   cleaned = cleaned.replace(
     /^(?:.*?(?:Unrealised|Unreal\s*ised|Profit\/\s*Loss|\(in absolute terms.*?\)|(?:ised\s+)?Loss\s+\(%\)\s*Regular\s*Direct|ISIN\s*तभूत.*)\s*)+/gi,
     ''
   );
+  cleaned = cleaned.replace(/^\(\s*[₹`]\s*\)\s*/, '');
+  cleaned = cleaned.replace(/^(?:CDSL\s+DEMAT(?:\s+खाता\s+विवरण)?|ACCOUNT\s+DETAILS|MUTUAL\s+FUND\s+UNITS\s+HELD[^\n]*)\s*/gi, '');
 
   // Strip leading numbering or bullet prefixes like "104 - ", "782 - ", "D201 - ", "001ZG - "
   cleaned = cleaned.replace(/^[A-Z0-9]+(?:\/[A-Z0-9]+)*\s*-\s+/, '');

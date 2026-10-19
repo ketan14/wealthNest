@@ -98,10 +98,25 @@ export class ParseCasPdfUseCase {
       };
     });
 
+    const transactions = (parsed.transactions || []).map((t) => ({
+      isin: t.isin,
+      schemeName: t.schemeName,
+      ticker: t.ticker,
+      date: t.date,
+      description: t.description,
+      type: t.type,
+      amountCents: Number(t.amount.cents),
+      units: t.units,
+      navPriceCents: t.navOrPrice ? Number(t.navOrPrice.cents) : undefined,
+      currency: 'INR',
+      selected: true,
+    }));
+
     return ok({
       provider: parsed.provider,
       statementDate: parsed.statementDate,
       items,
+      transactions,
       totalReportedValueCents: Number(parsed.totalReportedValue.cents),
       warnings: parsed.warnings,
     });

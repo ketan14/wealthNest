@@ -65,20 +65,44 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
 
           // 2. If asset does not exist, create asset record
           if (!existingAssetId) {
-            const { data: newAsset, error: assetErr } = await supabase
+            let assetClassToUse = item.assetClassId;
+            let { data: newAsset, error: assetErr } = await supabase
               .from('assets')
               .insert({
                 user_id: params.userId,
                 name: item.name,
                 ticker: item.ticker || null,
                 isin: item.isin || null,
-                asset_class_id: item.assetClassId,
+                asset_class_id: assetClassToUse,
                 currency: item.currency || 'INR',
               })
               .select('id')
               .single();
 
+            // Resilient fallback: If custom asset_class_id foreign key constraint fails, fallback to 'equity'
+            if (assetErr && assetClassToUse !== 'equity') {
+              console.warn(
+                `Asset class '${assetClassToUse}' rejected by database for ${item.name}, falling back to 'equity'`
+              );
+              const retryRes = await supabase
+                .from('assets')
+                .insert({
+                  user_id: params.userId,
+                  name: item.name,
+                  ticker: item.ticker || null,
+                  isin: item.isin || null,
+                  asset_class_id: 'equity',
+                  currency: item.currency || 'INR',
+                })
+                .select('id')
+                .single();
+
+              newAsset = retryRes.data;
+              assetErr = retryRes.error;
+            }
+
             if (assetErr || !newAsset) {
+              console.error(`Failed to insert asset ${item.name} (${item.isin}):`, assetErr);
               failed++;
               continue;
             }
@@ -106,6 +130,7 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
               .eq('id', existingHolding.id);
 
             if (updateErr) {
+              console.error(`Failed to update holding ${item.name}:`, updateErr);
               failed++;
             } else {
               updated++;
@@ -121,13 +146,118 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
             });
 
             if (insertErr) {
+              console.error(`Failed to insert holding ${item.name}:`, insertErr);
               failed++;
             } else {
               imported++;
             }
           }
-        } catch {
+        } catch (err) {
+          console.error(`Exception while importing holding ${item.name}:`, err);
           failed++;
+        }
+      }
+
+      // 3.5. Import transactions if provided
+      let transactionsImported = 0;
+      if (params.transactions && params.transactions.length > 0) {
+        for (const tx of params.transactions) {
+          try {
+            // Find or create asset for transaction
+            let assetId: string | null = null;
+            if (tx.isin) {
+              const { data: assetByIsin } = await supabase
+                .from('assets')
+                .select('id')
+                .eq('user_id', params.userId)
+                .eq('isin', tx.isin)
+                .maybeSingle();
+
+              if (assetByIsin) {
+                assetId = assetByIsin.id;
+              }
+            }
+
+            if (!assetId && tx.schemeName) {
+              const { data: assetByName } = await supabase
+                .from('assets')
+                .select('id')
+                .eq('user_id', params.userId)
+                .ilike('name', tx.schemeName)
+                .maybeSingle();
+
+              if (assetByName) {
+                assetId = assetByName.id;
+              }
+            }
+
+            if (!assetId) {
+              let { data: newAsset, error: assetErr } = await supabase
+                .from('assets')
+                .insert({
+                  user_id: params.userId,
+                  name: tx.schemeName,
+                  ticker: tx.ticker || null,
+                  isin: tx.isin || null,
+                  asset_class_id: 'mutual_fund',
+                  currency: tx.currency || 'INR',
+                })
+                .select('id')
+                .single();
+
+              if (assetErr) {
+                const retry = await supabase
+                  .from('assets')
+                  .insert({
+                    user_id: params.userId,
+                    name: tx.schemeName,
+                    ticker: tx.ticker || null,
+                    isin: tx.isin || null,
+                    asset_class_id: 'equity',
+                    currency: tx.currency || 'INR',
+                  })
+                  .select('id')
+                  .single();
+                newAsset = retry.data;
+              }
+
+              if (newAsset) {
+                assetId = newAsset.id;
+              }
+            }
+
+            if (assetId) {
+              // Deduplicate check: avoid double inserting exact same transaction
+              const { data: existingTx } = await supabase
+                .from('transactions')
+                .select('id')
+                .eq('user_id', params.userId)
+                .eq('asset_id', assetId)
+                .eq('transaction_date', tx.date)
+                .eq('amount_cents', tx.amountCents)
+                .eq('type', tx.type)
+                .maybeSingle();
+
+              if (!existingTx) {
+                const { error: txErr } = await supabase.from('transactions').insert({
+                  user_id: params.userId,
+                  asset_id: assetId,
+                  type: tx.type,
+                  quantity: tx.units ?? null,
+                  amount_cents: tx.amountCents,
+                  currency: tx.currency || 'INR',
+                  transaction_date: tx.date,
+                  notes: tx.description || null,
+                });
+
+                if (!txErr) {
+                  transactionsImported++;
+                }
+              }
+            }
+          } catch {
+            // Non-blocking per transaction
+          }
         }
       }
 
@@ -140,8 +270,8 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
             user_id: params.userId,
             provider: params.provider,
             statement_date: params.statementDate,
-            total_records: params.items.length,
-            imported_records: imported,
+            total_records: params.items.length + (params.transactions?.length || 0),
+            imported_records: imported + transactionsImported,
             updated_records: updated,
             skipped_records: 0,
             failed_records: failed,
@@ -164,6 +294,7 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
         updated,
         skipped: 0,
         failed,
+        transactionsImported,
       });
     } catch (e) {
       return err(e instanceof Error ? e : new Error(String(e)));
