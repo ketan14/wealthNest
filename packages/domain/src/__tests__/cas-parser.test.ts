@@ -22,6 +22,8 @@ describe('ISIN Validation & Asset Class Inference', () => {
   it('infers asset classes correctly', () => {
     expect(inferAssetClassFromIsin('INE002A01018', 'Reliance Industries Ltd').assetClassId).toBe('equity');
     expect(inferAssetClassFromIsin('INF209K01164', 'Nippon India Nifty BeES').assetClassId).toBe('equity');
+    expect(inferAssetClassFromIsin('INF740K01128', 'DSP Mid Cap Fund').assetClassId).toBe('mutual_fund');
+    expect(inferAssetClassFromIsin('INF194K01524', 'Bandhan Large & Mid Cap Fund').assetClassId).toBe('mutual_fund');
     expect(inferAssetClassFromIsin('IN0020180017', 'Sovereign Gold Bond 2028').assetClassId).toBe('commodity');
     expect(inferAssetClassFromIsin('INE040A01034', 'Embassy Office Parks REIT').assetClassId).toBe('real_estate');
   });
@@ -210,6 +212,112 @@ describe('NSDL CAS Statement Parser (Sanitized Fixture)', () => {
     expect(ppfas.reportedNavOrPrice?.toDecimal()).toBe(88.84);
     expect(ppfas.reportedMarketValue.toDecimal()).toBe(188234.78);
     expect(ppfas.folioOrDemat).toBe('10720220');
+  });
+
+  it('correctly parses multi-line CDSL Demat stocks without confusing boilerplate for company name', () => {
+    const realCdslDematSnippet = `
+      Central Depository Services (India) Limited
+      Statement as on : 31-Aug-2026
+      DEMAT ACCOUNTS HELD WITH CDSL
+      BO ID: 1208160000000000
+      Name: KETAN SHAMALBHAI VAGHELA
+
+      MTAR TECHNOLOGIES LIMITED
+      INE864I01014
+      # EQUITY SHARES 17.000 -- -- -- 17.000 7765.4500 1,32,012.65
+
+      TATA MOTORS LIMITED
+      INE1TAE01010
+      LIMITED # EQUITY SHARES 18.000 -- -- -- 18.000 3221.3500 57,984.30
+
+      INFOSYS LIMITED
+      INE009A01021
+      SHARES OF RS 5/- EACH 54.000 -- -- -- 54.000 995.0000 53,730.00
+
+      ADANI ENTERPRISES LIMITED-EQUITY SHARES OF RS 1/- EACH AFTER SUB DIVISION
+      INE423A01024 16.000 -- -- -- 16.000 2900.2500 46,404.00
+    `;
+
+    const parser = new CdslCasParser();
+    const result = parser.parse([realCdslDematSnippet]);
+
+    expect(result.holdings).toHaveLength(4);
+
+    // 1. MTAR Technologies
+    const mtar = result.holdings.find((h) => h.isin === 'INE864I01014')!;
+    expect(mtar).toBeDefined();
+    expect(mtar.name).toBe('MTAR TECHNOLOGIES LIMITED');
+    expect(mtar.ticker).toBe('MTARTECH');
+    expect(mtar.quantity).toBe(17);
+    expect(mtar.reportedNavOrPrice?.toDecimal()).toBe(7765.45);
+    expect(mtar.reportedMarketValue.toDecimal()).toBe(132012.65);
+
+    // 2. Tata Motors
+    const tata = result.holdings.find((h) => h.isin === 'INE1TAE01010')!;
+    expect(tata).toBeDefined();
+    expect(tata.name).toBe('TATA MOTORS LIMITED');
+    expect(tata.ticker).toBe('TATAMOTORS');
+    expect(tata.quantity).toBe(18);
+    expect(tata.reportedMarketValue.toDecimal()).toBe(57984.3);
+
+    // 3. Infosys
+    const infy = result.holdings.find((h) => h.isin === 'INE009A01021')!;
+    expect(infy).toBeDefined();
+    expect(infy.name).toBe('INFOSYS LIMITED');
+    expect(infy.ticker).toBe('INFY');
+    expect(infy.quantity).toBe(54);
+    expect(infy.reportedMarketValue.toDecimal()).toBe(53730);
+
+    // 4. Adani Enterprises
+    const adani = result.holdings.find((h) => h.isin === 'INE423A01024')!;
+    expect(adani).toBeDefined();
+    expect(adani.name).toBe('ADANI ENTERPRISES LIMITED');
+    expect(adani.ticker).toBe('ADANIENT');
+    expect(adani.quantity).toBe(16);
+    expect(adani.reportedMarketValue.toDecimal()).toBe(46404);
+  });
+
+  it('correctly parses wrapped Mutual Fund Folio lines and prevents commission/P&L column pollution', () => {
+    const wrappedMfSnippet = `
+      Central Depository Services (India) Limited
+      Statement as on : 31-Aug-2026
+      MUTUAL FUND UNITS HELD AS ON 31-08-2026
+
+      104 - DSP Mid Cap Fund - Regular Plan - Growth INF740K01128
+      4685175/66 ARN-9992 358.791 147.201 29,000.00 52,814.39 1.72 0 281.78 23,814.39 82.12
+
+      Bandhan Large & Mid Cap Fund - Regular Plan Growth INF194K01524
+      1895586/61 ARN-9992 348.034 135.962 46,000.00 47,319.40 2.28 0 272.73 1,319.40 2.87
+
+      / ARN-
+      DIRECT . - -
+      LIMITED # EQUITY SHARES -- -- --
+    `;
+
+    const parser = new CdslCasParser();
+    const result = parser.parse([wrappedMfSnippet]);
+
+    // Should only have 2 real mutual funds, ghost rows completely ignored
+    expect(result.holdings).toHaveLength(2);
+
+    const dsp = result.holdings.find((h) => h.isin === 'INF740K01128')!;
+    expect(dsp).toBeDefined();
+    expect(dsp.name).toBe('DSP Mid Cap Fund - Regular Plan - Growth');
+    expect(dsp.ticker).toBe('DSP-MIDCAP');
+    expect(dsp.folioOrDemat).toBe('4685175/66');
+    expect(dsp.quantity).toBe(358.791);
+    expect(dsp.reportedNavOrPrice?.toDecimal()).toBe(147.2);
+    expect(dsp.reportedMarketValue.toDecimal()).toBe(52814.39);
+    // Cost basis should be derived from cumulative invested (29,000 / 358.791)
+    expect(dsp.unitCost?.toDecimal()).toBeCloseTo(80.83, 1);
+
+    const bandhan = result.holdings.find((h) => h.isin === 'INF194K01524')!;
+    expect(bandhan).toBeDefined();
+    expect(bandhan.name).toBe('Bandhan Large & Mid Cap Fund - Regular Plan Growth');
+    expect(bandhan.ticker).toBe('BANDHAN-LM');
+    expect(bandhan.folioOrDemat).toBe('1895586/61');
+    expect(bandhan.quantity).toBe(348.034);
+    expect(bandhan.reportedMarketValue.toDecimal()).toBe(47319.4);
   });
 });
 

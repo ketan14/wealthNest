@@ -24,13 +24,14 @@ interface AddHoldingModalProps {
 }
 
 const FALLBACK_ASSET_CLASSES: AssetClassDefinition[] = [
-  { id: 'equity', name: 'Equities & Mutual Funds', colorHex: '#3b82f6', displayOrder: 1, description: '' },
-  { id: 'fixed_income', name: 'Fixed Income & Debt', colorHex: '#8b5cf6', displayOrder: 2, description: '' },
-  { id: 'commodity', name: 'Gold & Precious Metals', colorHex: '#eab308', displayOrder: 3, description: '' },
-  { id: 'real_estate', name: 'Real Estate & Land', colorHex: '#f59e0b', displayOrder: 4, description: '' },
-  { id: 'cash', name: 'Cash & Liquid Savings', colorHex: '#10b981', displayOrder: 5, description: '' },
-  { id: 'crypto', name: 'Digital Assets & Crypto', colorHex: '#ec4899', displayOrder: 6, description: '' },
-  { id: 'alternative', name: 'Alternative & Startups', colorHex: '#6366f1', displayOrder: 7, description: '' },
+  { id: 'equity', name: 'Equities & Stocks', colorHex: '#3b82f6', displayOrder: 1, description: 'Listed shares and Demat equities' },
+  { id: 'mutual_fund', name: 'Mutual Funds', colorHex: '#06b6d4', displayOrder: 2, description: 'Direct and regular mutual fund folios & SIPs' },
+  { id: 'fixed_income', name: 'Fixed Income & Debt', colorHex: '#8b5cf6', displayOrder: 3, description: '' },
+  { id: 'commodity', name: 'Gold & Precious Metals', colorHex: '#eab308', displayOrder: 4, description: '' },
+  { id: 'real_estate', name: 'Real Estate & Land', colorHex: '#f59e0b', displayOrder: 5, description: '' },
+  { id: 'cash', name: 'Cash & Liquid Savings', colorHex: '#10b981', displayOrder: 6, description: '' },
+  { id: 'crypto', name: 'Digital Assets & Crypto', colorHex: '#ec4899', displayOrder: 7, description: '' },
+  { id: 'alternative', name: 'Alternative & Startups', colorHex: '#6366f1', displayOrder: 8, description: '' },
 ];
 
 export function AddHoldingModal({

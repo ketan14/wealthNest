@@ -205,7 +205,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-4xl rounded-2xl border border-border bg-card p-6 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-border/80">
           <div className="flex items-center gap-2.5">
@@ -436,20 +436,27 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
             </div>
 
             {previewData.warnings.length > 0 && (
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 space-y-1.5">
-                <div className="flex items-center gap-1.5 font-semibold text-amber-400">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>Statement Parser Notice ({previewData.warnings.length})</span>
-                </div>
-                {previewData.warnings.map((w, i) => (
-                  <p key={i} className="text-[11px] text-amber-200/90 leading-relaxed pl-5">
-                    • {w}
+              <details className="rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 p-2.5 group">
+                <summary className="flex items-center justify-between cursor-pointer font-semibold text-amber-400 select-none">
+                  <div className="flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>Statement Parser Notice ({previewData.warnings.length})</span>
+                  </div>
+                  <span className="text-[10px] text-amber-400/80 group-open:rotate-180 transition-transform">
+                    ▼ Click to view
+                  </span>
+                </summary>
+                <div className="mt-2 space-y-1 max-h-24 overflow-y-auto pl-5 pr-2">
+                  {previewData.warnings.map((w, i) => (
+                    <p key={i} className="text-[11px] text-amber-200/90 leading-relaxed">
+                      • {w}
+                    </p>
+                  ))}
+                  <p className="text-[11px] text-muted-foreground pt-0.5">
+                    Closed folios with 0 balance can be ignored safely. If you hold units in an unextracted scheme, you can still import the rest of your portfolio now and add that scheme anytime via &quot;Add Holding&quot;.
                   </p>
-                ))}
-                <p className="text-[11px] text-muted-foreground pt-0.5 pl-5">
-                  Closed folios with 0 balance can be ignored safely. If you hold units in an unextracted scheme, you can still import the rest of your portfolio now and add that scheme anytime via &quot;Add Holding&quot;.
-                </p>
-              </div>
+                </div>
+              </details>
             )}
 
             {/* Select controls */}
@@ -462,7 +469,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                 <button
                   type="button"
                   onClick={() => handleSelectAll(true)}
-                  className="text-primary hover:underline"
+                  className="text-primary hover:underline font-semibold"
                 >
                   Select All
                 </button>
@@ -478,14 +485,15 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
             </div>
 
             {/* Preview Table */}
-            <div className="flex-1 overflow-y-auto border border-border/80 rounded-lg">
+            <div className="min-h-[300px] max-h-[460px] flex-1 overflow-y-auto border border-border/80 rounded-xl shadow-inner">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-border bg-secondary/40 text-muted-foreground sticky top-0 backdrop-blur-sm">
+                  <tr className="border-b border-border bg-secondary/60 text-muted-foreground sticky top-0 backdrop-blur-md z-10">
                     <th className="py-2.5 px-3 w-10 text-center">Import</th>
                     <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Asset / Ticker</th>
                     <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Asset Class</th>
                     <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Units</th>
+                    <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Price / NAV</th>
                     <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Reported Value</th>
                   </tr>
                 </thead>
@@ -494,7 +502,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                     <tr
                       key={item.isin || idx}
                       className={`hover:bg-secondary/30 transition-colors ${
-                        item.selected ? 'bg-secondary/15' : 'opacity-60'
+                        item.selected ? 'bg-secondary/15' : 'opacity-50'
                       }`}
                     >
                       <td className="py-2.5 px-3 text-center">
@@ -509,7 +517,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                         <div className="font-semibold text-foreground text-xs flex items-center gap-1.5 flex-wrap">
                           <span>{item.name}</span>
                           {item.ticker && (
-                            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-secondary/80 border border-border text-primary font-bold">
+                            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20 text-primary font-bold">
                               {item.ticker}
                             </span>
                           )}
@@ -517,12 +525,31 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                         <span className="font-mono text-[10px] text-muted-foreground">{item.isin}</span>
                       </td>
                       <td className="py-2.5 px-3 font-sans">
-                        <Badge variant="secondary" className="capitalize text-[10px]">
-                          {item.assetClassId.replace('_', ' ')}
-                        </Badge>
+                        {item.assetClassId === 'mutual_fund' ? (
+                          <Badge variant="outline" className="text-[10px] bg-cyan-500/10 text-cyan-400 border-cyan-500/30 font-medium">
+                            Mutual Funds
+                          </Badge>
+                        ) : item.assetClassId === 'equity' ? (
+                          <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/30 font-medium">
+                            Equities & Stocks
+                          </Badge>
+                        ) : item.assetClassId === 'commodity' ? (
+                          <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/30 font-medium">
+                            Gold & Commodities
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="capitalize text-[10px]">
+                            {item.assetClassId.replace('_', ' ')}
+                          </Badge>
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-right text-foreground">
                         {item.quantity.toLocaleString('en-IN', { maximumFractionDigits: 4 })}
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-muted-foreground">
+                        {item.unitCostCents
+                          ? `₹${(item.unitCostCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : '—'}
                       </td>
                       <td className="py-2.5 px-3 text-right font-bold text-foreground">
                         ₹{(item.currentValueCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
