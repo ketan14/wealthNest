@@ -17,7 +17,9 @@ export class ParseCasPdfUseCase {
       return err(new Error('Uploaded file is empty. Please select a valid CAS statement PDF.'));
     }
     if (pdfBytes.byteLength > MAX_SIZE_BYTES) {
-      return err(new Error('File size exceeds the 25 MB limit. Please upload a standard CAS statement.'));
+      return err(
+        new Error('File size exceeds the 25 MB limit. Please upload a standard CAS statement.')
+      );
     }
 
     // 2. Extract raw text pages from PDF via port
@@ -33,7 +35,10 @@ export class ParseCasPdfUseCase {
         errMsg.includes('needpassword') ||
         errMsg.includes('bad decrypt')
       ) {
-        const uppercaseRetry = await this.pdfExtractor.extractPages(pdfBytes, trimmedPass.toUpperCase());
+        const uppercaseRetry = await this.pdfExtractor.extractPages(
+          pdfBytes,
+          trimmedPass.toUpperCase()
+        );
         if (uppercaseRetry.success) {
           extractionResult = uppercaseRetry;
         }
@@ -82,21 +87,30 @@ export class ParseCasPdfUseCase {
       const unitCostCents = h.unitCost
         ? Number(h.unitCost.cents)
         : h.reportedNavOrPrice
-        ? Number(h.reportedNavOrPrice.cents)
-        : Math.round(Number(h.reportedMarketValue.cents) / (h.quantity || 1));
+          ? Number(h.reportedNavOrPrice.cents)
+          : Math.round(Number(h.reportedMarketValue.cents) / (h.quantity || 1));
 
       return {
         isin: h.isin,
         name: h.name,
         ticker: h.ticker,
         assetClassId: h.assetClassId,
+        instrumentType: h.instrumentType,
+        dematAccountId: h.dematAccountId,
+        folioNumber: h.folioNumber,
+        amcName: h.amcName,
+        schemePlan: h.schemePlan,
         quantity: h.quantity,
         unitCostCents,
         currentValueCents: Number(h.reportedMarketValue.cents),
+        costBasisVerified: h.costBasisVerified ?? false,
         currency: h.currency,
         selected: true,
       };
     });
+
+    const equities = items.filter((i) => i.assetClassId !== 'mutual_fund');
+    const mutualFunds = items.filter((i) => i.assetClassId === 'mutual_fund');
 
     const transactions = (parsed.transactions || []).map((t) => ({
       isin: t.isin,
@@ -110,12 +124,15 @@ export class ParseCasPdfUseCase {
       navPriceCents: t.navOrPrice ? Number(t.navOrPrice.cents) : undefined,
       currency: 'INR',
       selected: true,
+      folio: t.folio,
     }));
 
     return ok({
       provider: parsed.provider,
       statementDate: parsed.statementDate,
       items,
+      equities,
+      mutualFunds,
       transactions,
       totalReportedValueCents: Number(parsed.totalReportedValue.cents),
       warnings: parsed.warnings,

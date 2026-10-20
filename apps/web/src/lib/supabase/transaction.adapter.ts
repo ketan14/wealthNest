@@ -30,7 +30,8 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
     try {
       const { data, error } = await supabase
         .from('transactions')
-        .select(`
+        .select(
+          `
           id,
           user_id,
           asset_id,
@@ -46,7 +47,8 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
             name,
             ticker
           )
-        `)
+        `
+        )
         .eq('user_id', userId)
         .order('transaction_date', { ascending: false });
 

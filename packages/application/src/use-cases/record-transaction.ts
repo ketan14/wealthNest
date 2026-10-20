@@ -5,7 +5,14 @@ import {
   CreateTransactionParams,
 } from '../ports/transaction-repository.port.js';
 
-const VALID_TRANSACTION_TYPES = ['buy', 'sell', 'deposit', 'withdrawal', 'dividend', 'fee'] as const;
+const VALID_TRANSACTION_TYPES = [
+  'buy',
+  'sell',
+  'deposit',
+  'withdrawal',
+  'dividend',
+  'fee',
+] as const;
 
 export class RecordTransactionUseCase {
   constructor(private readonly transactionRepo: TransactionRepositoryPort) {}

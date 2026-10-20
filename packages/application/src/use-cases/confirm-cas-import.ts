@@ -1,9 +1,6 @@
 import { Result, ok, err } from '@wealthnest/shared';
 import { ImportSummaryResult } from '@wealthnest/domain';
-import {
-  CasImportRepositoryPort,
-  ConfirmCasImportParams,
-} from '../ports/cas-import.port.js';
+import { CasImportRepositoryPort, ConfirmCasImportParams } from '../ports/cas-import.port.js';
 
 export class ConfirmCasImportUseCase {
   constructor(private readonly casImportRepo: CasImportRepositoryPort) {}

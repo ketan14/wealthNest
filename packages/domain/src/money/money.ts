@@ -66,7 +66,7 @@ export class Money {
 
     const rateFrom = BASE_FX_RATES_TO_INR[this.currency] ?? 1;
     const rateTo = BASE_FX_RATES_TO_INR[targetCurrency] ?? 1;
-    const effectiveRate = customRate ?? (rateFrom / rateTo);
+    const effectiveRate = customRate ?? rateFrom / rateTo;
 
     const fromDecimal = this.toDecimal();
     const convertedDecimal = fromDecimal * effectiveRate;

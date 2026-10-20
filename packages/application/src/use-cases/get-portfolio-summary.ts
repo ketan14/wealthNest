@@ -6,10 +6,7 @@ import {
   PortfolioSummary,
   HoldingValuationItem,
 } from '@wealthnest/domain';
-import {
-  HoldingRepositoryPort,
-  HoldingDetailDto,
-} from '../ports/holding-repository.port.js';
+import { HoldingRepositoryPort, HoldingDetailDto } from '../ports/holding-repository.port.js';
 
 export interface PortfolioDataDto {
   readonly summary: PortfolioSummary;
@@ -19,10 +16,7 @@ export interface PortfolioDataDto {
 export class GetPortfolioSummaryUseCase {
   constructor(private readonly holdingRepo: HoldingRepositoryPort) {}
 
-  async execute(
-    userId: string,
-    currency: CurrencyCode = 'INR'
-  ): Promise<Result<PortfolioDataDto>> {
+  async execute(userId: string, currency: CurrencyCode = 'INR'): Promise<Result<PortfolioDataDto>> {
     const holdingsResult = await this.holdingRepo.listDetailsByUser(userId);
 
     if (!holdingsResult.success) {
@@ -34,9 +28,14 @@ export class GetPortfolioSummaryUseCase {
     // Map DTOs to pure domain calculation input using Money value objects
     const valuationItems: HoldingValuationItem[] = holdings.map((h) => {
       const holdingCurrency = (h.currency as CurrencyCode) || currency;
-      const totalCostCents = BigInt(Math.round((Number(h.quantity) || 0) * (Number(h.unitCostCents) || 0)));
+      const totalCostCents = BigInt(
+        Math.round((Number(h.quantity) || 0) * (Number(h.unitCostCents) || 0))
+      );
       const costBasis = Money.fromCents(totalCostCents, holdingCurrency);
-      const currentValue = Money.fromCents(BigInt(Math.round(Number(h.currentValueCents) || 0)), holdingCurrency);
+      const currentValue = Money.fromCents(
+        BigInt(Math.round(Number(h.currentValueCents) || 0)),
+        holdingCurrency
+      );
 
       return {
         holdingId: h.holdingId,

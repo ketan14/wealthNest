@@ -39,7 +39,10 @@ export function cleanSecurityName(rawName: string = ''): string {
     ''
   );
   cleaned = cleaned.replace(/^\(\s*[₹`]\s*\)\s*/, '');
-  cleaned = cleaned.replace(/^(?:CDSL\s+DEMAT(?:\s+खाता\s+विवरण)?|ACCOUNT\s+DETAILS|MUTUAL\s+FUND\s+UNITS\s+HELD[^\n]*)\s*/gi, '');
+  cleaned = cleaned.replace(
+    /^(?:CDSL\s+DEMAT(?:\s+खाता\s+विवरण)?|ACCOUNT\s+DETAILS|MUTUAL\s+FUND\s+UNITS\s+HELD[^\n]*)\s*/gi,
+    ''
+  );
 
   // Strip leading numbering or bullet prefixes like "104 - ", "782 - ", "D201 - ", "001ZG - "
   cleaned = cleaned.replace(/^[A-Z0-9]+(?:\/[A-Z0-9]+)*\s*-\s+/, '');
@@ -78,167 +81,328 @@ export function cleanSecurityName(rawName: string = ''): string {
   return cleaned;
 }
 
+export type StatementSectionHint = 'demat' | 'mutual_fund_rta' | 'unknown';
+
+export interface InstrumentClassification {
+  readonly assetClassId: string;
+  readonly assetType: 'equity' | 'mutual_fund' | 'bond' | 'commodity' | 'reit' | 'other';
+  readonly instrumentType:
+    'equity_share' | 'mutual_fund_scheme' | 'etf' | 'reit' | 'sgb' | 'bond' | 'other';
+}
+
 /**
- * Infers appropriate asset class from Indian ISIN conventions:
- * - INF... : Mutual Fund Schemes (CAMS / KFintech)
- * - IN0... / IN9... : Government Securities / Sovereign Gold Bonds (SGB)
- * - INE... : Indian Equities / Listed Securities / Corporate Bonds
+ * Classifies supported instruments using ISIN, statement section, and validated reference patterns.
+ * Treats ISIN prefixes strictly as hints, not definitive tax or asset classifications.
  */
 export function inferAssetClassFromIsin(
   isin: string,
-  securityName: string = ''
-): { assetClassId: string; assetType: 'equity' | 'mutual_fund' | 'bond' | 'commodity' | 'reit' | 'other' } {
+  securityName: string = '',
+  statementSection: StatementSectionHint = 'unknown'
+): InstrumentClassification {
   const upperIsin = isin.trim().toUpperCase();
   const lowerName = securityName.toLowerCase();
 
-  // 1. Sovereign Gold Bonds or Gold ETFs
+  // 1. Explicit Statement Section Priority: Mutual Fund RTA folios
+  if (statementSection === 'mutual_fund_rta') {
+    return {
+      assetClassId: 'mutual_fund',
+      assetType: 'mutual_fund',
+      instrumentType: 'mutual_fund_scheme',
+    };
+  }
+
+  // 2. Sovereign Gold Bonds (SGB) — Commodities
   if (
     lowerName.includes('sgb') ||
     lowerName.includes('sovereign gold') ||
-    lowerName.includes('gold bees') ||
-    lowerName.includes('gold etf')
+    (upperIsin.startsWith('IN00') && (lowerName.includes('gold') || lowerName.includes('sgb')))
   ) {
-    return { assetClassId: 'commodity', assetType: 'commodity' };
+    return {
+      assetClassId: 'commodity',
+      assetType: 'commodity',
+      instrumentType: 'sgb',
+    };
   }
 
-  // 2. Real Estate Investment Trusts (REITs)
-  if (lowerName.includes('reit') || lowerName.includes('embassy') || lowerName.includes('mindspace')) {
-    return { assetClassId: 'real_estate', assetType: 'reit' };
+  // 3. Precious Metals ETFs (Gold / Silver BeES) — Commodities
+  if (
+    lowerName.includes('gold bees') ||
+    lowerName.includes('gold etf') ||
+    lowerName.includes('silver bees') ||
+    lowerName.includes('silver etf')
+  ) {
+    return {
+      assetClassId: 'commodity',
+      assetType: 'commodity',
+      instrumentType: 'etf',
+    };
   }
 
-  // 3. Mutual Funds (ISIN starting with INF)
+  // 4. Liquid / Overnight Cash ETFs (Liquid BeES) — Cash
+  if (
+    lowerName.includes('liquid bees') ||
+    lowerName.includes('liquid etf') ||
+    lowerName.includes('liquid fund')
+  ) {
+    return {
+      assetClassId: 'cash',
+      assetType: 'other',
+      instrumentType: 'etf',
+    };
+  }
+
+  // 5. Real Estate Investment Trusts (REITs)
+  if (
+    lowerName.includes('reit') ||
+    lowerName.includes('embassy') ||
+    lowerName.includes('mindspace') ||
+    lowerName.includes('brookfield')
+  ) {
+    return {
+      assetClassId: 'real_estate',
+      assetType: 'reit',
+      instrumentType: 'reit',
+    };
+  }
+
+  // 6. Mutual Fund Schemes vs Exchange Traded Funds (INF... ISIN)
   if (upperIsin.startsWith('INF')) {
-    // If explicitly an exchange-traded index ETF traded on stock exchanges
+    // If traded on stock exchange as an ETF (e.g. Nifty BeES, Bank BeES, CPSE ETF)
     if (
       lowerName.includes('bees') ||
       lowerName.includes('etf') ||
       lowerName.includes('exchange traded fund')
     ) {
-      return { assetClassId: 'equity', assetType: 'equity' };
+      return {
+        assetClassId: 'equity',
+        assetType: 'equity',
+        instrumentType: 'etf',
+      };
     }
-    return { assetClassId: 'mutual_fund', assetType: 'mutual_fund' };
+    return {
+      assetClassId: 'mutual_fund',
+      assetType: 'mutual_fund',
+      instrumentType: 'mutual_fund_scheme',
+    };
   }
 
-  // 4. Government Bonds / Debt (ISIN starting with IN0 or IN9)
-  if (upperIsin.startsWith('IN0') || upperIsin.startsWith('IN9') || lowerName.includes('bond') || lowerName.includes('debenture')) {
-    return { assetClassId: 'fixed_income', assetType: 'bond' };
+  // 7. Government Securities / Debt / Corporate Bonds (IN0..., IN9..., Bonds, NCDs)
+  if (
+    upperIsin.startsWith('IN0') ||
+    upperIsin.startsWith('IN9') ||
+    lowerName.includes('bond') ||
+    lowerName.includes('debenture') ||
+    lowerName.includes('ncd')
+  ) {
+    return {
+      assetClassId: 'fixed_income',
+      assetType: 'bond',
+      instrumentType: 'bond',
+    };
   }
 
-  // 5. Default to Equities (standard INE listed shares)
-  return { assetClassId: 'equity', assetType: 'equity' };
+  // 8. Default: Listed Equity Shares (standard INE... shares)
+  return {
+    assetClassId: 'equity',
+    assetType: 'equity',
+    instrumentType: 'equity_share',
+  };
+}
+
+export interface MutualFundSchemeDetails {
+  readonly amcName: string;
+  readonly plan: 'Direct' | 'Regular' | 'Unknown';
+  readonly option: 'Growth' | 'IDCW' | 'Dividend' | 'Unknown';
+  readonly schemePlan?: string;
+  readonly cleanSchemeName: string;
+}
+
+export function extractMutualFundSchemeDetails(rawSchemeName: string): MutualFundSchemeDetails {
+  const cleaned = cleanSecurityName(rawSchemeName);
+  const lower = cleaned.toLowerCase();
+
+  // Detect Plan
+  let plan: 'Direct' | 'Regular' | 'Unknown' = 'Unknown';
+  if (lower.includes('direct')) {
+    plan = 'Direct';
+  } else if (lower.includes('regular')) {
+    plan = 'Regular';
+  }
+
+  // Detect Option
+  let option: 'Growth' | 'IDCW' | 'Dividend' | 'Unknown' = 'Unknown';
+  if (lower.includes('growth')) {
+    option = 'Growth';
+  } else if (lower.includes('idcw')) {
+    option = 'IDCW';
+  } else if (lower.includes('dividend')) {
+    option = 'Dividend';
+  }
+
+  // Known Indian AMCs pattern recognition
+  const amcPatterns: [RegExp, string][] = [
+    [/\b(?:Bandhan|IDFC)\b/i, 'Bandhan Mutual Fund'],
+    [/\bParag\s*Parikh|PPFAS\b/i, 'PPFAS Mutual Fund'],
+    [/\bHDFC\b/i, 'HDFC Mutual Fund'],
+    [/\bICICI\s*Pru(?:dential)?\b/i, 'ICICI Prudential Mutual Fund'],
+    [/\bSBI\b/i, 'SBI Mutual Fund'],
+    [/\bKotak(?:\s*Mahindra)?\b/i, 'Kotak Mahindra Mutual Fund'],
+    [/\bNippon(?:\s*India)?\b/i, 'Nippon India Mutual Fund'],
+    [/\bAxis\b/i, 'Axis Mutual Fund'],
+    [/\bMirae\s*Asset\b/i, 'Mirae Asset Mutual Fund'],
+    [/\bUTI\b/i, 'UTI Mutual Fund'],
+    [/\bDSP\b/i, 'DSP Mutual Fund'],
+    [/\bTata\b/i, 'Tata Mutual Fund'],
+    [/\bQuant\b/i, 'Quant Mutual Fund'],
+    [/\bMotilal\s*Oswal\b/i, 'Motilal Oswal Mutual Fund'],
+    [/\bAditya\s*Birla|ABSL\b/i, 'Aditya Birla Sun Life Mutual Fund'],
+    [/\bFranklin(?:\s*Templeton)?\b/i, 'Franklin Templeton Mutual Fund'],
+    [/\bEdelweiss\b/i, 'Edelweiss Mutual Fund'],
+    [/\bCanara\s*Robeco\b/i, 'Canara Robeco Mutual Fund'],
+    [/\bSundaram\b/i, 'Sundaram Mutual Fund'],
+    [/\bInvesco\b/i, 'Invesco Mutual Fund'],
+    [/\bWhiteOak\b/i, 'WhiteOak Capital Mutual Fund'],
+    [/\bHSBC\b/i, 'HSBC Mutual Fund'],
+  ];
+
+  let amcName = '';
+  for (const [pattern, name] of amcPatterns) {
+    if (pattern.test(cleaned)) {
+      amcName = name;
+      break;
+    }
+  }
+
+  if (!amcName) {
+    const parts = cleaned.split('-');
+    if (parts.length > 1 && parts[0]!.trim().length > 3) {
+      amcName = parts[0]!.trim();
+    }
+  }
+
+  const schemePlan =
+    plan !== 'Unknown' ? `${plan} Plan${option !== 'Unknown' ? ` - ${option}` : ''}` : undefined;
+
+  return {
+    amcName,
+    plan,
+    option,
+    schemePlan,
+    cleanSchemeName: cleaned,
+  };
 }
 
 export const KNOWN_ISIN_TICKERS: Record<string, string> = {
   // Top Equities & Bluechips from Indian Depository statements
-  'INE002A01018': 'RELIANCE',
-  'INE467B01029': 'TCS',
-  'INE040A01034': 'HDFCBANK',
-  'INE009A01021': 'INFY',
-  'INE090A01021': 'ICICIBANK',
-  'INE062A01020': 'SBIN',
-  'INE018A01030': 'LT',
-  'INE030A01027': 'HINDUNILVR',
-  'INE154A01025': 'ITC',
-  'INE238A01034': 'AXISBANK',
-  'INE121A01024': 'CHOLAFIN',
-  'INE860A01027': 'BHARTIARTL',
-  'INE752E01010': 'POWERGRID',
-  'INE081A01012': 'TATASTEEL',
-  'INE101A01026': 'M&M',
-  'INE585B01010': 'MARUTI',
-  'INE216A01030': 'SUNPHARMA',
-  'INE437A01024': 'APOLLOHOSP',
-  'INE075A01022': 'WIPRO',
-  'INE117A01022': 'ABB',
-  'INE848E01016': 'EMBASSY',
-  'INE043D01016': 'MINDSPACE',
+  INE002A01018: 'RELIANCE',
+  INE467B01029: 'TCS',
+  INE040A01034: 'HDFCBANK',
+  INE009A01021: 'INFY',
+  INE090A01021: 'ICICIBANK',
+  INE062A01020: 'SBIN',
+  INE018A01030: 'LT',
+  INE030A01027: 'HINDUNILVR',
+  INE154A01025: 'ITC',
+  INE238A01034: 'AXISBANK',
+  INE121A01024: 'CHOLAFIN',
+  INE860A01027: 'BHARTIARTL',
+  INE752E01010: 'POWERGRID',
+  INE081A01012: 'TATASTEEL',
+  INE101A01026: 'M&M',
+  INE585B01010: 'MARUTI',
+  INE216A01030: 'SUNPHARMA',
+  INE437A01024: 'APOLLOHOSP',
+  INE075A01022: 'WIPRO',
+  INE117A01022: 'ABB',
+  INE848E01016: 'EMBASSY',
+  INE043D01016: 'MINDSPACE',
 
   // CDSL Holdings from Real Statements
-  'INE864I01014': 'MTARTECH',
-  'INE1TAE01010': 'TATAMOTORS',
-  'INE155A01022': 'TATAMOTORS',
-  'INE010V01017': 'LTTS',
-  'INE414G01012': 'MUTHOOTFIN',
-  'INE423A01024': 'ADANIENT',
-  'INE814H01029': 'ADANIPOWER',
-  'INE150B01039': 'ALKYL',
-  'INE885A01032': 'AMARA',
-  'INE371P01015': 'AMBER',
-  'INE208A01029': 'ASHOK',
-  'INE021A01026': 'ASIANPAINT',
-  'INE949L01017': 'AUBANK',
-  'INE296A01032': 'BAJFINANCE',
-  'INE296A01024': 'BAJAJFINSV',
-  'INE397D01024': 'BHARTIARTL',
-  'INE482A01020': 'CEAT',
-  'INE348B01021': 'CENTURYPLY',
-  'INE596I01020': 'CAMS',
-  'INE089A01031': 'DRREDDY',
-  'INE126A01031': 'EIDPARRY',
-  'INE686Y01026': 'FINEORG',
-  'INE795G01014': 'HDFCLIFE',
-  'INE053A01029': 'INDHOTEL',
-  'INE053F01010': 'IRFC',
-  'INE663F01032': 'NAUKRI',
-  'INE646L01027': 'INDIGO',
-  'INE335Y01020': 'IRCTC',
-  'INE758E01017': 'JIOFIN',
-  'INE797F01020': 'JUBLFOOD',
-  'INE879K01018': 'KMCH',
-  'INE04I401011': 'KPITTECH',
-  'INE214T01019': 'LTIM',
-  'INE429E01023': 'SAFARI',
-  'INE775A01035': 'MOTHERSON',
-  'INE670A01012': 'TATAELXSI',
-  'INE245A01021': 'TATAPOWER',
-  'INE081A01020': 'TATASTEEL',
-  'INE280A01028': 'TITAN',
-  'INE854D01024': 'MCDOWELL-N',
-  'INE825V01034': 'MANYAVAR',
-  'INE274F01020': 'WESTLIFE',
-  'INE584A01023': 'NMDC',
-  'INE364U01010': 'POLYCAB',
-  'INE263A01024': 'BEL',
+  INE864I01014: 'MTARTECH',
+  INE1TAE01010: 'TATAMOTORS',
+  INE155A01022: 'TATAMOTORS',
+  INE010V01017: 'LTTS',
+  INE414G01012: 'MUTHOOTFIN',
+  INE423A01024: 'ADANIENT',
+  INE814H01029: 'ADANIPOWER',
+  INE150B01039: 'ALKYL',
+  INE885A01032: 'AMARA',
+  INE371P01015: 'AMBER',
+  INE208A01029: 'ASHOK',
+  INE021A01026: 'ASIANPAINT',
+  INE949L01017: 'AUBANK',
+  INE296A01032: 'BAJFINANCE',
+  INE296A01024: 'BAJAJFINSV',
+  INE397D01024: 'BHARTIARTL',
+  INE482A01020: 'CEAT',
+  INE348B01021: 'CENTURYPLY',
+  INE596I01020: 'CAMS',
+  INE089A01031: 'DRREDDY',
+  INE126A01031: 'EIDPARRY',
+  INE686Y01026: 'FINEORG',
+  INE795G01014: 'HDFCLIFE',
+  INE053A01029: 'INDHOTEL',
+  INE053F01010: 'IRFC',
+  INE663F01032: 'NAUKRI',
+  INE646L01027: 'INDIGO',
+  INE335Y01020: 'IRCTC',
+  INE758E01017: 'JIOFIN',
+  INE797F01020: 'JUBLFOOD',
+  INE879K01018: 'KMCH',
+  INE04I401011: 'KPITTECH',
+  INE214T01019: 'LTIM',
+  INE429E01023: 'SAFARI',
+  INE775A01035: 'MOTHERSON',
+  INE670A01012: 'TATAELXSI',
+  INE245A01021: 'TATAPOWER',
+  INE081A01020: 'TATASTEEL',
+  INE280A01028: 'TITAN',
+  INE854D01024: 'MCDOWELL-N',
+  INE825V01034: 'MANYAVAR',
+  INE274F01020: 'WESTLIFE',
+  INE584A01023: 'NMDC',
+  INE364U01010: 'POLYCAB',
+  INE263A01024: 'BEL',
 
   // Major ETFs
-  'INF209K01164': 'NIFTYBEES',
-  'INF179KC1965': 'HDFCNIFTY',
-  'INF769K01HS7': 'MAHKTECH',
-  'INF769K01HF4': 'FANG',
-  'INF204KB15V2': 'ITBEES',
-  'INF204KB14I2': 'GOLDBEES',
-  'INF204K01138': 'GOLDBEES',
-  'INF204KB17I6': 'BANKBEES',
-  'INF209KB1248': 'JUNIORBEES',
-  'INF732E01037': 'MON100',
-  'INF209KA12Z1': 'LIQUIDBEES',
+  INF209K01164: 'NIFTYBEES',
+  INF179KC1965: 'HDFCNIFTY',
+  INF769K01HS7: 'MAHKTECH',
+  INF769K01HF4: 'FANG',
+  INF204KB15V2: 'ITBEES',
+  INF204KB14I2: 'GOLDBEES',
+  INF204K01138: 'GOLDBEES',
+  INF204KB17I6: 'BANKBEES',
+  INF209KB1248: 'JUNIORBEES',
+  INF732E01037: 'MON100',
+  INF209KA12Z1: 'LIQUIDBEES',
 
   // Mutual Fund Schemes
-  'INF740K01PX1': 'DSP-MIDCAP-DIR',
-  'INF740K01128': 'DSP-MIDCAP',
-  'INF194K01524': 'BANDHAN-LM',
-  'INF194K01V89': 'BANDHAN-LM-DIR',
-  'INF174K01LS2': 'KOTAK-FLEXI-DIR',
-  'INF174K01LQ6': 'KOTAK-FLEXI-IDCW',
-  'INF174K01344': 'KOTAK-FLEXI-REG',
-  'INF204KB19V4': 'NIPPON-MULTI',
-  'INF879O01027': 'PPFAS-FLEXI',
-  'INF209K01842': 'NIPPON-SMALL',
-  'INF109K01Z48': 'ICICI-PRU-BLUE',
-  'INF179K01WJ1': 'HDFC-TOP100',
-  'INF200K01TS7': 'SBI-FLEXI',
-  'INF663L01FQ6': 'KOTAK-EMERGING',
-  'INF966L01681': 'MIRAE-LARGE',
-  'INF846K01164': 'AXIS-BLUECHIP',
-  'INF277K01460': 'TATA-DIGITAL',
-  'INF767K01235': 'UTI-NIFTY50',
+  INF740K01PX1: 'DSP-MIDCAP-DIR',
+  INF740K01128: 'DSP-MIDCAP',
+  INF194K01524: 'BANDHAN-LM',
+  INF194K01V89: 'BANDHAN-LM-DIR',
+  INF174K01LS2: 'KOTAK-FLEXI-DIR',
+  INF174K01LQ6: 'KOTAK-FLEXI-IDCW',
+  INF174K01344: 'KOTAK-FLEXI-REG',
+  INF204KB19V4: 'NIPPON-MULTI',
+  INF879O01027: 'PPFAS-FLEXI',
+  INF209K01842: 'NIPPON-SMALL',
+  INF109K01Z48: 'ICICI-PRU-BLUE',
+  INF179K01WJ1: 'HDFC-TOP100',
+  INF200K01TS7: 'SBI-FLEXI',
+  INF663L01FQ6: 'KOTAK-EMERGING',
+  INF966L01681: 'MIRAE-LARGE',
+  INF846K01164: 'AXIS-BLUECHIP',
+  INF277K01460: 'TATA-DIGITAL',
+  INF767K01235: 'UTI-NIFTY50',
 
   // Sovereign Gold Bonds
-  'IN0020180017': 'SGB-2028',
-  'IN0020180025': 'SGB-2028',
-  'IN0020190016': 'SGB-2029',
-  'IN0020200021': 'SGB-2030',
-  'IN0020210012': 'SGB-2031',
+  IN0020180017: 'SGB-2028',
+  IN0020180025: 'SGB-2028',
+  IN0020190016: 'SGB-2029',
+  IN0020200021: 'SGB-2030',
+  IN0020210012: 'SGB-2031',
 };
 
 const INVALID_TICKER_WORDS = new Set([
@@ -291,7 +455,8 @@ export function inferTickerFromSecurity(isin: string = '', securityName: string 
   if (lowerName.includes('dsp flexi')) return 'DSP-FLEXI';
   if (lowerName.includes('dsp mid cap') || lowerName.includes('dsp midcap')) return 'DSP-MIDCAP';
   if (lowerName.includes('parag parikh') || lowerName.includes('ppfas')) return 'PPFAS-FLEXI';
-  if (lowerName.includes('bandhan large & mid') || lowerName.includes('bandhan-lm')) return 'BANDHAN-LM';
+  if (lowerName.includes('bandhan large & mid') || lowerName.includes('bandhan-lm'))
+    return 'BANDHAN-LM';
 
   // 1. Exact match from curated Indian ISIN map
   if (upperIsin && KNOWN_ISIN_TICKERS[upperIsin]) {
@@ -357,7 +522,11 @@ export function inferTickerFromSecurity(isin: string = '', securityName: string 
       .replace(/^[\d\w]+\s*-\s*/, '') // Strip leading scheme codes like "782 - "
       .replace(/[-_/\\().]/g, ' ')
       .split(/\s+/)
-      .filter((w) => w.length > 1 && !/^(fund|plan|growth|direct|regular|dividend|idcw|option|equity)$/i.test(w));
+      .filter(
+        (w) =>
+          w.length > 1 &&
+          !/^(fund|plan|growth|direct|regular|dividend|idcw|option|equity)$/i.test(w)
+      );
     if (cleanTokens.length >= 2) {
       return `${cleanTokens[0]!.toUpperCase()}-${cleanTokens[1]!.toUpperCase().slice(0, 6)}`;
     }

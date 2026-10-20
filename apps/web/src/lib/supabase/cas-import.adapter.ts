@@ -1,17 +1,20 @@
 import { Result, ok, err } from '@wealthnest/shared';
-import {
-  CasImportRepositoryPort,
-  ConfirmCasImportParams,
-} from '@wealthnest/application';
+import { CasImportRepositoryPort, ConfirmCasImportParams } from '@wealthnest/application';
 import { ImportSummaryResult } from '@wealthnest/domain';
 import { supabase } from './client';
 
 export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
-  async upsertHoldingsFromCas(params: ConfirmCasImportParams): Promise<Result<ImportSummaryResult>> {
+  async upsertHoldingsFromCas(
+    params: ConfirmCasImportParams
+  ): Promise<Result<ImportSummaryResult>> {
     try {
       let imported = 0;
       let updated = 0;
       let failed = 0;
+      let equitiesImported = 0;
+      let equitiesUpdated = 0;
+      let mutualFundsImported = 0;
+      let mutualFundsUpdated = 0;
 
       for (const item of params.items) {
         try {
@@ -28,12 +31,14 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
 
             if (assetByIsin) {
               existingAssetId = assetByIsin.id;
-              // Ensure security name and ticker are attached/updated on the existing asset
+              // Ensure security name, ticker, and AMC are attached/updated on the existing asset
               await supabase
                 .from('assets')
                 .update({
                   name: item.name,
                   ...(item.ticker ? { ticker: item.ticker } : {}),
+                  ...(item.amcName ? { amc_name: item.amcName } : {}),
+                  ...(item.instrumentType ? { instrument_type: item.instrumentType } : {}),
                   updated_at: new Date().toISOString(),
                 })
                 .eq('id', existingAssetId);
@@ -50,13 +55,15 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
 
             if (assetByName) {
               existingAssetId = assetByName.id;
-              // Ensure security name, ISIN, and ticker are attached/updated on the existing asset
+              // Ensure security name, ISIN, ticker, and AMC are attached/updated on the existing asset
               await supabase
                 .from('assets')
                 .update({
                   name: item.name,
                   ...(item.isin ? { isin: item.isin } : {}),
                   ...(item.ticker ? { ticker: item.ticker } : {}),
+                  ...(item.amcName ? { amc_name: item.amcName } : {}),
+                  ...(item.instrumentType ? { instrument_type: item.instrumentType } : {}),
                   updated_at: new Date().toISOString(),
                 })
                 .eq('id', existingAssetId);
@@ -74,6 +81,10 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
                 ticker: item.ticker || null,
                 isin: item.isin || null,
                 asset_class_id: assetClassToUse,
+                instrument_type:
+                  item.instrumentType ||
+                  (assetClassToUse === 'mutual_fund' ? 'mutual_fund_scheme' : 'equity_share'),
+                amc_name: item.amcName || null,
                 currency: item.currency || 'INR',
               })
               .select('id')
@@ -92,6 +103,8 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
                   ticker: item.ticker || null,
                   isin: item.isin || null,
                   asset_class_id: 'equity',
+                  instrument_type: 'equity_share',
+                  amc_name: item.amcName || null,
                   currency: item.currency || 'INR',
                 })
                 .select('id')
@@ -109,22 +122,45 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
             existingAssetId = newAsset.id;
           }
 
-          // 3. Check if holding already exists for this asset
-          const { data: existingHolding } = await supabase
+          // 3. Check if holding already exists for this asset AND specific folio / demat account
+          let holdingQuery = supabase
             .from('holdings')
-            .select('id')
+            .select('id, unit_cost_cents, cost_basis_verified')
             .eq('user_id', params.userId)
-            .eq('asset_id', existingAssetId)
-            .maybeSingle();
+            .eq('asset_id', existingAssetId);
+
+          if (item.folioNumber) {
+            holdingQuery = holdingQuery.eq('folio_number', item.folioNumber);
+          } else {
+            holdingQuery = holdingQuery.is('folio_number', null);
+          }
+
+          if (item.dematAccountId) {
+            holdingQuery = holdingQuery.eq('demat_account_id', item.dematAccountId);
+          } else {
+            holdingQuery = holdingQuery.is('demat_account_id', null);
+          }
+
+          const { data: existingHolding } = await holdingQuery.maybeSingle();
+
+          const isMutualFund = item.assetClassId === 'mutual_fund';
 
           if (existingHolding) {
-            // Update existing holding (idempotent statement refresh)
+            // Update existing holding (idempotent statement refresh, preserving historical valuations if verified)
+            const shouldPreserveUnitCost =
+              existingHolding.cost_basis_verified && !item.costBasisVerified;
+
             const { error: updateErr } = await supabase
               .from('holdings')
               .update({
                 quantity: item.quantity,
-                unit_cost_cents: item.unitCostCents,
+                ...(!shouldPreserveUnitCost ? { unit_cost_cents: item.unitCostCents } : {}),
                 current_value_cents: item.currentValueCents,
+                amc_name: item.amcName || null,
+                scheme_plan: item.schemePlan || null,
+                cost_basis_verified: Boolean(
+                  item.costBasisVerified || existingHolding.cost_basis_verified
+                ),
                 updated_at: new Date().toISOString(),
               })
               .eq('id', existingHolding.id);
@@ -134,6 +170,11 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
               failed++;
             } else {
               updated++;
+              if (isMutualFund) {
+                mutualFundsUpdated++;
+              } else {
+                equitiesUpdated++;
+              }
             }
           } else {
             // Insert new holding position
@@ -143,6 +184,12 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
               quantity: item.quantity,
               unit_cost_cents: item.unitCostCents,
               current_value_cents: item.currentValueCents,
+              demat_account_id: item.dematAccountId || null,
+              folio_number: item.folioNumber || null,
+              amc_name: item.amcName || null,
+              scheme_plan: item.schemePlan || null,
+              cost_basis_verified: Boolean(item.costBasisVerified),
+              source: 'cas_import',
             });
 
             if (insertErr) {
@@ -150,6 +197,11 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
               failed++;
             } else {
               imported++;
+              if (isMutualFund) {
+                mutualFundsImported++;
+              } else {
+                equitiesImported++;
+              }
             }
           }
         } catch (err) {
@@ -294,6 +346,10 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
         updated,
         skipped: 0,
         failed,
+        equitiesImported,
+        equitiesUpdated,
+        mutualFundsImported,
+        mutualFundsUpdated,
         transactionsImported,
       });
     } catch (e) {

@@ -6,9 +6,15 @@ export interface ImportCasItemDto {
   readonly name: string;
   readonly ticker?: string;
   readonly assetClassId: string;
+  readonly instrumentType?: string;
+  readonly dematAccountId?: string;
+  readonly folioNumber?: string;
+  readonly amcName?: string;
+  readonly schemePlan?: string;
   readonly quantity: number;
   readonly unitCostCents: number;
   readonly currentValueCents: number;
+  readonly costBasisVerified?: boolean;
   readonly currency: string;
   readonly selected: boolean;
   readonly isExisting?: boolean;
@@ -26,12 +32,15 @@ export interface ImportCasTransactionDto {
   readonly navPriceCents?: number;
   readonly currency: string;
   readonly selected: boolean;
+  readonly folio?: string;
 }
 
 export interface CasPreviewDto {
   readonly provider: StatementProvider;
   readonly statementDate: string;
   readonly items: readonly ImportCasItemDto[];
+  readonly equities: readonly ImportCasItemDto[];
+  readonly mutualFunds: readonly ImportCasItemDto[];
   readonly transactions?: readonly ImportCasTransactionDto[];
   readonly totalReportedValueCents: number;
   readonly warnings: readonly string[];

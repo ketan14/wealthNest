@@ -58,9 +58,7 @@ export function calculatePortfolioSummary(
         : item.currentValue.convertTo(currency);
 
     const costInTarget =
-      item.costBasis.currency === currency
-        ? item.costBasis
-        : item.costBasis.convertTo(currency);
+      item.costBasis.currency === currency ? item.costBasis : item.costBasis.convertTo(currency);
 
     totalValue = totalValue.add(valInTarget);
     totalCost = totalCost.add(costInTarget);
@@ -81,10 +79,7 @@ export function calculatePortfolioSummary(
   }
 
   // 3. Aggregate asset class allocations
-  const classMap = new Map<
-    string,
-    { name: string; colorHex: string; totalValue: Money }
-  >();
+  const classMap = new Map<string, { name: string; colorHex: string; totalValue: Money }>();
 
   for (const item of items) {
     const valInTarget =
@@ -108,8 +103,7 @@ export function calculatePortfolioSummary(
   for (const [assetClassId, data] of classMap.entries()) {
     let percentage = 0;
     if (totalValue.cents > 0n) {
-      percentage =
-        Number((data.totalValue.cents * 10000n) / totalValue.cents) / 100;
+      percentage = Number((data.totalValue.cents * 10000n) / totalValue.cents) / 100;
     }
 
     allocations.push({

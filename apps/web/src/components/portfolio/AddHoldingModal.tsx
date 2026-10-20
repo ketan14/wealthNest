@@ -11,9 +11,16 @@ export interface NewHoldingFormValues {
   ticker?: string;
   assetClassId: string;
   quantity: number;
-  unitCost: number; // in dollars
-  currentValue: number; // in rupees
+  unitCost: number; // in INR
+  currentValue: number; // in INR
   currency: string;
+  // Specific structured fields
+  isin?: string;
+  dematAccountId?: string;
+  folioNumber?: string;
+  amcName?: string;
+  schemePlan?: string;
+  costBasisVerified?: boolean;
 }
 
 interface AddHoldingModalProps {
@@ -24,14 +31,62 @@ interface AddHoldingModalProps {
 }
 
 const FALLBACK_ASSET_CLASSES: AssetClassDefinition[] = [
-  { id: 'equity', name: 'Equities & Stocks', colorHex: '#3b82f6', displayOrder: 1, description: 'Listed shares and Demat equities' },
-  { id: 'mutual_fund', name: 'Mutual Funds', colorHex: '#06b6d4', displayOrder: 2, description: 'Direct and regular mutual fund folios & SIPs' },
-  { id: 'fixed_income', name: 'Fixed Income & Debt', colorHex: '#8b5cf6', displayOrder: 3, description: '' },
-  { id: 'commodity', name: 'Gold & Precious Metals', colorHex: '#eab308', displayOrder: 4, description: '' },
-  { id: 'real_estate', name: 'Real Estate & Land', colorHex: '#f59e0b', displayOrder: 5, description: '' },
-  { id: 'cash', name: 'Cash & Liquid Savings', colorHex: '#10b981', displayOrder: 6, description: '' },
-  { id: 'crypto', name: 'Digital Assets & Crypto', colorHex: '#ec4899', displayOrder: 7, description: '' },
-  { id: 'alternative', name: 'Alternative & Startups', colorHex: '#6366f1', displayOrder: 8, description: '' },
+  {
+    id: 'equity',
+    name: 'Equities & Stocks',
+    colorHex: '#3b82f6',
+    displayOrder: 1,
+    description: 'Listed shares and Demat equities',
+  },
+  {
+    id: 'mutual_fund',
+    name: 'Mutual Funds',
+    colorHex: '#06b6d4',
+    displayOrder: 2,
+    description: 'Direct and regular mutual fund folios & SIPs',
+  },
+  {
+    id: 'fixed_income',
+    name: 'Fixed Income & Debt',
+    colorHex: '#8b5cf6',
+    displayOrder: 3,
+    description: '',
+  },
+  {
+    id: 'commodity',
+    name: 'Gold & Precious Metals',
+    colorHex: '#eab308',
+    displayOrder: 4,
+    description: '',
+  },
+  {
+    id: 'real_estate',
+    name: 'Real Estate & Land',
+    colorHex: '#f59e0b',
+    displayOrder: 5,
+    description: '',
+  },
+  {
+    id: 'cash',
+    name: 'Cash & Liquid Savings',
+    colorHex: '#10b981',
+    displayOrder: 6,
+    description: '',
+  },
+  {
+    id: 'crypto',
+    name: 'Digital Assets & Crypto',
+    colorHex: '#ec4899',
+    displayOrder: 7,
+    description: '',
+  },
+  {
+    id: 'alternative',
+    name: 'Alternative & Startups',
+    colorHex: '#6366f1',
+    displayOrder: 8,
+    description: '',
+  },
 ];
 
 export function AddHoldingModal({
@@ -42,6 +97,12 @@ export function AddHoldingModal({
 }: AddHoldingModalProps) {
   const [name, setName] = useState('');
   const [ticker, setTicker] = useState('');
+  const [isin, setIsin] = useState('');
+  const [dematAccountId, setDematAccountId] = useState('');
+  const [folioNumber, setFolioNumber] = useState('');
+  const [amcName, setAmcName] = useState('');
+  const [schemePlan, setSchemePlan] = useState('Direct - Growth');
+  const [costBasisVerified, setCostBasisVerified] = useState(true);
   const [assetClassId, setAssetClassId] = useState('equity');
   const [quantity, setQuantity] = useState('');
   const [unitCost, setUnitCost] = useState('');
@@ -60,7 +121,8 @@ export function AddHoldingModal({
     },
   });
 
-  const assetClasses = dbAssetClasses && dbAssetClasses.length > 0 ? dbAssetClasses : FALLBACK_ASSET_CLASSES;
+  const assetClasses =
+    dbAssetClasses && dbAssetClasses.length > 0 ? dbAssetClasses : FALLBACK_ASSET_CLASSES;
 
   if (!isOpen) return null;
 
@@ -73,17 +135,29 @@ export function AddHoldingModal({
     const parsedCurrentValue = currentValue ? parseFloat(currentValue) : parsedQty * parsedUnitCost;
 
     if (!name.trim()) {
-      setError('Please provide an asset name.');
+      setError(
+        assetClassId === 'mutual_fund'
+          ? 'Please provide the mutual fund scheme name.'
+          : 'Please provide an asset/security name.'
+      );
       return;
     }
 
     if (isNaN(parsedQty) || parsedQty <= 0) {
-      setError('Quantity must be a positive number.');
+      setError(
+        assetClassId === 'mutual_fund'
+          ? 'Units must be a positive number.'
+          : 'Quantity must be a positive number.'
+      );
       return;
     }
 
     if (isNaN(parsedUnitCost) || parsedUnitCost < 0) {
-      setError('Unit cost cannot be negative.');
+      setError(
+        assetClassId === 'mutual_fund'
+          ? 'NAV/cost per unit cannot be negative.'
+          : 'Unit cost cannot be negative.'
+      );
       return;
     }
 
@@ -101,11 +175,26 @@ export function AddHoldingModal({
         unitCost: parsedUnitCost,
         currentValue: parsedCurrentValue,
         currency,
+        isin: isin.trim() ? isin.trim().toUpperCase() : undefined,
+        dematAccountId:
+          assetClassId === 'equity' && dematAccountId.trim() ? dematAccountId.trim() : undefined,
+        folioNumber:
+          assetClassId === 'mutual_fund' && folioNumber.trim() ? folioNumber.trim() : undefined,
+        amcName: assetClassId === 'mutual_fund' && amcName.trim() ? amcName.trim() : undefined,
+        schemePlan:
+          assetClassId === 'mutual_fund' && schemePlan.trim() ? schemePlan.trim() : undefined,
+        costBasisVerified: assetClassId === 'mutual_fund' ? costBasisVerified : true,
       });
 
       // Reset form
       setName('');
       setTicker('');
+      setIsin('');
+      setDematAccountId('');
+      setFolioNumber('');
+      setAmcName('');
+      setSchemePlan('Direct - Growth');
+      setCostBasisVerified(true);
       setAssetClassId('equity');
       setQuantity('');
       setUnitCost('');
@@ -126,9 +215,12 @@ export function AddHoldingModal({
     }
   };
 
+  const isEquity = assetClassId === 'equity';
+  const isMutualFund = assetClassId === 'mutual_fund';
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl">
+      <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-border/80">
           <div className="flex items-center gap-2.5">
@@ -136,9 +228,19 @@ export function AddHoldingModal({
               <Plus className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-foreground">Add New Holding</h3>
+              <h3 className="text-base font-semibold text-foreground">
+                {isEquity
+                  ? 'Add Direct Equity / Stock'
+                  : isMutualFund
+                    ? 'Add Mutual Fund Folio'
+                    : 'Add New Holding'}
+              </h3>
               <p className="text-xs text-muted-foreground">
-                Register an asset position into your portfolio
+                {isEquity
+                  ? 'Register a listed stock or exchange-traded position'
+                  : isMutualFund
+                    ? 'Register a mutual fund folio with AMC & scheme details'
+                    : 'Register an asset position into your portfolio'}
               </p>
             </div>
           </div>
@@ -159,38 +261,10 @@ export function AddHoldingModal({
             </div>
           )}
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2">
-              <label className="text-xs font-medium text-muted-foreground block mb-1">
-                Asset Name <span className="text-destructive">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Reliance Industries, Nifty 50 ETF, SGB 2028"
-                className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-muted-foreground block mb-1">
-                Ticker Symbol
-              </label>
-              <input
-                type="text"
-                value={ticker}
-                onChange={(e) => setTicker(e.target.value)}
-                placeholder="RELIANCE"
-                className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm uppercase font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-          </div>
-
+          {/* Asset Class Selector */}
           <div>
             <label className="text-xs font-medium text-muted-foreground block mb-1">
-              Asset Class <span className="text-destructive">*</span>
+              Investment Class <span className="text-destructive">*</span>
             </label>
             <select
               value={assetClassId}
@@ -205,10 +279,176 @@ export function AddHoldingModal({
             </select>
           </div>
 
+          {/* Conditional Fields: Mutual Fund vs Equity vs Other */}
+          {isMutualFund ? (
+            <>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">
+                  Scheme / Fund Name <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Bandhan Large & Mid Cap Fund"
+                  className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">
+                    AMC Name
+                  </label>
+                  <input
+                    type="text"
+                    value={amcName}
+                    onChange={(e) => setAmcName(e.target.value)}
+                    placeholder="e.g. Bandhan Mutual Fund"
+                    className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">
+                    Folio Number
+                  </label>
+                  <input
+                    type="text"
+                    value={folioNumber}
+                    onChange={(e) => setFolioNumber(e.target.value)}
+                    placeholder="e.g. 209928335/70"
+                    className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">
+                    Plan / Option
+                  </label>
+                  <select
+                    value={schemePlan}
+                    onChange={(e) => setSchemePlan(e.target.value)}
+                    className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="Direct - Growth">Direct - Growth</option>
+                    <option value="Direct - IDCW">Direct - IDCW</option>
+                    <option value="Regular - Growth">Regular - Growth</option>
+                    <option value="Regular - IDCW">Regular - IDCW</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">
+                    ISIN
+                  </label>
+                  <input
+                    type="text"
+                    value={isin}
+                    onChange={(e) => setIsin(e.target.value)}
+                    placeholder="INF194K01V89"
+                    className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm uppercase font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+            </>
+          ) : isEquity ? (
+            <>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">
+                    Company / Security Name <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Reliance Industries Limited"
+                    className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">
+                    NSE/BSE Ticker
+                  </label>
+                  <input
+                    type="text"
+                    value={ticker}
+                    onChange={(e) => setTicker(e.target.value)}
+                    placeholder="RELIANCE"
+                    className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm uppercase font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">
+                    ISIN
+                  </label>
+                  <input
+                    type="text"
+                    value={isin}
+                    onChange={(e) => setIsin(e.target.value)}
+                    placeholder="INE002A01018"
+                    className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm uppercase font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">
+                    Demat Account ID / DP
+                  </label>
+                  <input
+                    type="text"
+                    value={dematAccountId}
+                    onChange={(e) => setDematAccountId(e.target.value)}
+                    placeholder="e.g. 1208160000000000"
+                    className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2">
+                <label className="text-xs font-medium text-muted-foreground block mb-1">
+                  Asset Name <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Sovereign Gold Bond, PPF, Real Estate"
+                  className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">
+                  Ticker / Code
+                </label>
+                <input
+                  type="text"
+                  value={ticker}
+                  onChange={(e) => setTicker(e.target.value)}
+                  placeholder="CODE"
+                  className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm uppercase font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Quantities & Pricing */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="text-xs font-medium text-muted-foreground block mb-1">
-                Quantity <span className="text-destructive">*</span>
+                {isMutualFund ? 'Units Held' : isEquity ? 'Number of Shares' : 'Quantity'}{' '}
+                <span className="text-destructive">*</span>
               </label>
               <input
                 type="number"
@@ -216,14 +456,15 @@ export function AddHoldingModal({
                 required
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                placeholder="10"
+                placeholder={isMutualFund ? '150.250' : '10'}
                 className="w-full h-9 rounded-lg bg-secondary/50 border border-border px-3 text-sm font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
 
             <div>
               <label className="text-xs font-medium text-muted-foreground block mb-1">
-                Unit Cost (INR ₹) <span className="text-destructive">*</span>
+                {isMutualFund ? 'Purchase NAV (₹)' : isEquity ? 'Buy Price (₹)' : 'Unit Cost (₹)'}{' '}
+                <span className="text-destructive">*</span>
               </label>
               <input
                 type="number"
@@ -238,7 +479,7 @@ export function AddHoldingModal({
 
             <div>
               <label className="text-xs font-medium text-muted-foreground block mb-1">
-                Current Total Value (INR ₹)
+                Current Total Value (₹)
               </label>
               <input
                 type="number"
@@ -251,22 +492,47 @@ export function AddHoldingModal({
             </div>
           </div>
 
+          {isMutualFund && (
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="checkbox"
+                id="costBasisVerified"
+                checked={costBasisVerified}
+                onChange={(e) => setCostBasisVerified(e.target.checked)}
+                className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
+              />
+              <label
+                htmlFor="costBasisVerified"
+                className="text-xs text-muted-foreground cursor-pointer"
+              >
+                Cost basis is verified from statement or transaction history
+              </label>
+            </div>
+          )}
+
           <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 text-xs text-muted-foreground space-y-1">
             <p>
-              💡 <span className="text-foreground font-medium">India First Integer Precision:</span> Values
-              are stored in exact integer paise (<code className="text-primary font-mono">bigint</code>
-              ) to eliminate floating-point calculation drift.
+              💡 <span className="text-foreground font-medium">India First Integer Precision:</span>{' '}
+              Values are stored in exact integer paise (
+              <code className="text-primary font-mono">bigint</code>) to eliminate floating-point
+              calculation drift.
             </p>
           </div>
 
           {/* Action buttons */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-border/80">
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isLoading}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              disabled={isLoading}
+            >
               Cancel
             </Button>
             <Button type="submit" size="sm" disabled={isLoading} className="gap-2">
               {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Save Holding
+              Save Position
             </Button>
           </div>
         </form>

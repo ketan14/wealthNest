@@ -10,10 +10,16 @@ export interface ParsedCasHolding {
   readonly name: string;
   readonly ticker?: string;
   readonly folioOrDemat?: string;
+  readonly dematAccountId?: string;
+  readonly folioNumber?: string;
+  readonly amcName?: string;
+  readonly schemePlan?: string;
   readonly assetType: ParsedAssetType;
   readonly assetClassId: string;
+  readonly instrumentType?: string;
   readonly quantity: number;
   readonly unitCost?: Money;
+  readonly costBasisVerified: boolean;
   readonly reportedNavOrPrice?: Money;
   readonly reportedMarketValue: Money;
   readonly statementDate: string; // ISO date string YYYY-MM-DD
@@ -50,5 +56,9 @@ export interface ImportSummaryResult {
   readonly updated: number;
   readonly skipped: number;
   readonly failed: number;
+  readonly equitiesImported?: number;
+  readonly equitiesUpdated?: number;
+  readonly mutualFundsImported?: number;
+  readonly mutualFundsUpdated?: number;
   readonly transactionsImported?: number;
 }

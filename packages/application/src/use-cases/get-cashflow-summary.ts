@@ -19,10 +19,7 @@ export interface CashflowDataDto {
 export class GetCashflowSummaryUseCase {
   constructor(private readonly transactionRepo: TransactionRepositoryPort) {}
 
-  async execute(
-    userId: string,
-    currency: CurrencyCode = 'INR'
-  ): Promise<Result<CashflowDataDto>> {
+  async execute(userId: string, currency: CurrencyCode = 'INR'): Promise<Result<CashflowDataDto>> {
     const txResult = await this.transactionRepo.listByUser(userId);
 
     if (!txResult.success) {

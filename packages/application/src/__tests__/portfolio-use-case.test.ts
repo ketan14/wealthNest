@@ -86,4 +86,3 @@ describe('DeleteHoldingUseCase', () => {
     expect(mockRepo.deleteHolding).toHaveBeenCalledWith('holding-123', 'user-456');
   });
 });
-

@@ -135,10 +135,13 @@ export function TransactionsPage() {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'inflow' | 'outflow' | 'trades'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'inflow' | 'outflow' | 'trades'>(
+    'all'
+  );
 
   // Local state for interactive demo mode when not logged in
-  const [localDemoTransactions, setLocalDemoTransactions] = useState<TransactionDetailDto[]>(DEMO_TRANSACTIONS);
+  const [localDemoTransactions, setLocalDemoTransactions] =
+    useState<TransactionDetailDto[]>(DEMO_TRANSACTIONS);
 
   const transactionAdapter = useMemo(() => new SupabaseTransactionAdapter(), []);
   const holdingAdapter = useMemo(() => new SupabaseHoldingAdapter(), []);
@@ -305,8 +308,14 @@ export function TransactionsPage() {
 
   // Compute total volume for progress comparison bar
   const totalVolumeCents = summary.totalInflows.cents + summary.totalOutflows.cents;
-  const inflowRatio = totalVolumeCents > 0n ? Number((summary.totalInflows.cents * 10000n) / totalVolumeCents) / 100 : 50;
-  const outflowRatio = totalVolumeCents > 0n ? Number((summary.totalOutflows.cents * 10000n) / totalVolumeCents) / 100 : 50;
+  const inflowRatio =
+    totalVolumeCents > 0n
+      ? Number((summary.totalInflows.cents * 10000n) / totalVolumeCents) / 100
+      : 50;
+  const outflowRatio =
+    totalVolumeCents > 0n
+      ? Number((summary.totalOutflows.cents * 10000n) / totalVolumeCents) / 100
+      : 50;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -317,7 +326,10 @@ export function TransactionsPage() {
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
               Transactions & Cashflow
             </h2>
-            <Badge variant="default" className="font-mono text-[10px] bg-amber-500/15 text-amber-400 border-amber-500/30">
+            <Badge
+              variant="default"
+              className="font-mono text-[10px] bg-amber-500/15 text-amber-400 border-amber-500/30"
+            >
               India First (₹ INR)
             </Badge>
             <Badge variant={user ? 'success' : 'secondary'} className="font-mono text-[10px]">
@@ -349,8 +361,8 @@ export function TransactionsPage() {
                 Interactive Demonstration Cashflow Log Active
               </p>
               <p className="text-xs text-muted-foreground">
-                Sample audit history featuring Indian salary deposits, Reliance purchases, Nifty 50 SIPs, and TCS dividends.
-                Sign in to persist your personal audit trail in PostgreSQL.
+                Sample audit history featuring Indian salary deposits, Reliance purchases, Nifty 50
+                SIPs, and TCS dividends. Sign in to persist your personal audit trail in PostgreSQL.
               </p>
             </div>
           </div>
@@ -439,9 +451,7 @@ export function TransactionsPage() {
                 {summary.isNetPositive ? '+' : '-'}
                 {summary.netCashflow.formatIndianCompact()}
               </span>
-              <span className="text-[11px] text-muted-foreground">
-                Net capital balance
-              </span>
+              <span className="text-[11px] text-muted-foreground">Net capital balance</span>
             </div>
           </CardContent>
         </Card>
@@ -497,37 +507,49 @@ export function TransactionsPage() {
           {/* Breakdown cards by type */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 pt-1">
             <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/50">
-              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">Deposits</span>
+              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">
+                Deposits
+              </span>
               <p className="text-xs font-bold font-mono text-emerald-400 mt-0.5">
                 {summary.breakdownByType.deposit.formatIndianCompact()}
               </p>
             </div>
             <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/50">
-              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">Asset Buys</span>
+              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">
+                Asset Buys
+              </span>
               <p className="text-xs font-bold font-mono text-rose-400 mt-0.5">
                 {summary.breakdownByType.buy.formatIndianCompact()}
               </p>
             </div>
             <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/50">
-              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">Dividends</span>
+              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">
+                Dividends
+              </span>
               <p className="text-xs font-bold font-mono text-emerald-400 mt-0.5">
                 {summary.breakdownByType.dividend.formatIndianCompact()}
               </p>
             </div>
             <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/50">
-              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">Asset Sells</span>
+              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">
+                Asset Sells
+              </span>
               <p className="text-xs font-bold font-mono text-emerald-400 mt-0.5">
                 {summary.breakdownByType.sell.formatIndianCompact()}
               </p>
             </div>
             <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/50">
-              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">Withdrawals</span>
+              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">
+                Withdrawals
+              </span>
               <p className="text-xs font-bold font-mono text-rose-400 mt-0.5">
                 {summary.breakdownByType.withdrawal.formatIndianCompact()}
               </p>
             </div>
             <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/50">
-              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">Fees & STT</span>
+              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">
+                Fees & STT
+              </span>
               <p className="text-xs font-bold font-mono text-amber-400 mt-0.5">
                 {summary.breakdownByType.fee.formatIndianCompact()}
               </p>
@@ -618,11 +640,21 @@ export function TransactionsPage() {
                   <tr className="border-y border-border/80 bg-secondary/20 text-muted-foreground">
                     <th className="py-3 px-4 font-semibold uppercase tracking-wider">Date</th>
                     <th className="py-3 px-4 font-semibold uppercase tracking-wider">Type</th>
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">Asset / Description</th>
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Quantity</th>
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Amount (₹)</th>
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">Audit Notes</th>
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-center">Action</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">
+                      Asset / Description
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                      Quantity
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                      Amount (₹)
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">
+                      Audit Notes
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-center">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50 font-mono">
@@ -639,16 +671,47 @@ export function TransactionsPage() {
                     });
 
                     // Type color badges
-                    const typeBadgeStyles: Record<TransactionType, { bg: string; text: string; label: string }> = {
-                      deposit: { bg: 'bg-emerald-500/15 border-emerald-500/30', text: 'text-emerald-400', label: 'Deposit' },
-                      dividend: { bg: 'bg-emerald-500/15 border-emerald-500/30', text: 'text-emerald-400', label: 'Dividend' },
-                      sell: { bg: 'bg-teal-500/15 border-teal-500/30', text: 'text-teal-400', label: 'Sell' },
-                      buy: { bg: 'bg-blue-500/15 border-blue-500/30', text: 'text-blue-400', label: 'Buy' },
-                      withdrawal: { bg: 'bg-rose-500/15 border-rose-500/30', text: 'text-rose-400', label: 'Withdrawal' },
-                      fee: { bg: 'bg-amber-500/15 border-amber-500/30', text: 'text-amber-400', label: 'Charges' },
+                    const typeBadgeStyles: Record<
+                      TransactionType,
+                      { bg: string; text: string; label: string }
+                    > = {
+                      deposit: {
+                        bg: 'bg-emerald-500/15 border-emerald-500/30',
+                        text: 'text-emerald-400',
+                        label: 'Deposit',
+                      },
+                      dividend: {
+                        bg: 'bg-emerald-500/15 border-emerald-500/30',
+                        text: 'text-emerald-400',
+                        label: 'Dividend',
+                      },
+                      sell: {
+                        bg: 'bg-teal-500/15 border-teal-500/30',
+                        text: 'text-teal-400',
+                        label: 'Sell',
+                      },
+                      buy: {
+                        bg: 'bg-blue-500/15 border-blue-500/30',
+                        text: 'text-blue-400',
+                        label: 'Buy',
+                      },
+                      withdrawal: {
+                        bg: 'bg-rose-500/15 border-rose-500/30',
+                        text: 'text-rose-400',
+                        label: 'Withdrawal',
+                      },
+                      fee: {
+                        bg: 'bg-amber-500/15 border-amber-500/30',
+                        text: 'text-amber-400',
+                        label: 'Charges',
+                      },
                     };
 
-                    const badge = typeBadgeStyles[tx.type] || { bg: 'bg-secondary', text: 'text-foreground', label: tx.type };
+                    const badge = typeBadgeStyles[tx.type] || {
+                      bg: 'bg-secondary',
+                      text: 'text-foreground',
+                      label: tx.type,
+                    };
 
                     return (
                       <tr key={tx.id} className="hover:bg-secondary/30 transition-colors">
@@ -659,7 +722,9 @@ export function TransactionsPage() {
 
                         {/* Type Badge */}
                         <td className="py-3.5 px-4 font-sans whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${badge.bg} ${badge.text}`}>
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${badge.bg} ${badge.text}`}
+                          >
                             {isTxInflow ? (
                               <ArrowDownLeft className="w-3 h-3" />
                             ) : (
@@ -681,7 +746,9 @@ export function TransactionsPage() {
                               )}
                             </div>
                           ) : (
-                            <span className="text-muted-foreground capitalize font-medium">{tx.type}</span>
+                            <span className="text-muted-foreground capitalize font-medium">
+                              {tx.type}
+                            </span>
                           )}
                         </td>
 

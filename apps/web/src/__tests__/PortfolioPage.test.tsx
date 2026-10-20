@@ -145,7 +145,7 @@ describe('PortfolioPage Component', () => {
     // Verify modal is closed and Portfolio table now displays updated positions with security name attached to Asset / Ticker
     await waitFor(() => {
       expect(screen.getByText('RELIANCE INDUSTRIES LTD. - EQ')).toBeInTheDocument();
-      expect(screen.getByText('RELIANCE')).toBeInTheDocument();
+      expect(screen.getAllByText('RELIANCE').length).toBeGreaterThanOrEqual(1);
     });
   });
 });

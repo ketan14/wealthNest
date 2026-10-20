@@ -12,12 +12,19 @@ interface JoinedHoldingQueryRow {
   unit_cost_cents: number | string;
   current_value_cents: number | string;
   updated_at: string;
+  demat_account_id: string | null;
+  folio_number: string | null;
+  amc_name: string | null;
+  scheme_plan: string | null;
+  cost_basis_verified: boolean | null;
   assets: {
     id: string;
     name: string;
     ticker: string | null;
+    isin: string | null;
     currency: string;
     asset_class_id: string;
+    amc_name: string | null;
     asset_classes: {
       id: string;
       name: string;
@@ -31,25 +38,34 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
     try {
       const { data, error } = await supabase
         .from('holdings')
-        .select(`
+        .select(
+          `
           id,
           quantity,
           unit_cost_cents,
           current_value_cents,
           updated_at,
+          demat_account_id,
+          folio_number,
+          amc_name,
+          scheme_plan,
+          cost_basis_verified,
           assets (
             id,
             name,
             ticker,
+            isin,
             currency,
             asset_class_id,
+            amc_name,
             asset_classes (
               id,
               name,
               color_hex
             )
           )
-        `)
+        `
+        )
         .eq('user_id', userId)
         .order('current_value_cents', { ascending: false });
 
@@ -69,6 +85,7 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
           assetId: row.assets.id,
           name: row.assets.name,
           ticker: row.assets.ticker ?? undefined,
+          isin: row.assets.isin ?? undefined,
           assetClassId: row.assets.asset_class_id,
           assetClassName: assetClass?.name ?? 'Unknown',
           assetClassColor: assetClass?.color_hex ?? '#94a3b8',
@@ -77,6 +94,11 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
           currentValueCents: Number(row.current_value_cents),
           currency: row.assets.currency,
           updatedAt: row.updated_at,
+          dematAccountId: row.demat_account_id ?? undefined,
+          folioNumber: row.folio_number ?? undefined,
+          amcName: row.amc_name ?? row.assets.amc_name ?? undefined,
+          schemePlan: row.scheme_plan ?? undefined,
+          costBasisVerified: Boolean(row.cost_basis_verified),
         });
       }
 
@@ -95,7 +117,9 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
           user_id: params.userId,
           name: params.name,
           ticker: params.ticker ? params.ticker.toUpperCase() : null,
+          isin: params.isin || null,
           asset_class_id: params.assetClassId,
+          amc_name: params.amcName || null,
           currency: params.currency,
         })
         .select('id')
@@ -116,6 +140,11 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
           quantity: params.quantity,
           unit_cost_cents: params.unitCostCents,
           current_value_cents: params.currentValueCents,
+          demat_account_id: params.dematAccountId || null,
+          folio_number: params.folioNumber || null,
+          amc_name: params.amcName || null,
+          scheme_plan: params.schemePlan || null,
+          cost_basis_verified: Boolean(params.costBasisVerified),
         })
         .select('id, updated_at')
         .single();
@@ -136,6 +165,7 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
         assetId,
         name: params.name,
         ticker: params.ticker ? params.ticker.toUpperCase() : undefined,
+        isin: params.isin,
         assetClassId: params.assetClassId,
         assetClassName: classData?.name ?? params.assetClassId,
         assetClassColor: classData?.color_hex ?? '#3b82f6',
@@ -144,6 +174,11 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
         currentValueCents: params.currentValueCents,
         currency: params.currency,
         updatedAt: holdingData.updated_at,
+        dematAccountId: params.dematAccountId,
+        folioNumber: params.folioNumber,
+        amcName: params.amcName,
+        schemePlan: params.schemePlan,
+        costBasisVerified: params.costBasisVerified,
       };
 
       return ok(created);
@@ -179,11 +214,7 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
 
       if (holding?.asset_id) {
         try {
-          await supabase
-            .from('assets')
-            .delete()
-            .eq('id', holding.asset_id)
-            .eq('user_id', userId);
+          await supabase.from('assets').delete().eq('id', holding.asset_id).eq('user_id', userId);
         } catch {
           // Non-blocking asset cleanup
         }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ParseCasPdfUseCase,
@@ -75,8 +75,48 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
   const [previewData, setPreviewData] = useState<CasPreviewDto | null>(null);
   const [items, setItems] = useState<ImportCasItemDto[]>([]);
   const [transactions, setTransactions] = useState<ImportCasTransactionDto[]>([]);
-  const [activeTab, setActiveTab] = useState<'holdings' | 'transactions'>('holdings');
+  const [activeTab, setActiveTab] = useState<'equities' | 'mutual_funds' | 'transactions'>(
+    'equities'
+  );
   const [importSummary, setImportSummary] = useState<ImportSummaryResult | null>(null);
+
+  // Split items into Equities & Mutual Funds
+  const equities = useMemo(() => items.filter((i) => i.assetClassId !== 'mutual_fund'), [items]);
+  const mutualFunds = useMemo(() => items.filter((i) => i.assetClassId === 'mutual_fund'), [items]);
+
+  const selectedEquities = useMemo(() => equities.filter((e) => e.selected), [equities]);
+  const selectedMutualFunds = useMemo(() => mutualFunds.filter((m) => m.selected), [mutualFunds]);
+  const selectedTransactions = useMemo(
+    () => transactions.filter((t) => t.selected),
+    [transactions]
+  );
+
+  const equitiesSelectedValueCents = useMemo(
+    () => selectedEquities.reduce((s, i) => s + i.currentValueCents, 0),
+    [selectedEquities]
+  );
+  const equitiesTotalValueCents = useMemo(
+    () => equities.reduce((s, i) => s + i.currentValueCents, 0),
+    [equities]
+  );
+
+  const mfSelectedValueCents = useMemo(
+    () => selectedMutualFunds.reduce((s, i) => s + i.currentValueCents, 0),
+    [selectedMutualFunds]
+  );
+  const mfTotalValueCents = useMemo(
+    () => mutualFunds.reduce((s, i) => s + i.currentValueCents, 0),
+    [mutualFunds]
+  );
+
+  // Check for schemes held in multiple folios
+  const mfFolioCountsByIsin = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const mf of mutualFunds) {
+      counts.set(mf.isin, (counts.get(mf.isin) || 0) + 1);
+    }
+    return counts;
+  }, [mutualFunds]);
 
   // Reset state
   const handleReset = () => {
@@ -87,7 +127,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
     setPreviewData(null);
     setItems([]);
     setTransactions([]);
-    setActiveTab('holdings');
+    setActiveTab('equities');
     setImportSummary(null);
   };
 
@@ -116,7 +156,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
       setItems([...data.items]);
       setTransactions([...(data.transactions || [])]);
       setStep('preview');
-      setActiveTab('holdings');
+      const hasEquities = data.items.some((i) => i.assetClassId !== 'mutual_fund');
+      setActiveTab(hasEquities ? 'equities' : 'mutual_funds');
     },
     onError: (err) => {
       setError(err instanceof Error ? err.message : 'Failed to parse CAS statement.');
@@ -142,7 +183,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
         setItems([...res.value.items]);
         setTransactions([...(res.value.transactions || [])]);
         setStep('preview');
-        setActiveTab('holdings');
+        const hasEquities = res.value.items.some((i) => i.assetClassId !== 'mutual_fund');
+        setActiveTab(hasEquities ? 'equities' : 'mutual_funds');
       } else {
         setError(res.error.message);
       }
@@ -180,6 +222,10 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
           updated: 0,
           skipped: items.length - selectedHoldings,
           failed: 0,
+          equitiesImported: selectedEquities.length,
+          equitiesUpdated: 0,
+          mutualFundsImported: selectedMutualFunds.length,
+          mutualFundsUpdated: 0,
           transactionsImported: selectedTxs,
         };
         return mockSummary;
@@ -202,15 +248,27 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
     },
   });
 
-  // Toggle selection for holdings
-  const handleToggleSelect = (index: number) => {
+  // Toggle selection for holding
+  const handleToggleItem = (itemToToggle: ImportCasItemDto) => {
     setItems((prev) =>
-      prev.map((item, idx) => (idx === index ? { ...item, selected: !item.selected } : item))
+      prev.map((item) => (item === itemToToggle ? { ...item, selected: !item.selected } : item))
     );
   };
 
-  const handleSelectAll = (select: boolean) => {
-    setItems((prev) => prev.map((item) => ({ ...item, selected: select })));
+  const handleSelectAllEquities = (select: boolean) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.assetClassId !== 'mutual_fund' ? { ...item, selected: select } : item
+      )
+    );
+  };
+
+  const handleSelectAllMutualFunds = (select: boolean) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.assetClassId === 'mutual_fund' ? { ...item, selected: select } : item
+      )
+    );
   };
 
   // Toggle selection for transactions
@@ -224,8 +282,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
     setTransactions((prev) => prev.map((tx) => ({ ...tx, selected: select })));
   };
 
-  const selectedCount = items.filter((i) => i.selected).length;
-  const selectedTransactionsCount = transactions.filter((t) => t.selected).length;
+  const selectedCount = selectedEquities.length + selectedMutualFunds.length;
+  const selectedTransactionsCount = selectedTransactions.length;
 
   if (!isOpen) return null;
 
@@ -272,10 +330,13 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
             <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-muted-foreground flex items-start gap-2.5">
               <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-foreground">Zero-Knowledge Client-Side Extraction</p>
+                <p className="font-semibold text-foreground">
+                  Zero-Knowledge Client-Side Extraction
+                </p>
                 <p className="text-[11px] leading-relaxed mt-0.5">
                   Your PDF and password are processed strictly in-memory inside your local browser
-                  environment. They are never sent to third-party services, logged, or saved to disk.
+                  environment. They are never sent to third-party services, logged, or saved to
+                  disk.
                 </p>
               </div>
             </div>
@@ -300,7 +361,11 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
               />
               <label htmlFor="cas-file-input" className="cursor-pointer block space-y-2">
                 <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center mx-auto text-muted-foreground">
-                  {file ? <FileText className="w-5 h-5 text-primary" /> : <Upload className="w-5 h-5" />}
+                  {file ? (
+                    <FileText className="w-5 h-5 text-primary" />
+                  ) : (
+                    <Upload className="w-5 h-5" />
+                  )}
                 </div>
                 {file ? (
                   <div>
@@ -385,7 +450,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
 
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
                     Tip: CDSL & NSDL PDFs are typically protected with your{' '}
-                    <span className="font-semibold text-foreground">10-digit PAN in UPPERCASE</span> +{' '}
+                    <span className="font-semibold text-foreground">10-digit PAN in UPPERCASE</span>{' '}
+                    +{' '}
                     <span className="font-semibold text-foreground">Date of Birth (DDMMYYYY)</span>.
                   </p>
                 </div>
@@ -456,7 +522,10 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
               <div className="flex items-center gap-2 font-mono">
                 <span className="text-muted-foreground">Reported Value:</span>
                 <span className="font-bold text-emerald-400">
-                  ₹{(previewData.totalReportedValueCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  ₹
+                  {(previewData.totalReportedValueCents / 100).toLocaleString('en-IN', {
+                    minimumFractionDigits: 2,
+                  })}
                 </span>
               </div>
             </div>
@@ -479,35 +548,53 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                     </p>
                   ))}
                   <p className="text-[11px] text-muted-foreground pt-0.5">
-                    Closed folios with 0 balance can be ignored safely. If you hold units in an unextracted scheme, you can still import the rest of your portfolio now and add that scheme anytime via &quot;Add Holding&quot;.
+                    Closed folios with 0 balance can be ignored safely. If you hold units in an
+                    unextracted scheme, you can still import the rest of your portfolio now and add
+                    that scheme anytime via &quot;Add Holding&quot;.
                   </p>
                 </div>
               </details>
             )}
 
-            {/* Tab Navigation if transactions detected */}
-            {transactions.length > 0 && (
-              <div className="flex items-center gap-2 border-b border-border/80 pb-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('holdings')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
-                    activeTab === 'holdings'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'bg-secondary/40 text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <span>Portfolio Holdings</span>
-                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full bg-background/30 text-current font-bold">
-                    {items.length}
-                  </span>
-                </button>
+            {/* Tab Navigation: Direct Equities, Mutual Funds, Historical Transactions */}
+            <div className="flex items-center gap-2 border-b border-border/80 pb-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('equities')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
+                  activeTab === 'equities'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-secondary/40 text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span>Direct Equities & ETFs</span>
+                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full bg-background/30 text-current font-bold">
+                  {equities.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('mutual_funds')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
+                  activeTab === 'mutual_funds'
+                    ? 'bg-cyan-600 text-white shadow-sm'
+                    : 'bg-secondary/40 text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span>Mutual Funds</span>
+                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full bg-background/30 text-current font-bold">
+                  {mutualFunds.length}
+                </span>
+              </button>
+
+              {transactions.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setActiveTab('transactions')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
                     activeTab === 'transactions'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      ? 'bg-emerald-600 text-white shadow-sm'
                       : 'bg-secondary/40 text-muted-foreground hover:text-foreground'
                   }`}
                 >
@@ -516,21 +603,39 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                     {transactions.length}
                   </span>
                 </button>
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* Tab 1: Holdings Table */}
-            {activeTab === 'holdings' && (
+            {/* Tab 1: Direct Equities & ETFs Table */}
+            {activeTab === 'equities' && (
               <>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">
-                    Found <span className="text-foreground font-semibold">{items.length}</span> holdings (
-                    <span className="text-primary font-semibold">{selectedCount}</span> selected)
-                  </span>
+                <div className="flex items-center justify-between text-xs bg-blue-500/5 p-2 rounded-lg border border-blue-500/20">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">
+                      Found <span className="text-foreground font-semibold">{equities.length}</span>{' '}
+                      stocks & ETFs (
+                      <span className="text-blue-400 font-semibold">{selectedEquities.length}</span>{' '}
+                      selected)
+                    </span>
+                    <span className="text-muted-foreground">•</span>
+                    <span className="font-mono text-foreground font-semibold">
+                      Selected: ₹
+                      {(equitiesSelectedValueCents / 100).toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                      })}
+                    </span>
+                    <span className="text-muted-foreground text-[11px]">
+                      (of ₹
+                      {(equitiesTotalValueCents / 100).toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                      })}
+                      )
+                    </span>
+                  </div>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => handleSelectAll(true)}
+                      onClick={() => handleSelectAllEquities(true)}
                       className="text-primary hover:underline font-semibold"
                     >
                       Select All
@@ -538,7 +643,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                     <span className="text-muted-foreground">•</span>
                     <button
                       type="button"
-                      onClick={() => handleSelectAll(false)}
+                      onClick={() => handleSelectAllEquities(false)}
                       className="text-muted-foreground hover:text-foreground"
                     >
                       Deselect All
@@ -551,17 +656,28 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                     <thead>
                       <tr className="border-b border-border bg-secondary/60 text-muted-foreground sticky top-0 backdrop-blur-md z-10">
                         <th className="py-2.5 px-3 w-10 text-center">Import</th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Asset / Ticker</th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Asset Class</th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Units</th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Price / NAV</th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Reported Value</th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">
+                          Security / Ticker
+                        </th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">ISIN</th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">
+                          Demat Account
+                        </th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
+                          Shares
+                        </th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
+                          Price
+                        </th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
+                          Reported Value
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/50 font-mono">
-                      {items.map((item, idx) => (
+                      {equities.map((item: ImportCasItemDto, idx: number) => (
                         <tr
-                          key={item.isin || idx}
+                          key={`${item.isin}-${item.dematAccountId || idx}`}
                           className={`hover:bg-secondary/30 transition-colors ${
                             item.selected ? 'bg-secondary/15' : 'opacity-50'
                           }`}
@@ -570,7 +686,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                             <input
                               type="checkbox"
                               checked={item.selected}
-                              onChange={() => handleToggleSelect(idx)}
+                              onChange={() => handleToggleItem(item)}
                               className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
                             />
                           </td>
@@ -578,33 +694,19 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                             <div className="font-semibold text-foreground text-xs flex items-center gap-1.5 flex-wrap">
                               <span>{item.name}</span>
                               {item.ticker && (
-                                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20 text-primary font-bold">
+                                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold">
                                   {item.ticker}
                                 </span>
                               )}
                             </div>
-                            <span className="font-mono text-[10px] text-muted-foreground">{item.isin}</span>
                           </td>
-                          <td className="py-2.5 px-3 font-sans">
-                            {item.assetClassId === 'mutual_fund' ? (
-                              <Badge variant="outline" className="text-[10px] bg-cyan-500/10 text-cyan-400 border-cyan-500/30 font-medium">
-                                Mutual Funds
-                              </Badge>
-                            ) : item.assetClassId === 'equity' ? (
-                              <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/30 font-medium">
-                                Equities & Stocks
-                              </Badge>
-                            ) : item.assetClassId === 'commodity' ? (
-                              <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/30 font-medium">
-                                Gold & Commodities
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary" className="capitalize text-[10px]">
-                                {item.assetClassId.replace('_', ' ')}
-                              </Badge>
-                            )}
+                          <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground">
+                            {item.isin}
                           </td>
-                          <td className="py-2.5 px-3 text-right text-foreground">
+                          <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground">
+                            {item.dematAccountId || 'Demat Main'}
+                          </td>
+                          <td className="py-2.5 px-3 text-right text-foreground font-semibold">
                             {item.quantity.toLocaleString('en-IN', { maximumFractionDigits: 4 })}
                           </td>
                           <td className="py-2.5 px-3 text-right text-muted-foreground">
@@ -613,7 +715,10 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                               : '—'}
                           </td>
                           <td className="py-2.5 px-3 text-right font-bold text-foreground">
-                            ₹{(item.currentValueCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            ₹
+                            {(item.currentValueCents / 100).toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                            })}
                           </td>
                         </tr>
                       ))}
@@ -623,13 +728,164 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
               </>
             )}
 
-            {/* Tab 2: Transactions Table */}
+            {/* Tab 2: Mutual Funds Table */}
+            {activeTab === 'mutual_funds' && (
+              <>
+                <div className="flex items-center justify-between text-xs bg-cyan-500/5 p-2 rounded-lg border border-cyan-500/20">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">
+                      Found{' '}
+                      <span className="text-foreground font-semibold">{mutualFunds.length}</span>{' '}
+                      mutual fund folios (
+                      <span className="text-cyan-400 font-semibold">
+                        {selectedMutualFunds.length}
+                      </span>{' '}
+                      selected)
+                    </span>
+                    <span className="text-muted-foreground">•</span>
+                    <span className="font-mono text-foreground font-semibold">
+                      Selected: ₹
+                      {(mfSelectedValueCents / 100).toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                      })}
+                    </span>
+                    <span className="text-muted-foreground text-[11px]">
+                      (of ₹
+                      {(mfTotalValueCents / 100).toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                      })}
+                      )
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectAllMutualFunds(true)}
+                      className="text-primary hover:underline font-semibold"
+                    >
+                      Select All
+                    </button>
+                    <span className="text-muted-foreground">•</span>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectAllMutualFunds(false)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                </div>
+
+                <div className="min-h-[300px] max-h-[460px] flex-1 overflow-y-auto border border-border/80 rounded-xl shadow-inner">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-border bg-secondary/60 text-muted-foreground sticky top-0 backdrop-blur-md z-10">
+                        <th className="py-2.5 px-3 w-10 text-center">Import</th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">
+                          Scheme / Fund Name
+                        </th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">
+                          AMC / Plan
+                        </th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">
+                          Folio No.
+                        </th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">ISIN</th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
+                          Units
+                        </th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
+                          NAV
+                        </th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
+                          Reported Value
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/50 font-mono">
+                      {mutualFunds.map((item: ImportCasItemDto, idx: number) => {
+                        const hasMultipleFolios = (mfFolioCountsByIsin.get(item.isin) || 0) > 1;
+
+                        return (
+                          <tr
+                            key={`${item.isin}-${item.folioNumber || idx}`}
+                            className={`hover:bg-secondary/30 transition-colors ${
+                              item.selected ? 'bg-secondary/15' : 'opacity-50'
+                            }`}
+                          >
+                            <td className="py-2.5 px-3 text-center">
+                              <input
+                                type="checkbox"
+                                checked={item.selected}
+                                onChange={() => handleToggleItem(item)}
+                                className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
+                              />
+                            </td>
+                            <td className="py-2.5 px-3 font-sans">
+                              <div className="font-semibold text-foreground text-xs flex items-center gap-1.5 flex-wrap">
+                                <span>{item.name}</span>
+                                {hasMultipleFolios && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[9px] bg-amber-500/10 text-amber-400 border-amber-500/30 px-1 py-0"
+                                    title="This scheme is held across multiple distinct folios in your statement."
+                                  >
+                                    Multiple Folios
+                                  </Badge>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-3 font-sans">
+                              <div className="text-xs text-foreground font-medium">
+                                {item.amcName || 'Mutual Fund'}
+                              </div>
+                              {item.schemePlan && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  {item.schemePlan}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-[11px] text-foreground font-semibold">
+                              {item.folioNumber || 'Direct'}
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-[10px] text-muted-foreground">
+                              {item.isin}
+                            </td>
+                            <td className="py-2.5 px-3 text-right text-foreground font-semibold">
+                              {item.quantity.toLocaleString('en-IN', { maximumFractionDigits: 4 })}
+                            </td>
+                            <td className="py-2.5 px-3 text-right text-muted-foreground">
+                              {item.unitCostCents
+                                ? `₹${(item.unitCostCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
+                                : '—'}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-bold text-foreground">
+                              ₹
+                              {(item.currentValueCents / 100).toLocaleString('en-IN', {
+                                minimumFractionDigits: 2,
+                              })}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            {/* Tab 3: Transactions Table */}
             {activeTab === 'transactions' && (
               <>
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center justify-between text-xs bg-emerald-500/5 p-2 rounded-lg border border-emerald-500/20">
                   <span className="text-muted-foreground">
-                    Found <span className="text-foreground font-semibold">{transactions.length}</span> mutual fund transactions (
-                    <span className="text-emerald-400 font-semibold">{selectedTransactionsCount}</span> selected)
+                    Found{' '}
+                    <span className="text-foreground font-semibold">{transactions.length}</span>{' '}
+                    historical transactions (
+                    <span className="text-emerald-400 font-semibold">
+                      {selectedTransactionsCount}
+                    </span>{' '}
+                    selected)
                   </span>
                   <div className="flex items-center gap-2">
                     <button
@@ -657,10 +913,18 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                         <th className="py-2.5 px-3 w-10 text-center">Import</th>
                         <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Date</th>
                         <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Type</th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Scheme / Fund Name</th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Units</th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">NAV</th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Amount</th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">
+                          Scheme / Fund Name
+                        </th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
+                          Units
+                        </th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
+                          NAV
+                        </th>
+                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
+                          Amount
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/50 font-mono">
@@ -684,15 +948,24 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                           </td>
                           <td className="py-2.5 px-3 font-sans">
                             {tx.type === 'sell' ? (
-                              <Badge variant="outline" className="text-[10px] bg-rose-500/10 text-rose-400 border-rose-500/30 uppercase font-semibold">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] bg-rose-500/10 text-rose-400 border-rose-500/30 uppercase font-semibold"
+                              >
                                 Redemption
                               </Badge>
                             ) : tx.type === 'dividend' ? (
-                              <Badge variant="outline" className="text-[10px] bg-purple-500/10 text-purple-400 border-purple-500/30 uppercase font-semibold">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] bg-purple-500/10 text-purple-400 border-purple-500/30 uppercase font-semibold"
+                              >
                                 Dividend
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30 uppercase font-semibold">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30 uppercase font-semibold"
+                              >
                                 Purchase (SIP)
                               </Badge>
                             )}
@@ -711,7 +984,10 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                             </p>
                           </td>
                           <td className="py-2.5 px-3 text-right text-foreground font-semibold">
-                            {tx.type === 'sell' ? '-' : '+'}{tx.units ? tx.units.toLocaleString('en-IN', { maximumFractionDigits: 4 }) : '—'}
+                            {tx.type === 'sell' ? '-' : '+'}
+                            {tx.units
+                              ? tx.units.toLocaleString('en-IN', { maximumFractionDigits: 4 })
+                              : '—'}
                           </td>
                           <td className="py-2.5 px-3 text-right text-muted-foreground">
                             {tx.navPriceCents
@@ -719,7 +995,10 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                               : '—'}
                           </td>
                           <td className="py-2.5 px-3 text-right font-bold text-foreground">
-                            ₹{(tx.amountCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            ₹
+                            {(tx.amountCents / 100).toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                            })}
                           </td>
                         </tr>
                       ))}
@@ -731,7 +1010,12 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
 
             {/* Actions */}
             <div className="flex items-center justify-between pt-3 border-t border-border/80">
-              <Button variant="ghost" size="sm" onClick={() => setStep('upload')} className="gap-1.5 text-xs">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setStep('upload')}
+                className="gap-1.5 text-xs"
+              >
                 <RotateCcw className="w-3.5 h-3.5" />
                 Back to Upload
               </Button>
@@ -741,12 +1025,17 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                 </Button>
                 <Button
                   size="sm"
-                  disabled={(selectedCount === 0 && selectedTransactionsCount === 0) || confirmMutation.isPending}
+                  disabled={
+                    (selectedCount === 0 && selectedTransactionsCount === 0) ||
+                    confirmMutation.isPending
+                  }
                   onClick={() => confirmMutation.mutate()}
                   className="gap-2"
                 >
                   {confirmMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  Confirm & Import ({selectedCount} positions{selectedTransactionsCount > 0 ? `, ${selectedTransactionsCount} txs` : ''})
+                  Confirm & Import ({selectedEquities.length} Equities, {selectedMutualFunds.length}{' '}
+                  Mutual Funds
+                  {selectedTransactionsCount > 0 ? `, ${selectedTransactionsCount} txs` : ''})
                 </Button>
               </div>
             </div>
@@ -758,12 +1047,16 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
           <div className="space-y-6 pt-6 text-center">
             <div
               className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto ${
-                importSummary.failed > 0 && importSummary.imported === 0 && importSummary.updated === 0
+                importSummary.failed > 0 &&
+                importSummary.imported === 0 &&
+                importSummary.updated === 0
                   ? 'bg-rose-500/15 border border-rose-500/30 text-rose-400'
                   : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
               }`}
             >
-              {importSummary.failed > 0 && importSummary.imported === 0 && importSummary.updated === 0 ? (
+              {importSummary.failed > 0 &&
+              importSummary.imported === 0 &&
+              importSummary.updated === 0 ? (
                 <AlertCircle className="w-8 h-8" />
               ) : (
                 <CheckCircle2 className="w-8 h-8" />
@@ -772,14 +1065,18 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
 
             <div>
               <h4 className="text-lg font-bold text-foreground">
-                {importSummary.failed > 0 && importSummary.imported === 0 && importSummary.updated === 0
+                {importSummary.failed > 0 &&
+                importSummary.imported === 0 &&
+                importSummary.updated === 0
                   ? 'CAS Import Encountered Issues'
                   : 'CAS Import Completed Successfully!'}
               </h4>
               <p className="text-xs text-muted-foreground mt-1">
-                {importSummary.failed > 0 && importSummary.imported === 0 && importSummary.updated === 0
+                {importSummary.failed > 0 &&
+                importSummary.imported === 0 &&
+                importSummary.updated === 0
                   ? 'Could not save positions to database. Please review the notice below.'
-                  : 'Your investment positions have been extracted, validated, and synchronized.'}
+                  : 'Your investment positions have been extracted, validated, and synchronized into distinct investment classes.'}
               </p>
             </div>
 
@@ -787,45 +1084,49 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
               <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center justify-center gap-2 max-w-md mx-auto">
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
                 <span>
-                  {importSummary.failed} position{importSummary.failed > 1 ? 's' : ''} encountered an issue during database save.
+                  {importSummary.failed} position{importSummary.failed > 1 ? 's' : ''} encountered
+                  an issue during database save.
                 </span>
               </div>
             )}
 
             {/* Summary statistics grid */}
-            <div className={`grid gap-3 max-w-md mx-auto ${importSummary.failed > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                <span className="text-2xl font-bold font-mono text-emerald-400">
-                  {importSummary.imported}
-                </span>
-                <p className="text-[11px] text-muted-foreground mt-0.5">New Positions</p>
-              </div>
+            <div className="grid gap-3 max-w-lg mx-auto grid-cols-2 sm:grid-cols-4">
               <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
                 <span className="text-2xl font-bold font-mono text-blue-400">
+                  {importSummary.equitiesImported ??
+                    (importSummary.imported > 0 ? importSummary.imported : 0)}
+                </span>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Equities Imported</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
+                <span className="text-2xl font-bold font-mono text-cyan-400">
+                  {importSummary.mutualFundsImported ?? 0}
+                </span>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Mutual Funds</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                <span className="text-2xl font-bold font-mono text-purple-400">
                   {importSummary.updated}
                 </span>
                 <p className="text-[11px] text-muted-foreground mt-0.5">Updated</p>
               </div>
+
               <div className="p-3 rounded-xl bg-secondary/40 border border-border/50">
                 <span className="text-2xl font-bold font-mono text-muted-foreground">
                   {importSummary.skipped}
                 </span>
                 <p className="text-[11px] text-muted-foreground mt-0.5">Skipped</p>
               </div>
-              {importSummary.failed > 0 && (
-                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20">
-                  <span className="text-2xl font-bold font-mono text-rose-400">
-                    {importSummary.failed}
-                  </span>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">Failed</p>
-                </div>
-              )}
+
               {Boolean(importSummary.transactionsImported) && (
-                <div className={`p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 ${importSummary.failed > 0 ? 'col-span-4' : 'col-span-3'}`}>
-                  <span className="text-2xl font-bold font-mono text-purple-400">
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 col-span-2 sm:col-span-4">
+                  <span className="text-xl font-bold font-mono text-emerald-400">
                     +{importSummary.transactionsImported}
                   </span>
-                  <p className="text-[11px] text-purple-200 mt-0.5">
+                  <p className="text-[11px] text-emerald-200 mt-0.5">
                     Historical Transactions Added to Trade Ledger
                   </p>
                 </div>

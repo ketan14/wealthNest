@@ -24,7 +24,9 @@ describe('ParseCasPdfUseCase', () => {
 
   it('handles password requirement error gracefully', async () => {
     const mockExtractor: PdfExtractorPort = {
-      extractPages: vi.fn().mockResolvedValue(err(new Error('Password required to decrypt document'))),
+      extractPages: vi
+        .fn()
+        .mockResolvedValue(err(new Error('Password required to decrypt document'))),
     };
 
     const useCase = new ParseCasPdfUseCase(mockExtractor);

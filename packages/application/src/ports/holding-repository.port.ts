@@ -5,6 +5,7 @@ export interface HoldingDetailDto {
   readonly assetId: string;
   readonly name: string;
   readonly ticker?: string;
+  readonly isin?: string;
   readonly assetClassId: string;
   readonly assetClassName: string;
   readonly assetClassColor: string;
@@ -13,17 +14,28 @@ export interface HoldingDetailDto {
   readonly currentValueCents: number;
   readonly currency: string;
   readonly updatedAt: string;
+  readonly dematAccountId?: string;
+  readonly folioNumber?: string;
+  readonly amcName?: string;
+  readonly schemePlan?: string;
+  readonly costBasisVerified?: boolean;
 }
 
 export interface CreateHoldingParams {
   readonly userId: string;
   readonly name: string;
   readonly ticker?: string;
+  readonly isin?: string;
   readonly assetClassId: string;
   readonly currency: string;
   readonly quantity: number;
   readonly unitCostCents: number;
   readonly currentValueCents: number;
+  readonly dematAccountId?: string;
+  readonly folioNumber?: string;
+  readonly amcName?: string;
+  readonly schemePlan?: string;
+  readonly costBasisVerified?: boolean;
 }
 
 export interface HoldingRepositoryPort {

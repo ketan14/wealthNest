@@ -36,6 +36,8 @@ import {
   FileSpreadsheet,
   AlertCircle,
   Loader2,
+  CheckCircle2,
+  HelpCircle,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -46,6 +48,8 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     assetId: 'asset-1',
     name: 'Reliance Industries Ltd',
     ticker: 'RELIANCE',
+    isin: 'INE002A01018',
+    dematAccountId: '1208160000000000',
     assetClassId: 'equity',
     assetClassName: 'Equities & Stocks',
     assetClassColor: '#3b82f6',
@@ -53,6 +57,7 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     unitCostCents: 250000, // ₹2,500.00
     currentValueCents: 23600000, // ₹2,36,000.00 (+₹36,000)
     currency: 'INR',
+    costBasisVerified: true,
     updatedAt: new Date().toISOString(),
   },
   {
@@ -60,6 +65,10 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     assetId: 'asset-2',
     name: 'Parag Parikh Flexi Cap Fund',
     ticker: 'PPFAS-FLEXI',
+    isin: 'INF879O01019',
+    amcName: 'PPFAS Mutual Fund',
+    folioNumber: '10123456/90',
+    schemePlan: 'Direct Plan - Growth',
     assetClassId: 'mutual_fund',
     assetClassName: 'Mutual Funds',
     assetClassColor: '#06b6d4',
@@ -67,6 +76,7 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     unitCostCents: 5500, // ₹55.00
     currentValueCents: 11000000, // ₹1,10,000.00 (+₹27,500)
     currency: 'INR',
+    costBasisVerified: true,
     updatedAt: new Date().toISOString(),
   },
   {
@@ -74,6 +84,8 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     assetId: 'asset-3',
     name: 'Tata Consultancy Services',
     ticker: 'TCS',
+    isin: 'INE467B01029',
+    dematAccountId: '1208160000000000',
     assetClassId: 'equity',
     assetClassName: 'Equities & Stocks',
     assetClassColor: '#3b82f6',
@@ -81,6 +93,7 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     unitCostCents: 360000, // ₹3,600.00
     currentValueCents: 16600000, // ₹1,66,000.00 (+₹22,000)
     currency: 'INR',
+    costBasisVerified: true,
     updatedAt: new Date().toISOString(),
   },
   {
@@ -88,6 +101,8 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     assetId: 'asset-4',
     name: 'Sovereign Gold Bond 2028',
     ticker: 'SGB-2028',
+    isin: 'IN0020180017',
+    dematAccountId: '1208160000000000',
     assetClassId: 'commodity',
     assetClassName: 'Gold & Precious Metals',
     assetClassColor: '#eab308',
@@ -95,6 +110,26 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     unitCostCents: 580000, // ₹5,800.00
     currentValueCents: 22950000, // ₹2,29,500.00 (+₹55,500)
     currency: 'INR',
+    costBasisVerified: true,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    holdingId: 'demo-2b',
+    assetId: 'asset-2b',
+    name: 'Bandhan Large & Mid Cap Fund',
+    ticker: 'BANDHAN-LM',
+    isin: 'INF194K01V89',
+    amcName: 'Bandhan Mutual Fund',
+    folioNumber: '209928335/70',
+    schemePlan: 'Direct Plan - Growth',
+    assetClassId: 'mutual_fund',
+    assetClassName: 'Mutual Funds',
+    assetClassColor: '#06b6d4',
+    quantity: 2268.239,
+    unitCostCents: 14720, // ₹147.20
+    currentValueCents: 37671800, // ₹3,76,718.00
+    currency: 'INR',
+    costBasisVerified: false, // Closing balance imported from CAS without verified buy history
     updatedAt: new Date().toISOString(),
   },
   {
@@ -109,6 +144,7 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     unitCostCents: 150000000, // ₹15,00,000.00 (15 Lakhs)
     currentValueCents: 150000000, // ₹15,00,000.00
     currency: 'INR',
+    costBasisVerified: true,
     updatedAt: new Date().toISOString(),
   },
   {
@@ -123,6 +159,7 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     unitCostCents: 50000000, // ₹5,00,000.00 (5 Lakhs)
     currentValueCents: 50000000, // ₹5,00,000.00
     currency: 'INR',
+    costBasisVerified: true,
     updatedAt: new Date().toISOString(),
   },
   {
@@ -137,6 +174,7 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     unitCostCents: 25000000, // ₹2,50,000.00 (2.5 Lakhs)
     currentValueCents: 25000000, // ₹2,50,000.00
     currency: 'INR',
+    costBasisVerified: true,
     updatedAt: new Date().toISOString(),
   },
   {
@@ -144,6 +182,8 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     assetId: 'asset-8',
     name: 'Embassy Office Parks REIT',
     ticker: 'EMBASSY',
+    isin: 'INE041025011',
+    dematAccountId: '1208160000000000',
     assetClassId: 'real_estate',
     assetClassName: 'Real Estate & Land',
     assetClassColor: '#f59e0b',
@@ -151,6 +191,7 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     unitCostCents: 34000, // ₹340.00
     currentValueCents: 23700000, // ₹2,37,000.00 (+₹33,000)
     currency: 'INR',
+    costBasisVerified: true,
     updatedAt: new Date().toISOString(),
   },
 ];
@@ -172,7 +213,7 @@ export function PortfolioPage() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'consolidated' | 'grouped'>('consolidated');
+  const [viewMode, setViewMode] = useState<'all' | 'equities' | 'mutual_funds' | 'grouped'>('all');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -208,7 +249,7 @@ export function PortfolioPage() {
     return localDemoHoldings;
   }, [user, dbPortfolioData, localDemoHoldings]);
 
-  // Pure Domain Summary calculation with Money value objects
+  // Pure Domain Summary calculation with Money value objects: Aggregates all supported investments exactly once
   const summary: PortfolioSummary = useMemo(() => {
     if (user && dbPortfolioData) {
       return dbPortfolioData.summary;
@@ -216,9 +257,14 @@ export function PortfolioPage() {
 
     const valuationItems: HoldingValuationItem[] = localDemoHoldings.map((h) => {
       const holdingCurrency = (h.currency as CurrencyCode) || 'INR';
-      const totalCostCents = BigInt(Math.round((Number(h.quantity) || 0) * (Number(h.unitCostCents) || 0)));
+      const totalCostCents = BigInt(
+        Math.round((Number(h.quantity) || 0) * (Number(h.unitCostCents) || 0))
+      );
       const costBasis = Money.fromCents(totalCostCents, holdingCurrency);
-      const currentValue = Money.fromCents(BigInt(Math.round(Number(h.currentValueCents) || 0)), holdingCurrency);
+      const currentValue = Money.fromCents(
+        BigInt(Math.round(Number(h.currentValueCents) || 0)),
+        holdingCurrency
+      );
 
       return {
         holdingId: h.holdingId,
@@ -239,11 +285,27 @@ export function PortfolioPage() {
     return activeHoldings.filter((h) => {
       const matchesSearch =
         h.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (h.ticker && h.ticker.toLowerCase().includes(searchQuery.toLowerCase()));
+        (h.ticker && h.ticker.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (h.isin && h.isin.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (h.folioNumber && h.folioNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (h.amcName && h.amcName.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesClass = !selectedClassFilter || h.assetClassId === selectedClassFilter;
       return matchesSearch && matchesClass;
     });
   }, [activeHoldings, searchQuery, selectedClassFilter]);
+
+  // Separate investment subsets for specialized views
+  const equitiesHoldings = useMemo(() => {
+    return filteredHoldings.filter(
+      (h) => h.assetClassId === 'equity' || (h.assetClassId !== 'mutual_fund' && !h.folioNumber)
+    );
+  }, [filteredHoldings]);
+
+  const mutualFundHoldings = useMemo(() => {
+    return filteredHoldings.filter(
+      (h) => h.assetClassId === 'mutual_fund' || Boolean(h.folioNumber)
+    );
+  }, [filteredHoldings]);
 
   // Group filtered holdings by asset class for categorized multi-table view
   const groupedHoldings = useMemo(() => {
@@ -282,6 +344,42 @@ export function PortfolioPage() {
     }));
   }, [filteredHoldings]);
 
+  // Subtotals for Equities
+  const equitiesSubtotals = useMemo(() => {
+    const totalShares = equitiesHoldings.reduce((acc, h) => acc + h.quantity, 0);
+    const totalValueCents = equitiesHoldings.reduce((acc, h) => acc + h.currentValueCents, 0);
+    const totalCostCents = equitiesHoldings.reduce(
+      (acc, h) => acc + Math.round(h.quantity * h.unitCostCents),
+      0
+    );
+    const gainLossCents = totalValueCents - totalCostCents;
+    const returnPct = totalCostCents > 0 ? (gainLossCents / totalCostCents) * 100 : 0;
+    return { totalShares, totalValueCents, totalCostCents, gainLossCents, returnPct };
+  }, [equitiesHoldings]);
+
+  // Subtotals for Mutual Funds
+  const mfSubtotals = useMemo(() => {
+    const totalUnits = mutualFundHoldings.reduce((acc, h) => acc + h.quantity, 0);
+    const totalValueCents = mutualFundHoldings.reduce((acc, h) => acc + h.currentValueCents, 0);
+    const verifiedHoldings = mutualFundHoldings.filter((h) => h.costBasisVerified);
+    const totalVerifiedCostCents = verifiedHoldings.reduce(
+      (acc, h) => acc + Math.round(h.quantity * h.unitCostCents),
+      0
+    );
+    const verifiedValueCents = verifiedHoldings.reduce((acc, h) => acc + h.currentValueCents, 0);
+    const verifiedGainLossCents = verifiedValueCents - totalVerifiedCostCents;
+    const verifiedReturnPct =
+      totalVerifiedCostCents > 0 ? (verifiedGainLossCents / totalVerifiedCostCents) * 100 : 0;
+    return {
+      totalUnits,
+      totalValueCents,
+      totalVerifiedCostCents,
+      verifiedGainLossCents,
+      verifiedReturnPct,
+      hasUnverified: mutualFundHoldings.some((h) => !h.costBasisVerified),
+    };
+  }, [mutualFundHoldings]);
+
   // Mutation: Add Holding
   const addHoldingMutation = useMutation({
     mutationFn: async (values: NewHoldingFormValues) => {
@@ -295,11 +393,17 @@ export function PortfolioPage() {
           userId: user.id,
           name: values.name,
           ticker: values.ticker,
+          isin: values.isin,
           assetClassId: values.assetClassId,
           currency: values.currency || 'INR',
           quantity: values.quantity,
           unitCostCents,
           currentValueCents,
+          dematAccountId: values.dematAccountId,
+          folioNumber: values.folioNumber,
+          amcName: values.amcName,
+          schemePlan: values.schemePlan,
+          costBasisVerified: values.costBasisVerified,
         });
 
         if (!res.success) throw res.error;
@@ -311,9 +415,19 @@ export function PortfolioPage() {
           assetId: `asset-${Date.now()}`,
           name: values.name,
           ticker: values.ticker,
+          isin: values.isin,
+          dematAccountId: values.dematAccountId,
+          folioNumber: values.folioNumber,
+          amcName: values.amcName,
+          schemePlan: values.schemePlan,
+          costBasisVerified: values.costBasisVerified,
           assetClassId: values.assetClassId,
-          assetClassName: values.assetClassId.toUpperCase(),
-          assetClassColor: '#3b82f6',
+          assetClassName:
+            values.assetClassId === 'mutual_fund'
+              ? 'Mutual Funds'
+              : ASSET_CLASS_META_MAP[values.assetClassId]?.name ||
+                values.assetClassId.toUpperCase(),
+          assetClassColor: ASSET_CLASS_META_MAP[values.assetClassId]?.color || '#3b82f6',
           quantity: values.quantity,
           unitCostCents,
           currentValueCents,
@@ -348,15 +462,12 @@ export function PortfolioPage() {
         const useCase = new DeleteHoldingUseCase(holdingAdapter);
         const res = await useCase.execute(holdingId, user.id);
         if (!res.success) throw res.error;
-      } else {
-        setLocalDemoHoldings((prev) => prev.filter((h) => h.holdingId !== holdingId));
       }
     },
     onSuccess: () => {
       setDeletingId(null);
       if (user) {
         queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
-        refetch();
       }
     },
     onError: (err) => {
@@ -374,6 +485,12 @@ export function PortfolioPage() {
         userId: user.id,
         name: h.name,
         ticker: h.ticker,
+        isin: h.isin,
+        dematAccountId: h.dematAccountId,
+        folioNumber: h.folioNumber,
+        amcName: h.amcName,
+        schemePlan: h.schemePlan,
+        costBasisVerified: h.costBasisVerified,
         assetClassId: h.assetClassId,
         currency: 'INR',
         quantity: h.quantity,
@@ -393,7 +510,10 @@ export function PortfolioPage() {
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
               Portfolio & Asset Allocation
             </h2>
-            <Badge variant="default" className="font-mono text-[10px] bg-amber-500/15 text-amber-400 border-amber-500/30">
+            <Badge
+              variant="default"
+              className="font-mono text-[10px] bg-amber-500/15 text-amber-400 border-amber-500/30"
+            >
               India First (₹ INR)
             </Badge>
             <Badge variant={user ? 'success' : 'secondary'} className="font-mono text-[10px]">
@@ -401,7 +521,8 @@ export function PortfolioPage() {
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Indian multi-asset wealth tracker with Lakh/Crore precision and pure domain valuation engine.
+            Indian multi-asset wealth tracker with Lakh/Crore precision and separated Direct
+            Equities and Mutual Fund portfolios.
           </p>
         </div>
 
@@ -433,8 +554,9 @@ export function PortfolioPage() {
                 India-First Demonstration Portfolio Active
               </p>
               <p className="text-xs text-muted-foreground">
-                Sample portfolio featuring Indian Equities (Reliance, Nifty 50, TCS), Sovereign Gold Bonds (SGB), PPF, and FDs.
-                Sign in to save and sync your real portfolio in PostgreSQL.
+                Sample portfolio featuring Indian Equities (Reliance, TCS), Mutual Funds (Parag
+                Parikh, Bandhan), Sovereign Gold Bonds (SGB), PPF, and FDs. Sign in to save and sync
+                your real portfolio in PostgreSQL.
               </p>
             </div>
           </div>
@@ -447,9 +569,9 @@ export function PortfolioPage() {
         </div>
       )}
 
-      {/* Top Portfolio Valuation Summary Cards */}
+      {/* Top Portfolio Valuation Summary Cards: Unified across all holdings */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Total Net Portfolio Value */}
+        {/* Card 1: Total Portfolio Value */}
         <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -461,14 +583,9 @@ export function PortfolioPage() {
             <div className="text-2xl font-bold font-mono text-foreground">
               {summary.totalValue.format('en-IN')}
             </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs font-bold font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                {summary.totalValue.formatIndianCompact()}
-              </span>
-              <span className="text-[11px] text-muted-foreground font-mono">
-                {summary.totalValue.currency}
-              </span>
-            </div>
+            <p className="text-[11px] font-mono text-muted-foreground mt-1">
+              {summary.totalValue.formatIndianCompact()} (zero float drift)
+            </p>
           </CardContent>
         </Card>
 
@@ -484,14 +601,9 @@ export function PortfolioPage() {
             <div className="text-2xl font-bold font-mono text-foreground">
               {summary.totalCostBasis.format('en-IN')}
             </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs font-bold font-mono px-2 py-0.5 rounded bg-secondary/80 text-foreground border border-border">
-                {summary.totalCostBasis.formatIndianCompact()}
-              </span>
-              <span className="text-[11px] text-muted-foreground">
-                Net capital invested
-              </span>
-            </div>
+            <p className="text-[11px] font-mono text-muted-foreground mt-1">
+              Historical cost of verified positions
+            </p>
           </CardContent>
         </Card>
 
@@ -555,12 +667,15 @@ export function PortfolioPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <PieChart className="w-5 h-5 text-primary" />
-              <CardTitle className="text-base">Asset Class Allocation (India Taxonomy)</CardTitle>
+              <CardTitle className="text-base">
+                Asset Class Allocation (Unified Net Worth)
+              </CardTitle>
             </div>
             <Badge variant="secondary">Zero Float Drift</Badge>
           </div>
           <CardDescription>
-            Calculated distribution across Indian financial instruments and asset classes.
+            Unified distribution across Indian equities, mutual funds, gold bonds, debt, and cash
+            instruments.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -600,9 +715,7 @@ export function PortfolioPage() {
                     className="w-2.5 h-2.5 rounded-full shrink-0"
                     style={{ backgroundColor: alloc.colorHex }}
                   />
-                  <span className="text-xs font-medium text-foreground truncate">
-                    {alloc.name}
-                  </span>
+                  <span className="text-xs font-medium text-foreground truncate">{alloc.name}</span>
                 </div>
                 <div className="flex items-baseline justify-between mt-1">
                   <span className="text-sm font-bold font-mono text-foreground">
@@ -621,33 +734,61 @@ export function PortfolioPage() {
       {/* Holdings Management Table */}
       <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
         <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
               <CardTitle className="text-base">Portfolio Holdings</CardTitle>
               <CardDescription>
-                Positions with unit cost basis, current market value, and unrealized yield in Indian Rupees (₹).
+                Tailored views for Direct Equities, Mutual Funds, and Consolidated Portfolio.
               </CardDescription>
             </div>
 
             {/* View Mode Toggle and Filter/Search */}
             <div className="flex flex-wrap items-center gap-3">
-              {/* Consolidated vs By Asset Class Toggle */}
+              {/* Specialized View Switcher */}
               <div className="flex items-center p-0.5 bg-secondary/60 rounded-lg border border-border text-xs">
                 <button
                   type="button"
-                  onClick={() => setViewMode('consolidated')}
-                  className={`px-2.5 py-1 rounded-md font-medium transition-all ${
-                    viewMode === 'consolidated'
+                  onClick={() => setViewMode('all')}
+                  className={`px-3 py-1.5 rounded-md font-medium transition-all ${
+                    viewMode === 'all'
                       ? 'bg-background text-foreground shadow-xs font-semibold'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  Unified Table
+                  All Investments ({activeHoldings.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('equities')}
+                  className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-1.5 ${
+                    viewMode === 'equities'
+                      ? 'bg-blue-600 text-white shadow-xs font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <span>Direct Equities & ETFs</span>
+                  <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-background/20 font-bold">
+                    {equitiesHoldings.length}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('mutual_funds')}
+                  className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-1.5 ${
+                    viewMode === 'mutual_funds'
+                      ? 'bg-cyan-600 text-white shadow-xs font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <span>Mutual Funds</span>
+                  <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-background/20 font-bold">
+                    {mutualFundHoldings.length}
+                  </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode('grouped')}
-                  className={`px-2.5 py-1 rounded-md font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-md font-medium transition-all ${
                     viewMode === 'grouped'
                       ? 'bg-background text-foreground shadow-xs font-semibold'
                       : 'text-muted-foreground hover:text-foreground'
@@ -661,10 +802,10 @@ export function PortfolioPage() {
                 <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Filter asset or ticker..."
+                  placeholder="Filter ticker, ISIN, folio..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-8 pl-8 pr-3 text-xs rounded-lg bg-secondary/50 border border-border focus:outline-none focus:ring-1 focus:ring-primary w-40 sm:w-52 font-mono text-foreground"
+                  className="h-8 pl-8 pr-3 text-xs rounded-lg bg-secondary/50 border border-border focus:outline-none focus:ring-1 focus:ring-primary w-40 sm:w-56 font-mono text-foreground"
                 />
               </div>
 
@@ -681,6 +822,7 @@ export function PortfolioPage() {
             </div>
           </div>
         </CardHeader>
+
         <CardContent className="p-0">
           {deleteError && (
             <div className="p-3 mx-4 my-3 rounded-xl bg-destructive/15 text-destructive border border-destructive/30 text-xs flex items-center justify-between">
@@ -733,20 +875,405 @@ export function PortfolioPage() {
                     onClick={handleSeedStarterHoldings}
                     className="gap-1.5 text-xs font-mono"
                   >
-                    Seed 4 Starter Assets
+                    Seed Starter Assets
                   </Button>
                 )}
               </div>
             </div>
+          ) : viewMode === 'equities' ? (
+            /* VIEW 1: Direct Equities & ETFs Tailored View */
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-y border-border/80 bg-blue-500/5 text-muted-foreground">
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">Security</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">Ticker</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">ISIN</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">
+                      Demat Account
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                      Quantity
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                      Market Price
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                      Value
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                      Gain / Loss
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-center">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50 font-mono">
+                  {equitiesHoldings.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-8 text-center text-muted-foreground font-sans">
+                        No direct equity or ETF holdings match the filter.
+                      </td>
+                    </tr>
+                  ) : (
+                    equitiesHoldings.map((h) => {
+                      const totalCostCents = Math.round(h.quantity * h.unitCostCents);
+                      const gainLossCents = h.currentValueCents - totalCostCents;
+                      const isGain = gainLossCents >= 0;
+                      const returnPct =
+                        totalCostCents > 0 ? (gainLossCents / totalCostCents) * 100 : 0;
+                      const marketPricePerShare =
+                        h.quantity > 0 ? h.currentValueCents / (h.quantity * 100) : 0;
+
+                      return (
+                        <tr key={h.holdingId} className="hover:bg-secondary/30 transition-colors">
+                          <td className="py-3.5 px-4 font-sans font-semibold text-foreground">
+                            {h.name}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            {h.ticker ? (
+                              <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold">
+                                {h.ticker}
+                              </span>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-[11px] text-muted-foreground">
+                            {h.isin || '—'}
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-[11px] text-muted-foreground">
+                            {h.dematAccountId || 'Demat Main'}
+                          </td>
+                          <td className="py-3.5 px-4 text-right text-foreground font-semibold">
+                            {h.quantity.toLocaleString('en-IN', { maximumFractionDigits: 4 })}
+                          </td>
+                          <td className="py-3.5 px-4 text-right text-muted-foreground">
+                            ₹
+                            {marketPricePerShare.toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-bold text-foreground">
+                            ₹
+                            {(h.currentValueCents / 100).toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                            })}
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <span
+                              className={
+                                isGain
+                                  ? 'text-emerald-400 font-semibold'
+                                  : 'text-rose-400 font-semibold'
+                              }
+                            >
+                              {isGain ? '+' : '-'}₹
+                              {(Math.abs(gainLossCents) / 100).toLocaleString('en-IN', {
+                                minimumFractionDigits: 2,
+                              })}
+                            </span>
+                            <div
+                              className={`text-[10px] font-medium ${isGain ? 'text-emerald-400/80' : 'text-rose-400/80'}`}
+                            >
+                              {isGain ? '+' : ''}
+                              {returnPct.toFixed(2)}%
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <button
+                              disabled={deletingId === h.holdingId}
+                              onClick={() => {
+                                if (
+                                  window.confirm(`Delete equity "${h.name}" from your portfolio?`)
+                                ) {
+                                  deleteHoldingMutation.mutate(h.holdingId);
+                                }
+                              }}
+                              title="Delete Position"
+                              className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              {deletingId === h.holdingId ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+                {equitiesHoldings.length > 0 && (
+                  <tfoot>
+                    <tr className="border-t-2 border-border/80 bg-blue-500/5 font-mono text-xs font-semibold">
+                      <td colSpan={4} className="py-3 px-4 text-foreground font-sans">
+                        Subtotal ({equitiesHoldings.length} Equities & ETFs)
+                      </td>
+                      <td className="py-3 px-4 text-right text-foreground font-bold">
+                        {equitiesSubtotals.totalShares.toLocaleString('en-IN', {
+                          maximumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td className="py-3 px-4 text-right text-muted-foreground">
+                        Cost: ₹
+                        {(equitiesSubtotals.totalCostCents / 100).toLocaleString('en-IN', {
+                          minimumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td className="py-3 px-4 text-right font-bold text-foreground">
+                        ₹
+                        {(equitiesSubtotals.totalValueCents / 100).toLocaleString('en-IN', {
+                          minimumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <span
+                          className={
+                            equitiesSubtotals.gainLossCents >= 0
+                              ? 'text-emerald-400'
+                              : 'text-rose-400'
+                          }
+                        >
+                          {equitiesSubtotals.gainLossCents >= 0 ? '+' : '-'}₹
+                          {(Math.abs(equitiesSubtotals.gainLossCents) / 100).toLocaleString(
+                            'en-IN',
+                            { minimumFractionDigits: 2 }
+                          )}
+                        </span>
+                        <div className="text-[10px] text-muted-foreground">
+                          {equitiesSubtotals.gainLossCents >= 0 ? '+' : ''}
+                          {equitiesSubtotals.returnPct.toFixed(2)}%
+                        </div>
+                      </td>
+                      <td className="py-3 px-4"></td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          ) : viewMode === 'mutual_funds' ? (
+            /* VIEW 2: Mutual Funds Tailored View */
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-y border-border/80 bg-cyan-500/5 text-muted-foreground">
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">
+                      Scheme / Fund Name
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">AMC</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">Folio No.</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">Plan</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                      Units
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                      NAV
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                      Cost Basis
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                      Current Value
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                      Gain / Loss
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-center">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50 font-mono">
+                  {mutualFundHoldings.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="py-8 text-center text-muted-foreground font-sans">
+                        No mutual fund positions match the filter.
+                      </td>
+                    </tr>
+                  ) : (
+                    mutualFundHoldings.map((h) => {
+                      const totalCostCents = Math.round(h.quantity * h.unitCostCents);
+                      const gainLossCents = h.currentValueCents - totalCostCents;
+                      const isGain = gainLossCents >= 0;
+                      const returnPct =
+                        totalCostCents > 0 ? (gainLossCents / totalCostCents) * 100 : 0;
+                      const navPerUnit =
+                        h.quantity > 0 ? h.currentValueCents / (h.quantity * 100) : 0;
+
+                      return (
+                        <tr key={h.holdingId} className="hover:bg-secondary/30 transition-colors">
+                          <td className="py-3.5 px-4 font-sans font-semibold text-foreground">
+                            <div>{h.name}</div>
+                            {h.isin && (
+                              <div className="font-mono text-[10px] text-muted-foreground mt-0.5">
+                                ISIN: {h.isin}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 font-sans text-muted-foreground text-[11px]">
+                            {h.amcName || '—'}
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-[11px] text-cyan-400 font-semibold">
+                            {h.folioNumber || '—'}
+                          </td>
+                          <td className="py-3.5 px-4 font-sans text-muted-foreground text-[11px]">
+                            <span className="px-1.5 py-0.5 rounded bg-secondary/80 border border-border">
+                              {h.schemePlan || 'Direct'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right text-foreground font-semibold">
+                            {h.quantity.toLocaleString('en-IN', { maximumFractionDigits: 4 })}
+                          </td>
+                          <td className="py-3.5 px-4 text-right text-muted-foreground">
+                            ₹
+                            {navPerUnit.toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 4,
+                            })}
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            {h.costBasisVerified ? (
+                              <div>
+                                <div className="text-foreground font-semibold">
+                                  ₹
+                                  {(totalCostCents / 100).toLocaleString('en-IN', {
+                                    minimumFractionDigits: 2,
+                                  })}
+                                </div>
+                                <div className="text-[10px] text-emerald-400 flex items-center justify-end gap-1">
+                                  <CheckCircle2 className="w-2.5 h-2.5" />
+                                  <span>Verified</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                <span className="text-muted-foreground">—</span>
+                                <div className="text-[10px] text-amber-400/90 flex items-center justify-end gap-1">
+                                  <HelpCircle className="w-2.5 h-2.5" />
+                                  <span>Unverified (CAS)</span>
+                                </div>
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-bold text-foreground">
+                            ₹
+                            {(h.currentValueCents / 100).toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                            })}
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            {h.costBasisVerified ? (
+                              <>
+                                <span
+                                  className={
+                                    isGain
+                                      ? 'text-emerald-400 font-semibold'
+                                      : 'text-rose-400 font-semibold'
+                                  }
+                                >
+                                  {isGain ? '+' : '-'}₹
+                                  {(Math.abs(gainLossCents) / 100).toLocaleString('en-IN', {
+                                    minimumFractionDigits: 2,
+                                  })}
+                                </span>
+                                <div
+                                  className={`text-[10px] font-medium ${isGain ? 'text-emerald-400/80' : 'text-rose-400/80'}`}
+                                >
+                                  {isGain ? '+' : ''}
+                                  {returnPct.toFixed(2)}%
+                                </div>
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground text-[11px] italic">
+                                Pending txn history
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <button
+                              disabled={deletingId === h.holdingId}
+                              onClick={() => {
+                                if (window.confirm(`Delete mutual fund folio "${h.name}"?`)) {
+                                  deleteHoldingMutation.mutate(h.holdingId);
+                                }
+                              }}
+                              title="Delete Position"
+                              className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              {deletingId === h.holdingId ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+                {mutualFundHoldings.length > 0 && (
+                  <tfoot>
+                    <tr className="border-t-2 border-border/80 bg-cyan-500/5 font-mono text-xs font-semibold">
+                      <td colSpan={4} className="py-3 px-4 text-foreground font-sans">
+                        Subtotal ({mutualFundHoldings.length} Mutual Fund Folios)
+                      </td>
+                      <td className="py-3 px-4 text-right text-foreground font-bold">
+                        {mfSubtotals.totalUnits.toLocaleString('en-IN', {
+                          maximumFractionDigits: 3,
+                        })}
+                      </td>
+                      <td className="py-3 px-4"></td>
+                      <td className="py-3 px-4 text-right text-muted-foreground">
+                        Verified: ₹
+                        {(mfSubtotals.totalVerifiedCostCents / 100).toLocaleString('en-IN', {
+                          minimumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td className="py-3 px-4 text-right font-bold text-foreground">
+                        ₹
+                        {(mfSubtotals.totalValueCents / 100).toLocaleString('en-IN', {
+                          minimumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <span
+                          className={
+                            mfSubtotals.verifiedGainLossCents >= 0
+                              ? 'text-emerald-400'
+                              : 'text-rose-400'
+                          }
+                        >
+                          {mfSubtotals.verifiedGainLossCents >= 0 ? '+' : '-'}₹
+                          {(Math.abs(mfSubtotals.verifiedGainLossCents) / 100).toLocaleString(
+                            'en-IN',
+                            { minimumFractionDigits: 2 }
+                          )}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4"></td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
           ) : viewMode === 'grouped' ? (
+            /* VIEW 3: Grouped by Asset Class */
             <div className="p-4 space-y-6">
               {groupedHoldings.map((grp) => {
                 const grpGainLossCents = grp.totalValueCents - grp.totalCostCents;
                 const isGrpGain = grpGainLossCents >= 0;
-                const grpGainLossFormatted = (Math.abs(grpGainLossCents) / 100).toLocaleString('en-IN', {
-                  style: 'currency',
-                  currency: 'INR',
-                });
+                const grpGainLossFormatted = (Math.abs(grpGainLossCents) / 100).toLocaleString(
+                  'en-IN',
+                  {
+                    style: 'currency',
+                    currency: 'INR',
+                  }
+                );
                 const grpCostFormatted = (grp.totalCostCents / 100).toLocaleString('en-IN', {
                   style: 'currency',
                   currency: 'INR',
@@ -755,7 +1282,8 @@ export function PortfolioPage() {
                   style: 'currency',
                   currency: 'INR',
                 });
-                const grpReturnPct = grp.totalCostCents > 0 ? (grpGainLossCents / grp.totalCostCents) * 100 : 0;
+                const grpReturnPct =
+                  grp.totalCostCents > 0 ? (grpGainLossCents / grp.totalCostCents) * 100 : 0;
 
                 return (
                   <div
@@ -771,7 +1299,8 @@ export function PortfolioPage() {
                         />
                         <h3 className="font-semibold text-sm text-foreground">{grp.meta.name}</h3>
                         <Badge variant="secondary" className="text-[10px] font-mono">
-                          {grp.holdings.length} {grp.holdings.length === 1 ? 'position' : 'positions'}
+                          {grp.holdings.length}{' '}
+                          {grp.holdings.length === 1 ? 'position' : 'positions'}
                         </Badge>
                       </div>
                       <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs font-mono">
@@ -779,11 +1308,19 @@ export function PortfolioPage() {
                           Cost: <span className="text-foreground">{grpCostFormatted}</span>
                         </span>
                         <span className="text-muted-foreground">
-                          Value: <span className="font-bold text-foreground">{grpValueFormatted}</span>
+                          Value:{' '}
+                          <span className="font-bold text-foreground">{grpValueFormatted}</span>
                         </span>
-                        <span className={isGrpGain ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
+                        <span
+                          className={
+                            isGrpGain
+                              ? 'text-emerald-400 font-semibold'
+                              : 'text-rose-400 font-semibold'
+                          }
+                        >
                           {isGrpGain ? '+' : '-'}
-                          {grpGainLossFormatted} ({isGrpGain ? '+' : ''}{grpReturnPct.toFixed(2)}%)
+                          {grpGainLossFormatted} ({isGrpGain ? '+' : ''}
+                          {grpReturnPct.toFixed(2)}%)
                         </span>
                       </div>
                     </div>
@@ -793,12 +1330,24 @@ export function PortfolioPage() {
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
                           <tr className="border-b border-border/60 bg-secondary/15 text-muted-foreground">
-                            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider">Asset / Ticker</th>
-                            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-right">Quantity</th>
-                            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-right">Cost Basis</th>
-                            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-right">Current Value</th>
-                            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-right">Gain / Loss</th>
-                            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-center">Action</th>
+                            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider">
+                              Asset / Ticker
+                            </th>
+                            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-right">
+                              Quantity
+                            </th>
+                            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-right">
+                              Cost Basis
+                            </th>
+                            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-right">
+                              Current Value
+                            </th>
+                            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-right">
+                              Gain / Loss
+                            </th>
+                            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-center">
+                              Action
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/40 font-mono">
@@ -806,23 +1355,34 @@ export function PortfolioPage() {
                             const totalCostCents = Math.round(h.quantity * h.unitCostCents);
                             const gainLossCents = h.currentValueCents - totalCostCents;
                             const isGain = gainLossCents >= 0;
-                            const returnPct = totalCostCents > 0 ? (gainLossCents / totalCostCents) * 100 : 0;
+                            const returnPct =
+                              totalCostCents > 0 ? (gainLossCents / totalCostCents) * 100 : 0;
 
-                            const costBasisFormatted = (totalCostCents / 100).toLocaleString('en-IN', {
+                            const costBasisFormatted = (totalCostCents / 100).toLocaleString(
+                              'en-IN',
+                              {
+                                style: 'currency',
+                                currency: h.currency || 'INR',
+                              }
+                            );
+                            const currentValueFormatted = (
+                              h.currentValueCents / 100
+                            ).toLocaleString('en-IN', {
                               style: 'currency',
                               currency: h.currency || 'INR',
                             });
-                            const currentValueFormatted = (h.currentValueCents / 100).toLocaleString('en-IN', {
-                              style: 'currency',
-                              currency: h.currency || 'INR',
-                            });
-                            const gainLossFormatted = (Math.abs(gainLossCents) / 100).toLocaleString('en-IN', {
+                            const gainLossFormatted = (
+                              Math.abs(gainLossCents) / 100
+                            ).toLocaleString('en-IN', {
                               style: 'currency',
                               currency: h.currency || 'INR',
                             });
 
                             return (
-                              <tr key={h.holdingId} className="hover:bg-secondary/20 transition-colors">
+                              <tr
+                                key={h.holdingId}
+                                className="hover:bg-secondary/20 transition-colors"
+                              >
                                 <td className="py-3 px-4 font-sans">
                                   <div className="font-semibold text-foreground text-sm flex items-center gap-2">
                                     {h.name}
@@ -839,14 +1399,24 @@ export function PortfolioPage() {
                                 <td className="py-3 px-4 text-right text-muted-foreground">
                                   <div>{costBasisFormatted}</div>
                                   <div className="text-[10px] text-muted-foreground/80">
-                                    ₹{(h.unitCostCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}/u
+                                    ₹
+                                    {(h.unitCostCents / 100).toLocaleString('en-IN', {
+                                      minimumFractionDigits: 2,
+                                    })}
+                                    /u
                                   </div>
                                 </td>
                                 <td className="py-3 px-4 text-right font-bold text-foreground">
                                   {currentValueFormatted}
                                 </td>
                                 <td className="py-3 px-4 text-right">
-                                  <span className={isGain ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
+                                  <span
+                                    className={
+                                      isGain
+                                        ? 'text-emerald-400 font-semibold'
+                                        : 'text-rose-400 font-semibold'
+                                    }
+                                  >
                                     {isGain ? '+' : '-'}
                                     {gainLossFormatted}
                                   </span>
@@ -863,7 +1433,11 @@ export function PortfolioPage() {
                                   <button
                                     disabled={deletingId === h.holdingId}
                                     onClick={() => {
-                                      if (window.confirm(`Delete holding "${h.name}" from your portfolio?`)) {
+                                      if (
+                                        window.confirm(
+                                          `Delete holding "${h.name}" from your portfolio?`
+                                        )
+                                      ) {
                                         deleteHoldingMutation.mutate(h.holdingId);
                                       }
                                     }}
@@ -887,7 +1461,9 @@ export function PortfolioPage() {
                               Subtotal ({grp.meta.name})
                             </td>
                             <td className="py-2.5 px-4 text-right text-muted-foreground">
-                              {grp.holdings.reduce((sum, item) => sum + item.quantity, 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                              {grp.holdings
+                                .reduce((sum, item) => sum + item.quantity, 0)
+                                .toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                             </td>
                             <td className="py-2.5 px-4 text-right text-muted-foreground">
                               {grpCostFormatted}
@@ -911,17 +1487,30 @@ export function PortfolioPage() {
               })}
             </div>
           ) : (
+            /* VIEW 4: Consolidated All Investments View */
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-y border-border/80 bg-secondary/20 text-muted-foreground">
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">Asset / Ticker</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">
+                      Asset / Ticker
+                    </th>
                     <th className="py-3 px-4 font-semibold uppercase tracking-wider">Class</th>
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Quantity</th>
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Cost Basis</th>
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Current Value</th>
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Gain / Loss</th>
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-center">Action</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                      Quantity
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                      Cost Basis
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                      Current Value
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                      Gain / Loss
+                    </th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-center">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50 font-mono">
@@ -929,20 +1518,27 @@ export function PortfolioPage() {
                     const totalCostCents = Math.round(h.quantity * h.unitCostCents);
                     const gainLossCents = h.currentValueCents - totalCostCents;
                     const isGain = gainLossCents >= 0;
-                    const returnPct = totalCostCents > 0 ? (gainLossCents / totalCostCents) * 100 : 0;
+                    const returnPct =
+                      totalCostCents > 0 ? (gainLossCents / totalCostCents) * 100 : 0;
 
                     const costBasisFormatted = (totalCostCents / 100).toLocaleString('en-IN', {
                       style: 'currency',
                       currency: h.currency || 'INR',
                     });
-                    const currentValueFormatted = (h.currentValueCents / 100).toLocaleString('en-IN', {
-                      style: 'currency',
-                      currency: h.currency || 'INR',
-                    });
-                    const gainLossFormatted = (Math.abs(gainLossCents) / 100).toLocaleString('en-IN', {
-                      style: 'currency',
-                      currency: h.currency || 'INR',
-                    });
+                    const currentValueFormatted = (h.currentValueCents / 100).toLocaleString(
+                      'en-IN',
+                      {
+                        style: 'currency',
+                        currency: h.currency || 'INR',
+                      }
+                    );
+                    const gainLossFormatted = (Math.abs(gainLossCents) / 100).toLocaleString(
+                      'en-IN',
+                      {
+                        style: 'currency',
+                        currency: h.currency || 'INR',
+                      }
+                    );
 
                     return (
                       <tr key={h.holdingId} className="hover:bg-secondary/30 transition-colors">
@@ -956,6 +1552,11 @@ export function PortfolioPage() {
                               </span>
                             )}
                           </div>
+                          {h.folioNumber && (
+                            <div className="font-mono text-[10px] text-cyan-400 mt-0.5">
+                              Folio: {h.folioNumber} {h.schemePlan ? `• ${h.schemePlan}` : ''}
+                            </div>
+                          )}
                         </td>
 
                         {/* Asset Class */}
@@ -983,10 +1584,23 @@ export function PortfolioPage() {
 
                         {/* Cost Basis */}
                         <td className="py-3.5 px-4 text-right text-muted-foreground">
-                          <div>{costBasisFormatted}</div>
-                          <div className="text-[10px] text-muted-foreground/80">
-                            ₹{(h.unitCostCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}/u
-                          </div>
+                          {(h.costBasisVerified ?? true) ? (
+                            <>
+                              <div>{costBasisFormatted}</div>
+                              <div className="text-[10px] text-muted-foreground/80">
+                                ₹
+                                {(h.unitCostCents / 100).toLocaleString('en-IN', {
+                                  minimumFractionDigits: 2,
+                                })}
+                                /u
+                              </div>
+                            </>
+                          ) : (
+                            <div>
+                              <span>—</span>
+                              <div className="text-[10px] text-amber-400">Unverified in CAS</div>
+                            </div>
+                          )}
                         </td>
 
                         {/* Current Value */}
@@ -996,18 +1610,32 @@ export function PortfolioPage() {
 
                         {/* Gain / Loss */}
                         <td className="py-3.5 px-4 text-right">
-                          <span className={isGain ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
-                            {isGain ? '+' : '-'}
-                            {gainLossFormatted}
-                          </span>
-                          <div
-                            className={`text-[10px] font-medium ${
-                              isGain ? 'text-emerald-400/80' : 'text-rose-400/80'
-                            }`}
-                          >
-                            {isGain ? '+' : ''}
-                            {returnPct.toFixed(2)}%
-                          </div>
+                          {(h.costBasisVerified ?? true) ? (
+                            <>
+                              <span
+                                className={
+                                  isGain
+                                    ? 'text-emerald-400 font-semibold'
+                                    : 'text-rose-400 font-semibold'
+                                }
+                              >
+                                {isGain ? '+' : '-'}
+                                {gainLossFormatted}
+                              </span>
+                              <div
+                                className={`text-[10px] font-medium ${
+                                  isGain ? 'text-emerald-400/80' : 'text-rose-400/80'
+                                }`}
+                              >
+                                {isGain ? '+' : ''}
+                                {returnPct.toFixed(2)}%
+                              </div>
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground text-[11px] italic">
+                              Pending txn history
+                            </span>
+                          )}
                         </td>
 
                         {/* Delete Action */}
@@ -1015,7 +1643,9 @@ export function PortfolioPage() {
                           <button
                             disabled={deletingId === h.holdingId}
                             onClick={() => {
-                              if (window.confirm(`Delete holding "${h.name}" from your portfolio?`)) {
+                              if (
+                                window.confirm(`Delete holding "${h.name}" from your portfolio?`)
+                              ) {
                                 deleteHoldingMutation.mutate(h.holdingId);
                               }
                             }}
@@ -1049,71 +1679,41 @@ export function PortfolioPage() {
         isLoading={addHoldingMutation.isPending}
       />
 
-      {/* Import CAS Modal Component */}
+      {/* CAS PDF Importer Modal */}
       <ImportCasModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onSuccess={(importedItems) => {
           if (user) {
             queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
-            refetch();
-          }
-          if (importedItems && importedItems.length > 0) {
-            setLocalDemoHoldings((prev) => {
-              const isOnlyDemoHoldings = prev.every((h) => h.holdingId.startsWith('demo-'));
-              const base = isOnlyDemoHoldings && importedItems.length >= 3 ? [] : [...prev];
-              const updated = [...base];
-
-              for (const item of importedItems) {
-                // Match existing holding by isin, exact ticker, or exact name
-                const idx = updated.findIndex((h) => {
-                  const matchIsin = Boolean(item.isin && h.assetId.includes(item.isin));
-                  const matchTicker = Boolean(
-                    item.ticker && h.ticker && h.ticker.toUpperCase() === item.ticker.toUpperCase()
-                  );
-                  const matchName = h.name.toLowerCase() === item.name.toLowerCase();
-                  return matchIsin || matchTicker || matchName;
-                });
-
-                if (idx >= 0) {
-                  // Update existing holding position: attach security name and ticker from CAS
-                  updated[idx] = {
-                    ...updated[idx]!,
-                    name: item.name,
-                    ticker: item.ticker || updated[idx]!.ticker,
-                    quantity: item.quantity,
-                    unitCostCents: item.unitCostCents,
-                    currentValueCents: item.currentValueCents,
-                    updatedAt: new Date().toISOString(),
-                  };
-                } else {
-                  // Add as a new holding position
-                  const classMeta = ASSET_CLASS_META_MAP[item.assetClassId] || {
-                    name: item.assetClassId.toUpperCase(),
-                    color: '#3b82f6',
-                  };
-                  updated.push({
-                    holdingId: `cas-${item.isin || Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-                    assetId: `asset-${item.isin || Date.now()}`,
-                    name: item.name,
-                    ticker: item.ticker,
-                    assetClassId: item.assetClassId,
-                    assetClassName: classMeta.name,
-                    assetClassColor: classMeta.color,
-                    quantity: item.quantity,
-                    unitCostCents: item.unitCostCents,
-                    currentValueCents: item.currentValueCents,
-                    currency: item.currency || 'INR',
-                    updatedAt: new Date().toISOString(),
-                  });
-                }
-              }
-              return updated;
-            });
+          } else if (importedItems && importedItems.length > 0) {
+            const newHoldings: HoldingDetailDto[] = importedItems.map((item, idx) => ({
+              holdingId: `demo-imported-${idx}-${Date.now()}`,
+              assetId: `asset-imported-${idx}`,
+              name: item.name,
+              ticker: item.ticker,
+              isin: item.isin,
+              dematAccountId: item.dematAccountId,
+              folioNumber: item.folioNumber,
+              amcName: item.amcName,
+              schemePlan: item.schemePlan,
+              costBasisVerified: item.costBasisVerified,
+              assetClassId: item.assetClassId,
+              assetClassName:
+                item.assetClassId === 'mutual_fund'
+                  ? 'Mutual Funds'
+                  : ASSET_CLASS_META_MAP[item.assetClassId]?.name || 'Equities & Stocks',
+              assetClassColor: ASSET_CLASS_META_MAP[item.assetClassId]?.color || '#3b82f6',
+              quantity: item.quantity,
+              unitCostCents: item.unitCostCents,
+              currentValueCents: item.currentValueCents,
+              currency: 'INR',
+              updatedAt: new Date().toISOString(),
+            }));
+            setLocalDemoHoldings((prev) => [...newHoldings, ...prev]);
           }
         }}
       />
     </div>
   );
 }
-export default PortfolioPage;

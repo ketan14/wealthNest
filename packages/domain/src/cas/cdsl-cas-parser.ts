@@ -11,6 +11,7 @@ import {
   inferAssetClassFromIsin,
   inferTickerFromSecurity,
   isValidIsin,
+  extractMutualFundSchemeDetails,
 } from './isin.js';
 
 export class CdslCasParser implements ICasStatementParser {
@@ -25,13 +26,15 @@ export class CdslCasParser implements ICasStatementParser {
       textUpper.includes('CDSL CAS');
 
     // Make sure it is not NSDL
-    const isNsdl = textUpper.includes('NATIONAL SECURITIES DEPOSITORY') || textUpper.includes('NSDL CAS');
+    const isNsdl =
+      textUpper.includes('NATIONAL SECURITIES DEPOSITORY') || textUpper.includes('NSDL CAS');
     return hasCdslIdentifier && !isNsdl;
   }
 
   parse(pages: readonly string[]): ParsedCasStatement {
     const fullText = pages.join('\n');
     const statementDate = this.extractStatementDate(fullText);
+    const dematAccountId = this.extractDematAccountId(fullText);
     const rawWarnings: string[] = [];
     const holdings: ParsedCasHolding[] = [];
 
@@ -55,7 +58,8 @@ export class CdslCasParser implements ICasStatementParser {
 
     for (let oIdx = 0; oIdx < occurrences.length; oIdx++) {
       const { index: i, line, isin } = occurrences[oIdx]!;
-      const nextIsinIndex = oIdx + 1 < occurrences.length ? occurrences[oIdx + 1]!.index : lines.length;
+      const nextIsinIndex =
+        oIdx + 1 < occurrences.length ? occurrences[oIdx + 1]!.index : lines.length;
 
       // Skip intermediate transaction log and TER disclosure tables
       if (
@@ -73,10 +77,40 @@ export class CdslCasParser implements ICasStatementParser {
       let folio: string | undefined = undefined;
       let unitCost: Money | undefined = undefined;
 
+      // Extract Folio number if present on this line or nearby context
+      const folioRegex = /\b(?:Folio\s*(?:No\.?)?|Folio)\s*[:\s]+([0-9A-Za-z/_-]+)\b/i;
+      const lineFolio = line.match(folioRegex);
+      if (lineFolio) {
+        folio = lineFolio[1];
+      } else {
+        for (let b = 1; b <= 4 && i - b >= 0; b++) {
+          const fm = lines[i - b]!.match(folioRegex);
+          if (fm) {
+            folio = fm[1];
+            break;
+          }
+        }
+        if (!folio) {
+          for (let fIdx = 1; fIdx <= 4 && i + fIdx < lines.length; fIdx++) {
+            const fm = lines[i + fIdx]!.match(folioRegex);
+            if (fm) {
+              folio = fm[1];
+              break;
+            }
+          }
+        }
+      }
+
       // Scan up to 8 candidate lines forward (capped at next ISIN)
       const scanEnd = Math.min(nextIsinIndex, i + 8);
       let dematRes: { quantity: number; price: number; marketValue: number } | null = null;
-      let mfRes: { units: number; nav: number; invested: number; valuation: number; folio?: string } | null = null;
+      let mfRes: {
+        units: number;
+        nav: number;
+        invested: number;
+        valuation: number;
+        folio?: string;
+      } | null = null;
 
       for (let j = i; j < scanEnd; j++) {
         const text = j === i ? line.substring(line.indexOf(isin) + isin.length).trim() : lines[j]!;
@@ -92,7 +126,11 @@ export class CdslCasParser implements ICasStatementParser {
         }
 
         // 2. Mutual Fund folio balance row (e.g. "DIRECT 625.535 165.517 60,708.71 1,03,536.68")
-        if (/\b(?:ARN|DIRECT)\b/i.test(text) || isin.startsWith('INF')) {
+        const isEtf = /\b(?:ETF|BEES)\b/i.test(text) || /\b(?:ETF|BEES)\b/i.test(line);
+        if (
+          !isEtf &&
+          (/\b(?:ARN|DIRECT)\b/i.test(text) || (isin.startsWith('INF') && !text.includes('ETF')))
+        ) {
           const m = this.extractMutualFundNumbers(text);
           if (m && (m.units > 0 || m.valuation > 0)) {
             mfRes = m;
@@ -131,7 +169,11 @@ export class CdslCasParser implements ICasStatementParser {
           const nameParts: string[] = [];
           if (cleanAfterIsin) nameParts.push(cleanAfterIsin);
           for (let j = i + 1; j < scanEnd; j++) {
-            if (lines[j]!.includes('--') || lines[j]!.includes('- -') || this.extractDematNumericRow(lines[j]!)) {
+            if (
+              lines[j]!.includes('--') ||
+              lines[j]!.includes('- -') ||
+              this.extractDematNumericRow(lines[j]!)
+            ) {
               break;
             }
             nameParts.push(lines[j]!);
@@ -200,13 +242,14 @@ export class CdslCasParser implements ICasStatementParser {
         }
 
         if (textBeforeIsin) schemeParts.push(textBeforeIsin);
-        const schemeName = cleanSecurityName(schemeParts.join(' ')) || cleanSecurityName(textBeforeIsin);
+        const schemeName =
+          cleanSecurityName(schemeParts.join(' ')) || cleanSecurityName(textBeforeIsin);
 
         securityName = schemeName;
         quantity = mfRes.units;
         price = mfRes.nav;
         marketValue = mfRes.valuation;
-        folio = mfRes.folio;
+        folio = mfRes.folio || folio;
 
         if (mfRes.invested > 0 && mfRes.units > 0) {
           unitCost = Money.fromDecimal(mfRes.invested / mfRes.units, 'INR');
@@ -239,18 +282,35 @@ export class CdslCasParser implements ICasStatementParser {
           securityName = `Security ${isin}`;
         }
 
-        const { assetClassId, assetType } = inferAssetClassFromIsin(isin, securityName);
+        const statementSection = dematRes ? 'demat' : mfRes ? 'mutual_fund_rta' : 'unknown';
+        const { assetClassId, assetType, instrumentType } = inferAssetClassFromIsin(
+          isin,
+          securityName,
+          statementSection
+        );
         const ticker = inferTickerFromSecurity(isin, securityName);
+        const mfDetails =
+          assetClassId === 'mutual_fund' ? extractMutualFundSchemeDetails(securityName) : null;
+        const resolvedFolio = mfRes ? folio || mfRes.folio : undefined;
 
         holdings.push({
           isin,
           name: securityName,
           ticker,
-          folioOrDemat: folio,
+          folioOrDemat: resolvedFolio || (dematRes ? dematAccountId : undefined),
+          dematAccountId: dematRes ? dematAccountId : undefined,
+          folioNumber: resolvedFolio,
+          amcName: mfDetails?.amcName,
+          schemePlan:
+            mfDetails && mfDetails.plan !== 'Unknown'
+              ? `${mfDetails.plan} Plan${mfDetails.option !== 'Unknown' ? ` - ${mfDetails.option}` : ''}`
+              : undefined,
           assetType,
           assetClassId,
+          instrumentType,
           quantity,
           unitCost: unitCost || (price > 0 ? Money.fromDecimal(price, 'INR') : undefined),
+          costBasisVerified: false,
           reportedNavOrPrice: Money.fromDecimal(price, 'INR'),
           reportedMarketValue: Money.fromDecimal(marketValue, 'INR'),
           statementDate,
@@ -259,7 +319,10 @@ export class CdslCasParser implements ICasStatementParser {
       } else {
         const isExplicitZero =
           Boolean(line.match(/(?:balance|units|bal)[^\d:]*[:\s]+0(?:\.0+)?\b/i)) ||
-          Boolean(i + 1 < lines.length && lines[i + 1]!.match(/(?:balance|units|bal)[^\d:]*[:\s]+0(?:\.0+)?\b/i));
+          Boolean(
+            i + 1 < lines.length &&
+            lines[i + 1]!.match(/(?:balance|units|bal)[^\d:]*[:\s]+0(?:\.0+)?\b/i)
+          );
 
         if (isExplicitZero) {
           rawWarnings.push(`ISIN ${isin} reported 0 units (closed/zero-balance position).`);
@@ -270,34 +333,39 @@ export class CdslCasParser implements ICasStatementParser {
     }
 
     // 1. Process Demat and Summary Table holdings
+    // Key by (ISIN + Folio / Demat) so multiple folios of the same scheme are preserved
     const dedupedMap = new Map<string, ParsedCasHolding>();
     for (const h of holdings) {
-      if (dedupedMap.has(h.isin)) {
-        const existing = dedupedMap.get(h.isin)!;
+      const key = `${h.isin}::${h.folioNumber || h.folioOrDemat || h.dematAccountId || 'default'}`;
+      if (dedupedMap.has(key)) {
+        const existing = dedupedMap.get(key)!;
         if (h.reportedMarketValue.cents > existing.reportedMarketValue.cents) {
-          dedupedMap.set(h.isin, h);
+          dedupedMap.set(key, h);
         }
       } else {
-        dedupedMap.set(h.isin, h);
+        dedupedMap.set(key, h);
       }
     }
 
     // 2. Process RTA Mutual Fund Section (Transactions and Closing Balances)
     const rtaResult = this.parseRtaMutualFundSection(pages, statementDate);
     for (const rtaH of rtaResult.holdings) {
-      if (dedupedMap.has(rtaH.isin)) {
-        const existing = dedupedMap.get(rtaH.isin)!;
+      const key = `${rtaH.isin}::${rtaH.folioNumber || rtaH.folioOrDemat || 'default'}`;
+      if (dedupedMap.has(key)) {
+        const existing = dedupedMap.get(key)!;
         // Enrich holding name if existing name is short or truncated
         if (rtaH.name && rtaH.name.length > existing.name.length) {
-          dedupedMap.set(rtaH.isin, {
+          dedupedMap.set(key, {
             ...existing,
             name: rtaH.name,
             ticker: rtaH.ticker || existing.ticker,
+            amcName: rtaH.amcName || existing.amcName,
+            schemePlan: rtaH.schemePlan || existing.schemePlan,
           });
         }
       } else {
         // Holding only exists in RTA section (statement without summary table)
-        dedupedMap.set(rtaH.isin, rtaH);
+        dedupedMap.set(key, rtaH);
       }
     }
 
@@ -308,10 +376,11 @@ export class CdslCasParser implements ICasStatementParser {
     }
 
     // Filter out warnings for ISINs that were successfully extracted elsewhere in statement
+    const extractedIsins = new Set(uniqueHoldings.map((h) => h.isin));
     const finalWarnings = rawWarnings.filter((w) => {
       const match = w.match(/\b([A-Z]{2}[A-Z0-9]{9}[0-9])\b/);
       if (!match) return true;
-      return !dedupedMap.has(match[1]!);
+      return !extractedIsins.has(match[1]!);
     });
 
     return {
@@ -340,7 +409,10 @@ export class CdslCasParser implements ICasStatementParser {
 
     for (let p = 0; p < pages.length; p++) {
       const pageText = pages[p]!;
-      if (!pageText.includes('MUTUAL FUND UNITS HELD WITH MF/RTA') && !pageText.includes('Closing Balance')) {
+      if (
+        !pageText.includes('MUTUAL FUND UNITS HELD WITH MF/RTA') &&
+        !pageText.includes('Closing Balance')
+      ) {
         continue;
       }
 
@@ -397,7 +469,10 @@ export class CdslCasParser implements ICasStatementParser {
 
         for (let f = 1; f <= 35 && i + f < lines.length; f++) {
           const fLine = lines[i + f]!;
-          if (fLine.match(/\b(INF[A-Z0-9]{9})\b/) || fLine.includes('MUTUAL FUND UNITS HELD AS ON')) {
+          if (
+            fLine.match(/\b(INF[A-Z0-9]{9})\b/) ||
+            fLine.includes('MUTUAL FUND UNITS HELD AS ON')
+          ) {
             break;
           }
 
@@ -417,7 +492,11 @@ export class CdslCasParser implements ICasStatementParser {
 
             for (let k = 1; k <= 8 && i + f + k < lines.length; k++) {
               const nextL = lines[i + f + k]!;
-              if (nextL.match(/^(\d{2}-\d{2}-\d{4})/) || nextL.includes('Closing Balance') || nextL.includes('ISIN')) {
+              if (
+                nextL.match(/^(\d{2}-\d{2}-\d{4})/) ||
+                nextL.includes('Closing Balance') ||
+                nextL.includes('ISIN')
+              ) {
                 break;
               }
 
@@ -438,14 +517,18 @@ export class CdslCasParser implements ICasStatementParser {
             }
 
             if (numRow) {
-              const desc = descParts.join(' ').replace(/^[*]\s*/, '').trim();
-              const isRedemption = numRow.amount < 0 || numRow.units < 0 || /redemption/i.test(desc);
+              const desc = descParts
+                .join(' ')
+                .replace(/^[*]\s*/, '')
+                .trim();
+              const isRedemption =
+                numRow.amount < 0 || numRow.units < 0 || /redemption/i.test(desc);
               const isDividend = /dividend|idcw/i.test(desc);
               const type: 'buy' | 'sell' | 'dividend' | 'fee' = isRedemption
                 ? 'sell'
                 : isDividend
-                ? 'dividend'
-                : 'buy';
+                  ? 'dividend'
+                  : 'buy';
 
               transactions.push({
                 isin,
@@ -462,16 +545,39 @@ export class CdslCasParser implements ICasStatementParser {
           }
         }
 
+        let folio: string | undefined = undefined;
+        for (let b = 1; b <= 6 && i - b >= 0; b++) {
+          const fMatch = lines[i - b]!.match(
+            /\b(?:Folio\s*(?:No\.?)?|Folio)\s*[:\s]+([0-9A-Z/_-]+)\b/i
+          );
+          if (fMatch) {
+            folio = fMatch[1];
+            break;
+          }
+        }
+
         if (closingUnits !== null && closingUnits > 0) {
+          const mfDetails = extractMutualFundSchemeDetails(schemeName);
           holdings.push({
             isin,
             name: schemeName,
             ticker,
+            folioOrDemat: folio,
+            folioNumber: folio,
+            amcName: mfDetails.amcName,
+            schemePlan:
+              mfDetails.plan !== 'Unknown'
+                ? `${mfDetails.plan} Plan${mfDetails.option !== 'Unknown' ? ` - ${mfDetails.option}` : ''}`
+                : undefined,
             quantity: closingUnits,
+            costBasisVerified: false,
             reportedNavOrPrice: latestNav ? Money.fromDecimal(latestNav, 'INR') : undefined,
-            reportedMarketValue: latestNav ? Money.fromDecimal(closingUnits * latestNav, 'INR') : Money.zero('INR'),
+            reportedMarketValue: latestNav
+              ? Money.fromDecimal(closingUnits * latestNav, 'INR')
+              : Money.zero('INR'),
             assetClassId: 'mutual_fund',
             assetType: 'mutual_fund',
+            instrumentType: 'mutual_fund_scheme',
             statementDate,
             currency: 'INR',
           });
@@ -480,6 +586,16 @@ export class CdslCasParser implements ICasStatementParser {
     }
 
     return { holdings, transactions };
+  }
+
+  /**
+   * Extracts Demat BO ID / Client ID if present on statement
+   */
+  private extractDematAccountId(fullText: string): string | undefined {
+    const match = fullText.match(
+      /\b(?:BO\s*ID|BOID|Client\s*ID|Demat\s*Account\s*No)[^\d:]*[:\s]+([0-9]{8,16})\b/i
+    );
+    return match ? match[1] : undefined;
   }
 
   /**
@@ -518,7 +634,9 @@ export class CdslCasParser implements ICasStatementParser {
 
     // Optional folio detection
     let folio: string | undefined = undefined;
-    const folioMatch = clean.match(/\b([A-Za-z0-9/_-]+(?:\/[A-Za-z0-9_-]+)*)\s+(?:ARN[- ]\S+|DIRECT)\b/i);
+    const folioMatch = clean.match(
+      /\b([A-Za-z0-9/_-]+(?:\/[A-Za-z0-9_-]+)*)\s+(?:ARN[- ]\S+|DIRECT)\b/i
+    );
     if (folioMatch) {
       folio = folioMatch[1];
     }
@@ -661,8 +779,9 @@ export class CdslCasParser implements ICasStatementParser {
 
   private extractStatementDate(text: string): string {
     const match =
-      text.match(/(?:Statement\s+as\s+on\s*:?|Statement\s+Date\s*:?|As\s+on\s*:?)\s*(\d{1,2})[-/ ]([A-Za-z]{3}|\d{1,2})[-/ ](\d{4})/i) ||
-      text.match(/(\d{1,2})[-/ ]([A-Za-z]{3}|\d{1,2})[-/ ](\d{4})/);
+      text.match(
+        /(?:Statement\s+as\s+on\s*:?|Statement\s+Date\s*:?|As\s+on\s*:?)\s*(\d{1,2})[-/ ]([A-Za-z]{3}|\d{1,2})[-/ ](\d{4})/i
+      ) || text.match(/(\d{1,2})[-/ ]([A-Za-z]{3}|\d{1,2})[-/ ](\d{4})/);
 
     if (match) {
       const day = match[1]!.padStart(2, '0');
@@ -672,8 +791,18 @@ export class CdslCasParser implements ICasStatementParser {
 
       if (isNaN(Number(monthRaw))) {
         const monthNames: Record<string, string> = {
-          JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06',
-          JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12',
+          JAN: '01',
+          FEB: '02',
+          MAR: '03',
+          APR: '04',
+          MAY: '05',
+          JUN: '06',
+          JUL: '07',
+          AUG: '08',
+          SEP: '09',
+          OCT: '10',
+          NOV: '11',
+          DEC: '12',
         };
         month = monthNames[monthRaw.toUpperCase().slice(0, 3)] || '01';
       } else {

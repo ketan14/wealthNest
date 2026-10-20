@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Money } from '../money/money.js';
-import {
-  calculatePortfolioSummary,
-  HoldingValuationItem,
-} from '../portfolio/portfolio-summary.js';
+import { calculatePortfolioSummary, HoldingValuationItem } from '../portfolio/portfolio-summary.js';
 
 describe('Portfolio Domain Calculation Engine (India First)', () => {
   it('returns zeroes for an empty portfolio', () => {

@@ -16,7 +16,10 @@ if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
 }
 
 export class PdfJsTextExtractorAdapter implements PdfExtractorPort {
-  async extractPages(pdfBytes: ArrayBuffer, password?: string): Promise<Result<PdfExtractionResult>> {
+  async extractPages(
+    pdfBytes: ArrayBuffer,
+    password?: string
+  ): Promise<Result<PdfExtractionResult>> {
     try {
       // Load document into memory with optional password
       const loadingTask = pdfjsLib.getDocument({

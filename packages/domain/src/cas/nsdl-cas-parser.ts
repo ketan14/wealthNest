@@ -1,7 +1,12 @@
 import { ICasStatementParser } from './cas-parser.interface.js';
 import { ParsedCasStatement, ParsedCasHolding, StatementProvider } from './cas-types.js';
 import { Money } from '../money/money.js';
-import { inferAssetClassFromIsin, inferTickerFromSecurity, isValidIsin } from './isin.js';
+import {
+  inferAssetClassFromIsin,
+  inferTickerFromSecurity,
+  isValidIsin,
+  extractMutualFundSchemeDetails,
+} from './isin.js';
 
 export class NsdlCasParser implements ICasStatementParser {
   readonly provider: StatementProvider = 'NSDL';
@@ -44,12 +49,20 @@ export class NsdlCasParser implements ICasStatementParser {
       let price = 0;
       let marketValue = 0;
 
-      const lineWithoutIsin = line.replace(isin, '').replace(/^\s*ISIN[:\s]*/i, '').trim();
+      const lineWithoutIsin = line
+        .replace(isin, '')
+        .replace(/^\s*ISIN[:\s]*/i, '')
+        .trim();
 
       // 1. Try extracting numeric figures from the ISIN line
       const currentLineExtracted = this.extractNumericRow(lineWithoutIsin);
-      if (currentLineExtracted && (currentLineExtracted.quantity > 0 || currentLineExtracted.marketValue > 0)) {
-        securityName = (currentLineExtracted.securityName || '').replace(/^\s*ISIN[:\s]*/i, '').trim();
+      if (
+        currentLineExtracted &&
+        (currentLineExtracted.quantity > 0 || currentLineExtracted.marketValue > 0)
+      ) {
+        securityName = (currentLineExtracted.securityName || '')
+          .replace(/^\s*ISIN[:\s]*/i, '')
+          .trim();
         quantity = currentLineExtracted.quantity;
         price = currentLineExtracted.price;
         marketValue = currentLineExtracted.marketValue;
@@ -96,14 +109,28 @@ export class NsdlCasParser implements ICasStatementParser {
         if (securityName.length < 3) {
           if (i > 0) {
             const prev1 = lines[i - 1]!;
-            if (!prev1.match(isinRegex) && !prev1.toUpperCase().includes('PAGE') && !prev1.toUpperCase().includes('STATEMENT')) {
-              securityName = prev1.replace(/(\d+(?:,\d+)*(?:\.\d+)?)/g, '').replace(/folio\s*(?:no\.?)?:?\s*\S*/i, '').trim();
+            if (
+              !prev1.match(isinRegex) &&
+              !prev1.toUpperCase().includes('PAGE') &&
+              !prev1.toUpperCase().includes('STATEMENT')
+            ) {
+              securityName = prev1
+                .replace(/(\d+(?:,\d+)*(?:\.\d+)?)/g, '')
+                .replace(/folio\s*(?:no\.?)?:?\s*\S*/i, '')
+                .trim();
             }
           }
           if (securityName.length < 3 && i > 1) {
             const prev2 = lines[i - 2]!;
-            if (!prev2.match(isinRegex) && !prev2.toUpperCase().includes('PAGE') && !prev2.toUpperCase().includes('STATEMENT')) {
-              securityName = prev2.replace(/(\d+(?:,\d+)*(?:\.\d+)?)/g, '').replace(/folio\s*(?:no\.?)?:?\s*\S*/i, '').trim();
+            if (
+              !prev2.match(isinRegex) &&
+              !prev2.toUpperCase().includes('PAGE') &&
+              !prev2.toUpperCase().includes('STATEMENT')
+            ) {
+              securityName = prev2
+                .replace(/(\d+(?:,\d+)*(?:\.\d+)?)/g, '')
+                .replace(/folio\s*(?:no\.?)?:?\s*\S*/i, '')
+                .trim();
             }
           }
         }
@@ -113,8 +140,13 @@ export class NsdlCasParser implements ICasStatementParser {
           securityName = `Security ${isin}`;
         }
 
-        const { assetClassId, assetType } = inferAssetClassFromIsin(isin, securityName);
+        const { assetClassId, assetType, instrumentType } = inferAssetClassFromIsin(
+          isin,
+          securityName
+        );
         const ticker = inferTickerFromSecurity(isin, securityName);
+        const mfDetails =
+          assetClassId === 'mutual_fund' ? extractMutualFundSchemeDetails(securityName) : null;
 
         holdings.push({
           isin,
@@ -122,7 +154,14 @@ export class NsdlCasParser implements ICasStatementParser {
           ticker,
           assetType,
           assetClassId,
+          instrumentType,
+          amcName: mfDetails?.amcName,
+          schemePlan:
+            mfDetails && mfDetails.plan !== 'Unknown'
+              ? `${mfDetails.plan} Plan${mfDetails.option !== 'Unknown' ? ` - ${mfDetails.option}` : ''}`
+              : undefined,
           quantity,
+          costBasisVerified: false,
           reportedNavOrPrice: Money.fromDecimal(price, 'INR'),
           reportedMarketValue: Money.fromDecimal(marketValue, 'INR'),
           statementDate,
@@ -131,7 +170,10 @@ export class NsdlCasParser implements ICasStatementParser {
       } else {
         const isExplicitZero =
           Boolean(line.match(/(?:balance|units|bal)[^\d:]*[:\s]+0(?:\.0+)?\b/i)) ||
-          Boolean(i + 1 < lines.length && lines[i + 1]!.match(/(?:balance|units|bal)[^\d:]*[:\s]+0(?:\.0+)?\b/i));
+          Boolean(
+            i + 1 < lines.length &&
+            lines[i + 1]!.match(/(?:balance|units|bal)[^\d:]*[:\s]+0(?:\.0+)?\b/i)
+          );
 
         if (isExplicitZero) {
           warnings.push(`ISIN ${isin} reported 0 units (closed/zero-balance folio).`);
@@ -141,16 +183,17 @@ export class NsdlCasParser implements ICasStatementParser {
       }
     }
 
-    // Deduplicate holdings by ISIN within statement
+    // Deduplicate holdings by (ISIN + Folio / Demat) within statement
     const dedupedMap = new Map<string, ParsedCasHolding>();
     for (const h of holdings) {
-      if (dedupedMap.has(h.isin)) {
-        const existing = dedupedMap.get(h.isin)!;
+      const key = `${h.isin}::${h.folioNumber || h.folioOrDemat || h.dematAccountId || 'default'}`;
+      if (dedupedMap.has(key)) {
+        const existing = dedupedMap.get(key)!;
         if (h.reportedMarketValue.cents > existing.reportedMarketValue.cents) {
-          dedupedMap.set(h.isin, h);
+          dedupedMap.set(key, h);
         }
       } else {
-        dedupedMap.set(h.isin, h);
+        dedupedMap.set(key, h);
       }
     }
 
@@ -171,8 +214,9 @@ export class NsdlCasParser implements ICasStatementParser {
 
   private extractStatementDate(text: string): string {
     const match =
-      text.match(/(?:Statement\s+as\s+on\s*:?|Statement\s+Date\s*:?|As\s+on\s*:?)\s*(\d{1,2})[-/ ]([A-Za-z]{3}|\d{1,2})[-/ ](\d{4})/i) ||
-      text.match(/(\d{1,2})[-/ ]([A-Za-z]{3}|\d{1,2})[-/ ](\d{4})/);
+      text.match(
+        /(?:Statement\s+as\s+on\s*:?|Statement\s+Date\s*:?|As\s+on\s*:?)\s*(\d{1,2})[-/ ]([A-Za-z]{3}|\d{1,2})[-/ ](\d{4})/i
+      ) || text.match(/(\d{1,2})[-/ ]([A-Za-z]{3}|\d{1,2})[-/ ](\d{4})/);
 
     if (match) {
       const day = match[1]!.padStart(2, '0');
@@ -182,8 +226,18 @@ export class NsdlCasParser implements ICasStatementParser {
 
       if (isNaN(Number(monthRaw))) {
         const monthNames: Record<string, string> = {
-          JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06',
-          JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12',
+          JAN: '01',
+          FEB: '02',
+          MAR: '03',
+          APR: '04',
+          MAY: '05',
+          JUN: '06',
+          JUL: '07',
+          AUG: '08',
+          SEP: '09',
+          OCT: '10',
+          NOV: '11',
+          DEC: '12',
         };
         month = monthNames[monthRaw.toUpperCase().slice(0, 3)] || '01';
       } else {
@@ -222,11 +276,7 @@ export class NsdlCasParser implements ICasStatementParser {
     if (unitsMatch || valMatch) {
       const q = unitsMatch ? parseFloat(unitsMatch[1]!.replace(/,/g, '')) : 0;
       const v = valMatch ? parseFloat(valMatch[1]!.replace(/,/g, '')) : 0;
-      const p = navMatch
-        ? parseFloat(navMatch[1]!.replace(/,/g, ''))
-        : q > 0 && v > 0
-        ? v / q
-        : 0;
+      const p = navMatch ? parseFloat(navMatch[1]!.replace(/,/g, '')) : q > 0 && v > 0 ? v / q : 0;
       if (q > 0 || v > 0) {
         return { quantity: q, price: p, marketValue: v };
       }

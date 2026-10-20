@@ -2,7 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { CdslCasParser } from '../cas/cdsl-cas-parser.js';
 import { NsdlCasParser } from '../cas/nsdl-cas-parser.js';
 import { CasParserRegistry } from '../cas/cas-parser-registry.js';
-import { isValidIsin, isIndianIsin, inferAssetClassFromIsin, inferTickerFromSecurity } from '../cas/isin.js';
+import {
+  isValidIsin,
+  isIndianIsin,
+  inferAssetClassFromIsin,
+  inferTickerFromSecurity,
+} from '../cas/isin.js';
 
 describe('ISIN Validation & Asset Class Inference', () => {
   it('validates 12-character ISO 6166 ISINs', () => {
@@ -20,21 +25,39 @@ describe('ISIN Validation & Asset Class Inference', () => {
   });
 
   it('infers asset classes correctly', () => {
-    expect(inferAssetClassFromIsin('INE002A01018', 'Reliance Industries Ltd').assetClassId).toBe('equity');
-    expect(inferAssetClassFromIsin('INF209K01164', 'Nippon India Nifty BeES').assetClassId).toBe('equity');
-    expect(inferAssetClassFromIsin('INF740K01128', 'DSP Mid Cap Fund').assetClassId).toBe('mutual_fund');
-    expect(inferAssetClassFromIsin('INF194K01524', 'Bandhan Large & Mid Cap Fund').assetClassId).toBe('mutual_fund');
-    expect(inferAssetClassFromIsin('IN0020180017', 'Sovereign Gold Bond 2028').assetClassId).toBe('commodity');
-    expect(inferAssetClassFromIsin('INE040A01034', 'Embassy Office Parks REIT').assetClassId).toBe('real_estate');
+    expect(inferAssetClassFromIsin('INE002A01018', 'Reliance Industries Ltd').assetClassId).toBe(
+      'equity'
+    );
+    expect(inferAssetClassFromIsin('INF209K01164', 'Nippon India Nifty BeES').assetClassId).toBe(
+      'equity'
+    );
+    expect(inferAssetClassFromIsin('INF740K01128', 'DSP Mid Cap Fund').assetClassId).toBe(
+      'mutual_fund'
+    );
+    expect(
+      inferAssetClassFromIsin('INF194K01524', 'Bandhan Large & Mid Cap Fund').assetClassId
+    ).toBe('mutual_fund');
+    expect(inferAssetClassFromIsin('IN0020180017', 'Sovereign Gold Bond 2028').assetClassId).toBe(
+      'commodity'
+    );
+    expect(inferAssetClassFromIsin('INE040A01034', 'Embassy Office Parks REIT').assetClassId).toBe(
+      'real_estate'
+    );
   });
 
   it('attaches security name with asset ticker symbol correctly', () => {
-    expect(inferTickerFromSecurity('INE002A01018', 'RELIANCE INDUSTRIES LTD. - EQ')).toBe('RELIANCE');
-    expect(inferTickerFromSecurity('INF209K01164', 'NIPPON INDIA NIFTY 50 BEES ETF')).toBe('NIFTYBEES');
+    expect(inferTickerFromSecurity('INE002A01018', 'RELIANCE INDUSTRIES LTD. - EQ')).toBe(
+      'RELIANCE'
+    );
+    expect(inferTickerFromSecurity('INF209K01164', 'NIPPON INDIA NIFTY 50 BEES ETF')).toBe(
+      'NIFTYBEES'
+    );
     expect(inferTickerFromSecurity('IN0020180017', 'SOVEREIGN GOLD BOND 2028-29')).toBe('SGB-2028');
     expect(inferTickerFromSecurity('INE467B01029', 'TATA CONSULTANCY SERVICES LTD')).toBe('TCS');
     expect(inferTickerFromSecurity('INE040A01034', 'HDFC BANK LIMITED')).toBe('HDFCBANK');
-    expect(inferTickerFromSecurity('INF740K01PX1', 'DSP FLEXI CAP FUND - REGULAR PLAN')).toBe('DSP-FLEXI');
+    expect(inferTickerFromSecurity('INF740K01PX1', 'DSP FLEXI CAP FUND - REGULAR PLAN')).toBe(
+      'DSP-FLEXI'
+    );
   });
 });
 
@@ -378,12 +401,13 @@ describe('NSDL CAS Statement Parser (Sanitized Fixture)', () => {
   });
 });
 
-
 describe('CasParserRegistry', () => {
   it('automatically routes to appropriate parser based on statement header', () => {
     const registry = new CasParserRegistry();
 
-    const cdslSample = ['Central Depository Services (India) Limited\nINE002A01018 RELIANCE 10 2500 25000'];
+    const cdslSample = [
+      'Central Depository Services (India) Limited\nINE002A01018 RELIANCE 10 2500 25000',
+    ];
     const nsdlSample = ['National Securities Depository Limited\nINE467B01029 TCS 20 4000 80000'];
 
     expect(registry.detectAndParse(cdslSample).provider).toBe('CDSL');

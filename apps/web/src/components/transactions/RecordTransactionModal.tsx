@@ -29,12 +29,42 @@ const TRANSACTION_TYPES: Array<{
   category: 'inflow' | 'outflow';
   description: string;
 }> = [
-  { id: 'deposit', label: 'Deposit (Inflow)', category: 'inflow', description: 'Salary savings, fund injection' },
-  { id: 'buy', label: 'Buy Asset (Outflow)', category: 'outflow', description: 'Stock, ETF, SGB purchase' },
-  { id: 'sell', label: 'Sell Asset (Inflow)', category: 'inflow', description: 'Liquidation, profit booking' },
-  { id: 'dividend', label: 'Dividend / Interest (Inflow)', category: 'inflow', description: 'Stock dividend, SGB/FD interest' },
-  { id: 'withdrawal', label: 'Withdrawal (Outflow)', category: 'outflow', description: 'Personal draw, large expense' },
-  { id: 'fee', label: 'Charges & Taxes (Outflow)', category: 'outflow', description: 'Brokerage, STT, GST, AMC fee' },
+  {
+    id: 'deposit',
+    label: 'Deposit (Inflow)',
+    category: 'inflow',
+    description: 'Salary savings, fund injection',
+  },
+  {
+    id: 'buy',
+    label: 'Buy Asset (Outflow)',
+    category: 'outflow',
+    description: 'Stock, ETF, SGB purchase',
+  },
+  {
+    id: 'sell',
+    label: 'Sell Asset (Inflow)',
+    category: 'inflow',
+    description: 'Liquidation, profit booking',
+  },
+  {
+    id: 'dividend',
+    label: 'Dividend / Interest (Inflow)',
+    category: 'inflow',
+    description: 'Stock dividend, SGB/FD interest',
+  },
+  {
+    id: 'withdrawal',
+    label: 'Withdrawal (Outflow)',
+    category: 'outflow',
+    description: 'Personal draw, large expense',
+  },
+  {
+    id: 'fee',
+    label: 'Charges & Taxes (Outflow)',
+    category: 'outflow',
+    description: 'Brokerage, STT, GST, AMC fee',
+  },
 ];
 
 export function RecordTransactionModal({
@@ -50,7 +80,9 @@ export function RecordTransactionModal({
   const [customAssetTicker, setCustomAssetTicker] = useState('');
   const [amount, setAmount] = useState('');
   const [quantity, setQuantity] = useState('');
-  const [transactionDate, setTransactionDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [transactionDate, setTransactionDate] = useState(
+    () => new Date().toISOString().split('T')[0]
+  );
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -75,7 +107,9 @@ export function RecordTransactionModal({
 
     const matchedAsset = availableAssets.find((a) => a.id === selectedAssetId);
     const resolvedName = matchedAsset?.name || customAssetName.trim() || undefined;
-    const resolvedTicker = matchedAsset?.ticker || (customAssetTicker.trim() ? customAssetTicker.trim().toUpperCase() : undefined);
+    const resolvedTicker =
+      matchedAsset?.ticker ||
+      (customAssetTicker.trim() ? customAssetTicker.trim().toUpperCase() : undefined);
 
     try {
       await onSubmit({
@@ -165,9 +199,13 @@ export function RecordTransactionModal({
                       ) : (
                         <ArrowUpRight className="w-3.5 h-3.5 text-rose-400" />
                       )}
-                      <span className="text-xs font-semibold truncate text-foreground">{t.label.split(' ')[0]}</span>
+                      <span className="text-xs font-semibold truncate text-foreground">
+                        {t.label.split(' ')[0]}
+                      </span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground truncate mt-0.5">{t.description}</p>
+                    <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+                      {t.description}
+                    </p>
                   </button>
                 );
               })}
@@ -194,7 +232,11 @@ export function RecordTransactionModal({
                 >
                   <option value="">-- Select from your holdings or enter custom below --</option>
                   {availableAssets.map((asset) => (
-                    <option key={asset.id} value={asset.id} className="bg-slate-900 text-foreground">
+                    <option
+                      key={asset.id}
+                      value={asset.id}
+                      className="bg-slate-900 text-foreground"
+                    >
                       {asset.name} {asset.ticker ? `(${asset.ticker})` : ''}
                     </option>
                   ))}
@@ -289,14 +331,22 @@ export function RecordTransactionModal({
 
           <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 text-xs text-muted-foreground space-y-1">
             <p>
-              💡 <span className="text-foreground font-medium">Audit Integrity:</span> Transactions are
-              stored in exact integer paise (<code className="text-primary font-mono">bigint</code>) to ensure audit trail precision.
+              💡 <span className="text-foreground font-medium">Audit Integrity:</span> Transactions
+              are stored in exact integer paise (
+              <code className="text-primary font-mono">bigint</code>) to ensure audit trail
+              precision.
             </p>
           </div>
 
           {/* Action buttons */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-border/80">
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isLoading}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              disabled={isLoading}
+            >
               Cancel
             </Button>
             <Button type="submit" size="sm" disabled={isLoading} className="gap-2">

@@ -13,4 +13,10 @@ export interface HoldingEntity {
   readonly unitCost: Money;
   readonly currentValue: Money;
   readonly updatedAt: string;
+  readonly dematAccountId?: string;
+  readonly folioNumber?: string;
+  readonly amcName?: string;
+  readonly schemePlan?: string;
+  readonly costBasisVerified: boolean;
+  readonly source?: string;
 }
