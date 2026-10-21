@@ -7,6 +7,7 @@ import {
   Target,
   Settings,
   ShieldCheck,
+  Landmark,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -19,6 +20,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { title: 'System Overview', href: '/', icon: LayoutDashboard },
   { title: 'Portfolio', href: '/portfolio', icon: PieChart },
+  { title: 'Loans & Liabilities', href: '/liabilities', icon: Landmark },
   { title: 'Transactions', href: '/transactions', icon: ArrowLeftRight },
   { title: 'Analytics', href: '/analytics', icon: TrendingUp },
   { title: 'Goals & Targets', href: '/goals', icon: Target },

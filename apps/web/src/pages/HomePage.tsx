@@ -3,13 +3,17 @@ import {
   GetSystemStatusUseCase,
   SystemStatusDto,
   ListAssetClassesUseCase,
+  GetNetWorthSummaryUseCase,
 } from '@wealthnest/application';
-import { Money, AssetClassDefinition } from '@wealthnest/domain';
+import { Money, AssetClassDefinition, NetWorthSummary } from '@wealthnest/domain';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { AuthCard } from '@/components/auth/AuthCard';
 import { SupabaseAssetClassAdapter } from '@/lib/supabase/asset-class.adapter';
+import { SupabaseHoldingAdapter } from '@/lib/supabase/holding.adapter';
+import { SupabaseLiabilityAdapter } from '@/lib/supabase/liability.adapter';
+import { useAuth } from '@/lib/supabase/auth-context';
 import {
   CheckCircle2,
   Layers,
@@ -19,10 +23,17 @@ import {
   ArrowRight,
   Database,
   ExternalLink,
+  Landmark,
+  Wallet,
+  TrendingDown,
+  Percent,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export function HomePage() {
+  const { user } = useAuth();
+  const userId = user?.id || '';
+
   // Query 1: System status use case
   const { data: systemStatus, isLoading } = useQuery<SystemStatusDto>({
     queryKey: ['system-status'],
@@ -34,7 +45,7 @@ export function HomePage() {
     },
   });
 
-  // Query 2: Asset classes via Supabase adapter (Demonstrating Clean Architecture adapter integration)
+  // Query 2: Asset classes via Supabase adapter
   const { data: assetClasses, isLoading: isLoadingAssetClasses } = useQuery<AssetClassDefinition[]>(
     {
       queryKey: ['asset-classes'],
@@ -49,6 +60,28 @@ export function HomePage() {
     }
   );
 
+  // Query 3: Net Worth Summary (Assets minus Liabilities)
+  const { data: netWorthSummary } = useQuery<NetWorthSummary | null>({
+    queryKey: ['net-worth-summary', userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      const holdingAdapter = new SupabaseHoldingAdapter();
+      const liabilityAdapter = new SupabaseLiabilityAdapter();
+      const useCase = new GetNetWorthSummaryUseCase(holdingAdapter, liabilityAdapter);
+      const result = await useCase.execute({ userId });
+      if (!result.success) return null;
+      return result.value;
+    },
+    enabled: Boolean(userId),
+  });
+
+  const totalAssets = netWorthSummary?.totalAssets.toDecimal() ?? 0;
+  const totalLiabilities = netWorthSummary?.totalLiabilities.toDecimal() ?? 0;
+  const netWorth = netWorthSummary?.netWorth.toDecimal() ?? 0;
+  const isSolvent = netWorthSummary?.isSolvent ?? true;
+  const debtToAssets = (netWorthSummary?.debtToAssetsRatio ?? 0) * 100;
+  const totalMonthlyEmi = netWorthSummary?.totalMonthlyEmi.toDecimal() ?? 0;
+
   // Pure domain test calculation to verify domain package export boundary
   const demoMoneyA = Money.fromDecimal(150000.5, 'INR');
   const demoMoneyB = Money.fromDecimal(49999.5, 'INR');
@@ -61,15 +94,14 @@ export function HomePage() {
         <div className="relative z-10 max-w-3xl space-y-4">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
             <Sparkles className="w-3.5 h-3.5" />
-            Phase 1: Core Database & Auth Foundation
+            Phase 5: Loans & Liabilities Integration
           </div>
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-            WealthNest Core Monorepo
+            WealthNest Financial Health
           </h2>
           <p className="text-base text-muted-foreground leading-relaxed">
-            Personal wealth operating system with modular clean architecture, pure domain
-            calculations, PostgreSQL database migrations, Supabase Studio, and secure multi-tenant
-            data isolation.
+            Personal wealth operating system integrating verified assets, CAS imports, mortgages,
+            and loan obligations into unified net worth and cash flow analytics.
           </p>
 
           <div className="flex flex-wrap gap-3 pt-2">
@@ -79,15 +111,21 @@ export function HomePage() {
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
+            <Link to="/liabilities">
+              <Button variant="secondary" className="gap-2 text-xs">
+                <Landmark className="w-4 h-4 text-primary" />
+                Loans & Liabilities
+              </Button>
+            </Link>
             <a
               href="http://localhost:54323"
               target="_blank"
               rel="noreferrer"
               className="inline-block"
             >
-              <Button variant="secondary" className="gap-2 font-mono text-xs">
+              <Button variant="outline" className="gap-2 font-mono text-xs">
                 <Database className="w-4 h-4 text-emerald-400" />
-                Open Supabase Studio
+                Supabase Studio
                 <ExternalLink className="w-3 h-3 text-muted-foreground" />
               </Button>
             </a>
@@ -96,6 +134,96 @@ export function HomePage() {
 
         {/* Decorative background glow */}
         <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+      </div>
+
+      {/* Integrated Net Worth Dashboard Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Net Worth */}
+        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between text-muted-foreground text-xs uppercase font-semibold">
+              <span>Total Net Worth</span>
+              <Wallet className="w-4 h-4 text-emerald-400" />
+            </div>
+            <CardTitle
+              className={`text-2xl font-bold font-mono tracking-tight pt-1 ${
+                isSolvent ? 'text-emerald-400' : 'text-rose-400'
+              }`}
+            >
+              {isSolvent ? '₹' : '-₹'}
+              {netWorth.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <p className="text-xs text-muted-foreground">
+              Assets (₹{totalAssets.toLocaleString('en-IN', { maximumFractionDigits: 0 })}) - Debt
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Total Outstanding Liabilities */}
+        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between text-muted-foreground text-xs uppercase font-semibold">
+              <span>Outstanding Debt</span>
+              <TrendingDown className="w-4 h-4 text-rose-400" />
+            </div>
+            <CardTitle className="text-2xl font-bold font-mono tracking-tight text-foreground pt-1">
+              ₹{totalLiabilities.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <Link
+              to="/liabilities"
+              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+            >
+              View loans & mortgages →
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Monthly EMI Outflow */}
+        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between text-muted-foreground text-xs uppercase font-semibold">
+              <span>Monthly EMI</span>
+              <Landmark className="w-4 h-4 text-amber-400" />
+            </div>
+            <CardTitle className="text-2xl font-bold font-mono tracking-tight text-foreground pt-1">
+              ₹{totalMonthlyEmi.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <p className="text-xs text-muted-foreground">Monthly cash outflow for debt service</p>
+          </CardContent>
+        </Card>
+
+        {/* Debt-To-Assets Ratio */}
+        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between text-muted-foreground text-xs uppercase font-semibold">
+              <span>Debt-To-Assets</span>
+              <Percent className="w-4 h-4 text-blue-400" />
+            </div>
+            <CardTitle className="text-2xl font-bold font-mono tracking-tight text-foreground pt-1">
+              {debtToAssets.toFixed(1)}%
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <Badge
+              variant={
+                debtToAssets <= 30 ? 'success' : debtToAssets <= 50 ? 'secondary' : 'destructive'
+              }
+              className="text-[10px]"
+            >
+              {debtToAssets <= 30
+                ? 'Low Leverage'
+                : debtToAssets <= 50
+                  ? 'Moderate'
+                  : 'High Leverage'}
+            </Badge>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Grid: Auth Card + Supabase Database Manager Card */}

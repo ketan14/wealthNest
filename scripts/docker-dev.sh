@@ -25,7 +25,7 @@ case "$CMD" in
     ;;
   up-d)
     docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d --build
-    echo "Containers started! Access WealthNest at http://wealthnest.local or http://localhost:5173"
+    echo "Containers started! Access WealthNest at http://localhost:30000 or http://localhost:5173"
     ;;
   down)
     docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" down
