@@ -68,9 +68,9 @@ export function Sidebar() {
 
       {/* Monorepo Architecture Badge */}
       <div className="p-3 rounded-lg bg-accent/50 border border-border/60 text-xs text-muted-foreground">
-        <p className="font-medium text-foreground mb-1">Phase 0 Scaffolding</p>
+        <p className="font-medium text-foreground mb-1">Clean Architecture</p>
         <p className="text-[11px] leading-relaxed">
-          npm workspaces modular monolith ready for domain & persistence layers.
+          4 active layers: Web, Application, Pure Domain, and Shared utilities.
         </p>
       </div>
     </aside>

@@ -38,8 +38,10 @@ import {
   Loader2,
   CheckCircle2,
   HelpCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { marketDataAdapter } from '@/lib/market/market-data.adapter';
 
 // Demo initial positions tailored for Indian investors (India First)
 const DEMO_HOLDINGS: HoldingDetailDto[] = [
@@ -216,9 +218,49 @@ export function PortfolioPage() {
   const [viewMode, setViewMode] = useState<'all' | 'equities' | 'mutual_funds' | 'grouped'>('all');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isRefreshingNavs, setIsRefreshingNavs] = useState(false);
+  const [navRefreshMessage, setNavRefreshMessage] = useState<string | null>(null);
 
   // Local state for interactive demo mode when not logged in
   const [localDemoHoldings, setLocalDemoHoldings] = useState<HoldingDetailDto[]>(DEMO_HOLDINGS);
+
+  const handleRefreshLiveNavs = async () => {
+    setIsRefreshingNavs(true);
+    setNavRefreshMessage(null);
+    try {
+      const res = await marketDataAdapter.refreshPortfolioQuotes(activeHoldings);
+      if (res.success) {
+        const quoteMap = new Map<string, number>();
+        for (const q of res.value) {
+          if (q.isin) quoteMap.set(q.isin, q.priceCents);
+          quoteMap.set(q.identifier, q.priceCents);
+        }
+
+        setLocalDemoHoldings((prev) =>
+          prev.map((h) => {
+            const quotePrice =
+              (h.isin && quoteMap.get(h.isin)) ||
+              quoteMap.get(h.ticker || '') ||
+              quoteMap.get(h.holdingId);
+            if (quotePrice && quotePrice > 0) {
+              const updatedValuation = Math.round(Number(h.quantity) * quotePrice);
+              return {
+                ...h,
+                currentValueCents: updatedValuation,
+                updatedAt: new Date().toISOString(),
+              };
+            }
+            return h;
+          })
+        );
+
+        setNavRefreshMessage(`Refreshed ${res.value.length} securities via AMFI and NSE feeds!`);
+        setTimeout(() => setNavRefreshMessage(null), 4000);
+      }
+    } finally {
+      setIsRefreshingNavs(false);
+    }
+  };
 
   const holdingAdapter = useMemo(() => new SupabaseHoldingAdapter(), []);
 
@@ -526,21 +568,43 @@ export function PortfolioPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <Button
+            variant="secondary"
+            onClick={handleRefreshLiveNavs}
+            disabled={isRefreshingNavs}
+            className="gap-2 shadow-sm text-xs border border-border/80"
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 text-cyan-400 ${isRefreshingNavs ? 'animate-spin' : ''}`}
+            />
+            {isRefreshingNavs ? 'Fetching AMFI...' : 'Refresh AMFI NAVs'}
+          </Button>
           <Button
             variant="outline"
             onClick={() => setIsImportModalOpen(true)}
-            className="gap-2 shadow-sm border-primary/20 hover:bg-primary/5 text-foreground"
+            className="gap-2 shadow-sm border-primary/20 hover:bg-primary/5 text-foreground text-xs"
           >
             <FileSpreadsheet className="w-4 h-4 text-primary" />
             Import CAS
           </Button>
-          <Button onClick={() => setIsModalOpen(true)} className="gap-2 shadow-sm">
+          <Button onClick={() => setIsModalOpen(true)} className="gap-2 shadow-sm text-xs">
             <Plus className="w-4 h-4" />
             Add Holding
           </Button>
         </div>
       </div>
+
+      {/* AMFI Refresh Success Alert */}
+      {navRefreshMessage && (
+        <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3.5 flex items-center justify-between text-xs text-cyan-300 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-cyan-400" />
+            <span>{navRefreshMessage}</span>
+          </div>
+          <span className="font-mono text-[10px] text-cyan-400/80">AMFI Daily Feed</span>
+        </div>
+      )}
 
       {/* Mode Alert Banner if not authenticated */}
       {!user && (

@@ -5,10 +5,13 @@ import { HomePage } from '@/pages/HomePage';
 import { PortfolioPage } from '@/pages/PortfolioPage';
 import { LiabilitiesPage } from '@/pages/LiabilitiesPage';
 import { TransactionsPage } from '@/pages/TransactionsPage';
-import { PlaceholderModulePage } from '@/pages/PlaceholderModulePage';
+import { AnalyticsPage } from '@/pages/AnalyticsPage';
+import { GoalsPage } from '@/pages/GoalsPage';
+import { SettingsPage } from '@/pages/SettingsPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 import { AuthProvider } from '@/lib/supabase/auth-context';
+import { PreferencesProvider } from '@/lib/preferences/preferences-context';
 
 // Initialize TanStack Query client with production-ready defaults
 const queryClient = new QueryClient({
@@ -25,47 +28,22 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<AppShell />}>
-              <Route index element={<HomePage />} />
-              <Route path="portfolio" element={<PortfolioPage />} />
-              <Route path="liabilities" element={<LiabilitiesPage />} />
-              <Route path="transactions" element={<TransactionsPage />} />
-              <Route
-                path="analytics"
-                element={
-                  <PlaceholderModulePage
-                    title="Performance & Wealth Analytics"
-                    description="Historical return calculations, benchmarks, volatility, and net worth trajectory."
-                    targetPhase="Phase 4"
-                  />
-                }
-              />
-              <Route
-                path="goals"
-                element={
-                  <PlaceholderModulePage
-                    title="Financial Goals & Milestones"
-                    description="Target tracking, emergency fund modeling, and retirement forecasting."
-                    targetPhase="Phase 5"
-                  />
-                }
-              />
-              <Route
-                path="settings"
-                element={
-                  <PlaceholderModulePage
-                    title="System & Account Settings"
-                    description="Currency preferences, data export, sync settings, and security credentials."
-                    targetPhase="Phase 1"
-                  />
-                }
-              />
-              <Route path="*" element={<NotFoundPage />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
+        <PreferencesProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<AppShell />}>
+                <Route index element={<HomePage />} />
+                <Route path="portfolio" element={<PortfolioPage />} />
+                <Route path="liabilities" element={<LiabilitiesPage />} />
+                <Route path="transactions" element={<TransactionsPage />} />
+                <Route path="analytics" element={<AnalyticsPage />} />
+                <Route path="goals" element={<GoalsPage />} />
+                <Route path="settings" element={<SettingsPage />} />
+                <Route path="*" element={<NotFoundPage />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </PreferencesProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

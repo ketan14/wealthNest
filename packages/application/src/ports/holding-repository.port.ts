@@ -38,8 +38,17 @@ export interface CreateHoldingParams {
   readonly costBasisVerified?: boolean;
 }
 
+export interface UpdateHoldingValuesParams {
+  readonly holdingId: string;
+  readonly userId: string;
+  readonly quantity: number;
+  readonly unitCostCents: number;
+  readonly currentValueCents: number;
+}
+
 export interface HoldingRepositoryPort {
   listDetailsByUser(userId: string): Promise<Result<HoldingDetailDto[]>>;
   createHoldingWithAsset(params: CreateHoldingParams): Promise<Result<HoldingDetailDto>>;
   deleteHolding(holdingId: string, userId: string): Promise<Result<void>>;
+  updateHoldingValues?(params: UpdateHoldingValuesParams): Promise<Result<void>>;
 }

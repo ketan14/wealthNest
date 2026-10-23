@@ -107,4 +107,132 @@ describe('RecordTransactionUseCase', () => {
     });
     expect(resInvalidQty.success).toBe(false);
   });
+
+  it('synchronizes holding units and updates cost basis on Buy trade', async () => {
+    const mockTxRepo: TransactionRepositoryPort = {
+      listByUser: vi.fn(),
+      createTransaction: vi.fn().mockImplementation((p) =>
+        Promise.resolve(
+          ok({
+            id: 'tx-created-1',
+            createdAt: '2026-04-10T00:00:00Z',
+            ...p,
+          })
+        )
+      ),
+      deleteTransaction: vi.fn(),
+    };
+
+    const mockHoldingRepo = {
+      listDetailsByUser: vi.fn().mockResolvedValue(
+        ok([
+          {
+            holdingId: 'hold-1',
+            assetId: 'asset-1',
+            name: 'Reliance Industries Ltd',
+            assetClassId: 'equity',
+            assetClassName: 'Equity',
+            assetClassColor: '#3b82f6',
+            quantity: 10,
+            unitCostCents: 250000, // ₹2,500
+            currentValueCents: 2500000,
+            currency: 'INR',
+            updatedAt: '2026-04-01T00:00:00Z',
+          },
+        ])
+      ),
+      createHoldingWithAsset: vi.fn(),
+      deleteHolding: vi.fn(),
+      updateHoldingValues: vi.fn().mockResolvedValue(ok(undefined)),
+    };
+
+    const useCase = new RecordTransactionUseCase(mockTxRepo, mockHoldingRepo);
+
+    const result = await useCase.execute({
+      userId: 'user-1',
+      assetId: 'asset-1',
+      type: 'buy',
+      quantity: 5,
+      amountCents: 1400000, // ₹14,000 (unit ₹2,800)
+      currency: 'INR',
+    });
+
+    expect(result.success).toBe(true);
+    expect(mockHoldingRepo.updateHoldingValues).toHaveBeenCalledWith({
+      holdingId: 'hold-1',
+      userId: 'user-1',
+      quantity: 15,
+      unitCostCents: 260000, // (25000 + 14000) / 15 = 2600
+      currentValueCents: 4200000,
+    });
+  });
+
+  it('calculates realized capital gain and appends audit tag to notes on Sell trade', async () => {
+    let capturedParams: any = null;
+    const mockTxRepo: TransactionRepositoryPort = {
+      listByUser: vi.fn(),
+      createTransaction: vi.fn().mockImplementation((p) => {
+        capturedParams = p;
+        return Promise.resolve(
+          ok({
+            id: 'tx-created-2',
+            createdAt: '2026-04-10T00:00:00Z',
+            ...p,
+          })
+        );
+      }),
+      deleteTransaction: vi.fn(),
+    };
+
+    const mockHoldingRepo = {
+      listDetailsByUser: vi.fn().mockResolvedValue(
+        ok([
+          {
+            holdingId: 'hold-1',
+            assetId: 'asset-1',
+            name: 'Reliance Industries Ltd',
+            assetClassId: 'equity',
+            assetClassName: 'Equity',
+            assetClassColor: '#3b82f6',
+            quantity: 10,
+            unitCostCents: 250000, // ₹2,500
+            currentValueCents: 2500000,
+            currency: 'INR',
+            updatedAt: '2026-04-01T00:00:00Z',
+          },
+        ])
+      ),
+      createHoldingWithAsset: vi.fn(),
+      deleteHolding: vi.fn(),
+      updateHoldingValues: vi.fn().mockResolvedValue(ok(undefined)),
+    };
+
+    const useCase = new RecordTransactionUseCase(mockTxRepo, mockHoldingRepo);
+
+    // Sell 4 shares at ₹3,000 (total ₹12,000 = 1,200,000 paise)
+    // Cost basis of 4 shares = 4 * 2500 = ₹10,000 = 1,000,000 paise
+    // Realized Gain = ₹2,000
+    const result = await useCase.execute({
+      userId: 'user-1',
+      assetId: 'asset-1',
+      type: 'sell',
+      quantity: 4,
+      amountCents: 1200000,
+      currency: 'INR',
+      notes: 'Profit booking',
+    });
+
+    expect(result.success).toBe(true);
+    expect(mockHoldingRepo.updateHoldingValues).toHaveBeenCalledWith({
+      holdingId: 'hold-1',
+      userId: 'user-1',
+      quantity: 6,
+      unitCostCents: 250000,
+      currentValueCents: 1500000,
+    });
+
+    expect(capturedParams.notes).toContain('Profit booking');
+    expect(capturedParams.notes).toContain('Realized Gain: ₹2,000.00');
+  });
 });
+

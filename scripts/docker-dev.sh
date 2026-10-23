@@ -31,7 +31,7 @@ case "$CMD" in
     docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" down
     ;;
   logs)
-    docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" logs -f
+    docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE"  logs -f
     ;;
   rebuild)
     docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d --build --force-recreate

@@ -212,7 +212,7 @@ export class SupabaseLiabilityAdapter implements LiabilityRepositoryPort {
         linkedAssetId: r.linked_asset_id || undefined,
         linkedAssetName: r.assets?.name || undefined,
         notes: r.notes || undefined,
-        lastBalanceDate: latestBalRow?.asOf_date,
+        lastBalanceDate: latestBalRow?.as_of_date,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
       });

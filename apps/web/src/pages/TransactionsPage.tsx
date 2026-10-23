@@ -229,8 +229,8 @@ export function TransactionsPage() {
       const amountCents = Math.round(values.amount * 100);
 
       if (user) {
-        // Authenticated: Persist to PostgreSQL database
-        const useCase = new RecordTransactionUseCase(transactionAdapter);
+        // Authenticated: Persist to PostgreSQL database with automated holding synchronization
+        const useCase = new RecordTransactionUseCase(transactionAdapter, holdingAdapter);
         const res = await useCase.execute({
           userId: user.id,
           assetId: values.assetId,
@@ -267,6 +267,8 @@ export function TransactionsPage() {
     onSuccess: () => {
       if (user) {
         queryClient.invalidateQueries({ queryKey: ['cashflow-summary', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['user-holdings', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
       }
     },
   });

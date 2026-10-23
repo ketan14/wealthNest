@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { SupabaseLiabilityAdapter } from '@/lib/supabase/liability.adapter';
@@ -12,7 +12,7 @@ import {
   CreateLiabilityParams,
   UpdateLiabilityParams,
 } from '@wealthnest/application';
-import { NetWorthSummary } from '@wealthnest/domain';
+import { NetWorthSummary, Money, PropertyEquityDetail } from '@wealthnest/domain';
 import { AddLiabilityModal } from '@/components/liabilities/AddLiabilityModal';
 import { UpdateBalanceModal } from '@/components/liabilities/UpdateBalanceModal';
 import { UpdateValuationModal } from '@/components/liabilities/UpdateValuationModal';
@@ -38,6 +38,55 @@ import {
   CircleDollarSign,
   Briefcase,
 } from 'lucide-react';
+
+const DEMO_LIABILITIES: LiabilityDto[] = [
+  {
+    id: 'demo-loan-1',
+    userId: 'demo-user',
+    name: 'SBI Green Home Loan',
+    loanType: 'home_loan',
+    lender: 'State Bank of India',
+    accountNumber: '38192004812',
+    originalPrincipalCents: 500000000n, // ₹50,00,000 (50L)
+    currentBalanceCents: 412500000n, // ₹41,25,000 (41.25L)
+    interestRate: 8.5,
+    interestType: 'floating',
+    tenureMonths: 240,
+    emiAmountCents: 4339100n, // ₹43,391/mo
+    currency: 'INR',
+    startDate: '2023-01-15',
+    endDate: '2043-01-15',
+    status: 'active',
+    linkedAssetId: 'asset-home-1',
+    linkedAssetName: '3BHK Apartment - Bengaluru',
+    notes: 'Pegged to EBLR repo rate',
+    lastBalanceDate: '2026-01-10',
+    createdAt: '2023-01-15T00:00:00Z',
+    updatedAt: '2026-01-10T00:00:00Z',
+  },
+  {
+    id: 'demo-loan-2',
+    userId: 'demo-user',
+    name: 'HDFC EV Auto Loan',
+    loanType: 'vehicle_loan',
+    lender: 'HDFC Bank',
+    accountNumber: '89102938129',
+    originalPrincipalCents: 150000000n, // ₹15,00,000 (15L)
+    currentBalanceCents: 85000000n, // ₹8,50,000 (8.5L)
+    interestRate: 7.9,
+    interestType: 'fixed',
+    tenureMonths: 60,
+    emiAmountCents: 3034000n, // ₹30,340/mo
+    currency: 'INR',
+    startDate: '2024-03-01',
+    endDate: '2029-03-01',
+    status: 'active',
+    notes: 'Electric Vehicle concessional green loan',
+    lastBalanceDate: '2026-01-05',
+    createdAt: '2024-03-01T00:00:00Z',
+    updatedAt: '2026-01-05T00:00:00Z',
+  },
+];
 
 export function LiabilitiesPage() {
   const { user } = useAuth();
@@ -166,16 +215,67 @@ export function LiabilitiesPage() {
     }
   };
 
-  const filteredLiabilities = liabilities.filter((l) => {
+  const effectiveLiabilities = useMemo(() => {
+    return liabilities.length > 0 ? liabilities : DEMO_LIABILITIES;
+  }, [liabilities]);
+
+  const effectiveSummary: NetWorthSummary = useMemo(() => {
+    if (netWorthSummary) return netWorthSummary;
+
+    const totalDebtCents = effectiveLiabilities.reduce(
+      (sum, l) => sum + (l.status === 'active' ? l.currentBalanceCents : 0n),
+      0n
+    );
+    const totalEmiCents = effectiveLiabilities.reduce(
+      (sum, l) => sum + (l.status === 'active' ? l.emiAmountCents : 0n),
+      0n
+    );
+    const grossAssetsCents = 1850000000n; // ₹1.85 Cr baseline gross assets
+    const netWorthCents = grossAssetsCents - totalDebtCents;
+
+    const propEquities: PropertyEquityDetail[] = [
+      {
+        assetId: 'asset-home-1',
+        assetName: '3BHK Apartment - Bengaluru',
+        propertyValue: Money.fromCents(850000000n, 'INR'), // ₹85 Lakh
+        totalDebt: Money.fromCents(412500000n, 'INR'), // ₹41.25 Lakh
+        equity: Money.fromCents(437500000n, 'INR'), // ₹43.75 Lakh
+        isNegativeEquity: false,
+        ltvRatioPercentage: 48.5,
+        linkedLoans: [
+          {
+            liabilityId: 'demo-loan-1',
+            name: 'SBI Green Home Loan',
+            outstandingBalance: Money.fromCents(412500000n, 'INR'),
+          },
+        ],
+      },
+    ];
+
+    return {
+      asOfDate: new Date().toISOString().slice(0, 10),
+      totalAssets: Money.fromCents(grossAssetsCents, 'INR'),
+      totalLiabilities: Money.fromCents(totalDebtCents, 'INR'),
+      netWorth: Money.fromCents(netWorthCents, 'INR'),
+      isSolvent: netWorthCents > 0n,
+      debtToAssetsRatio: Number(totalDebtCents) / Number(grossAssetsCents),
+      totalMonthlyEmi: Money.fromCents(totalEmiCents, 'INR'),
+      propertyEquities: propEquities,
+      missingAssetValuations: [],
+      missingLiabilityBalances: [],
+    };
+  }, [netWorthSummary, effectiveLiabilities]);
+
+  const filteredLiabilities = effectiveLiabilities.filter((l) => {
     if (statusFilter === 'all') return true;
     return l.status === statusFilter;
   });
 
-  const totalOutstanding = netWorthSummary?.totalLiabilities.toDecimal() ?? 0;
-  const totalMonthlyEmi = netWorthSummary?.totalMonthlyEmi.toDecimal() ?? 0;
-  const debtToAssets = (netWorthSummary?.debtToAssetsRatio ?? 0) * 100;
-  const netWorthVal = netWorthSummary?.netWorth.toDecimal() ?? 0;
-  const isSolvent = netWorthSummary?.isSolvent ?? true;
+  const totalOutstanding = effectiveSummary.totalLiabilities.toDecimal();
+  const totalMonthlyEmi = effectiveSummary.totalMonthlyEmi.toDecimal();
+  const debtToAssets = (effectiveSummary.debtToAssetsRatio ?? 0) * 100;
+  const netWorthVal = effectiveSummary.netWorth.toDecimal();
+  const isSolvent = effectiveSummary.isSolvent ?? true;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -232,7 +332,7 @@ export function LiabilitiesPage() {
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-xs text-muted-foreground">
-              Across {liabilities.filter((l) => l.status === 'active').length} active loan
+              Across {effectiveLiabilities.filter((l) => l.status === 'active').length} active loan
               obligations
             </p>
           </CardContent>
@@ -312,7 +412,7 @@ export function LiabilitiesPage() {
       </div>
 
       {/* Property Equity & LTV Section (Collateral Breakdown) */}
-      {netWorthSummary?.propertyEquities && netWorthSummary.propertyEquities.length > 0 && (
+      {effectiveSummary.propertyEquities && effectiveSummary.propertyEquities.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -327,7 +427,7 @@ export function LiabilitiesPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {netWorthSummary.propertyEquities.map((pe) => {
+            {effectiveSummary.propertyEquities.map((pe) => {
               const propVal = pe.propertyValue.toDecimal();
               const debtVal = pe.totalDebt.toDecimal();
               const eqVal = pe.equity.toDecimal();
@@ -491,7 +591,7 @@ export function LiabilitiesPage() {
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                Active ({liabilities.filter((l) => l.status === 'active').length})
+                Active ({effectiveLiabilities.filter((l) => l.status === 'active').length})
               </button>
               <button
                 onClick={() => setStatusFilter('closed')}
@@ -501,7 +601,7 @@ export function LiabilitiesPage() {
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                Closed ({liabilities.filter((l) => l.status === 'closed').length})
+                Closed ({effectiveLiabilities.filter((l) => l.status === 'closed').length})
               </button>
               <button
                 onClick={() => setStatusFilter('all')}
@@ -511,7 +611,7 @@ export function LiabilitiesPage() {
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                All ({liabilities.length})
+                All ({effectiveLiabilities.length})
               </button>
             </div>
           </div>

@@ -3,6 +3,7 @@ import {
   HoldingRepositoryPort,
   HoldingDetailDto,
   CreateHoldingParams,
+  UpdateHoldingValuesParams,
 } from '@wealthnest/application';
 import { supabase } from './client';
 
@@ -225,4 +226,32 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
       return err(e instanceof Error ? e : new Error(String(e)));
     }
   }
+
+  async updateHoldingValues(params: UpdateHoldingValuesParams): Promise<Result<void>> {
+    try {
+      if (params.holdingId.startsWith('demo-')) {
+        return ok(undefined);
+      }
+
+      const { error } = await supabase
+        .from('holdings')
+        .update({
+          quantity: params.quantity,
+          unit_cost_cents: params.unitCostCents,
+          current_value_cents: params.currentValueCents,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', params.holdingId)
+        .eq('user_id', params.userId);
+
+      if (error) {
+        return err(new Error(error.message));
+      }
+
+      return ok(undefined);
+    } catch (e) {
+      return err(e instanceof Error ? e : new Error(String(e)));
+    }
+  }
 }
+

@@ -8,6 +8,8 @@ dist/
 build/
 out/
 *.tsbuildinfo
+.vite/
+apps/web/.vite/
 
 # Environment variables & secrets
 .env
