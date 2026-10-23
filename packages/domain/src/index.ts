@@ -24,3 +24,5 @@ export * from './goals/goal-calculator.js';
 export * from './tax/capital-gains.js';
 export * from './market/amfi-nav.js';
 export * from './portfolio/holding-synchronizer.js';
+export * from './family/family-types.js';
+export * from './family/family-wealth-calculator.js';

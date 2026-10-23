@@ -16,4 +16,6 @@ export interface TransactionEntity {
   readonly amount: Money;
   readonly date: ISODateString;
   readonly notes?: string;
+  readonly memberId?: string;
+  readonly accountId?: string;
 }

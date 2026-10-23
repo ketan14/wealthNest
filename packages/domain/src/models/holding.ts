@@ -19,4 +19,6 @@ export interface HoldingEntity {
   readonly schemePlan?: string;
   readonly costBasisVerified: boolean;
   readonly source?: string;
+  readonly memberId?: string;
+  readonly accountId?: string;
 }

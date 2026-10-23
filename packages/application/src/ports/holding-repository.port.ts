@@ -19,6 +19,8 @@ export interface HoldingDetailDto {
   readonly amcName?: string;
   readonly schemePlan?: string;
   readonly costBasisVerified?: boolean;
+  readonly memberId?: string;
+  readonly accountId?: string;
 }
 
 export interface CreateHoldingParams {
@@ -36,6 +38,8 @@ export interface CreateHoldingParams {
   readonly amcName?: string;
   readonly schemePlan?: string;
   readonly costBasisVerified?: boolean;
+  readonly memberId?: string;
+  readonly accountId?: string;
 }
 
 export interface UpdateHoldingValuesParams {
