@@ -25,7 +25,21 @@ export class SupabaseUserAdapter implements UserRepositoryPort {
         // ignore localStorage errors in non-browser envs
       }
 
-      // 2. Fetch from Supabase profiles table
+      // 2. Return local default/cached profile for demo users without making a PostgreSQL query
+      if (!id || id.startsWith('demo-')) {
+        if (localCachedProfile) return ok(localCachedProfile);
+        return ok({
+          id,
+          email: 'investor@wealthnest.in',
+          displayName: 'WealthNest Investor',
+          defaultCurrency: 'INR',
+          preferences: DEFAULT_USER_PREFERENCES,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      // 3. Fetch from Supabase profiles table for authenticated users
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -87,6 +101,10 @@ export class SupabaseUserAdapter implements UserRepositoryPort {
         }
       } catch {
         // ignore
+      }
+
+      if (!user.id || user.id.startsWith('demo-')) {
+        return ok(undefined);
       }
 
       const { error } = await supabase.from('profiles').upsert({
