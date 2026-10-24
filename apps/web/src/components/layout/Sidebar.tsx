@@ -7,9 +7,12 @@ import {
   Target,
   Settings,
   ShieldCheck,
+  ShieldAlert,
   Landmark,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAdmin } from '@/lib/admin/admin-context';
+
 
 interface NavItem {
   title: string;
@@ -28,6 +31,8 @@ const navItems: NavItem[] = [
 ];
 
 export function Sidebar() {
+  const { isAnyAdmin, currentAdminRole } = useAdmin();
+
   return (
     <aside className="w-64 border-r border-border bg-card/60 backdrop-blur-md flex flex-col justify-between p-4 min-h-screen">
       <div>
@@ -63,6 +68,30 @@ export function Sidebar() {
               <span>{item.title}</span>
             </NavLink>
           ))}
+
+          {isAnyAdmin && (
+            <div className="pt-2 mt-2 border-t border-border/40">
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all duration-150',
+                    isActive
+                      ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 shadow-sm'
+                      : 'text-cyan-400/90 hover:bg-cyan-500/10 hover:text-cyan-300'
+                  )
+                }
+              >
+                <div className="flex items-center gap-2.5">
+                  <ShieldAlert className="w-4 h-4" />
+                  <span>Admin Portal</span>
+                </div>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono">
+                  {currentAdminRole}
+                </span>
+              </NavLink>
+            </div>
+          )}
         </nav>
       </div>
 

@@ -27,6 +27,8 @@ export * from './use-cases/delete-transaction.js';
 export * from './use-cases/parse-cas-pdf.js';
 export * from './use-cases/confirm-cas-import.js';
 export * from './use-cases/get-performance-analytics.js';
+export * from './ports/admin-repository.port.js';
+export * from './ports/admin-audit-log.port.js';
 export * from './use-cases/manage-goals.js';
 export * from './use-cases/export-portfolio-data.js';
 export * from './use-cases/validate-and-parse-backup.js';
@@ -35,3 +37,7 @@ export * from './use-cases/get-tax-harvesting-summary.js';
 export * from './use-cases/refresh-market-quotes.js';
 export * from './use-cases/manage-family.js';
 export * from './use-cases/import-broker-csv.js';
+export * from './use-cases/admin/manage-admin-users.js';
+export * from './use-cases/admin/manage-platform-roles.js';
+export * from './use-cases/admin/get-admin-analytics.js';
+

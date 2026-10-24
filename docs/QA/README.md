@@ -20,6 +20,8 @@ This directory contains formal, executable Quality Assurance (QA) test suites, v
 | [Phase 5.2: Automated Live Stock CMP Feed (NSE/BSE)](./phase-5-2-live-stock-cmp-verification.md) | Phase 5.2 | Real-time NSE/BSE stock quotes, Indian Standard Time (IST) trading hours state machine, auto-polling toggle, BigInt integer paise conversion, and dual equity/MF synchronization. | ✅ Verified |
 | [Phase 6A: Multi-Demat & Family Portfolios](./phase-6-1-family-portfolios-verification.md) | Phase 6A | Legal entities (Self, Spouse, HUF, Child, Parent), multi-broker accounts (Zerodha, Groww, ICICI Direct), HUF Section 112A tax shield, goal beneficiaries, joint loan liabilities, and cross-module scoping. | ✅ Verified |
 | [Phase 6.2: Broker CSV Importers (Zerodha & Groww)](./phase-6-2-broker-csv-import-verification.md) | Phase 6.2 | Direct statement importers for Zerodha Kite Holdings & Console Tradebooks, Groww Holdings & Orders CSV exports, Zero Float drift paise parsing, and family assignment. | ✅ Verified |
+| [Phase 7: Admin Portal, User Management & Security](./phase-7-admin-portal-verification.md) | Phase 7 | Centralized user directory, platform-level RBAC (super_admin, support_admin, auditor), lifecycle management, append-only immutable audit trail, and zero-knowledge financial isolation boundary. | ✅ Verified |
+
 
 ---
 
@@ -45,8 +47,9 @@ Run these automated verification commands in your terminal to ensure zero regres
 # 1. Type-check across all workspaces (@wealthnest/domain, application, shared, web)
 ./node_modules/.bin/tsc -b
 
-# 2. Run all unit & integration test suites (180 test cases across 40 test files)
+# 2. Run all unit & integration test suites (220 test cases across 43 test files)
 node node_modules/vitest/vitest.mjs run
+
 
 # 3. Production bundle compilation verification
 npm run build

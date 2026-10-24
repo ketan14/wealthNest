@@ -21,9 +21,11 @@
 | **Phase 3.1: Loans & Liabilities** | Mortgages, EMIs, collateral linking, LTV ratios, and true Net Worth reconciliation | ✅ Complete | ✅ Verified | Complete `/liabilities` dashboard with debt KPIs. |
 | **Phase 4: Performance Analytics** | Newton-Raphson XIRR solver, CAGR, SVG trajectory chart, Nifty 50 TRI alpha, rebalance radar | ✅ Complete | ✅ Verified | Full `/analytics` dashboard with Indian benchmarks. |
 | **Phase 5: Financial Goals** | Inflation-adjusted target corpus math, reverse SIP calculator, emergency fund runway buffer | ✅ Complete | ✅ Verified | Complete `/goals` dashboard with milestone cards. |
-| **Phase 5.1 & 5A: Live Feeds & Tax** | Automated NSE/BSE stock CMP feeds, IST market hours detection, auto-polling toggle, AMFI daily NAV feed parser (`NAVAll.txt`), Budget 2024 LTCG (12.5% over ₹1.25L), STCG (20%), Tax-Loss Harvesting | ✅ Complete | ✅ Verified | Real-time live quote polling & refresh in `/portfolio` & `/analytics`. |
 | **Phase 6A: Multi-Demat & Family** | Legal entities (Self, Spouse, HUF, Child, Parent), multi-broker accounts (Zerodha, Groww, ICICI Direct), multi-entity Section 112A tax benefits, goal beneficiaries & joint liabilities | ✅ Complete | ✅ Verified | Migrations 7 & 8 applied; domain math & application use cases complete; full frontend UI integrated in `/portfolio`, `/analytics`, `/transactions`, `/goals`, `/liabilities`, and `/settings`. |
-| **Phase 6B: Desktop Runtime** | Tauri 2 + SQLite local offline sync | ⏳ Backlog | ❌ Pending | Future offline-first desktop runtime. |
+| **Phase 6.2: Broker CSV Importers** | Direct tradebook & holdings CSV parsers for Zerodha (Kite & Console) and Groww (Holdings & Orders), Zero Float drift BigInt paise calculation | ✅ Complete | ✅ Verified | Direct statement dropzone in Import CAS modal. |
+| **Phase 7: Admin Portal & Access Control** | Centralized user directory, platform-level RBAC (super_admin, support_admin, auditor), user lifecycle management (suspend, reactivate, invite, password reset), append-only immutable audit trail, zero-knowledge financial isolation boundary | ✅ Complete | ✅ Verified | Migration 9 applied; clean architecture domain/app layers complete; full frontend UI integrated at `/admin` with AdminGuard protection. |
+| **Phase 8: Desktop Runtime** | Tauri 2 + SQLite local offline sync | ⏳ Backlog | ❌ Pending | Future offline-first desktop runtime. |
+
 
 ---
 

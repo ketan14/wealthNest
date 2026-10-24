@@ -10,7 +10,17 @@ import { GoalsPage } from '@/pages/GoalsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
+import { AdminLayout } from '@/components/admin/AdminLayout';
+import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage';
+import { AdminUsersPage } from '@/pages/admin/AdminUsersPage';
+import { AdminUserDetailPage } from '@/pages/admin/AdminUserDetailPage';
+import { AdminHouseholdsPage } from '@/pages/admin/AdminHouseholdsPage';
+import { AdminRolesPage } from '@/pages/admin/AdminRolesPage';
+import { AdminAuditLogsPage } from '@/pages/admin/AdminAuditLogsPage';
+import { AdminSettingsPage } from '@/pages/admin/AdminSettingsPage';
+
 import { AuthProvider } from '@/lib/supabase/auth-context';
+import { AdminProvider } from '@/lib/admin/admin-context';
 import { PreferencesProvider } from '@/lib/preferences/preferences-context';
 import { FamilyProvider } from '@/lib/family/family-context';
 
@@ -29,24 +39,38 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <PreferencesProvider>
-          <FamilyProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<AppShell />}>
-                  <Route index element={<HomePage />} />
-                  <Route path="portfolio" element={<PortfolioPage />} />
-                  <Route path="liabilities" element={<LiabilitiesPage />} />
-                  <Route path="transactions" element={<TransactionsPage />} />
-                  <Route path="analytics" element={<AnalyticsPage />} />
-                  <Route path="goals" element={<GoalsPage />} />
-                  <Route path="settings" element={<SettingsPage />} />
-                  <Route path="*" element={<NotFoundPage />} />
-                </Route>
-              </Routes>
-            </BrowserRouter>
-          </FamilyProvider>
-        </PreferencesProvider>
+        <AdminProvider>
+          <PreferencesProvider>
+            <FamilyProvider>
+              <BrowserRouter>
+                <Routes>
+                  {/* Investor App Shell */}
+                  <Route path="/" element={<AppShell />}>
+                    <Route index element={<HomePage />} />
+                    <Route path="portfolio" element={<PortfolioPage />} />
+                    <Route path="liabilities" element={<LiabilitiesPage />} />
+                    <Route path="transactions" element={<TransactionsPage />} />
+                    <Route path="analytics" element={<AnalyticsPage />} />
+                    <Route path="goals" element={<GoalsPage />} />
+                    <Route path="settings" element={<SettingsPage />} />
+                    <Route path="*" element={<NotFoundPage />} />
+                  </Route>
+
+                  {/* Dedicated Platform Admin Portal */}
+                  <Route path="/admin" element={<AdminLayout />}>
+                    <Route index element={<AdminDashboardPage />} />
+                    <Route path="users" element={<AdminUsersPage />} />
+                    <Route path="users/:userId" element={<AdminUserDetailPage />} />
+                    <Route path="households" element={<AdminHouseholdsPage />} />
+                    <Route path="roles" element={<AdminRolesPage />} />
+                    <Route path="audit-logs" element={<AdminAuditLogsPage />} />
+                    <Route path="settings" element={<AdminSettingsPage />} />
+                  </Route>
+                </Routes>
+              </BrowserRouter>
+            </FamilyProvider>
+          </PreferencesProvider>
+        </AdminProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
