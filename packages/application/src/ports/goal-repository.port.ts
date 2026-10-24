@@ -23,6 +23,7 @@ export interface GoalDetailDto {
   readonly priority: GoalPriority;
   readonly currency: string;
   readonly notes?: string;
+  readonly memberId?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly linkedHoldings: readonly GoalHoldingLinkDto[];
@@ -41,6 +42,7 @@ export interface CreateGoalParams {
   readonly priority?: GoalPriority;
   readonly currency?: string;
   readonly notes?: string;
+  readonly memberId?: string;
 }
 
 export interface UpdateGoalParams {
@@ -56,6 +58,7 @@ export interface UpdateGoalParams {
   readonly inflationRate?: number;
   readonly priority?: GoalPriority;
   readonly notes?: string;
+  readonly memberId?: string;
 }
 
 export interface LinkHoldingToGoalParams {

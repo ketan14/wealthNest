@@ -12,6 +12,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 
 import { AuthProvider } from '@/lib/supabase/auth-context';
 import { PreferencesProvider } from '@/lib/preferences/preferences-context';
+import { FamilyProvider } from '@/lib/family/family-context';
 
 // Initialize TanStack Query client with production-ready defaults
 const queryClient = new QueryClient({
@@ -29,20 +30,22 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <PreferencesProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<AppShell />}>
-                <Route index element={<HomePage />} />
-                <Route path="portfolio" element={<PortfolioPage />} />
-                <Route path="liabilities" element={<LiabilitiesPage />} />
-                <Route path="transactions" element={<TransactionsPage />} />
-                <Route path="analytics" element={<AnalyticsPage />} />
-                <Route path="goals" element={<GoalsPage />} />
-                <Route path="settings" element={<SettingsPage />} />
-                <Route path="*" element={<NotFoundPage />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
+          <FamilyProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<AppShell />}>
+                  <Route index element={<HomePage />} />
+                  <Route path="portfolio" element={<PortfolioPage />} />
+                  <Route path="liabilities" element={<LiabilitiesPage />} />
+                  <Route path="transactions" element={<TransactionsPage />} />
+                  <Route path="analytics" element={<AnalyticsPage />} />
+                  <Route path="goals" element={<GoalsPage />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Route>
+              </Routes>
+            </BrowserRouter>
+          </FamilyProvider>
         </PreferencesProvider>
       </AuthProvider>
     </QueryClientProvider>

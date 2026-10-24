@@ -18,6 +18,8 @@ interface JoinedHoldingQueryRow {
   amc_name: string | null;
   scheme_plan: string | null;
   cost_basis_verified: boolean | null;
+  member_id: string | null;
+  account_id: string | null;
   assets: {
     id: string;
     name: string;
@@ -51,6 +53,8 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
           amc_name,
           scheme_plan,
           cost_basis_verified,
+          member_id,
+          account_id,
           assets (
             id,
             name,
@@ -100,6 +104,8 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
           amcName: row.amc_name ?? row.assets.amc_name ?? undefined,
           schemePlan: row.scheme_plan ?? undefined,
           costBasisVerified: Boolean(row.cost_basis_verified),
+          memberId: row.member_id ?? undefined,
+          accountId: row.account_id ?? undefined,
         });
       }
 
@@ -146,6 +152,8 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
           amc_name: params.amcName || null,
           scheme_plan: params.schemePlan || null,
           cost_basis_verified: Boolean(params.costBasisVerified),
+          member_id: params.memberId || null,
+          account_id: params.accountId || null,
         })
         .select('id, updated_at')
         .single();
@@ -180,6 +188,8 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
         amcName: params.amcName,
         schemePlan: params.schemePlan,
         costBasisVerified: params.costBasisVerified,
+        memberId: params.memberId,
+        accountId: params.accountId,
       };
 
       return ok(created);

@@ -161,6 +161,8 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
                 cost_basis_verified: Boolean(
                   item.costBasisVerified || existingHolding.cost_basis_verified
                 ),
+                ...(params.memberId ? { member_id: params.memberId } : {}),
+                ...(params.accountId ? { account_id: params.accountId } : {}),
                 updated_at: new Date().toISOString(),
               })
               .eq('id', existingHolding.id);
@@ -190,6 +192,8 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
               scheme_plan: item.schemePlan || null,
               cost_basis_verified: Boolean(item.costBasisVerified),
               source: 'cas_import',
+              member_id: params.memberId || null,
+              account_id: params.accountId || null,
             });
 
             if (insertErr) {
@@ -300,6 +304,8 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
                   currency: tx.currency || 'INR',
                   transaction_date: tx.date,
                   notes: tx.description || null,
+                  member_id: params.memberId || null,
+                  account_id: params.accountId || null,
                 });
 
                 if (!txErr) {

@@ -19,6 +19,9 @@ import { UpdateValuationModal } from '@/components/liabilities/UpdateValuationMo
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { useFamily } from '@/lib/family/family-context';
+import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
+import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 import {
   Landmark,
   Plus,
@@ -37,6 +40,8 @@ import {
   CreditCard,
   CircleDollarSign,
   Briefcase,
+  User,
+  Users,
 } from 'lucide-react';
 
 const DEMO_LIABILITIES: LiabilityDto[] = [
@@ -60,6 +65,8 @@ const DEMO_LIABILITIES: LiabilityDto[] = [
     linkedAssetId: 'asset-home-1',
     linkedAssetName: '3BHK Apartment - Bengaluru',
     notes: 'Pegged to EBLR repo rate',
+    memberId: 'mem-self',
+    coBorrowerMemberIds: ['mem-spouse'],
     lastBalanceDate: '2026-01-10',
     createdAt: '2023-01-15T00:00:00Z',
     updatedAt: '2026-01-10T00:00:00Z',
@@ -82,6 +89,8 @@ const DEMO_LIABILITIES: LiabilityDto[] = [
     endDate: '2029-03-01',
     status: 'active',
     notes: 'Electric Vehicle concessional green loan',
+    memberId: 'mem-spouse',
+    coBorrowerMemberIds: [],
     lastBalanceDate: '2026-01-05',
     createdAt: '2024-03-01T00:00:00Z',
     updatedAt: '2026-01-05T00:00:00Z',
@@ -92,9 +101,11 @@ export function LiabilitiesPage() {
   const { user } = useAuth();
   const userId = user?.id || '';
   const queryClient = useQueryClient();
+  const { members, selectedMemberId } = useFamily();
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [editingLiability, setEditingLiability] = useState<LiabilityDto | null>(null);
   const [balanceModalLiability, setBalanceModalLiability] = useState<LiabilityDto | null>(null);
 
@@ -131,13 +142,13 @@ export function LiabilitiesPage() {
     isLoading: isLoadingSummary,
     refetch: refetchSummary,
   } = useQuery<NetWorthSummary | null>({
-    queryKey: ['net-worth-summary', userId],
+    queryKey: ['net-worth-summary', userId, selectedMemberId],
     queryFn: async () => {
       if (!userId) return null;
       const holdingAdapter = new SupabaseHoldingAdapter();
       const liabilityAdapter = new SupabaseLiabilityAdapter();
       const useCase = new GetNetWorthSummaryUseCase(holdingAdapter, liabilityAdapter);
-      const res = await useCase.execute({ userId });
+      const res = await useCase.execute({ userId, memberId: selectedMemberId });
       if (!res.success) throw res.error;
       return res.value;
     },
@@ -216,8 +227,14 @@ export function LiabilitiesPage() {
   };
 
   const effectiveLiabilities = useMemo(() => {
-    return liabilities.length > 0 ? liabilities : DEMO_LIABILITIES;
-  }, [liabilities]);
+    const base = liabilities.length > 0 ? liabilities : DEMO_LIABILITIES;
+    if (!selectedMemberId || selectedMemberId === 'all') return base;
+    return base.filter(
+      (l) =>
+        l.memberId === selectedMemberId ||
+        (l.coBorrowerMemberIds && l.coBorrowerMemberIds.includes(selectedMemberId))
+    );
+  }, [liabilities, selectedMemberId]);
 
   const effectiveSummary: NetWorthSummary = useMemo(() => {
     if (netWorthSummary) return netWorthSummary;
@@ -316,6 +333,9 @@ export function LiabilitiesPage() {
           </Button>
         </div>
       </div>
+
+      {/* Phase 6A: Family Entity Switcher Bar */}
+      <FamilyFilterBar onOpenManageModal={() => setIsManageFamilyOpen(true)} />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -679,10 +699,35 @@ export function LiabilitiesPage() {
                               <span className="font-semibold text-foreground text-sm block">
                                 {l.name}
                               </span>
-                              <span className="text-[11px] text-muted-foreground">
-                                {l.lender}
-                                {l.accountNumber ? ` • #${l.accountNumber}` : ''}
-                              </span>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="text-[11px] text-muted-foreground">
+                                  {l.lender}
+                                  {l.accountNumber ? ` • #${l.accountNumber}` : ''}
+                                </span>
+                                {l.memberId && (
+                                  <span
+                                    className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border"
+                                    style={{
+                                      backgroundColor: `${members.find((m) => m.id === l.memberId)?.colorHex || '#3b82f6'}15`,
+                                      color: members.find((m) => m.id === l.memberId)?.colorHex || '#3b82f6',
+                                      borderColor: `${members.find((m) => m.id === l.memberId)?.colorHex || '#3b82f6'}30`,
+                                    }}
+                                  >
+                                    <User className="w-2.5 h-2.5" />
+                                    {members.find((m) => m.id === l.memberId)?.name || 'Borrower'}
+                                  </span>
+                                )}
+                                {l.coBorrowerMemberIds && l.coBorrowerMemberIds.length > 0 && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground bg-accent/40 px-1.5 py-0.5 rounded-md border border-border/50">
+                                    <Users className="w-2.5 h-2.5" />
+                                    Joint:{' '}
+                                    {l.coBorrowerMemberIds
+                                      .map((id) => members.find((m) => m.id === id)?.name)
+                                      .filter(Boolean)
+                                      .join(', ')}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -829,6 +874,12 @@ export function LiabilitiesPage() {
           }}
         />
       )}
+
+      {/* Phase 6A: Manage Family Modal */}
+      <ManageFamilyModal
+        isOpen={isManageFamilyOpen}
+        onClose={() => setIsManageFamilyOpen(false)}
+      />
     </div>
   );
 }

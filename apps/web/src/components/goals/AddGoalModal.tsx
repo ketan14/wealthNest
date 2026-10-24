@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { GoalCategory, GoalPriority, Money } from '@wealthnest/domain';
 import { CreateGoalParams } from '@wealthnest/application';
+import { useFamily } from '@/lib/family/family-context';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import {
@@ -13,6 +14,7 @@ import {
   Car,
   Plane,
   HeartHandshake,
+  Users,
 } from 'lucide-react';
 
 interface AddGoalModalProps {
@@ -34,8 +36,12 @@ const CATEGORY_OPTIONS: { id: GoalCategory; label: string; icon: any; defaultRet
 ];
 
 export function AddGoalModal({ isOpen, onClose, onSubmit, isSubmitting = false }: AddGoalModalProps) {
+  const { members, selectedMemberId } = useFamily();
   const [name, setName] = useState('');
   const [category, setCategory] = useState<GoalCategory>('wealth_creation');
+  const [memberId, setMemberId] = useState<string>(
+    selectedMemberId && selectedMemberId !== 'all' ? selectedMemberId : 'mem-self'
+  );
   const [targetAmountRupees, setTargetAmountRupees] = useState<string>('');
   const [targetDate, setTargetDate] = useState<string>('2029-12-31');
   const [initialSavedRupees, setInitialSavedRupees] = useState<string>('');
@@ -100,6 +106,7 @@ export function AddGoalModal({ isOpen, onClose, onSubmit, isSubmitting = false }
         priority,
         currency: 'INR',
         notes: notes.trim() || undefined,
+        memberId: memberId || undefined,
       });
 
       // Reset and close
@@ -177,11 +184,42 @@ export function AddGoalModal({ isOpen, onClose, onSubmit, isSubmitting = false }
             <input
               type="text"
               required
-              placeholder="e.g. Retirement 2040, Mumbai Apartment Down Payment"
+              placeholder="e.g. Retirement 2040, Krisha University Corpus"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-background border border-border/80 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
+          </div>
+
+          {/* Family Beneficiary Selector */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-primary" />
+              Goal Beneficiary / Family Entity
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {members.map((m) => {
+                const isSelected = memberId === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setMemberId(m.id)}
+                    className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all text-xs font-medium ${
+                      isSelected
+                        ? 'border-primary bg-primary/10 text-primary font-bold shadow-sm'
+                        : 'border-border/60 hover:border-border hover:bg-accent/30 text-muted-foreground'
+                    }`}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: m.colorHex }}
+                    />
+                    <span className="truncate">{m.name}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Target Amount & Preview */}

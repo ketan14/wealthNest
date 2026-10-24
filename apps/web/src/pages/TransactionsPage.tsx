@@ -41,22 +41,29 @@ import {
   Calendar,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useFamily } from '@/lib/family/family-context';
+import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
+import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 
 // Realistic sample Indian cashflow audit history for demo mode
 const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
   {
     id: 'demo-tx-1',
     userId: 'demo-user',
+    memberId: 'mem-self',
+    accountId: 'acc-zerodha',
     type: 'deposit',
     amountCents: 15000000, // ₹1,50,000.00
     currency: 'INR',
     transactionDate: '2026-04-01T09:30:00Z',
-    notes: 'Monthly investment capital allocation from salary account',
+    notes: 'Monthly investment capital allocation from freelance contract earnings',
     createdAt: '2026-04-01T09:30:00Z',
   },
   {
     id: 'demo-tx-2',
     userId: 'demo-user',
+    memberId: 'mem-self',
+    accountId: 'acc-zerodha',
     assetId: 'asset-rel',
     assetName: 'Reliance Industries Ltd',
     assetTicker: 'RELIANCE',
@@ -65,12 +72,14 @@ const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
     amountCents: 3750000, // ₹37,500.00
     currency: 'INR',
     transactionDate: '2026-04-03T11:15:00Z',
-    notes: 'Accumulation on market dip (NSE)',
+    notes: 'Ketan Vaghela direct equity accumulation on NSE dip',
     createdAt: '2026-04-03T11:15:00Z',
   },
   {
     id: 'demo-tx-3',
     userId: 'demo-user',
+    memberId: 'mem-spouse',
+    accountId: 'acc-groww',
     assetId: 'asset-nifty',
     assetName: 'Nifty 50 Index ETF',
     assetTicker: 'NIFTYBEES',
@@ -79,12 +88,14 @@ const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
     amountCents: 2400000, // ₹24,000.00
     currency: 'INR',
     transactionDate: '2026-04-05T10:00:00Z',
-    notes: 'Systematic Investment Plan (SIP) auto-execution',
+    notes: 'Parul Vaghela monthly SIP auto-execution from Bank of Baroda account',
     createdAt: '2026-04-05T10:00:00Z',
   },
   {
     id: 'demo-tx-4',
     userId: 'demo-user',
+    memberId: 'mem-huf',
+    accountId: 'acc-icici',
     assetId: 'asset-tcs',
     assetName: 'Tata Consultancy Services',
     assetTicker: 'TCS',
@@ -92,12 +103,14 @@ const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
     amountCents: 480000, // ₹4,800.00
     currency: 'INR',
     transactionDate: '2026-04-12T14:20:00Z',
-    notes: 'Q4 Final Dividend credited to bank',
+    notes: 'Q4 Final Dividend credited to Shamalbhai Vaghela HUF bank account',
     createdAt: '2026-04-12T14:20:00Z',
   },
   {
     id: 'demo-tx-5',
     userId: 'demo-user',
+    memberId: 'mem-self',
+    accountId: 'acc-zerodha',
     assetId: 'asset-sgb',
     assetName: 'Sovereign Gold Bond 2028',
     assetTicker: 'SGB-2028',
@@ -109,8 +122,38 @@ const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
     createdAt: '2026-04-15T10:00:00Z',
   },
   {
+    id: 'demo-tx-5b',
+    userId: 'demo-user',
+    memberId: 'mem-child',
+    accountId: 'acc-cams',
+    assetId: 'asset-2b',
+    assetName: 'Bandhan Large & Mid Cap Fund',
+    assetTicker: 'BANDHAN-LM',
+    type: 'buy',
+    quantity: 67.93,
+    amountCents: 1000000, // ₹10,000.00
+    currency: 'INR',
+    transactionDate: '2026-04-10T10:00:00Z',
+    notes: 'Krisha Vaghela monthly education compounding SIP',
+    createdAt: '2026-04-10T10:00:00Z',
+  },
+  {
+    id: 'demo-tx-5c',
+    userId: 'demo-user',
+    memberId: 'mem-mother',
+    accountId: 'acc-bob-fd',
+    type: 'dividend',
+    amountCents: 937500, // ₹9,375.00
+    currency: 'INR',
+    transactionDate: '2026-04-01T00:00:00Z',
+    notes: 'Ramilaben Vaghela Bank of Baroda Senior Citizen FD quarterly interest',
+    createdAt: '2026-04-01T00:00:00Z',
+  },
+  {
     id: 'demo-tx-6',
     userId: 'demo-user',
+    memberId: 'mem-spouse',
+    accountId: 'acc-groww',
     type: 'fee',
     amountCents: 18500, // ₹185.00
     currency: 'INR',
@@ -121,6 +164,8 @@ const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
   {
     id: 'demo-tx-7',
     userId: 'demo-user',
+    memberId: 'mem-self',
+    accountId: 'acc-zerodha',
     type: 'withdrawal',
     amountCents: 3500000, // ₹35,000.00
     currency: 'INR',
@@ -133,6 +178,8 @@ const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
 export function TransactionsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { selectedMemberId, selectedAccountId, members, accounts } = useFamily();
+  const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'inflow' | 'outflow' | 'trades'>(
@@ -174,21 +221,32 @@ export function TransactionsPage() {
     enabled: !!user,
   });
 
-  // Active transactions depending on authentication state
-  const activeTransactions: TransactionDetailDto[] = useMemo(() => {
+  // All transactions depending on authentication state
+  const allTransactions: TransactionDetailDto[] = useMemo(() => {
     if (user && dbCashflowData) {
       return [...dbCashflowData.transactions];
     }
     return localDemoTransactions;
   }, [user, dbCashflowData, localDemoTransactions]);
 
+  // Active transactions filtered by Family Member / Entity & Demat Account
+  const activeTransactions: TransactionDetailDto[] = useMemo(() => {
+    return allTransactions.filter((tx) => {
+      if (selectedMemberId !== 'all') {
+        const belongs =
+          tx.memberId === selectedMemberId || (!tx.memberId && selectedMemberId === 'mem-self');
+        if (!belongs) return false;
+      }
+      if (selectedAccountId !== 'all') {
+        if (tx.accountId !== selectedAccountId) return false;
+      }
+      return true;
+    });
+  }, [allTransactions, selectedMemberId, selectedAccountId]);
+
   // Pure Domain Summary calculation with Money value objects
   const summary: CashflowSummary = useMemo(() => {
-    if (user && dbCashflowData) {
-      return dbCashflowData.summary;
-    }
-
-    const items: CashflowTransactionItem[] = localDemoTransactions.map((t) => {
+    const items: CashflowTransactionItem[] = activeTransactions.map((t) => {
       const txCurrency = (t.currency as CurrencyCode) || 'INR';
       const amount = Money.fromCents(BigInt(t.amountCents), txCurrency);
 
@@ -201,7 +259,7 @@ export function TransactionsPage() {
     });
 
     return calculateCashflowSummary(items, 'INR');
-  }, [user, dbCashflowData, localDemoTransactions]);
+  }, [activeTransactions]);
 
   // Filter transactions based on category and search
   const filteredTransactions = useMemo(() => {
@@ -240,6 +298,8 @@ export function TransactionsPage() {
           currency: values.currency || 'INR',
           transactionDate: values.transactionDate,
           notes: values.notes,
+          memberId: values.memberId,
+          accountId: values.accountId,
         });
 
         if (!res.success) throw res.error;
@@ -258,6 +318,8 @@ export function TransactionsPage() {
           currency: values.currency || 'INR',
           transactionDate: values.transactionDate,
           notes: values.notes,
+          memberId: values.memberId,
+          accountId: values.accountId,
           createdAt: new Date().toISOString(),
         };
         setLocalDemoTransactions((prev) => [newDemoItem, ...prev]);
@@ -350,6 +412,9 @@ export function TransactionsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Phase 6A: Multi-Entity Family & Demat Filter Bar */}
+      <FamilyFilterBar onOpenManageModal={() => setIsManageFamilyOpen(true)} />
 
       {/* Mode Alert Banner if not authenticated */}
       {!user && (
@@ -752,6 +817,35 @@ export function TransactionsPage() {
                               {tx.type}
                             </span>
                           )}
+                          {(() => {
+                            const mem = members.find((m) => m.id === (tx.memberId || 'mem-self'));
+                            const acc = accounts.find((a) => a.id === tx.accountId);
+                            return (
+                              <div className="flex items-center gap-1.5 mt-1 font-sans">
+                                {mem && (
+                                  <span
+                                    className="text-[10px] px-1.5 py-0.2 rounded font-medium flex items-center gap-1"
+                                    style={{
+                                      backgroundColor: `${mem.colorHex}22`,
+                                      border: `1px solid ${mem.colorHex}55`,
+                                      color: mem.colorHex,
+                                    }}
+                                  >
+                                    <span
+                                      className="w-1.5 h-1.5 rounded-full"
+                                      style={{ backgroundColor: mem.colorHex }}
+                                    />
+                                    {mem.name.split(' ')[0]} {mem.relationship === 'huf' ? 'HUF' : ''}
+                                  </span>
+                                )}
+                                {acc && (
+                                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-secondary text-muted-foreground font-mono border border-border">
+                                    {acc.brokerName}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
 
                         {/* Quantity */}
@@ -811,6 +905,12 @@ export function TransactionsPage() {
           name: h.name,
           ticker: h.ticker,
         }))}
+      />
+
+      {/* Phase 6A: Manage Family Entities & Demat Accounts Modal */}
+      <ManageFamilyModal
+        isOpen={isManageFamilyOpen}
+        onClose={() => setIsManageFamilyOpen(false)}
       />
     </div>
   );

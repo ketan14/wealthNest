@@ -15,6 +15,7 @@ export interface GetNetWorthParams {
   readonly userId: string;
   readonly asOfDate?: string; // ISO YYYY-MM-DD, defaults to current date
   readonly currency?: CurrencyCode;
+  readonly memberId?: string;
 }
 
 export class GetNetWorthSummaryUseCase {
@@ -34,11 +35,25 @@ export class GetNetWorthSummaryUseCase {
       return err(holdingsResult.error);
     }
 
+    const filteredHoldings =
+      params.memberId && params.memberId !== 'all'
+        ? holdingsResult.value.filter((h) => h.memberId === params.memberId)
+        : holdingsResult.value;
+
     // 2. Fetch liabilities
     const liabilitiesResult = await this.liabilityRepo.listLiabilitiesByUser(userId);
     if (!liabilitiesResult.success) {
       return err(liabilitiesResult.error);
     }
+
+    const filteredLiabilities =
+      params.memberId && params.memberId !== 'all'
+        ? liabilitiesResult.value.filter(
+            (l) =>
+              l.memberId === params.memberId ||
+              (l.coBorrowerMemberIds && l.coBorrowerMemberIds.includes(params.memberId!))
+          )
+        : liabilitiesResult.value;
 
     // 3. Fetch asset-liability links
     const linksResult = await this.liabilityRepo.listAssetLiabilityLinks(userId);
@@ -53,7 +68,7 @@ export class GetNetWorthSummaryUseCase {
 
     // 4. Map assets to domain input with dated valuations
     const assetsInput: AssetHistoricalInput[] = [];
-    for (const h of holdingsResult.value) {
+    for (const h of filteredHoldings) {
       const holdingCurrency = (h.currency as CurrencyCode) || targetCurrency;
       const currentVal = Money.fromCents(
         BigInt(Math.round(Number(h.currentValueCents) || 0)),
@@ -83,7 +98,7 @@ export class GetNetWorthSummaryUseCase {
 
     // 5. Map liabilities to domain input with dated balances
     const liabilitiesInput: LiabilityHistoricalInput[] = [];
-    for (const l of liabilitiesResult.value) {
+    for (const l of filteredLiabilities) {
       const libCurrency = (l.currency as CurrencyCode) || targetCurrency;
       const originalPrincipal = Money.fromCents(l.originalPrincipalCents, libCurrency);
       const emiAmount = Money.fromCents(l.emiAmountCents, libCurrency);

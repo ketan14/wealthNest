@@ -14,7 +14,7 @@ describe('ExportPortfolioDataUseCase', () => {
       ok({
         id: 'user-123',
         email: 'investor@wealthnest.in',
-        displayName: 'Aarav Sharma',
+        displayName: 'Ketan Vaghela',
         defaultCurrency: 'INR',
         preferences: DEFAULT_USER_PREFERENCES,
         createdAt: '2026-01-01T00:00:00Z',

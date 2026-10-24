@@ -10,8 +10,8 @@ describe('ManageUserSettingsUseCase', () => {
       getById: vi.fn().mockResolvedValue(
         ok({
           id: 'u-1',
-          email: 'aarav@example.com',
-          displayName: 'Aarav Sharma',
+          email: 'ketan@example.com',
+          displayName: 'Ketan Vaghela',
           defaultCurrency: 'INR',
           preferences: DEFAULT_USER_PREFERENCES,
           createdAt: '2026-01-01T00:00:00Z',
@@ -26,7 +26,7 @@ describe('ManageUserSettingsUseCase', () => {
 
     expect(result.success).toBe(true);
     if (!result.success) return;
-    expect(result.value.displayName).toBe('Aarav Sharma');
+    expect(result.value.displayName).toBe('Ketan Vaghela');
     expect(result.value.preferences?.numberFormat).toBe('en-IN');
   });
 
@@ -36,8 +36,8 @@ describe('ManageUserSettingsUseCase', () => {
       getById: vi.fn().mockResolvedValue(
         ok({
           id: 'u-1',
-          email: 'aarav@example.com',
-          displayName: 'Aarav Sharma',
+          email: 'ketan@example.com',
+          displayName: 'Ketan Vaghela',
           defaultCurrency: 'INR',
           createdAt: '2026-01-01T00:00:00Z',
         })
@@ -50,10 +50,10 @@ describe('ManageUserSettingsUseCase', () => {
     };
 
     const useCase = new ManageUserSettingsUseCase(mockRepo);
-    const result = await useCase.updateDisplayName('u-1', 'Aarav K. Sharma');
+    const result = await useCase.updateDisplayName('u-1', 'Ketan S. Vaghela');
 
     expect(result.success).toBe(true);
-    expect(savedProfile.displayName).toBe('Aarav K. Sharma');
+    expect(savedProfile.displayName).toBe('Ketan S. Vaghela');
     expect(savedProfile.updatedAt).toBeDefined();
   });
 
@@ -62,8 +62,8 @@ describe('ManageUserSettingsUseCase', () => {
       getById: vi.fn().mockResolvedValue(
         ok({
           id: 'u-1',
-          email: 'aarav@example.com',
-          displayName: 'Aarav Sharma',
+          email: 'ketan@example.com',
+          displayName: 'Ketan Vaghela',
           defaultCurrency: 'INR',
           preferences: DEFAULT_USER_PREFERENCES,
           createdAt: '2026-01-01T00:00:00Z',

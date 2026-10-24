@@ -17,7 +17,7 @@ describe('Manage Family & Demat Accounts Use Cases', () => {
     {
       id: 'mem-1',
       userId: 'user-1',
-      name: 'Aditya Sharma',
+      name: 'Ketan Vaghela',
       relationship: 'self',
       colorHex: '#3b82f6',
       isPrimary: true,
@@ -25,7 +25,7 @@ describe('Manage Family & Demat Accounts Use Cases', () => {
     {
       id: 'mem-2',
       userId: 'user-1',
-      name: 'Sharma HUF',
+      name: 'Shamalbhai Vaghela HUF',
       relationship: 'huf',
       colorHex: '#8b5cf6',
       isPrimary: false,
@@ -126,7 +126,7 @@ describe('Manage Family & Demat Accounts Use Cases', () => {
 
     const result = await useCase.createMember({
       userId: 'user-1',
-      name: 'Priya Sharma',
+      name: 'Parul Vaghela',
       relationship: 'spouse',
       panMasked: 'BGTYU1234K',
       colorHex: '#ec4899',
@@ -134,7 +134,7 @@ describe('Manage Family & Demat Accounts Use Cases', () => {
 
     expect(isOk(result)).toBe(true);
     if (!isOk(result)) return;
-    expect(result.value.name).toBe('Priya Sharma');
+    expect(result.value.name).toBe('Parul Vaghela');
     expect(result.value.relationship).toBe('spouse');
     expect(familyRepo.saveMember).toHaveBeenCalledTimes(1);
   });

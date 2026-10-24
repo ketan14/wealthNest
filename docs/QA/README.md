@@ -17,6 +17,7 @@ This directory contains formal, executable Quality Assurance (QA) test suites, v
 | [Phase 4: Performance & Wealth Analytics](./phase-4-performance-analytics-verification.md) | Phase 4 | Institutional return mathematics (XIRR, CAGR), benchmark comparisons (Nifty 50 TRI, Sensex, SGB, SBI FD), asset allocation drift, and rebalancing recommendations. | ✅ Verified |
 | [Phase 5: Financial Goals & Milestones](./phase-5-goals-milestones-verification.md) | Phase 5 | Inflation-adjusted target corpus math, required monthly SIP calculations, emergency fund runway buffer analyzer, and milestone tracking. | ✅ Verified |
 | [Phase 5.1: Market Feeds, Budget 2024 Tax & Trade Sync](./phase-5-market-tax-and-trade-sync-verification.md) | Phase 5.1 | AMFI Daily NAV feed ingestion, ISIN matching, Budget 2024 equity LTCG/STCG calculation, Section 112A exemption, Tax-Loss Harvesting, and trade inventory synchronization. | ✅ Verified |
+| [Phase 6A: Multi-Demat & Family Portfolios](./phase-6-1-family-portfolios-verification.md) | Phase 6A | Legal entities (Self, Spouse, HUF, Child), multi-broker accounts (Zerodha, Groww, ICICI Direct), HUF Section 112A tax benefit, and cross-module scoping in Portfolio, Analytics, Transactions, and Settings. | ✅ Verified |
 
 ---
 

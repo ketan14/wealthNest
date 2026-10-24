@@ -19,6 +19,7 @@ export interface GetGoalsSummaryParams {
   readonly userId: string;
   readonly monthlyExpensesCents?: number; // e.g. 5000000 for ₹50,000/mo
   readonly currency?: CurrencyCode;
+  readonly memberId?: string;
 }
 
 export interface GoalEvaluationDto {
@@ -69,6 +70,7 @@ export interface GoalEvaluationDto {
   readonly status: string;
   readonly isFunded: boolean;
   readonly notes?: string;
+  readonly memberId?: string;
   readonly linkedHoldingsCount: number;
 }
 
@@ -125,6 +127,11 @@ export class GetGoalsSummaryUseCase {
       return err(goalsResult.error);
     }
 
+    const filteredGoalRows =
+      params.memberId && params.memberId !== 'all'
+        ? goalsResult.value.filter((g) => g.memberId === params.memberId)
+        : goalsResult.value;
+
     // 2. Fetch user holdings to identify liquid cash and linked holdings values
     const holdingsResult = await this.holdingRepo.listDetailsByUser(params.userId);
     const holdings = holdingsResult.success ? holdingsResult.value : [];
@@ -138,7 +145,7 @@ export class GetGoalsSummaryUseCase {
     }
 
     // 3. Map GoalDetailDto to domain GoalDefinition
-    const domainGoals: GoalDefinition[] = goalsResult.value.map((g) => {
+    const domainGoals: GoalDefinition[] = filteredGoalRows.map((g) => {
       const gCurrency = (g.currency as CurrencyCode) || currency;
       const targetDate = new Date(g.targetDate);
 
@@ -166,6 +173,7 @@ export class GetGoalsSummaryUseCase {
         priority: g.priority,
         currency: gCurrency,
         notes: g.notes,
+        memberId: g.memberId,
         linkedHoldings,
       };
     });
@@ -227,6 +235,7 @@ export class GetGoalsSummaryUseCase {
       status: evalResult.status,
       isFunded: evalResult.isFunded,
       notes: evalResult.goal.notes,
+      memberId: evalResult.goal.memberId,
       linkedHoldingsCount: evalResult.goal.linkedHoldings.length,
     }));
 

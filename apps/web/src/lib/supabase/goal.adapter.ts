@@ -38,6 +38,7 @@ interface GoalRow {
   priority: string;
   currency: string;
   notes: string | null;
+  member_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -125,6 +126,7 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
         priority: g.priority as GoalPriority,
         currency: g.currency || 'INR',
         notes: g.notes ?? undefined,
+        memberId: g.member_id ?? undefined,
         createdAt: g.created_at,
         updatedAt: g.updated_at,
         linkedHoldings: linksByGoal.get(g.id) || [],
@@ -153,6 +155,7 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
           priority: params.priority || 'medium',
           currency: params.currency || 'INR',
           notes: params.notes || null,
+          member_id: params.memberId || null,
         })
         .select()
         .single();
@@ -176,6 +179,7 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
         priority: row.priority as GoalPriority,
         currency: row.currency || 'INR',
         notes: row.notes ?? undefined,
+        memberId: row.member_id ?? undefined,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         linkedHoldings: [],
@@ -203,6 +207,7 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
       if (params.inflationRate !== undefined) updates.inflation_rate = params.inflationRate;
       if (params.priority !== undefined) updates.priority = params.priority;
       if (params.notes !== undefined) updates.notes = params.notes;
+      if (params.memberId !== undefined) updates.member_id = params.memberId;
 
       const { data, error } = await supabase
         .from('goals')
@@ -231,6 +236,7 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
         priority: row.priority as GoalPriority,
         currency: row.currency || 'INR',
         notes: row.notes ?? undefined,
+        memberId: row.member_id ?? undefined,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         linkedHoldings: [],

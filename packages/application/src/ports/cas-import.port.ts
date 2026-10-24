@@ -52,6 +52,8 @@ export interface ConfirmCasImportParams {
   readonly statementDate: string;
   readonly items: readonly ImportCasItemDto[];
   readonly transactions?: readonly ImportCasTransactionDto[];
+  readonly memberId?: string;
+  readonly accountId?: string;
 }
 
 export interface CasImportRepositoryPort {

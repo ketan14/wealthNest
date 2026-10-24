@@ -35,6 +35,8 @@ export interface LiabilityEntity {
   readonly endDate?: string; // YYYY-MM-DD
   readonly status: LiabilityStatus;
   readonly linkedAssetId?: string;
+  readonly memberId?: string; // Primary borrower member ID
+  readonly coBorrowerMemberIds?: readonly string[]; // Co-borrower family member IDs
   readonly notes?: string;
   readonly createdAt: string;
   readonly updatedAt: string;

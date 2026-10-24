@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AssetClassDefinition } from '@wealthnest/domain';
 import { ListAssetClassesUseCase } from '@wealthnest/application';
 import { SupabaseAssetClassAdapter } from '@/lib/supabase/asset-class.adapter';
 import { Button } from '@/components/ui/Button';
-import { X, Plus, AlertCircle, Loader2 } from 'lucide-react';
+import { X, Plus, AlertCircle, Loader2, Users, Briefcase } from 'lucide-react';
+import { useFamily } from '@/lib/family/family-context';
 
 export interface NewHoldingFormValues {
   name: string;
@@ -21,6 +22,8 @@ export interface NewHoldingFormValues {
   amcName?: string;
   schemePlan?: string;
   costBasisVerified?: boolean;
+  memberId?: string;
+  accountId?: string;
 }
 
 interface AddHoldingModalProps {
@@ -95,6 +98,8 @@ export function AddHoldingModal({
   onSubmit,
   isLoading = false,
 }: AddHoldingModalProps) {
+  const { members, accounts, selectedMemberId, selectedAccountId } = useFamily();
+
   const [name, setName] = useState('');
   const [ticker, setTicker] = useState('');
   const [isin, setIsin] = useState('');
@@ -109,6 +114,27 @@ export function AddHoldingModal({
   const [currentValue, setCurrentValue] = useState('');
   const [currency] = useState('INR');
   const [error, setError] = useState<string | null>(null);
+
+  // Entity & Demat Account state
+  const [holdingMemberId, setHoldingMemberId] = useState<string>(() => {
+    return selectedMemberId !== 'all' ? selectedMemberId : members[0]?.id || 'mem-self';
+  });
+  const [holdingAccountId, setHoldingAccountId] = useState<string>(() => {
+    return selectedAccountId !== 'all' ? selectedAccountId : '';
+  });
+
+  useEffect(() => {
+    if (selectedMemberId !== 'all') {
+      setHoldingMemberId(selectedMemberId);
+    }
+    if (selectedAccountId !== 'all') {
+      setHoldingAccountId(selectedAccountId);
+    }
+  }, [selectedMemberId, selectedAccountId]);
+
+  const relevantAccounts = useMemo(() => {
+    return accounts.filter((a) => a.memberId === holdingMemberId);
+  }, [accounts, holdingMemberId]);
 
   // Fetch asset classes from database adapter
   const { data: dbAssetClasses } = useQuery<AssetClassDefinition[]>({
@@ -184,6 +210,8 @@ export function AddHoldingModal({
         schemePlan:
           assetClassId === 'mutual_fund' && schemePlan.trim() ? schemePlan.trim() : undefined,
         costBasisVerified: assetClassId === 'mutual_fund' ? costBasisVerified : true,
+        memberId: holdingMemberId || undefined,
+        accountId: holdingAccountId || undefined,
       });
 
       // Reset form
@@ -277,6 +305,50 @@ export function AddHoldingModal({
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Legal Entity & Demat Account Selection */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-secondary/20 border border-border/50">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-blue-400" />
+                Legal Entity / Member
+              </label>
+              <select
+                value={holdingMemberId}
+                onChange={(e) => {
+                  setHoldingMemberId(e.target.value);
+                  const firstAcc = accounts.find((a) => a.memberId === e.target.value);
+                  setHoldingAccountId(firstAcc?.id || '');
+                }}
+                className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+              >
+                {members.map((m) => (
+                  <option key={m.id} value={m.id} className="bg-slate-900 text-foreground">
+                    {m.name} ({m.relationship.toUpperCase()})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
+                <Briefcase className="w-3.5 h-3.5 text-slate-400" />
+                Demat / Broker / Folio
+              </label>
+              <select
+                value={holdingAccountId}
+                onChange={(e) => setHoldingAccountId(e.target.value)}
+                className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+              >
+                <option value="" className="bg-slate-900 text-foreground">-- None / General --</option>
+                {relevantAccounts.map((a) => (
+                  <option key={a.id} value={a.id} className="bg-slate-900 text-foreground">
+                    {a.brokerName}: {a.accountName}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Conditional Fields: Mutual Fund vs Equity vs Other */}

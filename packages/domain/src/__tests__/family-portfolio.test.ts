@@ -10,7 +10,7 @@ describe('Family Portfolio Domain Calculator', () => {
     {
       id: 'mem-1',
       userId: 'user-1',
-      name: 'Aditya Sharma',
+      name: 'Ketan Vaghela',
       relationship: 'self',
       panMasked: 'ABCDE****F',
       colorHex: '#3b82f6',
@@ -19,7 +19,7 @@ describe('Family Portfolio Domain Calculator', () => {
     {
       id: 'mem-2',
       userId: 'user-1',
-      name: 'Priya Sharma',
+      name: 'Parul Vaghela',
       relationship: 'spouse',
       panMasked: 'BGTYU****K',
       colorHex: '#ec4899',
@@ -28,7 +28,7 @@ describe('Family Portfolio Domain Calculator', () => {
     {
       id: 'mem-3',
       userId: 'user-1',
-      name: 'Aditya Sharma HUF',
+      name: 'Shamalbhai Vaghela HUF',
       relationship: 'huf',
       panMasked: 'AAACH****H',
       colorHex: '#8b5cf6',

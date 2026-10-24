@@ -37,13 +37,19 @@ import {
   Coins,
   Scissors,
   Receipt,
+  Users,
 } from 'lucide-react';
+import { useFamily } from '@/lib/family/family-context';
+import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
+import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 
 // Demo initial positions tailored for Indian investors (matches Portfolio demo)
 const DEMO_HOLDINGS: HoldingDetailDto[] = [
   {
     holdingId: 'demo-1',
     assetId: 'asset-1',
+    memberId: 'mem-self',
+    accountId: 'acc-zerodha',
     name: 'Reliance Industries Ltd',
     ticker: 'RELIANCE',
     assetClassId: 'equity',
@@ -58,6 +64,8 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
   {
     holdingId: 'demo-2',
     assetId: 'asset-2',
+    memberId: 'mem-spouse',
+    accountId: 'acc-groww',
     name: 'Parag Parikh Flexi Cap Fund',
     ticker: 'PPFAS-FLEXI',
     assetClassId: 'equity',
@@ -72,6 +80,8 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
   {
     holdingId: 'demo-3',
     assetId: 'asset-3',
+    memberId: 'mem-huf',
+    accountId: 'acc-icici',
     name: 'Tata Consultancy Services',
     ticker: 'TCS',
     assetClassId: 'equity',
@@ -86,6 +96,8 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
   {
     holdingId: 'demo-4',
     assetId: 'asset-4',
+    memberId: 'mem-self',
+    accountId: 'acc-zerodha',
     name: 'Sovereign Gold Bond 2028',
     ticker: 'SGB2028',
     assetClassId: 'commodity',
@@ -100,6 +112,8 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
   {
     holdingId: 'demo-5',
     assetId: 'asset-5',
+    memberId: 'mem-child',
+    accountId: 'acc-cams',
     name: 'HDFC Corporate Bond Fund',
     ticker: 'HDFCBOND',
     assetClassId: 'fixed_income',
@@ -114,6 +128,8 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
   {
     holdingId: 'demo-6',
     assetId: 'asset-6',
+    memberId: 'mem-self',
+    accountId: 'acc-sbi-ppf',
     name: 'ICICI Emergency Liquid Fund',
     ticker: 'ICICILIQ',
     assetClassId: 'cash',
@@ -131,6 +147,8 @@ const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
   {
     id: 'demo-tx-1',
     userId: 'demo-user',
+    memberId: 'mem-self',
+    accountId: 'acc-zerodha',
     type: 'deposit',
     amountCents: 50000000, // ₹5,00,000
     currency: 'INR',
@@ -140,6 +158,8 @@ const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
   {
     id: 'demo-tx-2',
     userId: 'demo-user',
+    memberId: 'mem-spouse',
+    accountId: 'acc-groww',
     type: 'deposit',
     amountCents: 20000000, // ₹2,00,000
     currency: 'INR',
@@ -149,6 +169,8 @@ const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
   {
     id: 'demo-tx-3',
     userId: 'demo-user',
+    memberId: 'mem-huf',
+    accountId: 'acc-icici',
     type: 'dividend',
     amountCents: 1250000, // ₹12,500
     currency: 'INR',
@@ -160,6 +182,8 @@ const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
 export function AnalyticsPage() {
   const { user } = useAuth();
   const userId = user?.id || '';
+  const { selectedMemberId, selectedAccountId, members, activeMember } = useFamily();
+  const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
 
   // Allocation strategy model state
   const [modelType, setModelType] = useState<AllocationModelType>('balanced');
@@ -169,7 +193,7 @@ export function AnalyticsPage() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   // 1. Query holdings (Supabase or demo fallback)
-  const { data: holdings = [] } = useQuery<HoldingDetailDto[]>({
+  const { data: rawHoldings = [] } = useQuery<HoldingDetailDto[]>({
     queryKey: ['portfolio-holdings', userId],
     queryFn: async () => {
       if (!userId) return DEMO_HOLDINGS;
@@ -181,8 +205,23 @@ export function AnalyticsPage() {
     enabled: true,
   });
 
+  // Filter holdings based on selected family member and demat account
+  const holdings = useMemo(() => {
+    return rawHoldings.filter((h) => {
+      if (selectedMemberId !== 'all') {
+        const belongs =
+          h.memberId === selectedMemberId || (!h.memberId && selectedMemberId === 'mem-self');
+        if (!belongs) return false;
+      }
+      if (selectedAccountId !== 'all') {
+        if (h.accountId !== selectedAccountId) return false;
+      }
+      return true;
+    });
+  }, [rawHoldings, selectedMemberId, selectedAccountId]);
+
   // 2. Query transactions
-  const { data: transactions = [] } = useQuery<TransactionDetailDto[]>({
+  const { data: rawTransactions = [] } = useQuery<TransactionDetailDto[]>({
     queryKey: ['transactions-list', userId],
     queryFn: async () => {
       if (!userId) return DEMO_TRANSACTIONS;
@@ -193,6 +232,21 @@ export function AnalyticsPage() {
     },
     enabled: true,
   });
+
+  // Filter transactions based on selected family member and demat account
+  const transactions = useMemo(() => {
+    return rawTransactions.filter((t) => {
+      if (selectedMemberId !== 'all') {
+        const belongs =
+          t.memberId === selectedMemberId || (!t.memberId && selectedMemberId === 'mem-self');
+        if (!belongs) return false;
+      }
+      if (selectedAccountId !== 'all') {
+        if (t.accountId !== selectedAccountId) return false;
+      }
+      return true;
+    });
+  }, [rawTransactions, selectedMemberId, selectedAccountId]);
 
   // 3. Compute pure domain analytics
   const analytics: PortfolioAnalyticsSummary = useMemo(() => {
@@ -323,14 +377,29 @@ export function AnalyticsPage() {
             <Badge variant="outline" className="text-[11px] font-mono border-border/80">
               India First (₹ INR)
             </Badge>
-            {userId ? (
-              <Badge variant="secondary" className="text-[11px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-                <Database className="w-3 h-3 mr-1 inline" />
-                Live PostgreSQL Data
+            {selectedMemberId !== 'all' && activeMember ? (
+              <Badge
+                variant="secondary"
+                className="text-[11px] font-medium flex items-center gap-1 border"
+                style={{
+                  backgroundColor: `${activeMember.colorHex}22`,
+                  borderColor: `${activeMember.colorHex}55`,
+                  color: activeMember.colorHex,
+                }}
+              >
+                <Users className="w-3 h-3" />
+                {activeMember.name} ({activeMember.relationship.toUpperCase()})
               </Badge>
             ) : (
               <Badge variant="secondary" className="text-[11px] bg-blue-500/10 text-blue-400 border-blue-500/20">
-                Demo Portfolio
+                <Users className="w-3 h-3 mr-1 inline" />
+                Combined Family Portfolio ({members.length} Entities)
+              </Badge>
+            )}
+            {userId && (
+              <Badge variant="secondary" className="text-[11px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                <Database className="w-3 h-3 mr-1 inline" />
+                Live PostgreSQL Data
               </Badge>
             )}
           </div>
@@ -359,6 +428,9 @@ export function AnalyticsPage() {
           ))}
         </div>
       </div>
+
+      {/* Phase 6A: Multi-Entity Family & Demat Filter Bar */}
+      <FamilyFilterBar onOpenManageModal={() => setIsManageFamilyOpen(true)} />
 
       {/* Top 4 Performance KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -811,11 +883,17 @@ export function AnalyticsPage() {
           {/* 4 Tax Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-3.5 rounded-xl bg-accent/30 border border-border/60 space-y-1">
-              <span className="text-xs text-muted-foreground">Section 112A LTCG Exemption</span>
+              <span className="text-xs text-muted-foreground">
+                {activeMember?.relationship === 'huf' ? 'HUF Section 112A Exemption' : 'Section 112A LTCG Exemption'}
+              </span>
               <div className="text-lg font-bold font-mono text-emerald-400">
                 {taxSummary.annualLtcgExemption.formatIndianCompact()}
               </div>
-              <p className="text-[11px] text-muted-foreground">Tax-free headroom per financial year</p>
+              <p className="text-[11px] text-muted-foreground">
+                {activeMember?.relationship === 'huf'
+                  ? 'Independent HUF PAN exemption'
+                  : 'Tax-free headroom per financial year'}
+              </p>
             </div>
 
             <div className="p-3.5 rounded-xl bg-accent/30 border border-border/60 space-y-1">
@@ -908,6 +986,12 @@ export function AnalyticsPage() {
           </div>
         </div>
       )}
+
+      {/* Phase 6A: Manage Family Entities & Demat Accounts Modal */}
+      <ManageFamilyModal
+        isOpen={isManageFamilyOpen}
+        onClose={() => setIsManageFamilyOpen(false)}
+      />
     </div>
   );
 }

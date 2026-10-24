@@ -29,6 +29,8 @@ interface JoinedLiabilityRow {
   end_date: string | null;
   status: string;
   linked_asset_id: string | null;
+  member_id: string | null;
+  co_borrower_ids: string[] | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -61,6 +63,8 @@ export class SupabaseLiabilityAdapter implements LiabilityRepositoryPort {
           end_date,
           status,
           linked_asset_id,
+          member_id,
+          co_borrower_ids,
           notes,
           created_at,
           updated_at,
@@ -122,6 +126,8 @@ export class SupabaseLiabilityAdapter implements LiabilityRepositoryPort {
           status: (r.status as any) || 'active',
           linkedAssetId: r.linked_asset_id || undefined,
           linkedAssetName: r.assets?.name || undefined,
+          memberId: r.member_id || undefined,
+          coBorrowerMemberIds: r.co_borrower_ids || undefined,
           notes: r.notes || undefined,
           lastBalanceDate: latestBal?.asOfDate,
           createdAt: r.created_at,
@@ -241,6 +247,8 @@ export class SupabaseLiabilityAdapter implements LiabilityRepositoryPort {
           end_date: params.endDate || null,
           status: params.status || 'active',
           linked_asset_id: params.linkedAssetId || null,
+          member_id: params.memberId || null,
+          co_borrower_ids: params.coBorrowerMemberIds ? [...params.coBorrowerMemberIds] : [],
           notes: params.notes || null,
         })
         .select()
@@ -270,6 +278,8 @@ export class SupabaseLiabilityAdapter implements LiabilityRepositoryPort {
         endDate: data.end_date || undefined,
         status: data.status as any,
         linkedAssetId: data.linked_asset_id || undefined,
+        memberId: data.member_id || undefined,
+        coBorrowerMemberIds: data.co_borrower_ids || undefined,
         notes: data.notes || undefined,
         createdAt: data.created_at,
         updatedAt: data.updated_at,
@@ -296,6 +306,9 @@ export class SupabaseLiabilityAdapter implements LiabilityRepositoryPort {
         updateData.emi_amount_cents = Number(params.emiAmountCents);
       if (params.status !== undefined) updateData.status = params.status;
       if (params.linkedAssetId !== undefined) updateData.linked_asset_id = params.linkedAssetId;
+      if (params.memberId !== undefined) updateData.member_id = params.memberId;
+      if (params.coBorrowerMemberIds !== undefined)
+        updateData.co_borrower_ids = [...params.coBorrowerMemberIds];
       if (params.notes !== undefined) updateData.notes = params.notes;
 
       const { data, error } = await supabase

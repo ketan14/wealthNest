@@ -7,8 +7,9 @@ import {
   UpdateLiabilityParams,
 } from '@wealthnest/application';
 import { SupabaseHoldingAdapter } from '@/lib/supabase/holding.adapter';
+import { useFamily } from '@/lib/family/family-context';
 import { Button } from '@/components/ui/Button';
-import { X, Landmark, AlertCircle, Building2 } from 'lucide-react';
+import { X, Landmark, AlertCircle, Building2, User, Users } from 'lucide-react';
 
 interface AddLiabilityModalProps {
   isOpen: boolean;
@@ -46,7 +47,9 @@ export function AddLiabilityModal({
 }: AddLiabilityModalProps) {
   const isEditing = Boolean(liabilityToEdit);
 
-  // Form states
+  const { members, selectedMemberId } = useFamily();
+  const [memberId, setMemberId] = useState<string>('mem-self');
+  const [coBorrowerMemberIds, setCoBorrowerMemberIds] = useState<string[]>([]);
   const [name, setName] = useState('');
   const [loanType, setLoanType] = useState<LoanType>('home_loan');
   const [lender, setLender] = useState('');
@@ -95,8 +98,11 @@ export function AddLiabilityModal({
       );
       setStartDate(liabilityToEdit.startDate || '');
       setEndDate(liabilityToEdit.endDate || '');
-      setStatus(liabilityToEdit.status);
       setLinkedAssetId(liabilityToEdit.linkedAssetId || '');
+      setMemberId(liabilityToEdit.memberId || 'mem-self');
+      setCoBorrowerMemberIds(
+        liabilityToEdit.coBorrowerMemberIds ? [...liabilityToEdit.coBorrowerMemberIds] : []
+      );
       setNotes(liabilityToEdit.notes || '');
     } else {
       setName('');
@@ -113,6 +119,10 @@ export function AddLiabilityModal({
       setEndDate('');
       setStatus('active');
       setLinkedAssetId('');
+      setMemberId(
+        selectedMemberId && selectedMemberId !== 'all' ? selectedMemberId : 'mem-self'
+      );
+      setCoBorrowerMemberIds([]);
       setNotes('');
     }
     setErrorMsg(null);
@@ -164,6 +174,8 @@ export function AddLiabilityModal({
           emiAmountCents: BigInt(Math.round(emiAmount * 100)),
           status,
           linkedAssetId: linkedAssetId || null,
+          memberId: memberId || undefined,
+          coBorrowerMemberIds: coBorrowerMemberIds.length > 0 ? coBorrowerMemberIds : undefined,
           notes: notes.trim() || undefined,
         } as UpdateLiabilityParams);
       } else {
@@ -184,6 +196,8 @@ export function AddLiabilityModal({
           endDate: endDate || undefined,
           status,
           linkedAssetId: linkedAssetId || undefined,
+          memberId: memberId || undefined,
+          coBorrowerMemberIds: coBorrowerMemberIds.length > 0 ? coBorrowerMemberIds : undefined,
           notes: notes.trim() || undefined,
         } as CreateLiabilityParams);
       }
@@ -229,6 +243,62 @@ export function AddLiabilityModal({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Primary Borrower & Co-Borrowers */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl border border-border/80 bg-accent/10">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-primary" />
+                Primary Borrower
+              </label>
+              <select
+                value={memberId}
+                onChange={(e) => setMemberId(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              >
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} ({m.relationship.toUpperCase()})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-primary" />
+                Joint Co-Borrowers (Optional)
+              </label>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {members
+                  .filter((m) => m.id !== memberId)
+                  .map((m) => {
+                    const isCoBorrower = coBorrowerMemberIds.includes(m.id);
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          if (isCoBorrower) {
+                            setCoBorrowerMemberIds((prev) => prev.filter((id) => id !== m.id));
+                          } else {
+                            setCoBorrowerMemberIds((prev) => [...prev, m.id]);
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1.5 ${
+                          isCoBorrower
+                            ? 'bg-primary/10 border-primary text-primary font-semibold'
+                            : 'bg-background border-border/60 text-muted-foreground hover:border-border'
+                        }`}
+                      >
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: m.colorHex }} />
+                        {m.name}
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+          </div>
+
           {/* Loan Title & Type */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>

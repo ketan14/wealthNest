@@ -22,7 +22,7 @@
 | **Phase 4: Performance Analytics** | Newton-Raphson XIRR solver, CAGR, SVG trajectory chart, Nifty 50 TRI alpha, rebalance radar | ✅ Complete | ✅ Verified | Full `/analytics` dashboard with Indian benchmarks. |
 | **Phase 5: Financial Goals** | Inflation-adjusted target corpus math, reverse SIP calculator, emergency fund runway buffer | ✅ Complete | ✅ Verified | Complete `/goals` dashboard with milestone cards. |
 | **Phase 5.1: Live Feeds & Tax** | AMFI daily NAV feed parser (`NAVAll.txt`), Budget 2024 LTCG (12.5% over ₹1.25L), STCG (20%), Tax-Loss Harvesting | ✅ Complete | ✅ Verified | Real-time quote refresh in `/portfolio` & `/analytics`. |
-| **Phase 6A: Multi-Demat & Family** | Legal entities (Self, Spouse, HUF, Child), multi-broker accounts (Zerodha, Groww, ICICI Direct), multi-entity Section 112A tax benefits | 🟡 In Progress | 🟡 Domain & App Layer Done | Database migration 7 applied; domain math & application use cases complete; UI pending. |
+| **Phase 6A: Multi-Demat & Family** | Legal entities (Self, Spouse, HUF, Child, Parent), multi-broker accounts (Zerodha, Groww, ICICI Direct), multi-entity Section 112A tax benefits, goal beneficiaries & joint liabilities | ✅ Complete | ✅ Verified | Migrations 7 & 8 applied; domain math & application use cases complete; full frontend UI integrated in `/portfolio`, `/analytics`, `/transactions`, `/goals`, `/liabilities`, and `/settings`. |
 | **Phase 6B: Desktop Runtime** | Tauri 2 + SQLite local offline sync | ⏳ Backlog | ❌ Pending | Future offline-first desktop runtime. |
 
 ---
@@ -53,9 +53,25 @@
   - Unit tests in `packages/domain/src/__tests__/family-portfolio.test.ts` (100% passing).
 * **Application Layer (`packages/application`)**:
   - `packages/application/src/ports/family-repository.port.ts`: `FamilyRepositoryPort`, `FamilyMemberDto`, `PortfolioAccountDto`.
+  - Extended `TransactionDetailDto` and `CreateTransactionParams` in `packages/application/src/ports/transaction-repository.port.ts` with `memberId` and `accountId`.
   - `packages/application/src/use-cases/manage-family.ts`: `GetFamilyPortfolioSummaryUseCase`, `ManageFamilyMembersUseCase`, `ManagePortfolioAccountsUseCase`.
   - Extended `HoldingDetailDto` and `CreateHoldingParams` with `memberId` and `accountId`.
   - Unit tests in `packages/application/src/__tests__/family-use-case.test.ts` (100% passing).
+* **Frontend UI Layer (`apps/web`)**:
+  - `apps/web/src/lib/supabase/family.adapter.ts`: Supabase repository adapter with local storage & rich demo fallback (`mem-self`, `mem-spouse`, `mem-huf`, `mem-child`, `acc-zerodha`, `acc-groww`, `acc-icici`, `acc-cams`, `acc-sbi-ppf`).
+  - `apps/web/src/lib/family/family-context.tsx`: Global family state managing active entity (`selectedMemberId`), Demat filter (`selectedAccountId`), summary calculation, and full CRUD operations.
+  - `apps/web/src/components/family/FamilyFilterBar.tsx`: Responsive entity switcher with pills (`👨‍👩‍👧‍👦 Combined Family`, `👤 Self`, `💍 Spouse`, `🏛️ HUF`, `👶 Child`), scoped Demat selector, and management trigger.
+  - `apps/web/src/components/family/FamilyDistributionWidget.tsx`: Multi-segment wealth allocation bar, entity card grid, and the Budget 2024 HUF Section 112A Tax Shield banner.
+  - `apps/web/src/components/family/ManageFamilyModal.tsx`: Dual-tab modal for adding/deleting family entities and Demat/MF folios.
+  - `apps/web/src/pages/SettingsPage.tsx`: Dedicated "Family & Demats" settings tab with registered entities, connected Demats, and Section 112A tax shield advisory.
+  - `apps/web/src/pages/PortfolioPage.tsx`: Integrated filter bar, family distribution widget, dynamic holdings scoping by member & Demat account, and table entity/broker badges.
+  - `apps/web/src/components/portfolio/AddHoldingModal.tsx`: Legal Entity and Demat account selectors with member-scoped broker filtering.
+  - `apps/web/src/components/portfolio/ImportCasModal.tsx` & `cas-import.adapter.ts`: Entity and Demat assignment card during CAS statement preview, persisting `member_id` and `account_id` to imported positions and transactions.
+  - `apps/web/src/pages/AnalyticsPage.tsx`: Integrated filter bar, dynamic scoping of XIRR, CAGR, benchmark alpha, asset allocation radar, and HUF Section 112A annual exemption indicator.
+  - `apps/web/src/pages/TransactionsPage.tsx` & `RecordTransactionModal.tsx`: Integrated filter bar, cashflow KPIs scoped to entity, audit table entity & broker badges, and entity/account assignment on new transactions.
+  - `apps/web/src/pages/GoalsPage.tsx` & `AddGoalModal.tsx`: Integrated filter bar, beneficiary badges on milestones (`Krisha Vaghela`, `Ketan Vaghela`, `Shamalbhai Vaghela HUF`), family member entity selection in add goal modal, and entity-scoped goal progress and emergency runway.
+  - `apps/web/src/pages/LiabilitiesPage.tsx` & `AddLiabilityModal.tsx`: Integrated filter bar, primary borrower and joint co-borrower tags (`Ketan Vaghela` + `Joint: Parul Vaghela`), entity-scoped Net Worth and debt calculations, and borrower selectors in add/edit liability modal.
+  - `apps/web/src/__tests__/FamilyPortfolio.test.tsx`: Comprehensive integration test suite (16 tests) covering components, modal interactions, CAS preview tagging, and page integration for Portfolio, Settings, Transactions, Analytics, Goals, and Liabilities.
 
 ---
 
@@ -64,28 +80,29 @@
 The following areas are pending for review and prioritization:
 
 ### 1. Priority 1: Phase 6A Frontend UI Integration (Multi-Demat & Family Portfolios)
-* [ ] **Family Repository Adapter (`apps/web/src/lib/supabase/family.adapter.ts`)**:
+* [x] **Family Repository Adapter (`apps/web/src/lib/supabase/family.adapter.ts`)**:
   - Implement Supabase adapter with fallback demo data (Self: Zerodha Kite, Spouse: Groww Direct, HUF: ICICI Direct, Child: Parag Parikh Folio).
-* [ ] **Family Context Provider (`apps/web/src/lib/family/family-context.tsx`)**:
+* [x] **Family Context Provider (`apps/web/src/lib/family/family-context.tsx`)**:
   - Global state managing `selectedMemberId` (`'all'` for combined family net worth or specific entity ID) and `selectedAccountId`.
-* [ ] **Family Entity Switcher Bar (`apps/web/src/components/family/FamilyFilterBar.tsx`)**:
+* [x] **Family Entity Switcher Bar (`apps/web/src/components/family/FamilyFilterBar.tsx`)**:
   - Top entity switcher with pills: "👨‍👩‍👧‍👦 All Family", "👤 Self", "💍 Spouse", "🏛️ HUF", "👶 Child" and Demat account dropdown.
-* [ ] **Family Wealth & HUF Tax Widget (`apps/web/src/components/family/FamilyDistributionWidget.tsx`)**:
+* [x] **Family Wealth & HUF Tax Widget (`apps/web/src/components/family/FamilyDistributionWidget.tsx`)**:
   - Visual wealth breakdown by entity and the **HUF Tax Benefit** banner.
-* [ ] **Entity & Account Management (`apps/web/src/components/family/ManageFamilyModal.tsx` / Settings Tab)**:
+* [x] **Entity & Account Management (`apps/web/src/components/family/ManageFamilyModal.tsx` / Settings Tab)**:
   - Dedicated tab in `/settings` to add, edit, or remove family members and Demat accounts.
-* [ ] **Update `/portfolio`, `/analytics`, `/transactions`**:
+* [x] **Update `/portfolio`, `/analytics`, `/transactions` & Ingestion Modals**:
   - Filter holdings and transactions by active entity/account.
-  - Add entity and broker badges to holdings table rows.
-* [ ] **Component Tests**:
-  - Create `apps/web/src/__tests__/FamilyPortfolio.test.tsx`.
+  - Add entity and broker badges to holdings table rows and transaction audit rows.
+  - Assign transactions and holdings to specific entities and Demat folios in record modal, add holding modal, and CAS statement preview.
+* [x] **Component & Integration Tests**:
+  - Comprehensive unit test suite in `apps/web/src/__tests__/FamilyPortfolio.test.tsx` (10 tests covering all UI components, modals, and pages).
 
 ### 2. Priority 2: Automated Live Stock CMP Feed (Phase 5A Expansion)
 * [ ] Integrate live NSE/BSE stock quote adapter (Yahoo Finance / rapid market proxy) alongside the existing AMFI mutual fund NAV feed.
 
 ### 3. Priority 3: QA Documentation
-* [ ] Create `docs/QA/phase-6-1-family-portfolios-verification.md` covering all test cases for family entities, multi-Demat accounts, and HUF tax rules.
-* [ ] Update `docs/QA/README.md`.
+* [x] Created `docs/QA/phase-6-1-family-portfolios-verification.md` covering all 7 test cases for family entities, multi-Demat accounts, and HUF tax rules.
+* [x] Updated `docs/QA/README.md`.
 
 ### 4. Priority 4: Phase 6B Desktop Offline Architecture (Tauri 2 + SQLite)
 * [ ] Tauri 2 desktop bundle scaffolding with local SQLite adapter for complete offline operation.
@@ -95,7 +112,8 @@ The following areas are pending for review and prioritization:
 ## 📈 Quality Gates & System Health
 
 * **TypeScript Compilation**: `npm run type-check` compiles with **0 errors**.
-* **Automated Test Coverage**: **134 passing unit tests** across 34 test suites (`vitest`).
+* **Automated Test Coverage**: **150 passing tests** across 35 test suites (`vitest`).
+* **Persona & Real-World Dogfooding**: Fully personalized to the **Vaghela Family** (`Ketan Vaghela`, `Parul Vaghela`, `Krisha Vaghela`, `Shamalbhai Vaghela HUF`, `Ramilaben Vaghela`) with strict global rule enforcement.
 * **Active Containers**:
   - Web App: `http://localhost:30000` (Nginx Proxy) / `http://localhost:5174` (Vite)
   - Supabase Studio: `http://localhost:54323`

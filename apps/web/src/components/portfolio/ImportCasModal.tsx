@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ParseCasPdfUseCase,
@@ -27,12 +27,15 @@ import {
   ArrowRight,
   FileText,
   RotateCcw,
+  Users,
+  Briefcase,
 } from 'lucide-react';
+import { useFamily } from '@/lib/family/family-context';
 
 interface ImportCasModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (importedItems?: ImportCasItemDto[]) => void;
+  onSuccess?: (importedItems?: ImportCasItemDto[], memberId?: string, accountId?: string) => void;
 }
 
 // Sample sanitized CDSL & NSDL text fixtures for quick testing without personal files
@@ -66,6 +69,7 @@ const SANITIZED_NSDL_FIXTURE_PAGES = [
 export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { members, accounts, selectedMemberId, selectedAccountId } = useFamily();
 
   const [step, setStep] = useState<'upload' | 'preview' | 'summary'>('upload');
   const [file, setFile] = useState<File | null>(null);
@@ -79,6 +83,27 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
     'equities'
   );
   const [importSummary, setImportSummary] = useState<ImportSummaryResult | null>(null);
+
+  // Legal Entity & Demat Account Assignment
+  const [importMemberId, setImportMemberId] = useState<string>(() => {
+    return selectedMemberId !== 'all' ? selectedMemberId : members[0]?.id || 'mem-self';
+  });
+  const [importAccountId, setImportAccountId] = useState<string>(() => {
+    return selectedAccountId !== 'all' ? selectedAccountId : '';
+  });
+
+  useEffect(() => {
+    if (selectedMemberId !== 'all') {
+      setImportMemberId(selectedMemberId);
+    }
+    if (selectedAccountId !== 'all') {
+      setImportAccountId(selectedAccountId);
+    }
+  }, [selectedMemberId, selectedAccountId]);
+
+  const relevantAccounts = useMemo(() => {
+    return accounts.filter((a) => a.memberId === importMemberId);
+  }, [accounts, importMemberId]);
 
   // Split items into Equities & Mutual Funds
   const equities = useMemo(() => items.filter((i) => i.assetClassId !== 'mutual_fund'), [items]);
@@ -207,6 +232,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
           statementDate: previewData.statementDate,
           items,
           transactions,
+          memberId: importMemberId || undefined,
+          accountId: importAccountId || undefined,
         });
 
         if (!res.success) throw res.error;
@@ -240,7 +267,11 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
         queryClient.invalidateQueries({ queryKey: ['cashflow-summary', user.id] });
       }
       if (onSuccess) {
-        onSuccess(items.filter((i) => i.selected));
+        onSuccess(
+          items.filter((i) => i.selected),
+          importMemberId || undefined,
+          importAccountId || undefined
+        );
       }
     },
     onError: (err) => {
@@ -555,6 +586,50 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                 </div>
               </details>
             )}
+
+            {/* Phase 6A: Legal Entity & Demat Account Assignment */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-secondary/30 border border-border/60">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-blue-400" />
+                  Assign To Legal Entity / Member
+                </label>
+                <select
+                  value={importMemberId}
+                  onChange={(e) => {
+                    setImportMemberId(e.target.value);
+                    const firstAcc = accounts.find((a) => a.memberId === e.target.value);
+                    setImportAccountId(firstAcc?.id || '');
+                  }}
+                  className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                >
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id} className="bg-slate-900 text-foreground">
+                      {m.name} ({m.relationship.toUpperCase()})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
+                  <Briefcase className="w-3.5 h-3.5 text-slate-400" />
+                  Assign Demat / Broker Account
+                </label>
+                <select
+                  value={importAccountId}
+                  onChange={(e) => setImportAccountId(e.target.value)}
+                  className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                >
+                  <option value="" className="bg-slate-900 text-foreground">-- Auto / Statement Folios --</option>
+                  {relevantAccounts.map((a) => (
+                    <option key={a.id} value={a.id} className="bg-slate-900 text-foreground">
+                      {a.brokerName}: {a.accountName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
             {/* Tab Navigation: Direct Equities, Mutual Funds, Historical Transactions */}
             <div className="flex items-center gap-2 border-b border-border/80 pb-2">

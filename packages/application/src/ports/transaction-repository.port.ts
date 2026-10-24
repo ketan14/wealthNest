@@ -13,6 +13,8 @@ export interface TransactionDetailDto {
   readonly currency: string;
   readonly transactionDate: string;
   readonly notes?: string;
+  readonly memberId?: string;
+  readonly accountId?: string;
   readonly createdAt: string;
 }
 
@@ -23,6 +25,8 @@ export interface CreateTransactionParams {
   readonly quantity?: number;
   readonly amountCents: number;
   readonly currency: string;
+  readonly memberId?: string;
+  readonly accountId?: string;
   readonly transactionDate?: string;
   readonly notes?: string;
 }

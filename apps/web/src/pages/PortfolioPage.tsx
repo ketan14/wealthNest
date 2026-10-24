@@ -42,6 +42,10 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { marketDataAdapter } from '@/lib/market/market-data.adapter';
+import { useFamily } from '@/lib/family/family-context';
+import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
+import { FamilyDistributionWidget } from '@/components/family/FamilyDistributionWidget';
+import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 
 // Demo initial positions tailored for Indian investors (India First)
 const DEMO_HOLDINGS: HoldingDetailDto[] = [
@@ -61,6 +65,8 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     currency: 'INR',
     costBasisVerified: true,
     updatedAt: new Date().toISOString(),
+    memberId: 'mem-self',
+    accountId: 'acc-zerodha',
   },
   {
     holdingId: 'demo-2',
@@ -80,6 +86,8 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     currency: 'INR',
     costBasisVerified: true,
     updatedAt: new Date().toISOString(),
+    memberId: 'mem-spouse',
+    accountId: 'acc-groww',
   },
   {
     holdingId: 'demo-3',
@@ -97,6 +105,8 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     currency: 'INR',
     costBasisVerified: true,
     updatedAt: new Date().toISOString(),
+    memberId: 'mem-huf',
+    accountId: 'acc-icici',
   },
   {
     holdingId: 'demo-4',
@@ -114,6 +124,8 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     currency: 'INR',
     costBasisVerified: true,
     updatedAt: new Date().toISOString(),
+    memberId: 'mem-self',
+    accountId: 'acc-zerodha',
   },
   {
     holdingId: 'demo-2b',
@@ -131,8 +143,10 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     unitCostCents: 14720, // ₹147.20
     currentValueCents: 37671800, // ₹3,76,718.00
     currency: 'INR',
-    costBasisVerified: false, // Closing balance imported from CAS without verified buy history
+    costBasisVerified: false,
     updatedAt: new Date().toISOString(),
+    memberId: 'mem-child',
+    accountId: 'acc-cams',
   },
   {
     holdingId: 'demo-5',
@@ -148,12 +162,14 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     currency: 'INR',
     costBasisVerified: true,
     updatedAt: new Date().toISOString(),
+    memberId: 'mem-self',
+    accountId: 'acc-sbi-ppf',
   },
   {
     holdingId: 'demo-6',
     assetId: 'asset-6',
-    name: 'HDFC Bank Fixed Deposit',
-    ticker: 'HDFC-FD',
+    name: 'Bank of Baroda Senior Citizen FD',
+    ticker: 'BOB-FD',
     assetClassId: 'fixed_income',
     assetClassName: 'Fixed Income & Debt',
     assetClassColor: '#8b5cf6',
@@ -163,6 +179,8 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     currency: 'INR',
     costBasisVerified: true,
     updatedAt: new Date().toISOString(),
+    memberId: 'mem-mother',
+    accountId: 'acc-bob-fd',
   },
   {
     holdingId: 'demo-7',
@@ -178,6 +196,8 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     currency: 'INR',
     costBasisVerified: true,
     updatedAt: new Date().toISOString(),
+    memberId: 'mem-self',
+    accountId: 'acc-zerodha',
   },
   {
     holdingId: 'demo-8',
@@ -195,6 +215,8 @@ const DEMO_HOLDINGS: HoldingDetailDto[] = [
     currency: 'INR',
     costBasisVerified: true,
     updatedAt: new Date().toISOString(),
+    memberId: 'mem-huf',
+    accountId: 'acc-icici',
   },
 ];
 
@@ -211,8 +233,10 @@ const ASSET_CLASS_META_MAP: Record<string, { name: string; color: string }> = {
 export function PortfolioPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { selectedMemberId, selectedAccountId, members, accounts } = useFamily();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'all' | 'equities' | 'mutual_funds' | 'grouped'>('all');
@@ -223,6 +247,48 @@ export function PortfolioPage() {
 
   // Local state for interactive demo mode when not logged in
   const [localDemoHoldings, setLocalDemoHoldings] = useState<HoldingDetailDto[]>(DEMO_HOLDINGS);
+
+  const holdingAdapter = useMemo(() => new SupabaseHoldingAdapter(), []);
+
+  // Query authenticated holdings from Supabase via Clean Architecture Use Case
+  const {
+    data: dbPortfolioData,
+    isLoading: isLoadingDb,
+    refetch,
+  } = useQuery({
+    queryKey: ['portfolio-summary', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const useCase = new GetPortfolioSummaryUseCase(holdingAdapter);
+      const res = await useCase.execute(user.id, 'INR');
+      if (!res.success) throw res.error;
+      return res.value;
+    },
+    enabled: !!user,
+  });
+
+  // Consolidated pool of all holdings (DB or local demo)
+  const allHoldings: HoldingDetailDto[] = useMemo(() => {
+    if (user && dbPortfolioData) {
+      return [...dbPortfolioData.holdings];
+    }
+    return localDemoHoldings;
+  }, [user, dbPortfolioData, localDemoHoldings]);
+
+  // Active holdings filtered by Family Member / Legal Entity & Demat Account
+  const activeHoldings: HoldingDetailDto[] = useMemo(() => {
+    return allHoldings.filter((h) => {
+      if (selectedMemberId !== 'all') {
+        const belongs =
+          h.memberId === selectedMemberId || (!h.memberId && selectedMemberId === 'mem-self');
+        if (!belongs) return false;
+      }
+      if (selectedAccountId !== 'all') {
+        if (h.accountId !== selectedAccountId) return false;
+      }
+      return true;
+    });
+  }, [allHoldings, selectedMemberId, selectedAccountId]);
 
   const handleRefreshLiveNavs = async () => {
     setIsRefreshingNavs(true);
@@ -262,42 +328,9 @@ export function PortfolioPage() {
     }
   };
 
-  const holdingAdapter = useMemo(() => new SupabaseHoldingAdapter(), []);
-
-  // Query authenticated holdings from Supabase via Clean Architecture Use Case
-  const {
-    data: dbPortfolioData,
-    isLoading: isLoadingDb,
-    refetch,
-  } = useQuery({
-    queryKey: ['portfolio-summary', user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-      const useCase = new GetPortfolioSummaryUseCase(holdingAdapter);
-      const res = await useCase.execute(user.id, 'INR');
-      if (!res.success) throw res.error;
-      return res.value;
-    },
-    enabled: !!user,
-  });
-
-  // Calculate live portfolio values:
-  // If user is authenticated, use their Supabase database data.
-  // Otherwise, calculate live from local interactive demo data.
-  const activeHoldings: HoldingDetailDto[] = useMemo(() => {
-    if (user && dbPortfolioData) {
-      return [...dbPortfolioData.holdings];
-    }
-    return localDemoHoldings;
-  }, [user, dbPortfolioData, localDemoHoldings]);
-
-  // Pure Domain Summary calculation with Money value objects: Aggregates all supported investments exactly once
+  // Pure Domain Summary calculation with Money value objects: Aggregates activeHoldings
   const summary: PortfolioSummary = useMemo(() => {
-    if (user && dbPortfolioData) {
-      return dbPortfolioData.summary;
-    }
-
-    const valuationItems: HoldingValuationItem[] = localDemoHoldings.map((h) => {
+    const valuationItems: HoldingValuationItem[] = activeHoldings.map((h) => {
       const holdingCurrency = (h.currency as CurrencyCode) || 'INR';
       const totalCostCents = BigInt(
         Math.round((Number(h.quantity) || 0) * (Number(h.unitCostCents) || 0))
@@ -320,7 +353,7 @@ export function PortfolioPage() {
     });
 
     return calculatePortfolioSummary(valuationItems, 'INR');
-  }, [user, dbPortfolioData, localDemoHoldings]);
+  }, [activeHoldings]);
 
   // Filter holdings based on search and selected class
   const filteredHoldings = useMemo(() => {
@@ -446,6 +479,8 @@ export function PortfolioPage() {
           amcName: values.amcName,
           schemePlan: values.schemePlan,
           costBasisVerified: values.costBasisVerified,
+          memberId: values.memberId,
+          accountId: values.accountId,
         });
 
         if (!res.success) throw res.error;
@@ -463,6 +498,8 @@ export function PortfolioPage() {
           amcName: values.amcName,
           schemePlan: values.schemePlan,
           costBasisVerified: values.costBasisVerified,
+          memberId: values.memberId,
+          accountId: values.accountId,
           assetClassId: values.assetClassId,
           assetClassName:
             values.assetClassId === 'mutual_fund'
@@ -594,6 +631,12 @@ export function PortfolioPage() {
           </Button>
         </div>
       </div>
+
+      {/* Phase 6A: Multi-Entity Family & Demat Filter Bar */}
+      <FamilyFilterBar onOpenManageModal={() => setIsManageFamilyOpen(true)} />
+
+      {/* Phase 6A: Consolidated Family Distribution & HUF Shield */}
+      {selectedMemberId === 'all' && <FamilyDistributionWidget />}
 
       {/* AMFI Refresh Success Alert */}
       {navRefreshMessage && (
@@ -993,7 +1036,33 @@ export function PortfolioPage() {
                       return (
                         <tr key={h.holdingId} className="hover:bg-secondary/30 transition-colors">
                           <td className="py-3.5 px-4 font-sans font-semibold text-foreground">
-                            {h.name}
+                            <div>{h.name}</div>
+                            {(() => {
+                              const mem = members.find((m) => m.id === (h.memberId || 'mem-self'));
+                              const acc = accounts.find((a) => a.id === h.accountId);
+                              return (
+                                <div className="flex items-center gap-1.5 mt-1 font-sans">
+                                  {mem && (
+                                    <span
+                                      className="text-[10px] px-1.5 py-0.2 rounded font-medium flex items-center gap-1"
+                                      style={{
+                                        backgroundColor: `${mem.colorHex}22`,
+                                        border: `1px solid ${mem.colorHex}55`,
+                                        color: mem.colorHex,
+                                      }}
+                                    >
+                                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: mem.colorHex }} />
+                                      {mem.name.split(' ')[0]} {mem.relationship === 'huf' ? 'HUF' : ''}
+                                    </span>
+                                  )}
+                                  {acc && (
+                                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-secondary text-muted-foreground font-mono border border-border">
+                                      {acc.brokerName}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="py-3.5 px-4">
                             {h.ticker ? (
@@ -1177,6 +1246,32 @@ export function PortfolioPage() {
                                 ISIN: {h.isin}
                               </div>
                             )}
+                            {(() => {
+                              const mem = members.find((m) => m.id === (h.memberId || 'mem-self'));
+                              const acc = accounts.find((a) => a.id === h.accountId);
+                              return (
+                                <div className="flex items-center gap-1.5 mt-1 font-sans">
+                                  {mem && (
+                                    <span
+                                      className="text-[10px] px-1.5 py-0.2 rounded font-medium flex items-center gap-1"
+                                      style={{
+                                        backgroundColor: `${mem.colorHex}22`,
+                                        border: `1px solid ${mem.colorHex}55`,
+                                        color: mem.colorHex,
+                                      }}
+                                    >
+                                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: mem.colorHex }} />
+                                      {mem.name.split(' ')[0]} {mem.relationship === 'huf' ? 'HUF' : ''}
+                                    </span>
+                                  )}
+                                  {acc && (
+                                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-secondary text-muted-foreground font-mono border border-border">
+                                      {acc.brokerName}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="py-3.5 px-4 font-sans text-muted-foreground text-[11px]">
                             {h.amcName || '—'}
@@ -1621,6 +1716,32 @@ export function PortfolioPage() {
                               Folio: {h.folioNumber} {h.schemePlan ? `• ${h.schemePlan}` : ''}
                             </div>
                           )}
+                          {(() => {
+                            const mem = members.find((m) => m.id === (h.memberId || 'mem-self'));
+                            const acc = accounts.find((a) => a.id === h.accountId);
+                            return (
+                              <div className="flex items-center gap-1.5 mt-1 font-sans">
+                                {mem && (
+                                  <span
+                                    className="text-[10px] px-1.5 py-0.2 rounded font-medium flex items-center gap-1"
+                                    style={{
+                                      backgroundColor: `${mem.colorHex}22`,
+                                      border: `1px solid ${mem.colorHex}55`,
+                                      color: mem.colorHex,
+                                    }}
+                                  >
+                                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: mem.colorHex }} />
+                                    {mem.name.split(' ')[0]} {mem.relationship === 'huf' ? 'HUF' : ''}
+                                  </span>
+                                )}
+                                {acc && (
+                                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-secondary text-muted-foreground font-mono border border-border">
+                                    {acc.brokerName}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
 
                         {/* Asset Class */}
@@ -1747,17 +1868,21 @@ export function PortfolioPage() {
       <ImportCasModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
-        onSuccess={(importedItems) => {
+        onSuccess={(importedItems, memberId, accountId) => {
           if (user) {
             queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
           } else if (importedItems && importedItems.length > 0) {
+            const chosenMemberId =
+              memberId || (selectedMemberId !== 'all' ? selectedMemberId : 'mem-self');
+            const chosenAccountId =
+              accountId || (selectedAccountId !== 'all' ? selectedAccountId : undefined);
             const newHoldings: HoldingDetailDto[] = importedItems.map((item, idx) => ({
               holdingId: `demo-imported-${idx}-${Date.now()}`,
               assetId: `asset-imported-${idx}`,
               name: item.name,
               ticker: item.ticker,
               isin: item.isin,
-              dematAccountId: item.dematAccountId,
+              dematAccountId: item.dematAccountId || chosenAccountId,
               folioNumber: item.folioNumber,
               amcName: item.amcName,
               schemePlan: item.schemePlan,
@@ -1773,10 +1898,18 @@ export function PortfolioPage() {
               currentValueCents: item.currentValueCents,
               currency: 'INR',
               updatedAt: new Date().toISOString(),
+              memberId: chosenMemberId,
+              accountId: chosenAccountId,
             }));
             setLocalDemoHoldings((prev) => [...newHoldings, ...prev]);
           }
         }}
+      />
+
+      {/* Phase 6A: Manage Family Entities & Demat Accounts Modal */}
+      <ManageFamilyModal
+        isOpen={isManageFamilyOpen}
+        onClose={() => setIsManageFamilyOpen(false)}
       />
     </div>
   );

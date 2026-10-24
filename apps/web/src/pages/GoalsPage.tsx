@@ -22,6 +22,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { AddGoalModal } from '@/components/goals/AddGoalModal';
+import { useFamily } from '@/lib/family/family-context';
+import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
+import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 import {
   Target,
   Sparkles,
@@ -37,6 +40,7 @@ import {
   Calendar,
   Database,
   Wallet,
+  User,
 } from 'lucide-react';
 
 const CATEGORY_ICONS: Record<GoalCategory, any> = {
@@ -66,6 +70,7 @@ const DEMO_GOALS: GoalDetailDto[] = [
     priority: 'critical',
     currency: 'INR',
     notes: 'Liquid fixed deposit and arbitrage fund reserves for unforeseen emergencies.',
+    memberId: 'mem-self',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     linkedHoldings: [],
@@ -73,7 +78,7 @@ const DEMO_GOALS: GoalDetailDto[] = [
   {
     id: 'demo-g2',
     userId: 'demo-user',
-    name: 'Retirement & Financial Independence (FIRE)',
+    name: 'Ketan & Parul Retirement (FIRE Target: 52)',
     category: 'retirement',
     targetAmountCents: 2500000000, // ₹2.50 Crore
     targetDate: new Date(Date.now() + 14 * 365 * 24 * 3600 * 1000).toISOString().split('T')[0]!,
@@ -83,7 +88,8 @@ const DEMO_GOALS: GoalDetailDto[] = [
     inflationRate: 6.0,
     priority: 'critical',
     currency: 'INR',
-    notes: 'Long-term equity mutual funds, PPF, and EPF accumulation.',
+    notes: 'Ketan (Freelance Contractor, ex-MNC) & Parul (Bank of Baroda) long-term equity, PPF, and NPS accumulation.',
+    memberId: 'mem-self',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     linkedHoldings: [],
@@ -91,7 +97,7 @@ const DEMO_GOALS: GoalDetailDto[] = [
   {
     id: 'demo-g3',
     userId: 'demo-user',
-    name: 'Apartment Down Payment (3BHK)',
+    name: 'Family Home & Residence Reserve',
     category: 'home_purchase',
     targetAmountCents: 400000000, // ₹40 Lakh
     targetDate: new Date(Date.now() + 3.5 * 365 * 24 * 3600 * 1000).toISOString().split('T')[0]!,
@@ -101,7 +107,8 @@ const DEMO_GOALS: GoalDetailDto[] = [
     inflationRate: 6.0,
     priority: 'high',
     currency: 'INR',
-    notes: 'Corporate bonds and hybrid debt fund savings for home purchase.',
+    notes: 'Corporate bonds and hybrid debt fund savings for family residence.',
+    memberId: 'mem-spouse',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     linkedHoldings: [],
@@ -109,17 +116,37 @@ const DEMO_GOALS: GoalDetailDto[] = [
   {
     id: 'demo-g4',
     userId: 'demo-user',
-    name: 'Child Higher Education Fund',
+    name: 'Krisha Higher Education & University Corpus',
     category: 'education',
     targetAmountCents: 350000000, // ₹35 Lakh
-    targetDate: new Date(Date.now() + 8 * 365 * 24 * 3600 * 1000).toISOString().split('T')[0]!,
+    targetDate: new Date(Date.now() + 12 * 365 * 24 * 3600 * 1000).toISOString().split('T')[0]!,
     initialSavedCents: 60000000, // ₹6 Lakh
     monthlyContributionCents: 1500000, // ₹15,000 / month
     expectedReturnRate: 11.5,
     inflationRate: 8.5,
     priority: 'high',
     currency: 'INR',
-    notes: 'Targeting overseas master degree corpus factoring higher education inflation.',
+    notes: 'Krisha Vaghela (Age 6, 1st Std) targeting university & professional degree corpus at age 18.',
+    memberId: 'mem-child',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    linkedHoldings: [],
+  },
+  {
+    id: 'demo-g5',
+    userId: 'demo-user',
+    name: 'Shamalbhai & Ramilaben Senior Healthcare & Pilgrimage Reserve',
+    category: 'wealth_creation',
+    targetAmountCents: 150000000, // ₹15 Lakh
+    targetDate: new Date(Date.now() + 5 * 365 * 24 * 3600 * 1000).toISOString().split('T')[0]!,
+    initialSavedCents: 120000000, // ₹12 Lakh
+    monthlyContributionCents: 1000000, // ₹10,000 / month
+    expectedReturnRate: 7.5,
+    inflationRate: 6.0,
+    priority: 'high',
+    currency: 'INR',
+    notes: 'Shamalbhai (68) & Ramilaben (61) healthcare buffer and senior citizen pilgrimage fund.',
+    memberId: 'mem-huf',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     linkedHoldings: [],
@@ -130,8 +157,10 @@ export function GoalsPage() {
   const { user } = useAuth();
   const userId = user?.id || '';
   const queryClient = useQueryClient();
+  const { members, selectedMemberId } = useFamily();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [monthlyExpenseRupees, setMonthlyExpenseRupees] = useState<number>(65000);
   const [demoGoalsState, setDemoGoalsState] = useState<GoalDetailDto[]>(DEMO_GOALS);
 
@@ -150,6 +179,12 @@ export function GoalsPage() {
 
   const activeGoalsList: GoalDetailDto[] = userId ? (dbGoals || DEMO_GOALS) : demoGoalsState;
 
+  // Filter goals by selected family member entity
+  const filteredGoalsList = useMemo(() => {
+    if (!selectedMemberId || selectedMemberId === 'all') return activeGoalsList;
+    return activeGoalsList.filter((g) => g.memberId === selectedMemberId);
+  }, [activeGoalsList, selectedMemberId]);
+
   // 2. Query user holdings (to get liquid cash)
   const { data: dbHoldings } = useQuery<HoldingDetailDto[]>({
     queryKey: ['goals-holdings', userId],
@@ -166,12 +201,17 @@ export function GoalsPage() {
   const summary: GoalsSummary = useMemo(() => {
     let liquidCashCents = 40000000n; // ₹4 Lakh default demo liquid cash
     if (userId && dbHoldings) {
-      liquidCashCents = dbHoldings
+      const targetHoldings =
+        selectedMemberId && selectedMemberId !== 'all'
+          ? dbHoldings.filter((h) => h.memberId === selectedMemberId)
+          : dbHoldings;
+
+      liquidCashCents = targetHoldings
         .filter((h) => h.assetClassId === 'cash')
         .reduce((sum, h) => sum + BigInt(Math.round(h.currentValueCents)), 0n);
     }
 
-    const domainGoals: GoalDefinition[] = activeGoalsList.map((g) => {
+    const domainGoals: GoalDefinition[] = filteredGoalsList.map((g) => {
       const gCurrency = (g.currency as CurrencyCode) || 'INR';
       const targetDate = new Date(g.targetDate);
 
@@ -196,6 +236,7 @@ export function GoalsPage() {
         priority: g.priority,
         currency: gCurrency,
         notes: g.notes,
+        memberId: g.memberId,
         linkedHoldings,
       };
     });
@@ -204,7 +245,7 @@ export function GoalsPage() {
     const expensesMoney = Money.fromDecimal(monthlyExpenseRupees, 'INR');
 
     return calculateGoalsSummary(domainGoals, liquidMoney, expensesMoney, 'INR');
-  }, [activeGoalsList, userId, dbHoldings, monthlyExpenseRupees]);
+  }, [filteredGoalsList, userId, dbHoldings, monthlyExpenseRupees, selectedMemberId]);
 
   // Create Goal Mutation
   const createMutation = useMutation({
@@ -308,6 +349,9 @@ export function GoalsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Phase 6A: Family Entity Switcher Bar */}
+      <FamilyFilterBar onOpenManageModal={() => setIsManageFamilyOpen(true)} />
 
       {/* Top 4 KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -514,7 +558,22 @@ export function GoalsPage() {
                         <Icon className="w-5 h-5" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-base text-foreground leading-snug">{goal.name}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-base text-foreground leading-snug">{goal.name}</h4>
+                          {goal.memberId && (
+                            <span
+                              className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border"
+                              style={{
+                                backgroundColor: `${members.find((m) => m.id === goal.memberId)?.colorHex || '#3b82f6'}15`,
+                                color: members.find((m) => m.id === goal.memberId)?.colorHex || '#3b82f6',
+                                borderColor: `${members.find((m) => m.id === goal.memberId)?.colorHex || '#3b82f6'}30`,
+                              }}
+                            >
+                              <User className="w-2.5 h-2.5" />
+                              {members.find((m) => m.id === goal.memberId)?.name || 'Beneficiary'}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs text-muted-foreground flex items-center gap-1 font-mono">
                             <Calendar className="w-3.5 h-3.5" />
@@ -630,6 +689,12 @@ export function GoalsPage() {
           await createMutation.mutateAsync(params);
         }}
         isSubmitting={createMutation.isPending}
+      />
+
+      {/* Phase 6A: Manage Family Entities Modal */}
+      <ManageFamilyModal
+        isOpen={isManageFamilyOpen}
+        onClose={() => setIsManageFamilyOpen(false)}
       />
     </div>
   );

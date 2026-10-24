@@ -25,6 +25,8 @@ export interface LiabilityDto {
   readonly status: LiabilityStatus;
   readonly linkedAssetId?: string;
   readonly linkedAssetName?: string;
+  readonly memberId?: string;
+  readonly coBorrowerMemberIds?: readonly string[];
   readonly notes?: string;
   readonly lastBalanceDate?: string;
   readonly createdAt: string;
@@ -81,6 +83,8 @@ export interface CreateLiabilityParams {
   readonly endDate?: string;
   readonly status?: LiabilityStatus;
   readonly linkedAssetId?: string;
+  readonly memberId?: string;
+  readonly coBorrowerMemberIds?: readonly string[];
   readonly notes?: string;
 }
 
@@ -97,6 +101,8 @@ export interface UpdateLiabilityParams {
   readonly emiAmountCents?: bigint;
   readonly status?: LiabilityStatus;
   readonly linkedAssetId?: string | null;
+  readonly memberId?: string;
+  readonly coBorrowerMemberIds?: readonly string[];
   readonly notes?: string;
 }
 

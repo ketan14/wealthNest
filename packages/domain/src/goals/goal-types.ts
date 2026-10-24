@@ -36,6 +36,7 @@ export interface GoalDefinition {
   readonly priority: GoalPriority;
   readonly currency: CurrencyCode;
   readonly notes?: string;
+  readonly memberId?: string; // Family member beneficiary ID
   readonly linkedHoldings: readonly GoalHoldingLink[];
 }
 

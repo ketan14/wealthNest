@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { TransactionType } from '@wealthnest/domain';
 import { Button } from '@/components/ui/Button';
-import { X, Plus, AlertCircle, Loader2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { X, Plus, AlertCircle, Loader2, ArrowDownLeft, ArrowUpRight, Users, Briefcase } from 'lucide-react';
+import { useFamily } from '@/lib/family/family-context';
 
 export interface NewTransactionFormValues {
   type: TransactionType;
@@ -13,6 +14,8 @@ export interface NewTransactionFormValues {
   currency: string;
   transactionDate: string;
   notes?: string;
+  memberId?: string;
+  accountId?: string;
 }
 
 interface RecordTransactionModalProps {
@@ -74,6 +77,8 @@ export function RecordTransactionModal({
   isLoading = false,
   availableAssets = [],
 }: RecordTransactionModalProps) {
+  const { members, accounts, selectedMemberId, selectedAccountId } = useFamily();
+
   const [type, setType] = useState<TransactionType>('buy');
   const [selectedAssetId, setSelectedAssetId] = useState<string>('');
   const [customAssetName, setCustomAssetName] = useState('');
@@ -85,6 +90,28 @@ export function RecordTransactionModal({
   );
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Entity & Demat Account state
+  const [txMemberId, setTxMemberId] = useState<string>(() => {
+    return selectedMemberId !== 'all' ? selectedMemberId : members[0]?.id || 'mem-self';
+  });
+  const [txAccountId, setTxAccountId] = useState<string>(() => {
+    return selectedAccountId !== 'all' ? selectedAccountId : '';
+  });
+
+  useEffect(() => {
+    if (selectedMemberId !== 'all') {
+      setTxMemberId(selectedMemberId);
+    }
+    if (selectedAccountId !== 'all') {
+      setTxAccountId(selectedAccountId);
+    }
+  }, [selectedMemberId, selectedAccountId]);
+
+  // Relevant accounts for the chosen entity
+  const relevantAccounts = useMemo(() => {
+    return accounts.filter((a) => a.memberId === txMemberId);
+  }, [accounts, txMemberId]);
 
   if (!isOpen) return null;
 
@@ -122,6 +149,8 @@ export function RecordTransactionModal({
         currency: 'INR',
         transactionDate: new Date(transactionDate || Date.now()).toISOString(),
         notes: notes.trim() || undefined,
+        memberId: txMemberId || undefined,
+        accountId: txAccountId || undefined,
       });
 
       // Reset form
@@ -209,6 +238,50 @@ export function RecordTransactionModal({
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Legal Entity & Demat Account Selection */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-secondary/20 border border-border/50">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-blue-400" />
+                Legal Entity / Member
+              </label>
+              <select
+                value={txMemberId}
+                onChange={(e) => {
+                  setTxMemberId(e.target.value);
+                  const firstAcc = accounts.find((a) => a.memberId === e.target.value);
+                  setTxAccountId(firstAcc?.id || '');
+                }}
+                className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+              >
+                {members.map((m) => (
+                  <option key={m.id} value={m.id} className="bg-slate-900 text-foreground">
+                    {m.name} ({m.relationship.toUpperCase()})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
+                <Briefcase className="w-3.5 h-3.5 text-slate-400" />
+                Demat / Broker Account
+              </label>
+              <select
+                value={txAccountId}
+                onChange={(e) => setTxAccountId(e.target.value)}
+                className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+              >
+                <option value="" className="bg-slate-900 text-foreground">-- None / General --</option>
+                {relevantAccounts.map((a) => (
+                  <option key={a.id} value={a.id} className="bg-slate-900 text-foreground">
+                    {a.brokerName}: {a.accountName}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

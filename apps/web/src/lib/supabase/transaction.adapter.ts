@@ -17,6 +17,8 @@ interface JoinedTransactionRow {
   currency: string;
   transaction_date: string;
   notes: string | null;
+  member_id: string | null;
+  account_id: string | null;
   created_at: string;
   assets: {
     id: string;
@@ -41,6 +43,8 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
           currency,
           transaction_date,
           notes,
+          member_id,
+          account_id,
           created_at,
           assets (
             id,
@@ -69,6 +73,8 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
         currency: row.currency,
         transactionDate: row.transaction_date,
         notes: row.notes ?? undefined,
+        memberId: row.member_id ?? undefined,
+        accountId: row.account_id ?? undefined,
         createdAt: row.created_at,
       }));
 
@@ -93,6 +99,8 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
           currency: params.currency || 'INR',
           transaction_date: transactionDate,
           notes: params.notes || null,
+          member_id: params.memberId || null,
+          account_id: params.accountId || null,
         })
         .select('id, created_at, transaction_date')
         .single();
@@ -130,6 +138,8 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
         currency: params.currency || 'INR',
         transactionDate: data.transaction_date,
         notes: params.notes,
+        memberId: params.memberId,
+        accountId: params.accountId,
         createdAt: data.created_at,
       };
 

@@ -42,7 +42,7 @@ Validate that:
 ### TC-SET-002: User Profile Management & Reactive Persistence
 - **Objective**: Verify that user display name can be edited and persisted locally and via Supabase profiles adapter.
 - **Test Steps**:
-  1. Under the **Profile & Security** tab, enter a new display name (e.g. `Aarav Sharma`).
+  1. Under the **Profile & Security** tab, enter a new display name (e.g. `Ketan Vaghela`).
   2. Click **Save Profile Changes**.
 - **Expected Results**:
   - Button switches to active state.
