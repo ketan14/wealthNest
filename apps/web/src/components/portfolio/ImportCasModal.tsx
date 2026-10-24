@@ -7,7 +7,11 @@ import {
   ImportCasTransactionDto,
   CasPreviewDto,
 } from '@wealthnest/application';
-import { ImportSummaryResult } from '@wealthnest/domain';
+import {
+  ImportSummaryResult,
+  detectAndParseBrokerCsv,
+  StatementProvider,
+} from '@wealthnest/domain';
 import { PdfJsTextExtractorAdapter } from '@/lib/pdf/pdfjs-extractor.adapter';
 import { SupabaseCasImportAdapter } from '@/lib/supabase/cas-import.adapter';
 import { useAuth } from '@/lib/supabase/auth-context';
@@ -66,11 +70,33 @@ const SANITIZED_NSDL_FIXTURE_PAGES = [
    INE040A01034  HDFC BANK LIMITED                 50.000        1600.00       80000.00`,
 ];
 
+const SANITIZED_ZERODHA_HOLDINGS_CSV = `Instrument,Qty.,Avg. cost,LTP,Cur. val,P&L,Net chg.,Day chg.
+RELIANCE,80,2500.00,2950.00,"2,36,000.00","36,000.00",18.00,1.25
+TCS,40,"3,600.00","4,150.00","1,66,000.00","22,000.00",15.28,-0.45
+GOLDBEES,500,52.50,58.20,29100.00,2850.00,10.86,0.34`;
+
+const SANITIZED_ZERODHA_TRADEBOOK_CSV = `symbol,isin,trade_date,exchange,segment,series,trade_type,quantity,price,trade_id,order_id,order_execution_time
+RELIANCE,INE002A01018,2024-03-15,NSE,EQ,EQ,buy,50,2500.00,123456,987654,2024-03-15 11:20:15
+TCS,INE467B01029,2024-04-10,NSE,EQ,EQ,buy,40,3600.00,123457,987655,2024-04-10 14:15:30
+RELIANCE,INE002A01018,2024-05-20,NSE,EQ,EQ,sell,10,2900.00,123458,987656,2024-05-20 10:05:00`;
+
+const SANITIZED_GROWW_HOLDINGS_CSV = `Company Name,Symbol,Shares,Average Price,Current Value,Market Price
+Reliance Industries Ltd,RELIANCE,30,"2,480.00","88,500.00","2,950.00"
+Tata Consultancy Services Ltd,TCS,20,"3,550.00","83,000.00","4,150.00"
+Parag Parikh Flexi Cap Fund Direct-Growth,PPFAS-FLEXI,1000,55.00,78450.00,78.45`;
+
+const SANITIZED_GROWW_ORDERS_CSV = `Stock Name,Order Type,Date,Quantity,Average Price,Status
+Reliance Industries,BUY,12-Apr-2024,25,2520.00,EXECUTED
+Infosys,BUY,18-Apr-2024,50,1420.00,EXECUTED`;
+
 export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { members, accounts, selectedMemberId, selectedAccountId } = useFamily();
 
+  const [importSource, setImportSource] = useState<'cas_pdf' | 'zerodha_csv' | 'groww_csv'>(
+    'cas_pdf'
+  );
   const [step, setStep] = useState<'upload' | 'preview' | 'summary'>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState('');
@@ -161,11 +187,114 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
     onClose();
   };
 
+  // Helper: Parse broker CSV text directly
+  const handleParseBrokerCsvText = (
+    csvContent: string,
+    preferredBroker?: 'ZERODHA' | 'GROWW'
+  ) => {
+    setError(null);
+    try {
+      const parsed = detectAndParseBrokerCsv(csvContent, preferredBroker);
+
+      if (parsed.holdings.length === 0 && parsed.trades.length === 0) {
+        setError(
+          parsed.warnings.length > 0
+            ? parsed.warnings.join('; ')
+            : 'Could not extract any holdings or trades from this CSV file. Please verify the format.'
+        );
+        return;
+      }
+
+      const convertedItems: ImportCasItemDto[] = parsed.holdings.map((h) => ({
+        isin: h.isin || '',
+        name: h.name,
+        ticker: h.symbol,
+        assetClassId:
+          h.assetType === 'mutual_fund'
+            ? 'mutual_fund'
+            : h.assetType === 'commodity'
+            ? 'commodity'
+            : 'equity',
+        instrumentType:
+          h.assetType === 'mutual_fund'
+            ? 'mutual_fund_scheme'
+            : h.assetType === 'commodity'
+            ? 'sovereign_gold_bond'
+            : 'equity_share',
+        quantity: h.quantity,
+        unitCostCents: Number(h.unitCost.cents),
+        currentValueCents: Number(h.currentValue?.cents ?? h.unitCost.multiply(h.quantity).cents),
+        costBasisVerified: true,
+        currency: 'INR',
+        selected: true,
+      }));
+
+      const convertedTxs: ImportCasTransactionDto[] = parsed.trades.map((t) => ({
+        isin: t.isin || '',
+        schemeName: t.name,
+        ticker: t.symbol,
+        date: t.tradeDate,
+        description: `${t.rawBroker} ${t.tradeType} ${t.symbol}${t.tradeId ? ` [#${t.tradeId}]` : ''}`,
+        type: t.tradeType.toLowerCase() as 'buy' | 'sell',
+        amountCents: Number(t.totalAmount.cents),
+        units: t.quantity,
+        navPriceCents: Number(t.price.cents),
+        currency: 'INR',
+        selected: true,
+      }));
+
+      const totalReportedValueCents = convertedItems.reduce(
+        (acc, i) => acc + i.currentValueCents,
+        0
+      );
+
+      const preview: CasPreviewDto = {
+        provider: parsed.provider as StatementProvider,
+        statementDate: new Date().toISOString().slice(0, 10),
+        items: convertedItems,
+        equities: convertedItems.filter((i) => i.assetClassId !== 'mutual_fund'),
+        mutualFunds: convertedItems.filter((i) => i.assetClassId === 'mutual_fund'),
+        transactions: convertedTxs,
+        totalReportedValueCents,
+        warnings: parsed.warnings,
+      };
+
+      setPreviewData(preview);
+      setItems(convertedItems);
+      setTransactions(convertedTxs);
+      setStep('preview');
+
+      if (convertedItems.length > 0) {
+        const hasEquities = convertedItems.some((i) => i.assetClassId !== 'mutual_fund');
+        setActiveTab(hasEquities ? 'equities' : 'mutual_funds');
+      } else if (convertedTxs.length > 0) {
+        setActiveTab('transactions');
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Failed to parse broker CSV.');
+    }
+  };
+
   // Parse Action
   const parseMutation = useMutation({
     mutationFn: async () => {
       setError(null);
-      if (!file) throw new Error('Please select a CAS statement PDF file.');
+      if (!file) throw new Error('Please select a statement or CSV file.');
+
+      const isCsv =
+        file.name.endsWith('.csv') || file.type.includes('csv') || importSource !== 'cas_pdf';
+
+      if (isCsv) {
+        const text = await file.text();
+        const preferredBroker: 'ZERODHA' | 'GROWW' | undefined =
+          importSource === 'zerodha_csv'
+            ? 'ZERODHA'
+            : importSource === 'groww_csv'
+            ? 'GROWW'
+            : undefined;
+        handleParseBrokerCsvText(text, preferredBroker);
+        return null;
+      }
 
       const arrayBuffer = await file.arrayBuffer();
       const extractor = new PdfJsTextExtractorAdapter();
@@ -177,6 +306,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
       return res.value;
     },
     onSuccess: (data) => {
+      if (!data) return; // Handled directly in CSV parser
       setPreviewData(data);
       setItems([...data.items]);
       setTransactions([...(data.transactions || [])]);
@@ -357,6 +487,60 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
               </div>
             )}
 
+            {/* Import Source Selector */}
+            <div className="flex items-center gap-2 p-1 bg-secondary/50 rounded-xl border border-border/80">
+              <button
+                type="button"
+                onClick={() => {
+                  setImportSource('cas_pdf');
+                  setFile(null);
+                  setError(null);
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+                  importSource === 'cas_pdf'
+                    ? 'bg-card text-foreground shadow border border-border'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5 text-primary" />
+                <span>CAS Statement (PDF)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setImportSource('zerodha_csv');
+                  setFile(null);
+                  setError(null);
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+                  importSource === 'zerodha_csv'
+                    ? 'bg-card text-foreground shadow border border-border'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-blue-400" />
+                <span>Zerodha Kite (CSV)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setImportSource('groww_csv');
+                  setFile(null);
+                  setError(null);
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+                  importSource === 'groww_csv'
+                    ? 'bg-card text-foreground shadow border border-border'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Groww (CSV)</span>
+              </button>
+            </div>
+
             {/* Privacy Guarantee Banner */}
             <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-muted-foreground flex items-start gap-2.5">
               <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
@@ -365,9 +549,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                   Zero-Knowledge Client-Side Extraction
                 </p>
                 <p className="text-[11px] leading-relaxed mt-0.5">
-                  Your PDF and password are processed strictly in-memory inside your local browser
-                  environment. They are never sent to third-party services, logged, or saved to
-                  disk.
+                  Your files (PDF or CSV) and data are parsed strictly in-memory inside your local
+                  browser environment. They are never sent to third-party tracking services or logged.
                 </p>
               </div>
             </div>
@@ -381,12 +564,16 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
               <input
                 type="file"
                 id="cas-file-input"
-                accept=".pdf"
+                accept={importSource === 'cas_pdf' ? '.pdf' : '.csv,text/csv'}
                 className="hidden"
                 onChange={(e) => {
                   if (e.target.files && e.target.files[0]) {
-                    setFile(e.target.files[0]);
+                    const selectedFile = e.target.files[0];
+                    setFile(selectedFile);
                     setError(null);
+                    if (selectedFile.name.endsWith('.csv') && importSource === 'cas_pdf') {
+                      setImportSource('zerodha_csv');
+                    }
                   }
                 }}
               />
@@ -408,86 +595,107 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                 ) : (
                   <div>
                     <p className="text-sm font-medium text-foreground">
-                      Click to choose or drag-and-drop your CAS PDF
+                      {importSource === 'cas_pdf'
+                        ? 'Click to choose or drag-and-drop your CAS PDF'
+                        : importSource === 'zerodha_csv'
+                        ? 'Click to choose or drag-and-drop your Zerodha Holdings or Tradebook CSV'
+                        : 'Click to choose or drag-and-drop your Groww Holdings or Orders CSV'}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Supports standard NSDL and CDSL e-CAS statements (up to 25 MB)
+                      {importSource === 'cas_pdf'
+                        ? 'Supports standard NSDL and CDSL e-CAS statements (up to 25 MB)'
+                        : importSource === 'zerodha_csv'
+                        ? 'Supports Kite Holdings CSV (holdings.csv) and Console Tradebook CSV (tradebook.csv)'
+                        : 'Supports Groww Holdings CSV (Holdings.csv) and Orders History CSV (Orders.csv)'}
                     </p>
                   </div>
                 )}
               </label>
             </div>
 
-            {/* Password Input */}
-            {(() => {
-              const isPasswordError = Boolean(error && error.toLowerCase().includes('password'));
-              const hasLowercase = Boolean(password && password !== password.toUpperCase());
+            {/* Password Input or Plain Text Notice */}
+            {importSource === 'cas_pdf' ? (
+              (() => {
+                const isPasswordError = Boolean(error && error.toLowerCase().includes('password'));
+                const hasLowercase = Boolean(password && password !== password.toUpperCase());
 
-              return (
-                <div
-                  className={`space-y-2 p-3 rounded-xl border transition-all ${
-                    isPasswordError
-                      ? 'border-amber-500/60 bg-amber-500/10 ring-1 ring-amber-500/30'
-                      : 'border-border/60 bg-secondary/20'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
-                      <Lock
-                        className={`w-3.5 h-3.5 ${
-                          isPasswordError ? 'text-amber-400 animate-pulse' : 'text-primary'
-                        }`}
+                return (
+                  <div
+                    className={`space-y-2 p-3 rounded-xl border transition-all ${
+                      isPasswordError
+                        ? 'border-amber-500/60 bg-amber-500/10 ring-1 ring-amber-500/30'
+                        : 'border-border/60 bg-secondary/20'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                        <Lock
+                          className={`w-3.5 h-3.5 ${
+                            isPasswordError ? 'text-amber-400 animate-pulse' : 'text-primary'
+                          }`}
+                        />
+                        Document Password (if encrypted)
+                      </label>
+                      {hasLowercase && (
+                        <button
+                          type="button"
+                          onClick={() => setPassword((prev) => prev.toUpperCase())}
+                          className="text-[10px] text-primary hover:underline font-semibold tracking-wide"
+                        >
+                          Convert to UPPERCASE
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          if (error) setError(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && file && !parseMutation.isPending) {
+                            e.preventDefault();
+                            parseMutation.mutate();
+                          }
+                        }}
+                        placeholder="e.g. ABCDE1234F01011990 (PAN + DOB DDMMYYYY)"
+                        className="w-full h-9 rounded-lg bg-card border border-border px-3 pr-10 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        autoFocus={isPasswordError}
                       />
-                      Document Password (if encrypted)
-                    </label>
-                    {hasLowercase && (
                       <button
                         type="button"
-                        onClick={() => setPassword((prev) => prev.toUpperCase())}
-                        className="text-[10px] text-primary hover:underline font-semibold tracking-wide"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        title={showPassword ? 'Hide password' : 'Show password'}
                       >
-                        Convert to UPPERCASE
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
-                    )}
-                  </div>
+                    </div>
 
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => {
-                        setPassword(e.target.value);
-                        if (error) setError(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && file && !parseMutation.isPending) {
-                          e.preventDefault();
-                          parseMutation.mutate();
-                        }
-                      }}
-                      placeholder="e.g. ABCDE1234F01011990 (PAN + DOB DDMMYYYY)"
-                      className="w-full h-9 rounded-lg bg-card border border-border px-3 pr-10 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                      autoFocus={isPasswordError}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      title={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Tip: CDSL & NSDL PDFs are typically protected with your{' '}
+                      <span className="font-semibold text-foreground">10-digit PAN in UPPERCASE</span>{' '}
+                      +{' '}
+                      <span className="font-semibold text-foreground">Date of Birth (DDMMYYYY)</span>.
+                    </p>
                   </div>
-
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    Tip: CDSL & NSDL PDFs are typically protected with your{' '}
-                    <span className="font-semibold text-foreground">10-digit PAN in UPPERCASE</span>{' '}
-                    +{' '}
-                    <span className="font-semibold text-foreground">Date of Birth (DDMMYYYY)</span>.
+                );
+              })()
+            ) : (
+              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-blue-200">No Document Password Required</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Broker CSV files exported from Zerodha Kite Console or Groww are unencrypted plain
+                    text. They will be parsed completely client-side in your browser.
                   </p>
                 </div>
-              );
-            })()}
+              </div>
+            )}
 
             {/* Sample Fixtures Quick-Test Buttons */}
             <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 space-y-2">
@@ -512,6 +720,42 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                   className="text-xs font-mono gap-1.5 h-8"
                 >
                   Load Sample NSDL CAS (TCS, HDFC Bank)
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleParseBrokerCsvText(SANITIZED_ZERODHA_HOLDINGS_CSV, 'ZERODHA')}
+                  className="text-xs font-mono gap-1.5 h-8 border-blue-500/30 hover:bg-blue-500/10 text-blue-300"
+                >
+                  Load Sample Zerodha Holdings CSV (Reliance, TCS, Gold BeES)
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleParseBrokerCsvText(SANITIZED_ZERODHA_TRADEBOOK_CSV, 'ZERODHA')}
+                  className="text-xs font-mono gap-1.5 h-8 border-blue-500/30 hover:bg-blue-500/10 text-blue-300"
+                >
+                  Load Sample Zerodha Tradebook CSV (Buy/Sell Executions)
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleParseBrokerCsvText(SANITIZED_GROWW_HOLDINGS_CSV, 'GROWW')}
+                  className="text-xs font-mono gap-1.5 h-8 border-emerald-500/30 hover:bg-emerald-500/10 text-emerald-300"
+                >
+                  Load Sample Groww Holdings CSV (Equities & PPFAS Mutual Fund)
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleParseBrokerCsvText(SANITIZED_GROWW_ORDERS_CSV, 'GROWW')}
+                  className="text-xs font-mono gap-1.5 h-8 border-emerald-500/30 hover:bg-emerald-500/10 text-emerald-300"
+                >
+                  Load Sample Groww Orders CSV (Orders History)
                 </Button>
               </div>
             </div>
@@ -543,7 +787,10 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Provider:</span>
                 <Badge variant="success" className="font-mono text-xs">
-                  {previewData.provider} CAS
+                  {previewData.provider}{' '}
+                  {previewData.provider === 'ZERODHA' || previewData.provider === 'GROWW'
+                    ? 'Statement'
+                    : 'CAS'}
                 </Badge>
               </div>
               <div className="flex items-center gap-2 font-mono">
@@ -590,11 +837,15 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
             {/* Phase 6A: Legal Entity & Demat Account Assignment */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-secondary/30 border border-border/60">
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
+                <label
+                  htmlFor="import-member-select"
+                  className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5"
+                >
                   <Users className="w-3.5 h-3.5 text-blue-400" />
                   Assign To Legal Entity / Member
                 </label>
                 <select
+                  id="import-member-select"
                   value={importMemberId}
                   onChange={(e) => {
                     setImportMemberId(e.target.value);
@@ -612,11 +863,15 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
               </div>
 
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
+                <label
+                  htmlFor="import-account-select"
+                  className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5"
+                >
                   <Briefcase className="w-3.5 h-3.5 text-slate-400" />
                   Assign Demat / Broker Account
                 </label>
                 <select
+                  id="import-account-select"
                   value={importAccountId}
                   onChange={(e) => setImportAccountId(e.target.value)}
                   className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"

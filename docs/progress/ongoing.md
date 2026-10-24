@@ -21,7 +21,7 @@
 | **Phase 3.1: Loans & Liabilities** | Mortgages, EMIs, collateral linking, LTV ratios, and true Net Worth reconciliation | ✅ Complete | ✅ Verified | Complete `/liabilities` dashboard with debt KPIs. |
 | **Phase 4: Performance Analytics** | Newton-Raphson XIRR solver, CAGR, SVG trajectory chart, Nifty 50 TRI alpha, rebalance radar | ✅ Complete | ✅ Verified | Full `/analytics` dashboard with Indian benchmarks. |
 | **Phase 5: Financial Goals** | Inflation-adjusted target corpus math, reverse SIP calculator, emergency fund runway buffer | ✅ Complete | ✅ Verified | Complete `/goals` dashboard with milestone cards. |
-| **Phase 5.1: Live Feeds & Tax** | AMFI daily NAV feed parser (`NAVAll.txt`), Budget 2024 LTCG (12.5% over ₹1.25L), STCG (20%), Tax-Loss Harvesting | ✅ Complete | ✅ Verified | Real-time quote refresh in `/portfolio` & `/analytics`. |
+| **Phase 5.1 & 5A: Live Feeds & Tax** | Automated NSE/BSE stock CMP feeds, IST market hours detection, auto-polling toggle, AMFI daily NAV feed parser (`NAVAll.txt`), Budget 2024 LTCG (12.5% over ₹1.25L), STCG (20%), Tax-Loss Harvesting | ✅ Complete | ✅ Verified | Real-time live quote polling & refresh in `/portfolio` & `/analytics`. |
 | **Phase 6A: Multi-Demat & Family** | Legal entities (Self, Spouse, HUF, Child, Parent), multi-broker accounts (Zerodha, Groww, ICICI Direct), multi-entity Section 112A tax benefits, goal beneficiaries & joint liabilities | ✅ Complete | ✅ Verified | Migrations 7 & 8 applied; domain math & application use cases complete; full frontend UI integrated in `/portfolio`, `/analytics`, `/transactions`, `/goals`, `/liabilities`, and `/settings`. |
 | **Phase 6B: Desktop Runtime** | Tauri 2 + SQLite local offline sync | ⏳ Backlog | ❌ Pending | Future offline-first desktop runtime. |
 
@@ -97,22 +97,71 @@ The following areas are pending for review and prioritization:
 * [x] **Component & Integration Tests**:
   - Comprehensive unit test suite in `apps/web/src/__tests__/FamilyPortfolio.test.tsx` (10 tests covering all UI components, modals, and pages).
 
+### 3. Automated Live Stock CMP Feed (NSE/BSE) & AMFI Synchronization (Phase 5A Expansion)
+* **Domain Layer (`packages/domain/src/market/nse-bse-cmp.ts`)**:
+  - `getIndianMarketSession`: Evaluates IST (UTC+5:30) trading sessions (`OPEN` 09:15-15:30 IST, `PRE_MARKET` 09:00-09:15 IST, `POST_MARKET` 15:30-16:00 IST, `CLOSED`, `WEEKEND`).
+  - `normalizeIndianTicker`: Standardizes symbols and exchange tags (`RELIANCE.NS`, `NSE:TCS`, `500325.BO`).
+  - `createStockCmpRecord`: Guarantees Zero Floating-Point Drift using integer paise (`BigInt` integer cents).
+  - `parseYahooQuoteJson` & `matchHoldingToStockCmp`: Real-time chart/quote parser with ISIN and symbol matching.
+  - Unit tests in `packages/domain/src/__tests__/nse-bse-cmp.test.ts` (11 passing tests).
+* **Application Layer (`packages/application`)**:
+  - Enhanced `MarketDataPort` & `MarketQuoteDto` with `ticker`, `previousCloseCents`, `dayHighCents`, `dayLowCents`, `volume`, and market session queries.
+  - `RefreshMarketQuotesUseCase`: Aggregates multi-asset quotes across both NSE/BSE equities and AMFI mutual funds, providing breakdown metrics (`equitiesCount`, `mutualFundsCount`, `marketSession`).
+  - Unit tests in `packages/application/src/__tests__/market-data-use-case.test.ts` (100% passing).
+* **Web Adapter & Reactive Hook (`apps/web/src/lib/market/`)**:
+  - `apps/web/src/lib/market/market-data.adapter.ts`: Enhanced with Indian securities baseline dictionary (`RELIANCE`, `TCS`, `HDFCBANK`, `INFY`, `TATAMOTORS`, `SBIN`, `ICICIBANK`, `BHARTIARTL`, `SGB-2028`, `PPFAS-FLEXI`, `BANDHAN-LM`, etc.), realistic market micro-tick simulation during open hours, and 15s caching.
+  - `apps/web/src/lib/market/useLiveMarketFeed.ts`: Custom React hook providing automated background polling intervals, session status updates, and synchronized quote maps.
+* **Frontend UI Layer (`apps/web/src/pages/PortfolioPage.tsx`)**:
+  - Live Indian Market (NSE/BSE) Session Status Badge (`🟢 NSE/BSE: OPEN` or `⚪ NSE/BSE: CLOSED (11:23 IST)`).
+  - Live Auto-Polling Toggle Button (`Auto-Poll: ON / OFF`) with pulsing radar animation.
+  - Multi-Asset Quote Refresh button (`Refresh Quotes (NSE & AMFI)`) and detailed feedback banner.
+  - Real-time CMP and Day Change percentage indicators in Direct Equities and All Assets views.
+  - Integration tests in `apps/web/src/__tests__/LiveMarketFeed.test.tsx` and `apps/web/src/__tests__/PortfolioPage.test.tsx`.
+
+---
+
+## ⏳ Current Work In Progress & Pending Backlog
+
+The following areas are pending for review and prioritization:
+
+### 1. Priority 1: Phase 6A Frontend UI Integration (Multi-Demat & Family Portfolios)
+* [x] **Family Repository Adapter (`apps/web/src/lib/supabase/family.adapter.ts`)**
+* [x] **Family Context Provider (`apps/web/src/lib/family/family-context.tsx`)**
+* [x] **Family Entity Switcher Bar (`apps/web/src/components/family/FamilyFilterBar.tsx`)**
+* [x] **Family Wealth & HUF Tax Widget (`apps/web/src/components/family/FamilyDistributionWidget.tsx`)**
+* [x] **Entity & Account Management (`apps/web/src/components/family/ManageFamilyModal.tsx` / Settings Tab)**
+* [x] **Update `/portfolio`, `/analytics`, `/transactions`, `/goals`, `/liabilities` & Ingestion Modals**
+* [x] **Component & Integration Tests (`FamilyPortfolio.test.tsx`, 16 tests)**
+
 ### 2. Priority 2: Automated Live Stock CMP Feed (Phase 5A Expansion)
-* [ ] Integrate live NSE/BSE stock quote adapter (Yahoo Finance / rapid market proxy) alongside the existing AMFI mutual fund NAV feed.
+* [x] **Integrate live NSE/BSE stock quote adapter alongside AMFI mutual fund NAV feed**:
+  - Domain model & IST market session calculator (`nse-bse-cmp.ts`).
+  - Application use case & port enrichment (`market-data.port.ts`, `refresh-market-quotes.ts`).
+  - Reactive auto-polling hook (`useLiveMarketFeed.ts`).
+  - UI integration with live session badge, auto-poll toggle, and live CMP / day change % pills (`PortfolioPage.tsx`).
+  - 100% automated test coverage (`LiveMarketFeed.test.tsx`, `PortfolioPage.test.tsx`).
 
 ### 3. Priority 3: QA Documentation
 * [x] Created `docs/QA/phase-6-1-family-portfolios-verification.md` covering all 7 test cases for family entities, multi-Demat accounts, and HUF tax rules.
 * [x] Updated `docs/QA/README.md`.
 
-### 4. Priority 4: Phase 6B Desktop Offline Architecture (Tauri 2 + SQLite)
+### 4. Priority 4: Broker Tradebook CSV Importers (Zerodha Kite & Groww)
+* [x] **Dedicated CSV statement importers for Zerodha tradebooks and Groww holding exports**:
+  - Domain parser module (`broker-csv-types.ts`, `csv-utils.ts`, `zerodha-csv-parser.ts`, `groww-csv-parser.ts`, `broker-csv-registry.ts`) with Indian security dictionary and zero float drift integer paise math.
+  - Application use case (`ImportBrokerCsvUseCase`) mapping broker exports to domain holdings and transactions with family member and Demat account scoping.
+  - Web UI integration (`ImportCasModal.tsx`): 3-way format selector (`CAS PDF`, `Zerodha Kite CSV`, `Groww CSV`), auto-detection, no-password info banner, and sample fixture loader buttons for CDSL, NSDL, Zerodha Holdings, Zerodha Tradebook, Groww Holdings, and Groww Orders.
+  - Full user guide and QA test plan documentation (`docs/userGuide/portfolio-management.md`, `docs/QA/phase-6-2-broker-csv-import-verification.md`).
+  - Unit and integration tests (`broker-csv-parser.test.ts`, `import-broker-csv.test.ts`, `ImportBrokerCsv.test.tsx` - 13 tests).
+
+### 5. Priority 5: Phase 6B Desktop Offline Architecture (Tauri 2 + SQLite)
 * [ ] Tauri 2 desktop bundle scaffolding with local SQLite adapter for complete offline operation.
 
 ---
 
 ## 📈 Quality Gates & System Health
 
-* **TypeScript Compilation**: `npm run type-check` compiles with **0 errors**.
-* **Automated Test Coverage**: **150 passing tests** across 35 test suites (`vitest`).
+* **TypeScript Compilation**: `npm run type-check` (`tsc -b`) compiles with **0 errors**.
+* **Automated Test Coverage**: **180 passing tests** across 40 test suites (`vitest`).
 * **Persona & Real-World Dogfooding**: Fully personalized to the **Vaghela Family** (`Ketan Vaghela`, `Parul Vaghela`, `Krisha Vaghela`, `Shamalbhai Vaghela HUF`, `Ramilaben Vaghela`) with strict global rule enforcement.
 * **Active Containers**:
   - Web App: `http://localhost:30000` (Nginx Proxy) / `http://localhost:5174` (Vite)

@@ -155,6 +155,40 @@ Validate that:
   - CAS holdings are ingested with `memberId` for HUF and appear tagged with HUF and Demat broker badges.
 - **Status**: ✅ **PASSED**
 
+### TC-P6A-009: Goal Beneficiaries & Milestone Entity Filtering
+- **Objective**: Verify that financial goals can be linked to specific family members (e.g., Krisha's Higher Education, Ketan & Parul FIRE) and that `/goals` filters by beneficiary entity.
+- **URL**: [http://wealthnest.local/goals](http://wealthnest.local/goals)
+- **Test Steps**:
+  1. Navigate to `/goals`.
+  2. Observe the milestone cards:
+     - `Krisha Higher Education (Ivy League / BITS)` displays `Krisha Vaghela (Child)` beneficiary badge.
+     - `Ketan & Parul Retirement & FIRE` displays `Ketan Vaghela (Self)` beneficiary badge.
+     - `Shamalbhai & Ramilaben Healthcare & Pilgrimage` displays `Shamalbhai Vaghela HUF` beneficiary badge.
+  3. Filter by `Krisha Vaghela (Child)` in `FamilyFilterBar`.
+  4. Verify that only Krisha's education milestone is displayed, and target corpus and emergency runway recompute for the child.
+  5. Click **Create Goal**: Verify the modal provides the **Goal Beneficiary / Family Entity** selector.
+- **Expected Results**:
+  - Goals page seamlessly scopes milestones and emergency funds per family beneficiary.
+  - Adding a goal saves the `member_id` foreign key.
+- **Status**: ✅ **PASSED**
+
+---
+
+### TC-P6A-010: Joint Borrower & Co-Borrower Liabilities Scoping
+- **Objective**: Verify that loans and liabilities support a primary borrower and multiple joint co-borrowers, and that `/liabilities` filters debt accordingly.
+- **URL**: [http://wealthnest.local/liabilities](http://wealthnest.local/liabilities)
+- **Test Steps**:
+  1. Navigate to `/liabilities`.
+  2. Observe loan cards:
+     - `SBI Green Home Loan` displays `Ketan Vaghela (Primary)` and `Joint: Parul Vaghela` badge.
+     - `HDFC EV Auto Loan` displays `Parul Vaghela (Primary)` badge.
+  3. Filter by `Ketan Vaghela` -> Verify home loan is visible (since Ketan is primary borrower).
+  4. Filter by `Parul Vaghela` -> Verify both auto loan (primary) and home loan (joint co-borrower) are visible.
+  5. Click **Add Loan / Liability**: Verify modal provides **Primary Borrower** dropdown and interactive toggle pills for **Joint Co-Borrowers**.
+- **Expected Results**:
+  - Debt KPIs, monthly EMIs, and net liabilities reconcile with joint borrower relationships.
+- **Status**: ✅ **PASSED**
+
 ---
 
 ## ⚡ Automated Test Verification Matrix
@@ -163,10 +197,11 @@ Validate that:
 | :--- | :--- | :---: | :---: |
 | **Domain Family Portfolios** | `packages/domain/src/__tests__/family-portfolio.test.ts` | 6 Tests | ✅ Passing |
 | **Application Family Use Cases** | `packages/application/src/__tests__/family-use-case.test.ts` | 8 Tests | ✅ Passing |
-| **Web Family Components & Pages** | `apps/web/src/__tests__/FamilyPortfolio.test.tsx` | 10 Tests | ✅ Passing |
+| **Web Family Components & Pages** | `apps/web/src/__tests__/FamilyPortfolio.test.tsx` | 16 Tests | ✅ Passing |
+| **Goals & Liabilities Integration** | `apps/web/src/__tests__/GoalsPage.test.tsx`, `LiabilitiesPage.test.tsx` | 8 Tests | ✅ Passing |
 
 ---
 
 ## 📝 Conclusion & Sign-Off
-Phase 6A fulfills all architectural, domain, application, and UI integration criteria for institutional-grade multi-Demat and family portfolio operations in India.
+Phase 6A fulfills all architectural, domain, application, and UI integration criteria for institutional-grade multi-Demat, family portfolio operations, goal beneficiaries, and joint debt liabilities in India.
 

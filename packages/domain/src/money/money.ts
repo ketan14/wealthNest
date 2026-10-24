@@ -46,6 +46,11 @@ export class Money {
     return new Money(this.cents - other.cents, this.currency);
   }
 
+  multiply(factor: number): Money {
+    const newCents = BigInt(Math.round(Number(this.cents) * factor));
+    return new Money(newCents, this.currency);
+  }
+
   equals(other: Money): boolean {
     return this.currency === other.currency && this.cents === other.cents;
   }

@@ -1,10 +1,13 @@
 import { Result, ok, err, isOk } from '@wealthnest/shared';
 import { HoldingRepositoryPort } from '../ports/holding-repository.port.js';
-import { MarketDataPort, MarketQuoteDto } from '../ports/market-data.port.js';
+import { MarketDataPort, MarketQuoteDto, MarketSessionDto } from '../ports/market-data.port.js';
 
 export interface RefreshedPortfolioValuationDto {
   readonly quotes: readonly MarketQuoteDto[];
   readonly totalUpdatedHoldings: number;
+  readonly equitiesCount: number;
+  readonly mutualFundsCount: number;
+  readonly marketSession?: MarketSessionDto;
   readonly asOfDate: string;
 }
 
@@ -25,10 +28,20 @@ export class RefreshMarketQuotesUseCase {
       }
 
       const quotes = quotesRes.value;
+      const equitiesCount = quotes.filter(
+        (q) => q.source === 'NSE' || q.source === 'BSE'
+      ).length;
+      const mutualFundsCount = quotes.filter((q) => q.source === 'AMFI').length;
+      const marketSession = this.marketDataPort.getMarketSession
+        ? this.marketDataPort.getMarketSession()
+        : undefined;
 
       return ok({
         quotes,
         totalUpdatedHoldings: quotes.length,
+        equitiesCount,
+        mutualFundsCount,
+        marketSession,
         asOfDate: new Date().toISOString(),
       });
     } catch (e: any) {

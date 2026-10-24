@@ -148,4 +148,46 @@ describe('PortfolioPage Component', () => {
       expect(screen.getAllByText('RELIANCE').length).toBeGreaterThanOrEqual(1);
     });
   });
+
+  it('displays Indian Market (NSE/BSE) trading session badge, auto-poll toggle, and live quote refresh action', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <MemoryRouter>
+            <PortfolioPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+
+    // Verify Market Session badge is displayed
+    expect(screen.getByText(/NSE\/BSE: (OPEN|CLOSED|PRE-MARKET)/i)).toBeInTheDocument();
+
+    // Verify Refresh Quotes (NSE & AMFI) button exists
+    const refreshBtn = screen.getByRole('button', { name: /Refresh Quotes \(NSE & AMFI\)/i });
+    expect(refreshBtn).toBeInTheDocument();
+
+    // Click refresh
+    fireEvent.click(refreshBtn);
+
+    // Verify success banner appears
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Refreshed.*securities.*Stocks via NSE\/BSE.*MFs via AMFI/i)
+      ).toBeInTheDocument();
+    });
+
+    // Verify Auto-Poll button exists and toggles
+    const autoPollBtn = screen.getByRole('button', { name: /Auto-Poll: OFF/i });
+    expect(autoPollBtn).toBeInTheDocument();
+
+    fireEvent.click(autoPollBtn);
+    expect(screen.getByRole('button', { name: /Auto-Poll: ON/i })).toBeInTheDocument();
+  });
 });

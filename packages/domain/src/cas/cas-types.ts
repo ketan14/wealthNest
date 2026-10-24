@@ -1,7 +1,7 @@
 import { CurrencyCode } from '../money/currency.js';
 import { Money } from '../money/money.js';
 
-export type StatementProvider = 'NSDL' | 'CDSL' | 'UNKNOWN';
+export type StatementProvider = 'NSDL' | 'CDSL' | 'ZERODHA' | 'GROWW' | 'UNKNOWN';
 
 export type ParsedAssetType = 'equity' | 'mutual_fund' | 'bond' | 'commodity' | 'reit' | 'other';
 

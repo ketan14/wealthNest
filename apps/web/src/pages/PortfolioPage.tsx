@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CurrencyCode,
@@ -39,9 +39,11 @@ import {
   CheckCircle2,
   HelpCircle,
   RefreshCw,
+  Radio,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { marketDataAdapter } from '@/lib/market/market-data.adapter';
+import { MarketQuoteDto } from '@wealthnest/application';
+import { useLiveMarketFeed } from '@/lib/market/useLiveMarketFeed';
 import { useFamily } from '@/lib/family/family-context';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { FamilyDistributionWidget } from '@/components/family/FamilyDistributionWidget';
@@ -242,8 +244,6 @@ export function PortfolioPage() {
   const [viewMode, setViewMode] = useState<'all' | 'equities' | 'mutual_funds' | 'grouped'>('all');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [isRefreshingNavs, setIsRefreshingNavs] = useState(false);
-  const [navRefreshMessage, setNavRefreshMessage] = useState<string | null>(null);
 
   // Local state for interactive demo mode when not logged in
   const [localDemoHoldings, setLocalDemoHoldings] = useState<HoldingDetailDto[]>(DEMO_HOLDINGS);
@@ -290,43 +290,48 @@ export function PortfolioPage() {
     });
   }, [allHoldings, selectedMemberId, selectedAccountId]);
 
-  const handleRefreshLiveNavs = async () => {
-    setIsRefreshingNavs(true);
-    setNavRefreshMessage(null);
-    try {
-      const res = await marketDataAdapter.refreshPortfolioQuotes(activeHoldings);
-      if (res.success) {
-        const quoteMap = new Map<string, number>();
-        for (const q of res.value) {
-          if (q.isin) quoteMap.set(q.isin, q.priceCents);
-          quoteMap.set(q.identifier, q.priceCents);
-        }
-
-        setLocalDemoHoldings((prev) =>
-          prev.map((h) => {
-            const quotePrice =
-              (h.isin && quoteMap.get(h.isin)) ||
-              quoteMap.get(h.ticker || '') ||
-              quoteMap.get(h.holdingId);
-            if (quotePrice && quotePrice > 0) {
-              const updatedValuation = Math.round(Number(h.quantity) * quotePrice);
-              return {
-                ...h,
-                currentValueCents: updatedValuation,
-                updatedAt: new Date().toISOString(),
-              };
-            }
-            return h;
-          })
-        );
-
-        setNavRefreshMessage(`Refreshed ${res.value.length} securities via AMFI and NSE feeds!`);
-        setTimeout(() => setNavRefreshMessage(null), 4000);
-      }
-    } finally {
-      setIsRefreshingNavs(false);
+  // Real-time market quote synchronization and live stock polling
+  const handleQuotesUpdated = useCallback((quoteList: readonly MarketQuoteDto[]) => {
+    const quoteMap = new Map<string, number>();
+    for (const q of quoteList) {
+      if (q.isin) quoteMap.set(q.isin, q.priceCents);
+      if (q.ticker) quoteMap.set(q.ticker, q.priceCents);
+      quoteMap.set(q.identifier, q.priceCents);
     }
-  };
+
+    setLocalDemoHoldings((prev) =>
+      prev.map((h) => {
+        const quotePrice =
+          (h.isin && quoteMap.get(h.isin)) ||
+          (h.ticker && quoteMap.get(h.ticker)) ||
+          quoteMap.get(h.holdingId);
+        if (quotePrice && quotePrice > 0) {
+          const updatedValuation = Math.round(Number(h.quantity) * quotePrice);
+          return {
+            ...h,
+            currentValueCents: updatedValuation,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return h;
+      })
+    );
+  }, []);
+
+  const {
+    isPolling,
+    setIsPolling,
+    isRefreshing: isRefreshingNavs,
+    session: marketSession,
+    statusMessage: navRefreshMessage,
+    quotes: liveQuotesMap,
+    refreshNow: handleRefreshLiveNavs,
+  } = useLiveMarketFeed({
+    holdings: activeHoldings,
+    onQuotesUpdated: handleQuotesUpdated,
+    defaultPolling: false,
+    pollingIntervalMs: 25000,
+  });
 
   // Pure Domain Summary calculation with Money value objects: Aggregates activeHoldings
   const summary: PortfolioSummary = useMemo(() => {
@@ -598,24 +603,60 @@ export function PortfolioPage() {
             <Badge variant={user ? 'success' : 'secondary'} className="font-mono text-[10px]">
               {user ? 'Database Active' : 'Demo Mode'}
             </Badge>
+            {/* Live Indian Market (NSE/BSE) Session Indicator */}
+            <Badge
+              variant="outline"
+              className={`font-mono text-[10px] flex items-center gap-1.5 ${
+                marketSession.isOpen
+                  ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                  : 'bg-secondary/70 text-muted-foreground border-border'
+              }`}
+              title={`Indian Market Session: ${marketSession.description} (${marketSession.istTimeString})`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  marketSession.isOpen ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'
+                }`}
+              />
+              {marketSession.isOpen
+                ? 'NSE/BSE: OPEN'
+                : `NSE/BSE: CLOSED (${marketSession.istTimeString})`}
+            </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Indian multi-asset wealth tracker with Lakh/Crore precision and separated Direct
-            Equities and Mutual Fund portfolios.
+            Indian multi-asset wealth tracker with Lakh/Crore precision, automated live stock CMP,
+            and separated Direct Equities and Mutual Fund portfolios.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Live Auto-Polling Toggle Button */}
+          <Button
+            variant={isPolling ? 'default' : 'outline'}
+            onClick={() => setIsPolling((prev) => !prev)}
+            className={`gap-1.5 shadow-sm text-xs border ${
+              isPolling
+                ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500/50'
+                : 'border-border/80 text-muted-foreground hover:text-foreground'
+            }`}
+            title="Automatically poll live stock CMP and AMFI NAVs every 25 seconds"
+          >
+            <Radio
+              className={`w-3.5 h-3.5 ${isPolling ? 'animate-pulse text-white' : 'text-muted-foreground'}`}
+            />
+            <span>Auto-Poll: {isPolling ? 'ON' : 'OFF'}</span>
+          </Button>
+
           <Button
             variant="secondary"
-            onClick={handleRefreshLiveNavs}
+            onClick={() => void handleRefreshLiveNavs()}
             disabled={isRefreshingNavs}
             className="gap-2 shadow-sm text-xs border border-border/80"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 text-cyan-400 ${isRefreshingNavs ? 'animate-spin' : ''}`}
             />
-            {isRefreshingNavs ? 'Fetching AMFI...' : 'Refresh AMFI NAVs'}
+            {isRefreshingNavs ? 'Fetching Feeds...' : 'Refresh Quotes (NSE & AMFI)'}
           </Button>
           <Button
             variant="outline"
@@ -638,14 +679,14 @@ export function PortfolioPage() {
       {/* Phase 6A: Consolidated Family Distribution & HUF Shield */}
       {selectedMemberId === 'all' && <FamilyDistributionWidget />}
 
-      {/* AMFI Refresh Success Alert */}
+      {/* AMFI & NSE Refresh Success Alert */}
       {navRefreshMessage && (
         <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3.5 flex items-center justify-between text-xs text-cyan-300 animate-in fade-in">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-cyan-400" />
             <span>{navRefreshMessage}</span>
           </div>
-          <span className="font-mono text-[10px] text-cyan-400/80">AMFI Daily Feed</span>
+          <span className="font-mono text-[10px] text-cyan-400/80">NSE/BSE & AMFI Feeds</span>
         </div>
       )}
 
@@ -1083,11 +1124,42 @@ export function PortfolioPage() {
                             {h.quantity.toLocaleString('en-IN', { maximumFractionDigits: 4 })}
                           </td>
                           <td className="py-3.5 px-4 text-right text-muted-foreground">
-                            ₹
-                            {marketPricePerShare.toLocaleString('en-IN', {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
+                            {(() => {
+                              const q =
+                                (h.isin && liveQuotesMap.get(h.isin)) ||
+                                (h.ticker && liveQuotesMap.get(h.ticker)) ||
+                                liveQuotesMap.get(h.holdingId);
+                              const price = q ? q.priceCents / 100 : marketPricePerShare;
+                              const isUp = q ? q.changePercent >= 0 : isGain;
+                              return (
+                                <div>
+                                  <div className="font-bold text-foreground">
+                                    ₹
+                                    {price.toLocaleString('en-IN', {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                  </div>
+                                  {q && (
+                                    <div className="flex items-center justify-end gap-1 text-[10px] mt-0.5 font-sans">
+                                      <span
+                                        className={`px-1 rounded text-[9px] font-semibold ${
+                                          isUp
+                                            ? 'text-emerald-400 bg-emerald-500/10'
+                                            : 'text-rose-400 bg-rose-500/10'
+                                        }`}
+                                      >
+                                        {isUp ? '+' : ''}
+                                        {q.changePercent.toFixed(2)}%
+                                      </span>
+                                      <span className="font-mono text-[9px] text-blue-400">
+                                        {q.source}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="py-3.5 px-4 text-right font-bold text-foreground">
                             ₹
@@ -1788,9 +1860,38 @@ export function PortfolioPage() {
                           )}
                         </td>
 
-                        {/* Current Value */}
+                        {/* Current Value / CMP */}
                         <td className="py-3.5 px-4 text-right font-bold text-foreground">
-                          {currentValueFormatted}
+                          <div>{currentValueFormatted}</div>
+                          {(() => {
+                            const q =
+                              (h.isin && liveQuotesMap.get(h.isin)) ||
+                              (h.ticker && liveQuotesMap.get(h.ticker)) ||
+                              liveQuotesMap.get(h.holdingId);
+                            if (!q) return null;
+                            const isStock = q.source === 'NSE' || q.source === 'BSE';
+                            const isUp = q.changePercent >= 0;
+                            return (
+                              <div className="flex items-center justify-end gap-1 text-[10px] mt-0.5 font-normal">
+                                <span className="text-muted-foreground font-mono">
+                                  {isStock ? 'CMP: ' : 'NAV: '}₹
+                                  {(q.priceCents / 100).toLocaleString('en-IN', {
+                                    minimumFractionDigits: 2,
+                                  })}
+                                </span>
+                                <span
+                                  className={`px-1 py-0.2 rounded font-semibold text-[9px] ${
+                                    isUp
+                                      ? 'text-emerald-400 bg-emerald-500/10'
+                                      : 'text-rose-400 bg-rose-500/10'
+                                  }`}
+                                >
+                                  {isUp ? '+' : ''}
+                                  {q.changePercent.toFixed(2)}%
+                                </span>
+                              </div>
+                            );
+                          })()}
                         </td>
 
                         {/* Gain / Loss */}
