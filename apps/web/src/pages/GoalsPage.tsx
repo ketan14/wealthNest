@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { AddGoalModal } from '@/components/goals/AddGoalModal';
 import { useFamily } from '@/lib/family/family-context';
+import { useSupportSession } from '@/lib/admin/support-session-context';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 import {
@@ -158,6 +159,7 @@ export function GoalsPage() {
   const userId = user?.id || '';
   const queryClient = useQueryClient();
   const { members, selectedMemberId } = useFamily();
+  const { isSupportModeActive } = useSupportSession();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
@@ -343,7 +345,12 @@ export function GoalsPage() {
 
         {/* Action Button */}
         <div className="flex items-center gap-2">
-          <Button onClick={() => setIsAddModalOpen(true)} className="gap-2 shadow-md">
+          <Button
+            onClick={() => setIsAddModalOpen(true)}
+            disabled={isSupportModeActive}
+            title={isSupportModeActive ? 'Disabled in Support Impersonation Mode (Read-Only)' : undefined}
+            className="gap-2 shadow-md disabled:opacity-50"
+          >
             <Plus className="w-4 h-4" />
             Create Financial Goal
           </Button>

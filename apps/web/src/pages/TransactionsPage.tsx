@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useFamily } from '@/lib/family/family-context';
+import { useSupportSession } from '@/lib/admin/support-session-context';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 
@@ -179,6 +180,7 @@ export function TransactionsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { selectedMemberId, selectedAccountId, members, accounts } = useFamily();
+  const { isSupportModeActive } = useSupportSession();
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -406,7 +408,12 @@ export function TransactionsPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button onClick={() => setIsModalOpen(true)} className="gap-2 shadow-sm">
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            disabled={isSupportModeActive}
+            title={isSupportModeActive ? 'Disabled in Support Impersonation Mode (Read-Only)' : undefined}
+            className="gap-2 shadow-sm disabled:opacity-50"
+          >
             <Plus className="w-4 h-4" />
             Record Transaction
           </Button>

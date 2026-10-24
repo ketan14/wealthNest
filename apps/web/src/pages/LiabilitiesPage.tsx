@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useFamily } from '@/lib/family/family-context';
+import { useSupportSession } from '@/lib/admin/support-session-context';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 import {
@@ -102,6 +103,7 @@ export function LiabilitiesPage() {
   const userId = user?.id || '';
   const queryClient = useQueryClient();
   const { members, selectedMemberId } = useFamily();
+  const { isSupportModeActive, supportData } = useSupportSession();
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -226,15 +228,41 @@ export function LiabilitiesPage() {
     }
   };
 
-  const effectiveLiabilities = useMemo(() => {
-    const base = liabilities.length > 0 ? liabilities : DEMO_LIABILITIES;
+  const effectiveLiabilities = useMemo((): readonly LiabilityDto[] => {
+    if (isSupportModeActive && supportData?.liabilities) {
+      return supportData.liabilities.map((item) => ({
+        id: item.id,
+        userId: 'support-target',
+        name: item.name,
+        loanType: item.liabilityType as any,
+        lender: item.lenderName,
+        accountNumber: undefined,
+        originalPrincipalCents: BigInt(item.originalAmountPaise),
+        currentBalanceCents: BigInt(item.outstandingBalancePaise),
+        interestRate: item.interestRate,
+        interestType: 'fixed' as const,
+        tenureMonths: 120,
+        emiAmountCents: BigInt(item.monthlyPaymentPaise),
+        currency: 'INR',
+        startDate: item.startDate,
+        maturityDate: item.targetPayoffDate,
+        status: 'active' as const,
+        memberId: undefined,
+        coBorrowerMemberIds: [],
+        lastBalanceDate: item.startDate,
+        linkedAssetName: undefined,
+        createdAt: item.startDate,
+        updatedAt: item.startDate,
+      }));
+    }
+    const base: readonly LiabilityDto[] = liabilities.length > 0 ? liabilities : DEMO_LIABILITIES;
     if (!selectedMemberId || selectedMemberId === 'all') return base;
     return base.filter(
       (l) =>
         l.memberId === selectedMemberId ||
         (l.coBorrowerMemberIds && l.coBorrowerMemberIds.includes(selectedMemberId))
     );
-  }, [liabilities, selectedMemberId]);
+  }, [isSupportModeActive, supportData, liabilities, selectedMemberId]);
 
   const effectiveSummary: NetWorthSummary = useMemo(() => {
     if (netWorthSummary) return netWorthSummary;
@@ -326,7 +354,9 @@ export function LiabilitiesPage() {
               setEditingLiability(null);
               setIsAddModalOpen(true);
             }}
-            className="gap-2 shadow-lg shadow-primary/20"
+            disabled={isSupportModeActive}
+            title={isSupportModeActive ? 'Disabled in Support Impersonation Mode (Read-Only)' : undefined}
+            className="gap-2 shadow-lg shadow-primary/20 disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
             Add Loan / Liability
