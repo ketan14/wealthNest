@@ -45,6 +45,7 @@ import { Link } from 'react-router-dom';
 import { MarketQuoteDto } from '@wealthnest/application';
 import { useLiveMarketFeed } from '@/lib/market/useLiveMarketFeed';
 import { useFamily } from '@/lib/family/family-context';
+import { useSupportSession } from '@/lib/admin/support-session-context';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { FamilyDistributionWidget } from '@/components/family/FamilyDistributionWidget';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
@@ -236,6 +237,7 @@ export function PortfolioPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { selectedMemberId, selectedAccountId, members, accounts } = useFamily();
+  const { isSupportModeActive, supportData } = useSupportSession();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
@@ -267,13 +269,43 @@ export function PortfolioPage() {
     enabled: !!user,
   });
 
-  // Consolidated pool of all holdings (DB or local demo)
+  // Consolidated pool of all holdings (DB, support session, or local demo)
   const allHoldings: HoldingDetailDto[] = useMemo(() => {
+    if (isSupportModeActive && supportData?.portfolio) {
+      return supportData.portfolio.map((item) => ({
+        holdingId: item.id,
+        assetId: item.id,
+        name: item.symbol,
+        ticker: item.symbol,
+        isin: undefined,
+        assetClassId: item.assetClass,
+        assetClassName:
+          item.assetClass === 'equity'
+            ? 'Equities & Stocks'
+            : item.assetClass === 'mutual_fund'
+            ? 'Mutual Funds'
+            : item.assetClass === 'gold'
+            ? 'Gold & Precious Metals'
+            : 'Other Assets',
+        assetClassColor:
+          item.assetClass === 'equity'
+            ? '#3b82f6'
+            : item.assetClass === 'mutual_fund'
+            ? '#06b6d4'
+            : '#eab308',
+        quantity: item.quantity,
+        unitCostCents: item.averagePricePaise,
+        currentValueCents: item.currentValuePaise,
+        currency: 'INR',
+        costBasisVerified: true,
+        updatedAt: item.asOfDate,
+      }));
+    }
     if (user && dbPortfolioData) {
       return [...dbPortfolioData.holdings];
     }
     return localDemoHoldings;
-  }, [user, dbPortfolioData, localDemoHoldings]);
+  }, [isSupportModeActive, supportData, user, dbPortfolioData, localDemoHoldings]);
 
   // Active holdings filtered by Family Member / Legal Entity & Demat Account
   const activeHoldings: HoldingDetailDto[] = useMemo(() => {
@@ -661,12 +693,19 @@ export function PortfolioPage() {
           <Button
             variant="outline"
             onClick={() => setIsImportModalOpen(true)}
-            className="gap-2 shadow-sm border-primary/20 hover:bg-primary/5 text-foreground text-xs"
+            disabled={isSupportModeActive}
+            title={isSupportModeActive ? 'Disabled in Support Impersonation Mode (Read-Only)' : undefined}
+            className="gap-2 shadow-sm border-primary/20 hover:bg-primary/5 text-foreground text-xs disabled:opacity-50"
           >
             <FileSpreadsheet className="w-4 h-4 text-primary" />
             Import CAS
           </Button>
-          <Button onClick={() => setIsModalOpen(true)} className="gap-2 shadow-sm text-xs">
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            disabled={isSupportModeActive}
+            title={isSupportModeActive ? 'Disabled in Support Impersonation Mode (Read-Only)' : undefined}
+            className="gap-2 shadow-sm text-xs disabled:opacity-50"
+          >
             <Plus className="w-4 h-4" />
             Add Holding
           </Button>

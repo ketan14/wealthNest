@@ -82,6 +82,14 @@ When logged in with an administrative entitlement (`super_admin`, `support_admin
 - Configuration of administrative MFA enforcement, session timeout durations, and minimum password lengths.
 - System integrity diagnostics confirming PostgreSQL 15 connection, Integer Paise BigInt zero-drift engine, and `en-IN` currency formatting.
 
+### 3.8 Support Impersonation Mode ("View as User")
+- Troubleshoot user issues without obtaining user passwords or hijacking sessions.
+- Initiate via the **View Application as User** button on any user's profile (`/admin/users/:userId`).
+- Requires a mandatory ticket reason (minimum 8 characters).
+- Enforces an ephemeral 15-minute TTL countdown timer with an ambient top banner.
+- All private financial queries are server-validated read-only RPCs (`support_get_user_*`).
+- For complete details, see [Support Impersonation Mode Guide](./support-impersonation.md).
+
 ---
 
 ## 4. Bootstrapping the First Administrator

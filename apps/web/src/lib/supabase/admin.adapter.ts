@@ -471,3 +471,4 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
 }
 
 export const adminAdapter = new SupabaseAdminAdapter();
+export const adminAuditLogAdapter: AdminAuditLogPort = adminAdapter;

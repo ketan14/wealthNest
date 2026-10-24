@@ -21,6 +21,7 @@ This directory contains formal, executable Quality Assurance (QA) test suites, v
 | [Phase 6A: Multi-Demat & Family Portfolios](./phase-6-1-family-portfolios-verification.md) | Phase 6A | Legal entities (Self, Spouse, HUF, Child, Parent), multi-broker accounts (Zerodha, Groww, ICICI Direct), HUF Section 112A tax shield, goal beneficiaries, joint loan liabilities, and cross-module scoping. | ✅ Verified |
 | [Phase 6.2: Broker CSV Importers (Zerodha & Groww)](./phase-6-2-broker-csv-import-verification.md) | Phase 6.2 | Direct statement importers for Zerodha Kite Holdings & Console Tradebooks, Groww Holdings & Orders CSV exports, Zero Float drift paise parsing, and family assignment. | ✅ Verified |
 | [Phase 7: Admin Portal, User Management & Security](./phase-7-admin-portal-verification.md) | Phase 7 | Centralized user directory, platform-level RBAC (super_admin, support_admin, auditor), lifecycle management, append-only immutable audit trail, and zero-knowledge financial isolation boundary. | ✅ Verified |
+| [Phase 8: Admin View-as-User & Support Impersonation](./phase-8-support-impersonation-verification.md) | Phase 8 | Ephemeral, read-only troubleshooting session with zero credential sharing, untouched private RLS, 15-minute countdown timer, mutation locks, and immutable audit logs. | ✅ Verified |
 
 
 ---

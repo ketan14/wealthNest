@@ -21,6 +21,7 @@ import { AdminSettingsPage } from '@/pages/admin/AdminSettingsPage';
 
 import { AuthProvider } from '@/lib/supabase/auth-context';
 import { AdminProvider } from '@/lib/admin/admin-context';
+import { SupportSessionProvider } from '@/lib/admin/support-session-context';
 import { PreferencesProvider } from '@/lib/preferences/preferences-context';
 import { FamilyProvider } from '@/lib/family/family-context';
 
@@ -40,36 +41,38 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <AdminProvider>
-          <PreferencesProvider>
-            <FamilyProvider>
-              <BrowserRouter>
-                <Routes>
-                  {/* Investor App Shell */}
-                  <Route path="/" element={<AppShell />}>
-                    <Route index element={<HomePage />} />
-                    <Route path="portfolio" element={<PortfolioPage />} />
-                    <Route path="liabilities" element={<LiabilitiesPage />} />
-                    <Route path="transactions" element={<TransactionsPage />} />
-                    <Route path="analytics" element={<AnalyticsPage />} />
-                    <Route path="goals" element={<GoalsPage />} />
-                    <Route path="settings" element={<SettingsPage />} />
-                    <Route path="*" element={<NotFoundPage />} />
-                  </Route>
+          <SupportSessionProvider>
+            <PreferencesProvider>
+              <FamilyProvider>
+                <BrowserRouter>
+                  <Routes>
+                    {/* Investor App Shell */}
+                    <Route path="/" element={<AppShell />}>
+                      <Route index element={<HomePage />} />
+                      <Route path="portfolio" element={<PortfolioPage />} />
+                      <Route path="liabilities" element={<LiabilitiesPage />} />
+                      <Route path="transactions" element={<TransactionsPage />} />
+                      <Route path="analytics" element={<AnalyticsPage />} />
+                      <Route path="goals" element={<GoalsPage />} />
+                      <Route path="settings" element={<SettingsPage />} />
+                      <Route path="*" element={<NotFoundPage />} />
+                    </Route>
 
-                  {/* Dedicated Platform Admin Portal */}
-                  <Route path="/admin" element={<AdminLayout />}>
-                    <Route index element={<AdminDashboardPage />} />
-                    <Route path="users" element={<AdminUsersPage />} />
-                    <Route path="users/:userId" element={<AdminUserDetailPage />} />
-                    <Route path="households" element={<AdminHouseholdsPage />} />
-                    <Route path="roles" element={<AdminRolesPage />} />
-                    <Route path="audit-logs" element={<AdminAuditLogsPage />} />
-                    <Route path="settings" element={<AdminSettingsPage />} />
-                  </Route>
-                </Routes>
-              </BrowserRouter>
-            </FamilyProvider>
-          </PreferencesProvider>
+                    {/* Dedicated Platform Admin Portal */}
+                    <Route path="/admin" element={<AdminLayout />}>
+                      <Route index element={<AdminDashboardPage />} />
+                      <Route path="users" element={<AdminUsersPage />} />
+                      <Route path="users/:userId" element={<AdminUserDetailPage />} />
+                      <Route path="households" element={<AdminHouseholdsPage />} />
+                      <Route path="roles" element={<AdminRolesPage />} />
+                      <Route path="audit-logs" element={<AdminAuditLogsPage />} />
+                      <Route path="settings" element={<AdminSettingsPage />} />
+                    </Route>
+                  </Routes>
+                </BrowserRouter>
+              </FamilyProvider>
+            </PreferencesProvider>
+          </SupportSessionProvider>
         </AdminProvider>
       </AuthProvider>
     </QueryClientProvider>

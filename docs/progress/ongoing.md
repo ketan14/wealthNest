@@ -24,7 +24,8 @@
 | **Phase 6A: Multi-Demat & Family** | Legal entities (Self, Spouse, HUF, Child, Parent), multi-broker accounts (Zerodha, Groww, ICICI Direct), multi-entity Section 112A tax benefits, goal beneficiaries & joint liabilities | ✅ Complete | ✅ Verified | Migrations 7 & 8 applied; domain math & application use cases complete; full frontend UI integrated in `/portfolio`, `/analytics`, `/transactions`, `/goals`, `/liabilities`, and `/settings`. |
 | **Phase 6.2: Broker CSV Importers** | Direct tradebook & holdings CSV parsers for Zerodha (Kite & Console) and Groww (Holdings & Orders), Zero Float drift BigInt paise calculation | ✅ Complete | ✅ Verified | Direct statement dropzone in Import CAS modal. |
 | **Phase 7: Admin Portal & Access Control** | Centralized user directory, platform-level RBAC (super_admin, support_admin, auditor), user lifecycle management (suspend, reactivate, invite, password reset), append-only immutable audit trail, zero-knowledge financial isolation boundary | ✅ Complete | ✅ Verified | Migration 9 applied; clean architecture domain/app layers complete; full frontend UI integrated at `/admin` with AdminGuard protection. |
-| **Phase 8: Desktop Runtime** | Tauri 2 + SQLite local offline sync | ⏳ Backlog | ❌ Pending | Future offline-first desktop runtime. |
+| **Phase 8: Admin View-as-User & Support Mode** | Secure, auditable admin troubleshooting impersonation mode with zero credential swapping, untouched private table RLS, server security-definer RPCs, 15-minute TTL countdown timer, mutation locks, and immutable audit logs | ✅ Complete | ✅ Verified | Migration 10 applied; pure domain invariants, application use cases, Supabase adapter, context, SupportModeBanner, ViewAsUserModal, and PortfolioPage integration complete. Full test suite passing (248 tests across 46 files). |
+| **Phase 9: Desktop Runtime** | Tauri 2 + SQLite local offline sync | ⏳ Backlog | ❌ Pending | Future offline-first desktop runtime. |
 
 
 ---

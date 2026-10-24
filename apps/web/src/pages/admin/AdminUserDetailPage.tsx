@@ -14,8 +14,10 @@ import {
   AlertCircle,
   CheckCircle2,
   X,
+  Eye,
 } from 'lucide-react';
 import { AdminHeader } from '../../components/admin/AdminHeader';
+import { ViewAsUserModal } from '../../components/admin/ViewAsUserModal';
 import { adminAdapter } from '../../lib/supabase/admin.adapter';
 import { useAdmin } from '../../lib/admin/admin-context';
 import {
@@ -36,6 +38,7 @@ export function AdminUserDetailPage() {
 
   // Status modal state
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showViewAsUserModal, setShowViewAsUserModal] = useState(false);
   const [newStatus, setNewStatus] = useState<UserAccessStatus>('suspended');
   const [reasonCode, setReasonCode] = useState('SECURITY_INCIDENT');
   const [reasonDetails, setReasonDetails] = useState('');
@@ -299,6 +302,16 @@ export function AdminUserDetailPage() {
                     <KeyRound className="w-4 h-4" />
                     <span>Trigger Password Reset</span>
                   </button>
+
+                  {adminActor?.userId !== userDetail.id && (
+                    <button
+                      onClick={() => setShowViewAsUserModal(true)}
+                      className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30 transition-all shadow-sm"
+                    >
+                      <Eye className="w-4 h-4 text-amber-400" />
+                      <span>View Application as User</span>
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -607,6 +620,13 @@ export function AdminUserDetailPage() {
           </div>
         </div>
       )}
+
+      {/* View as User Support Modal */}
+      <ViewAsUserModal
+        isOpen={showViewAsUserModal}
+        onClose={() => setShowViewAsUserModal(false)}
+        targetUser={userDetail}
+      />
     </div>
   );
 }

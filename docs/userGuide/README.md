@@ -15,6 +15,7 @@ Welcome to the **WealthNest User Guide** — an institutional-grade, privacy-fir
 | **05. [Loans & Liabilities](./loans-and-liabilities.md)** | Debt & True Net Worth | Tracking home and auto loans, managing primary and joint co-borrowers, EMI schedules, collateral linking, and net worth reconciliation. |
 | **06. [Analytics & Tax](./analytics-and-tax.md)** | Returns & Budget 2024 Tax | Performance math (XIRR, CAGR), Nifty 50 TRI benchmark comparison, Union Budget 2024 Capital Gains Tax (LTCG 12.5% over ₹1.25L, STCG 20%), and Tax-Loss Harvesting radar. |
 | **07. [Admin Portal](./admin-portal.md)** | User Lifecycle & Security | Centralized user directory, platform-level RBAC (super_admin, support_admin, auditor), multi-user household tenancy, and tamper-proof audit trail. |
+| **08. [Support Impersonation](./support-impersonation.md)** | View as User & Auditing | Ephemeral, read-only troubleshooting session with zero credential sharing, untouched private RLS, 15-minute countdown timer, and immutable audit logs. |
 
 
 ---
