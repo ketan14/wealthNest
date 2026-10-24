@@ -19,6 +19,9 @@ import { AdminRolesPage } from '@/pages/admin/AdminRolesPage';
 import { AdminAuditLogsPage } from '@/pages/admin/AdminAuditLogsPage';
 import { AdminSettingsPage } from '@/pages/admin/AdminSettingsPage';
 
+import { SignUpPage } from '@/pages/SignUpPage';
+import { LoginPage } from '@/pages/LoginPage';
+
 import { AuthProvider } from '@/lib/supabase/auth-context';
 import { AdminProvider } from '@/lib/admin/admin-context';
 import { SupportSessionProvider } from '@/lib/admin/support-session-context';
@@ -46,6 +49,10 @@ export function App() {
               <FamilyProvider>
                 <BrowserRouter>
                   <Routes>
+                    {/* Dedicated Authentication Routes */}
+                    <Route path="/signup" element={<SignUpPage />} />
+                    <Route path="/login" element={<LoginPage />} />
+
                     {/* Investor App Shell */}
                     <Route path="/" element={<AppShell />}>
                       <Route index element={<HomePage />} />

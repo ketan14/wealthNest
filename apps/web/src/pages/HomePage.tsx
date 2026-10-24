@@ -105,8 +105,16 @@ export function HomePage() {
           </p>
 
           <div className="flex flex-wrap gap-3 pt-2">
+            {!user && (
+              <Link to="/signup">
+                <Button className="gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs">
+                  Get Started
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            )}
             <Link to="/portfolio">
-              <Button className="gap-2">
+              <Button variant={!user ? 'outline' : 'default'} className="gap-2 text-xs">
                 Portfolio Module
                 <ArrowRight className="w-4 h-4" />
               </Button>
