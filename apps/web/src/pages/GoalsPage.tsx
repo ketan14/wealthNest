@@ -21,6 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { AddGoalModal } from '@/components/goals/AddGoalModal';
+import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
 import { useFamily } from '@/lib/family/family-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
@@ -163,6 +164,7 @@ export function GoalsPage() {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
+  const [goalToDelete, setGoalToDelete] = useState<{ id: string; name: string } | null>(null);
   const [monthlyExpenseRupees, setMonthlyExpenseRupees] = useState<number>(65000);
   const [demoGoalsState, setDemoGoalsState] = useState<GoalDetailDto[]>(DEMO_GOALS);
 
@@ -609,13 +611,10 @@ export function GoalsPage() {
                       </Badge>
 
                       <button
-                        onClick={() => {
-                          if (confirm(`Are you sure you want to delete goal "${goal.name}"?`)) {
-                            deleteMutation.mutate(goal.id);
-                          }
-                        }}
-                        className="p-1 rounded text-muted-foreground hover:text-rose-400 transition-colors"
+                        onClick={() => setGoalToDelete(goal)}
+                        className="p-1 rounded text-muted-foreground hover:text-rose-400 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
                         title="Delete Goal"
+                        aria-label={`Delete goal ${goal.name}`}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -698,6 +697,22 @@ export function GoalsPage() {
       <ManageFamilyModal
         isOpen={isManageFamilyOpen}
         onClose={() => setIsManageFamilyOpen(false)}
+      />
+
+      {/* Phase 9.2: Accessible Non-Blocking Delete Confirmation Modal */}
+      <ConfirmActionModal
+        isOpen={Boolean(goalToDelete)}
+        title="Delete Financial Goal"
+        message={`Are you sure you want to delete the goal "${goalToDelete?.name}"? Progress and target projections will be removed.`}
+        confirmLabel="Delete Goal"
+        isLoading={deleteMutation.isPending}
+        onConfirm={() => {
+          if (goalToDelete) {
+            deleteMutation.mutate(goalToDelete.id);
+            setGoalToDelete(null);
+          }
+        }}
+        onCancel={() => setGoalToDelete(null)}
       />
     </div>
   );

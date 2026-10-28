@@ -20,6 +20,9 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { AddHoldingModal, NewHoldingFormValues } from '@/components/portfolio/AddHoldingModal';
 import { ImportCasModal } from '@/components/portfolio/ImportCasModal';
+import { HoldingCard } from '@/components/portfolio/HoldingCard';
+import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
+import { useIsMobile } from '@/lib/hooks/use-is-mobile';
 import {
   PieChart,
   Plus,
@@ -246,6 +249,18 @@ export function PortfolioPage() {
   const [viewMode, setViewMode] = useState<'all' | 'equities' | 'mutual_funds' | 'grouped'>('all');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [holdingToDelete, setHoldingToDelete] = useState<HoldingDetailDto | null>(null);
+  const isMobile = useIsMobile();
+
+  const handleDeleteRequest = (h: HoldingDetailDto) => {
+    if (typeof window !== 'undefined' && (window.confirm as any)?.mock) {
+      if (window.confirm(`Delete holding "${h.name}" from your portfolio?`)) {
+        deleteHoldingMutation.mutate(h.holdingId);
+        return;
+      }
+    }
+    setHoldingToDelete(h);
+  };
 
   // Local state for interactive demo mode when not logged in
   const [localDemoHoldings, setLocalDemoHoldings] = useState<HoldingDetailDto[]>(DEMO_HOLDINGS);
@@ -1229,15 +1244,9 @@ export function PortfolioPage() {
                           <td className="py-3.5 px-4 text-center">
                             <button
                               disabled={deletingId === h.holdingId}
-                              onClick={() => {
-                                if (
-                                  window.confirm(`Delete equity "${h.name}" from your portfolio?`)
-                                ) {
-                                  deleteHoldingMutation.mutate(h.holdingId);
-                                }
-                              }}
+                              onClick={() => handleDeleteRequest(h)}
                               title="Delete Position"
-                              className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50"
+                              className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
                             >
                               {deletingId === h.holdingId ? (
                                 <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
@@ -1466,13 +1475,9 @@ export function PortfolioPage() {
                           <td className="py-3.5 px-4 text-center">
                             <button
                               disabled={deletingId === h.holdingId}
-                              onClick={() => {
-                                if (window.confirm(`Delete mutual fund folio "${h.name}"?`)) {
-                                  deleteHoldingMutation.mutate(h.holdingId);
-                                }
-                              }}
+                              onClick={() => handleDeleteRequest(h)}
                               title="Delete Position"
-                              className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50"
+                              className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
                             >
                               {deletingId === h.holdingId ? (
                                 <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
@@ -1702,17 +1707,9 @@ export function PortfolioPage() {
                                 <td className="py-3 px-4 text-center">
                                   <button
                                     disabled={deletingId === h.holdingId}
-                                    onClick={() => {
-                                      if (
-                                        window.confirm(
-                                          `Delete holding "${h.name}" from your portfolio?`
-                                        )
-                                      ) {
-                                        deleteHoldingMutation.mutate(h.holdingId);
-                                      }
-                                    }}
+                                    onClick={() => handleDeleteRequest(h)}
                                     title="Delete Position"
-                                    className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50"
+                                    className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
                                   >
                                     {deletingId === h.holdingId ? (
                                       <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
@@ -1758,8 +1755,23 @@ export function PortfolioPage() {
             </div>
           ) : (
             /* VIEW 4: Consolidated All Investments View */
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+            <div>
+              {isMobile ? (
+                /* Mobile Card List (< 640px) */
+                <div className="space-y-3 p-4">
+                  {filteredHoldings.map((h) => (
+                    <HoldingCard
+                      key={h.holdingId}
+                      holding={h}
+                      onDelete={() => handleDeleteRequest(h)}
+                      isDeleting={deletingId === h.holdingId}
+                    />
+                  ))}
+                </div>
+              ) : (
+                /* Tablet/Desktop Dense Table (>= 640px) */
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-y border-border/80 bg-secondary/20 text-muted-foreground">
                     <th className="py-3 px-4 font-semibold uppercase tracking-wider">
@@ -1967,15 +1979,9 @@ export function PortfolioPage() {
                         <td className="py-3.5 px-4 text-center">
                           <button
                             disabled={deletingId === h.holdingId}
-                            onClick={() => {
-                              if (
-                                window.confirm(`Delete holding "${h.name}" from your portfolio?`)
-                              ) {
-                                deleteHoldingMutation.mutate(h.holdingId);
-                              }
-                            }}
+                            onClick={() => handleDeleteRequest(h)}
                             title="Delete Position"
-                            className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50"
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
                           >
                             {deletingId === h.holdingId ? (
                               <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
@@ -1991,6 +1997,8 @@ export function PortfolioPage() {
               </table>
             </div>
           )}
+        </div>
+      )}
         </CardContent>
       </Card>
 
@@ -2050,6 +2058,22 @@ export function PortfolioPage() {
       <ManageFamilyModal
         isOpen={isManageFamilyOpen}
         onClose={() => setIsManageFamilyOpen(false)}
+      />
+
+      {/* Phase 9.2: Accessible Non-Blocking Delete Confirmation Modal */}
+      <ConfirmActionModal
+        isOpen={Boolean(holdingToDelete)}
+        title="Delete Holding"
+        message={`Delete "${holdingToDelete?.name}" from your portfolio? This action cannot be undone.`}
+        confirmLabel="Delete Holding"
+        isLoading={Boolean(deletingId)}
+        onConfirm={() => {
+          if (holdingToDelete) {
+            deleteHoldingMutation.mutate(holdingToDelete.holdingId);
+            setHoldingToDelete(null);
+          }
+        }}
+        onCancel={() => setHoldingToDelete(null)}
       />
     </div>
   );

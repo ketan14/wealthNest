@@ -609,8 +609,9 @@ export function AnalyticsPage() {
         <CardContent>
           <div className="w-full overflow-x-auto">
             <svg
+              data-testid="analytics-trajectory-svg"
               viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-              className="w-full h-auto min-w-[600px] select-none"
+              className="w-full max-w-full h-auto select-none"
             >
               <defs>
                 <linearGradient id="valGrad" x1="0" y1="0" x2="0" y2="1">

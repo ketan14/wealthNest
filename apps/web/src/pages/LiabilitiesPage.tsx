@@ -15,6 +15,7 @@ import { NetWorthSummary, Money, PropertyEquityDetail } from '@wealthnest/domain
 import { AddLiabilityModal } from '@/components/liabilities/AddLiabilityModal';
 import { UpdateBalanceModal } from '@/components/liabilities/UpdateBalanceModal';
 import { UpdateValuationModal } from '@/components/liabilities/UpdateValuationModal';
+import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -109,6 +110,7 @@ export function LiabilitiesPage() {
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [editingLiability, setEditingLiability] = useState<LiabilityDto | null>(null);
   const [balanceModalLiability, setBalanceModalLiability] = useState<LiabilityDto | null>(null);
+  const [liabilityToDelete, setLiabilityToDelete] = useState<LiabilityDto | null>(null);
 
   // Valuation modal state
   const [valuationModalAsset, setValuationModalAsset] = useState<{
@@ -190,14 +192,8 @@ export function LiabilitiesPage() {
     },
   });
 
-  const handleDelete = async (l: LiabilityDto) => {
-    if (
-      window.confirm(
-        `Are you sure you want to remove the loan "${l.name}"? Historical balance records will also be removed.`
-      )
-    ) {
-      await deleteLiabilityMutation.mutateAsync(l.id);
-    }
+  const handleDelete = (l: LiabilityDto) => {
+    setLiabilityToDelete(l);
   };
 
   const handleRefresh = async () => {
@@ -905,6 +901,22 @@ export function LiabilitiesPage() {
       <ManageFamilyModal
         isOpen={isManageFamilyOpen}
         onClose={() => setIsManageFamilyOpen(false)}
+      />
+
+      {/* Phase 9.2: Accessible Non-Blocking Delete Confirmation Modal */}
+      <ConfirmActionModal
+        isOpen={Boolean(liabilityToDelete)}
+        title="Remove Loan / Liability"
+        message={`Are you sure you want to remove the loan "${liabilityToDelete?.name}"? Historical balance records will also be removed.`}
+        confirmLabel="Remove Loan"
+        isLoading={deleteLiabilityMutation.isPending}
+        onConfirm={async () => {
+          if (liabilityToDelete) {
+            await deleteLiabilityMutation.mutateAsync(liabilityToDelete.id);
+            setLiabilityToDelete(null);
+          }
+        }}
+        onCancel={() => setLiabilityToDelete(null)}
       />
     </div>
   );

@@ -26,7 +26,7 @@
 | **Phase 7: Admin Portal & Access Control** | Centralized user directory, platform-level RBAC (super_admin, support_admin, auditor), user lifecycle management (suspend, reactivate, invite, password reset), append-only immutable audit trail, zero-knowledge financial isolation boundary | ✅ Complete | ✅ Verified | Migration 9 applied; clean architecture domain/app layers complete; full frontend UI integrated at `/admin` with AdminGuard protection. |
 | **Phase 8: Admin View-as-User & Support Mode** | Secure, auditable admin troubleshooting impersonation mode with zero credential swapping, untouched private table RLS, server security-definer RPCs, 15-minute TTL countdown timer, mutation locks, and immutable audit logs | ✅ Complete | ✅ Verified | Migration 10 applied; pure domain invariants, application use cases, Supabase adapter, context, SupportModeBanner, ViewAsUserModal, and PortfolioPage integration complete. |
 | **Phase 9.1: Local Persistence & Decoupling** | Local SQLite schema (12 tables), composite foreign keys, dynamic RepositoryProvider injection, in-memory SQLite parity tests, and atomic restore | ✅ Complete | ✅ Verified | Eliminates direct Supabase coupling from UI pages; enables 100% offline persistence. 303/303 tests passing. |
-| **Phase 9.2: Mobile Responsive UI & Touch** | Adaptive navigation (bottom tab bar on mobile, sidebar on desktop), responsive cards for holdings/transactions, touch targets $\ge 44\text{px}$, responsive SVG trajectory chart | ⏳ In Progress | ⏳ Spec Defined | Mobile phone (< 768px) and touch tablet ergonomics with safe-area insets. |
+| **Phase 9.2: Mobile Responsive UI & Touch** | Adaptive navigation (bottom tab bar on mobile, sidebar on desktop), responsive cards for holdings/transactions, touch targets $\ge 44\text{px}$, responsive SVG trajectory chart | ✅ Complete | ✅ Verified | Mobile phone (< 768px) and touch tablet ergonomics with safe-area insets. 316/316 tests passing. |
 | **Phase 10: Cross-Platform Desktop & Mobile Runtime** | Tauri 2 compilation for Desktop (Win, Mac, Linux) & Mobile (Android, iOS) with OS sandboxing, native file dialogs, and biometric unlock | ⏳ Pending | ⏳ Spec Defined | Native binary packaging; independent platform readiness tracks. |
 
 
@@ -135,15 +135,15 @@
   - Centralized `RepositoryProvider` and repository hooks (`useRepositories()`, `useHoldingRepository()`, etc.) fully decoupling `apps/web/src/` from `new Supabase*Adapter()`.
   - 6 in-memory SQLite test suites (20 tests) verifying schema, cross-user isolation, CRUD, atomic backup/restore, rollback safety, and DI context.
 
-### Phase 9.2: Mobile Responsive UI & Touch Ergonomics
-* [ ] **Milestone 9.2A: Adaptive Navigation Shell**
-  - Responsive bottom navigation bar for mobile viewports $< 768\text{px}$ with safe-area insets (`env(safe-area-inset-bottom)`).
-  - Responsive collapse/hide for desktop `Sidebar`.
-* [ ] **Milestone 9.2B: Mobile Card Presentations & Touch Target Enforcement**
-  - Stacked `HoldingCard` and `TransactionCard` list views replacing wide 7-9 column HTML tables on screens $< 640\text{px}$.
-  - Minimum $44 \times 44\text{px}$ touch target enforcement on all buttons and modal inputs.
-  - Responsive SVG trajectory chart with dynamic container `viewBox`.
-  - Non-blocking `ConfirmActionModal` replacing browser `window.confirm`.
+### Phase 9.2: Mobile Responsive UI & Touch Ergonomics — ✅ COMPLETE
+* [x] **Milestone 9.2A: Adaptive Navigation Shell**
+  - Responsive bottom navigation bar (`BottomNavigationBar.tsx`) for mobile viewports $< 768\text{px}$ with safe-area insets (`env(safe-area-inset-bottom)`).
+  - Responsive collapse/hide for desktop `Sidebar` (`hidden md:flex md:w-64`).
+* [x] **Milestone 9.2B: Mobile Card Presentations & Touch Target Enforcement**
+  - Stacked `HoldingCard` and `TransactionCard` list views replacing wide HTML tables on screens $< 640\text{px}` via `useIsMobile`.
+  - Minimum $44 \times 44\text{px}$ touch target enforcement on all buttons, links, and modal inputs.
+  - Responsive SVG trajectory chart with dynamic container scaling and zero `min-w-[600px]` overflow.
+  - Non-blocking, accessible `ConfirmActionModal` replacing browser `window.confirm`.
 
 ### Phase 10: Native Cross-Platform Desktop & Mobile Runtime (Tauri 2)
 * [ ] **Milestone 10.1: Native Tauri 2 Desktop Runtime**
@@ -160,7 +160,7 @@
 ## 📈 Quality Gates & System Health
 
 * **TypeScript Compilation**: `npm run type-check` (`tsc -b`) compiles with **0 errors**.
-* **Automated Test Coverage**: **303 passing tests** across 56 test suites (`vitest`) — 100% green.
+* **Automated Test Coverage**: **316 passing tests** across 61 test suites (`vitest`) — 100% green.
 * **Persona & Real-World Dogfooding**: Fully personalized to the **Vaghela Family** (`Ketan Vaghela`, `Parul Vaghela`, `Krisha Vaghela`, `Shamalbhai Vaghela HUF`, `Ramilaben Vaghela`) with strict global rule enforcement.
 * **Active Containers**:
   - Web App: `http://localhost:30000` (Nginx Proxy) / `http://localhost:5174` (Vite)

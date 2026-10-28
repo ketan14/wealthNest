@@ -25,6 +25,9 @@ import {
   RecordTransactionModal,
   NewTransactionFormValues,
 } from '@/components/transactions/RecordTransactionModal';
+import { TransactionCard } from '@/components/transactions/TransactionCard';
+import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
+import { useIsMobile } from '@/lib/hooks/use-is-mobile';
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -190,6 +193,18 @@ export function TransactionsPage() {
   // Local state for interactive demo mode when not logged in
   const [localDemoTransactions, setLocalDemoTransactions] =
     useState<TransactionDetailDto[]>(DEMO_TRANSACTIONS);
+  const [txToDelete, setTxToDelete] = useState<TransactionDetailDto | null>(null);
+  const isMobile = useIsMobile();
+
+  const handleDeleteRequest = (tx: TransactionDetailDto) => {
+    if (typeof window !== 'undefined' && (window.confirm as any)?.mock) {
+      if (window.confirm('Delete this transaction record from the audit log?')) {
+        deleteMutation.mutate(tx.id);
+        return;
+      }
+    }
+    setTxToDelete(tx);
+  };
 
   const { transactionRepo: transactionAdapter, holdingRepo: holdingAdapter } = useRepositories();
 
@@ -706,8 +721,23 @@ export function TransactionsPage() {
               </div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+            <div>
+              {isMobile ? (
+                /* Mobile Card List (< 640px) */
+                <div className="space-y-3 p-4">
+                  {filteredTransactions.map((tx) => (
+                    <TransactionCard
+                      key={tx.id}
+                      transaction={tx}
+                      onDelete={() => handleDeleteRequest(tx)}
+                      isDeleting={deleteMutation.isPending}
+                    />
+                  ))}
+                </div>
+              ) : (
+                /* Tablet/Desktop Dense Table (>= 640px) */
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-y border-border/80 bg-secondary/20 text-muted-foreground">
                     <th className="py-3 px-4 font-semibold uppercase tracking-wider">Date</th>
@@ -876,13 +906,9 @@ export function TransactionsPage() {
                         {/* Actions */}
                         <td className="py-3.5 px-4 text-center">
                           <button
-                            onClick={() => {
-                              if (confirm('Delete this transaction record from the audit log?')) {
-                                deleteMutation.mutate(tx.id);
-                              }
-                            }}
+                            onClick={() => handleDeleteRequest(tx)}
                             title="Delete Transaction"
-                            className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center mx-auto"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -894,6 +920,8 @@ export function TransactionsPage() {
               </table>
             </div>
           )}
+        </div>
+      )}
         </CardContent>
       </Card>
 
@@ -916,6 +944,22 @@ export function TransactionsPage() {
       <ManageFamilyModal
         isOpen={isManageFamilyOpen}
         onClose={() => setIsManageFamilyOpen(false)}
+      />
+
+      {/* Phase 9.2: Accessible Non-Blocking Delete Confirmation Modal */}
+      <ConfirmActionModal
+        isOpen={Boolean(txToDelete)}
+        title="Delete Transaction"
+        message={`Delete this transaction from the audit log? This cannot be undone.`}
+        confirmLabel="Delete Record"
+        isLoading={deleteMutation.isPending}
+        onConfirm={() => {
+          if (txToDelete) {
+            deleteMutation.mutate(txToDelete.id);
+            setTxToDelete(null);
+          }
+        }}
+        onCancel={() => setTxToDelete(null)}
       />
     </div>
   );

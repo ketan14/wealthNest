@@ -34,7 +34,10 @@ export function Sidebar() {
   const { isAnyAdmin, currentAdminRole } = useAdmin();
 
   return (
-    <aside className="w-64 border-r border-border bg-card/60 backdrop-blur-md flex flex-col justify-between p-4 min-h-screen">
+    <aside
+      data-testid="desktop-sidebar"
+      className="hidden md:flex md:w-64 border-r border-border bg-card/60 backdrop-blur-md flex-col justify-between p-4 min-h-screen shrink-0"
+    >
       <div>
         {/* Brand Logo & Title */}
         <div className="flex items-center gap-3 px-3 py-4 mb-4">
