@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/supabase/auth-context';
-import { SupabaseGoalAdapter } from '@/lib/supabase/goal.adapter';
-import { SupabaseHoldingAdapter } from '@/lib/supabase/holding.adapter';
+import { useRepositories } from '@/lib/persistence/repository-context';
 import {
   GoalDetailDto,
   CreateGoalUseCase,
@@ -160,6 +159,7 @@ export function GoalsPage() {
   const queryClient = useQueryClient();
   const { members, selectedMemberId } = useFamily();
   const { isSupportModeActive } = useSupportSession();
+  const { goalRepo, holdingRepo } = useRepositories();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
@@ -171,8 +171,7 @@ export function GoalsPage() {
     queryKey: ['user-goals', userId],
     queryFn: async () => {
       if (!userId) return DEMO_GOALS;
-      const adapter = new SupabaseGoalAdapter();
-      const res = await adapter.listGoalsByUser(userId);
+      const res = await goalRepo.listGoalsByUser(userId);
       if (!res.success || res.value.length === 0) return DEMO_GOALS;
       return res.value;
     },
@@ -192,8 +191,7 @@ export function GoalsPage() {
     queryKey: ['goals-holdings', userId],
     queryFn: async () => {
       if (!userId) return [];
-      const adapter = new SupabaseHoldingAdapter();
-      const res = await adapter.listDetailsByUser(userId);
+      const res = await holdingRepo.listDetailsByUser(userId);
       return res.success ? res.value : [];
     },
     enabled: true,
@@ -253,8 +251,7 @@ export function GoalsPage() {
   const createMutation = useMutation({
     mutationFn: async (params: Omit<CreateGoalParams, 'userId'>) => {
       if (userId) {
-        const adapter = new SupabaseGoalAdapter();
-        const useCase = new CreateGoalUseCase(adapter);
+        const useCase = new CreateGoalUseCase(goalRepo);
         const res = await useCase.execute({ ...params, userId });
         if (!res.success) throw res.error;
         return res.value;
@@ -292,8 +289,7 @@ export function GoalsPage() {
   const deleteMutation = useMutation({
     mutationFn: async (goalId: string) => {
       if (userId) {
-        const adapter = new SupabaseGoalAdapter();
-        const useCase = new DeleteGoalUseCase(adapter);
+        const useCase = new DeleteGoalUseCase(goalRepo);
         const res = await useCase.execute(goalId, userId);
         if (!res.success) throw res.error;
       } else {

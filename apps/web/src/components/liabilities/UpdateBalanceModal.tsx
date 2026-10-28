@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { LiabilityDto } from '@wealthnest/application';
-import { SupabaseLiabilityAdapter } from '@/lib/supabase/liability.adapter';
+import { useLiabilityRepository } from '@/lib/persistence/repository-context';
 import { Button } from '@/components/ui/Button';
 import { X, History, AlertCircle, ArrowDownCircle } from 'lucide-react';
 
@@ -27,13 +27,14 @@ export function UpdateBalanceModal({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const liabilityRepo = useLiabilityRepository();
+
   // Fetch historical balances for this liability
   const { data: balanceHistory, refetch: refetchHistory } = useQuery({
     queryKey: ['liability-balances', liability?.id],
     queryFn: async () => {
       if (!liability) return [];
-      const adapter = new SupabaseLiabilityAdapter();
-      const res = await adapter.listLiabilityBalances(liability.id, userId);
+      const res = await liabilityRepo.listLiabilityBalances(liability.id, userId);
       return res.success ? res.value : [];
     },
     enabled: isOpen && Boolean(liability),
@@ -68,8 +69,7 @@ export function UpdateBalanceModal({
 
     setIsSubmitting(true);
     try {
-      const adapter = new SupabaseLiabilityAdapter();
-      const res = await adapter.recordLiabilityBalance({
+      const res = await liabilityRepo.recordLiabilityBalance({
         liabilityId: liability.id,
         userId,
         balanceCents: BigInt(Math.round(balance * 100)),

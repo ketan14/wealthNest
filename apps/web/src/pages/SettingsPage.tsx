@@ -10,11 +10,7 @@ import {
 } from '@wealthnest/application';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { useAuth } from '@/lib/supabase/auth-context';
-import { SupabaseHoldingAdapter } from '@/lib/supabase/holding.adapter';
-import { SupabaseTransactionAdapter } from '@/lib/supabase/transaction.adapter';
-import { SupabaseLiabilityAdapter } from '@/lib/supabase/liability.adapter';
-import { SupabaseGoalAdapter } from '@/lib/supabase/goal.adapter';
-import { SupabaseBackupAdapter } from '@/lib/supabase/backup.adapter';
+import { useRepositories } from '@/lib/persistence/repository-context';
 import { userAdapter } from '@/lib/supabase/user.adapter';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -92,24 +88,26 @@ export function SettingsPage() {
         };
   }, []);
 
+  const { holdingRepo, transactionRepo, liabilityRepo, goalRepo, backupRepo } = useRepositories();
+
   // Adapters for export & restore
   const exportUseCase = useMemo(() => {
     return new ExportPortfolioDataUseCase(
       userAdapter,
-      new SupabaseHoldingAdapter(),
-      new SupabaseTransactionAdapter(),
-      new SupabaseLiabilityAdapter(),
-      new SupabaseGoalAdapter()
+      holdingRepo,
+      transactionRepo,
+      liabilityRepo,
+      goalRepo
     );
-  }, []);
+  }, [holdingRepo, transactionRepo, liabilityRepo, goalRepo]);
 
   const validateBackupUseCase = useMemo(() => {
     return new ValidateAndParseBackupUseCase();
   }, []);
 
   const restoreUseCase = useMemo(() => {
-    return new RestorePortfolioFromBackupUseCase(new SupabaseBackupAdapter());
-  }, []);
+    return new RestorePortfolioFromBackupUseCase(backupRepo);
+  }, [backupRepo]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();

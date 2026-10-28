@@ -13,7 +13,7 @@ import {
   StatementProvider,
 } from '@wealthnest/domain';
 import { PdfJsTextExtractorAdapter } from '@/lib/pdf/pdfjs-extractor.adapter';
-import { SupabaseCasImportAdapter } from '@/lib/supabase/cas-import.adapter';
+import { useCasImportRepository } from '@/lib/persistence/repository-context';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -93,6 +93,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { members, accounts, selectedMemberId, selectedAccountId } = useFamily();
+  const casImportRepo = useCasImportRepository();
 
   const [importSource, setImportSource] = useState<'cas_pdf' | 'zerodha_csv' | 'groww_csv'>(
     'cas_pdf'
@@ -352,9 +353,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
       if (!previewData) throw new Error('No preview data found to import.');
 
       if (user) {
-        // Authenticated: Persist into PostgreSQL database
-        const adapter = new SupabaseCasImportAdapter();
-        const useCase = new ConfirmCasImportUseCase(adapter);
+        // Authenticated: Persist into database via repository port
+        const useCase = new ConfirmCasImportUseCase(casImportRepo);
 
         const res = await useCase.execute({
           userId: user.id,

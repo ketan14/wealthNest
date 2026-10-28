@@ -16,8 +16,7 @@ import {
   DeleteTransactionUseCase,
   TransactionDetailDto,
 } from '@wealthnest/application';
-import { SupabaseTransactionAdapter } from '@/lib/supabase/transaction.adapter';
-import { SupabaseHoldingAdapter } from '@/lib/supabase/holding.adapter';
+import { useRepositories } from '@/lib/persistence/repository-context';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -192,8 +191,7 @@ export function TransactionsPage() {
   const [localDemoTransactions, setLocalDemoTransactions] =
     useState<TransactionDetailDto[]>(DEMO_TRANSACTIONS);
 
-  const transactionAdapter = useMemo(() => new SupabaseTransactionAdapter(), []);
-  const holdingAdapter = useMemo(() => new SupabaseHoldingAdapter(), []);
+  const { transactionRepo: transactionAdapter, holdingRepo: holdingAdapter } = useRepositories();
 
   // Query user holdings for asset dropdown in modal
   const { data: userHoldings } = useQuery({

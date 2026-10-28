@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/supabase/auth-context';
-import { SupabaseHoldingAdapter } from '@/lib/supabase/holding.adapter';
-import { SupabaseTransactionAdapter } from '@/lib/supabase/transaction.adapter';
+import { useRepositories } from '@/lib/persistence/repository-context';
 import {
   HoldingDetailDto,
   TransactionDetailDto,
@@ -184,6 +183,7 @@ export function AnalyticsPage() {
   const userId = user?.id || '';
   const { selectedMemberId, selectedAccountId, members, activeMember } = useFamily();
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
+  const { holdingRepo, transactionRepo } = useRepositories();
 
   // Allocation strategy model state
   const [modelType, setModelType] = useState<AllocationModelType>('balanced');
@@ -197,8 +197,7 @@ export function AnalyticsPage() {
     queryKey: ['portfolio-holdings', userId],
     queryFn: async () => {
       if (!userId) return DEMO_HOLDINGS;
-      const adapter = new SupabaseHoldingAdapter();
-      const res = await adapter.listDetailsByUser(userId);
+      const res = await holdingRepo.listDetailsByUser(userId);
       if (!res.success || res.value.length === 0) return DEMO_HOLDINGS;
       return res.value;
     },
@@ -225,8 +224,7 @@ export function AnalyticsPage() {
     queryKey: ['transactions-list', userId],
     queryFn: async () => {
       if (!userId) return DEMO_TRANSACTIONS;
-      const adapter = new SupabaseTransactionAdapter();
-      const res = await adapter.listByUser(userId);
+      const res = await transactionRepo.listByUser(userId);
       if (!res.success || res.value.length === 0) return DEMO_TRANSACTIONS;
       return res.value;
     },

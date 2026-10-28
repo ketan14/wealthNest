@@ -23,6 +23,7 @@ import { SignUpPage } from '@/pages/SignUpPage';
 import { LoginPage } from '@/pages/LoginPage';
 
 import { AuthProvider } from '@/lib/supabase/auth-context';
+import { RepositoryProvider } from '@/lib/persistence/repository-context';
 import { AdminProvider } from '@/lib/admin/admin-context';
 import { SupportSessionProvider } from '@/lib/admin/support-session-context';
 import { PreferencesProvider } from '@/lib/preferences/preferences-context';
@@ -43,11 +44,12 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AdminProvider>
-          <SupportSessionProvider>
-            <PreferencesProvider>
-              <FamilyProvider>
-                <BrowserRouter>
+        <RepositoryProvider>
+          <AdminProvider>
+            <SupportSessionProvider>
+              <PreferencesProvider>
+                <FamilyProvider>
+                  <BrowserRouter>
                   <Routes>
                     {/* Dedicated Authentication Routes */}
                     <Route path="/signup" element={<SignUpPage />} />
@@ -81,6 +83,7 @@ export function App() {
             </PreferencesProvider>
           </SupportSessionProvider>
         </AdminProvider>
+        </RepositoryProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

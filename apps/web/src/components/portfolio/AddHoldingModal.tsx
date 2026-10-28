@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AssetClassDefinition } from '@wealthnest/domain';
 import { ListAssetClassesUseCase } from '@wealthnest/application';
-import { SupabaseAssetClassAdapter } from '@/lib/supabase/asset-class.adapter';
+import { useAssetClassRepository } from '@/lib/persistence/repository-context';
 import { Button } from '@/components/ui/Button';
 import { X, Plus, AlertCircle, Loader2, Users, Briefcase } from 'lucide-react';
 import { useFamily } from '@/lib/family/family-context';
@@ -136,12 +136,13 @@ export function AddHoldingModal({
     return accounts.filter((a) => a.memberId === holdingMemberId);
   }, [accounts, holdingMemberId]);
 
+  const assetClassRepo = useAssetClassRepository();
+
   // Fetch asset classes from database adapter
   const { data: dbAssetClasses } = useQuery<AssetClassDefinition[]>({
     queryKey: ['asset-classes'],
     queryFn: async () => {
-      const adapter = new SupabaseAssetClassAdapter();
-      const useCase = new ListAssetClassesUseCase(adapter);
+      const useCase = new ListAssetClassesUseCase(assetClassRepo);
       const res = await useCase.execute();
       return res.success ? res.value : FALLBACK_ASSET_CLASSES;
     },

@@ -10,9 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { AuthCard } from '@/components/auth/AuthCard';
-import { SupabaseAssetClassAdapter } from '@/lib/supabase/asset-class.adapter';
-import { SupabaseHoldingAdapter } from '@/lib/supabase/holding.adapter';
-import { SupabaseLiabilityAdapter } from '@/lib/supabase/liability.adapter';
+import { useRepositories } from '@/lib/persistence/repository-context';
 import { useAuth } from '@/lib/supabase/auth-context';
 import {
   CheckCircle2,
@@ -33,6 +31,7 @@ import { Link } from 'react-router-dom';
 export function HomePage() {
   const { user } = useAuth();
   const userId = user?.id || '';
+  const { assetClassRepo, holdingRepo, liabilityRepo } = useRepositories();
 
   // Query 1: System status use case
   const { data: systemStatus, isLoading } = useQuery<SystemStatusDto>({
@@ -50,8 +49,7 @@ export function HomePage() {
     {
       queryKey: ['asset-classes'],
       queryFn: async () => {
-        const adapter = new SupabaseAssetClassAdapter();
-        const useCase = new ListAssetClassesUseCase(adapter);
+        const useCase = new ListAssetClassesUseCase(assetClassRepo);
         const result = await useCase.execute();
         if (!result.success) return [];
         return result.value;
@@ -65,9 +63,7 @@ export function HomePage() {
     queryKey: ['net-worth-summary', userId],
     queryFn: async () => {
       if (!userId) return null;
-      const holdingAdapter = new SupabaseHoldingAdapter();
-      const liabilityAdapter = new SupabaseLiabilityAdapter();
-      const useCase = new GetNetWorthSummaryUseCase(holdingAdapter, liabilityAdapter);
+      const useCase = new GetNetWorthSummaryUseCase(holdingRepo, liabilityRepo);
       const result = await useCase.execute({ userId });
       if (!result.success) return null;
       return result.value;

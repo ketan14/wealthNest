@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { SupabaseLiabilityAdapter } from '@/lib/supabase/liability.adapter';
+import { useLiabilityRepository } from '@/lib/persistence/repository-context';
 import { Button } from '@/components/ui/Button';
 import { X, Building2, AlertCircle } from 'lucide-react';
 
@@ -22,6 +22,7 @@ export function UpdateValuationModal({
   userId,
   onSuccess,
 }: UpdateValuationModalProps) {
+  const liabilityRepo = useLiabilityRepository();
   const [valuationStr, setValuationStr] = useState('');
   const [asOfDate, setAsOfDate] = useState('');
   const [source, setSource] = useState('manual_appraisal');
@@ -58,8 +59,7 @@ export function UpdateValuationModal({
 
     setIsSubmitting(true);
     try {
-      const adapter = new SupabaseLiabilityAdapter();
-      const res = await adapter.recordAssetValuation({
+      const res = await liabilityRepo.recordAssetValuation({
         assetId,
         userId,
         valuationCents: BigInt(Math.round(val * 100)),

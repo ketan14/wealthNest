@@ -13,8 +13,8 @@ import {
   DeleteHoldingUseCase,
   HoldingDetailDto,
 } from '@wealthnest/application';
-import { SupabaseHoldingAdapter } from '@/lib/supabase/holding.adapter';
 import { useAuth } from '@/lib/supabase/auth-context';
+import { useHoldingRepository } from '@/lib/persistence/repository-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -250,7 +250,7 @@ export function PortfolioPage() {
   // Local state for interactive demo mode when not logged in
   const [localDemoHoldings, setLocalDemoHoldings] = useState<HoldingDetailDto[]>(DEMO_HOLDINGS);
 
-  const holdingAdapter = useMemo(() => new SupabaseHoldingAdapter(), []);
+  const holdingAdapter = useHoldingRepository();
 
   // Query authenticated holdings from Supabase via Clean Architecture Use Case
   const {

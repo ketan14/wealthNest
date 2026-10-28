@@ -6,7 +6,7 @@ import {
   CreateLiabilityParams,
   UpdateLiabilityParams,
 } from '@wealthnest/application';
-import { SupabaseHoldingAdapter } from '@/lib/supabase/holding.adapter';
+import { useHoldingRepository } from '@/lib/persistence/repository-context';
 import { useFamily } from '@/lib/family/family-context';
 import { Button } from '@/components/ui/Button';
 import { X, Landmark, AlertCircle, Building2, User, Users } from 'lucide-react';
@@ -69,12 +69,13 @@ export function AddLiabilityModal({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const holdingRepo = useHoldingRepository();
+
   // Query user assets to allow linking collateral (especially Real Estate)
   const { data: userHoldings } = useQuery({
     queryKey: ['holdings-details', userId],
     queryFn: async () => {
-      const adapter = new SupabaseHoldingAdapter();
-      const res = await adapter.listDetailsByUser(userId);
+      const res = await holdingRepo.listDetailsByUser(userId);
       return res.success ? res.value : [];
     },
     enabled: isOpen && Boolean(userId),

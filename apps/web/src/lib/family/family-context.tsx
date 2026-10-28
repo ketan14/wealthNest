@@ -10,12 +10,11 @@ import { FamilyPortfolioSummary, calculateFamilyPortfolioSummary } from '@wealth
 import { isOk } from '@wealthnest/shared';
 import { useAuth } from '../supabase/auth-context';
 import {
-  familyAdapter,
   DEFAULT_DEMO_MEMBERS,
   DEFAULT_DEMO_ACCOUNTS,
   DEFAULT_DEMO_HOLDINGS_FAMILY,
 } from '../supabase/family.adapter';
-import { SupabaseHoldingAdapter } from '../supabase/holding.adapter';
+import { useRepositories } from '../persistence/repository-context';
 
 interface FamilyContextType {
   members: FamilyMemberDto[];
@@ -82,26 +81,27 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const [familySummary, setFamilySummary] = useState<FamilyPortfolioSummary | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const holdingAdapter = useMemo(() => new SupabaseHoldingAdapter(), []);
+  const { holdingRepo, familyRepo } = useRepositories();
+
   const getSummaryUseCase = useMemo(
-    () => new GetFamilyPortfolioSummaryUseCase(familyAdapter, holdingAdapter),
-    [holdingAdapter]
+    () => new GetFamilyPortfolioSummaryUseCase(familyRepo, holdingRepo),
+    [familyRepo, holdingRepo]
   );
   const manageMembersUseCase = useMemo(
-    () => new ManageFamilyMembersUseCase(familyAdapter),
-    []
+    () => new ManageFamilyMembersUseCase(familyRepo),
+    [familyRepo]
   );
   const manageAccountsUseCase = useMemo(
-    () => new ManagePortfolioAccountsUseCase(familyAdapter),
-    []
+    () => new ManagePortfolioAccountsUseCase(familyRepo),
+    [familyRepo]
   );
 
   const refreshFamilyData = useCallback(async () => {
     try {
       setIsLoading(true);
       const [membersRes, accountsRes] = await Promise.all([
-        familyAdapter.getMembers(userId),
-        familyAdapter.getAccounts(userId),
+        familyRepo.getMembers(userId),
+        familyRepo.getAccounts(userId),
       ]);
 
       let currentMembers = DEFAULT_DEMO_MEMBERS;

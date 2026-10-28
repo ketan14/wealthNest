@@ -25,8 +25,8 @@
 | **Phase 6.2: Broker CSV Importers** | Direct tradebook & holdings CSV parsers for Zerodha (Kite & Console) and Groww (Holdings & Orders), Zero Float drift BigInt paise calculation | ✅ Complete | ✅ Verified | Direct statement dropzone in Import CAS modal. |
 | **Phase 7: Admin Portal & Access Control** | Centralized user directory, platform-level RBAC (super_admin, support_admin, auditor), user lifecycle management (suspend, reactivate, invite, password reset), append-only immutable audit trail, zero-knowledge financial isolation boundary | ✅ Complete | ✅ Verified | Migration 9 applied; clean architecture domain/app layers complete; full frontend UI integrated at `/admin` with AdminGuard protection. |
 | **Phase 8: Admin View-as-User & Support Mode** | Secure, auditable admin troubleshooting impersonation mode with zero credential swapping, untouched private table RLS, server security-definer RPCs, 15-minute TTL countdown timer, mutation locks, and immutable audit logs | ✅ Complete | ✅ Verified | Migration 10 applied; pure domain invariants, application use cases, Supabase adapter, context, SupportModeBanner, ViewAsUserModal, and PortfolioPage integration complete. |
-| **Phase 9.1: Local Persistence & Decoupling** | Local SQLite schema (12 tables), composite foreign keys, dynamic RepositoryProvider injection, in-memory SQLite parity tests, and atomic restore | ⏳ In Progress | ⏳ Spec Defined | Eliminates direct Supabase coupling from UI pages; enables 100% offline persistence. |
-| **Phase 9.2: Mobile Responsive UI & Touch** | Adaptive navigation (bottom tab bar on mobile, sidebar on desktop), responsive cards for holdings/transactions, touch targets $\ge 44\text{px}$, responsive SVG trajectory chart | ⏳ Pending | ⏳ Spec Defined | Mobile phone (< 768px) and touch tablet ergonomics with safe-area insets. |
+| **Phase 9.1: Local Persistence & Decoupling** | Local SQLite schema (12 tables), composite foreign keys, dynamic RepositoryProvider injection, in-memory SQLite parity tests, and atomic restore | ✅ Complete | ✅ Verified | Eliminates direct Supabase coupling from UI pages; enables 100% offline persistence. 303/303 tests passing. |
+| **Phase 9.2: Mobile Responsive UI & Touch** | Adaptive navigation (bottom tab bar on mobile, sidebar on desktop), responsive cards for holdings/transactions, touch targets $\ge 44\text{px}$, responsive SVG trajectory chart | ⏳ In Progress | ⏳ Spec Defined | Mobile phone (< 768px) and touch tablet ergonomics with safe-area insets. |
 | **Phase 10: Cross-Platform Desktop & Mobile Runtime** | Tauri 2 compilation for Desktop (Win, Mac, Linux) & Mobile (Android, iOS) with OS sandboxing, native file dialogs, and biometric unlock | ⏳ Pending | ⏳ Spec Defined | Native binary packaging; independent platform readiness tracks. |
 
 
@@ -119,7 +119,7 @@
 
 ## ⏳ Current Work In Progress & Pending Backlog
 
-### Phase 9.1: Local-First Persistence & Repository Decoupling (The Foundation)
+### Phase 9.1: Local-First Persistence & Repository Decoupling (The Foundation) — ✅ COMPLETE
 * [x] **Remediation P0: Financial History, Cross-User Isolation & Atomic Restore Engine**
   - Standardized financial precision rules (`packages/domain/src/portfolio/precision-rules.ts`): quantity $\le 8$ decimal places, integer paise, separation of `unitCostPaise` (cost per share) and `currentValuationPaise` (aggregate market value), basis points return percentage.
   - Implemented cross-user and cross-household isolation invariants (`packages/domain/src/admin/cross-user-isolation.ts`).
@@ -128,12 +128,12 @@
   - Implemented `SupabaseBackupAdapter` (`apps/web/src/lib/supabase/backup.adapter.ts`) implementing `BackupPort`.
   - Wired `SettingsPage.tsx` restore button to real async restore use case with progress indicator and error reporting.
   - Verified historical net worth multi-year timeline reproducibility in pure domain calculator.
-* [ ] **Milestone 9.1A: Local SQLite Schema & Migration Engine**
-  - Local SQLite schema with integer paise precision and composite foreign keys `(user_id, id)`.
-  - Implement SQLite repository adapters adhering to existing ports (`HoldingRepositoryPort`, `TransactionRepositoryPort`, `FamilyRepositoryPort`, `LiabilityRepositoryPort`, `GoalRepositoryPort`, `BackupPort`).
-* [ ] **Milestone 9.1B: Dynamic Repository Decoupling**
-  - Centralized `RepositoryProvider` / `useRepositories()` hook to decouple UI pages from `new Supabase*Adapter()`.
-  - In-memory SQLite test suite in Vitest validating full export -> wipe -> restore parity.
+* [x] **Milestone 9.1A: Local SQLite Schema & Migration Engine**
+  - Local SQLite schema with 12 relational tables, composite foreign keys `(user_id, entity_id)` for engine-level isolation.
+  - Implemented 7 concrete SQLite repository adapters (`SqliteHoldingAdapter`, `SqliteTransactionAdapter`, `SqliteLiabilityAdapter`, `SqliteGoalAdapter`, `SqliteFamilyAdapter`, `SqliteAssetClassAdapter`, `SqliteBackupAdapter`).
+* [x] **Milestone 9.1B: Dynamic Repository Decoupling**
+  - Centralized `RepositoryProvider` and repository hooks (`useRepositories()`, `useHoldingRepository()`, etc.) fully decoupling `apps/web/src/` from `new Supabase*Adapter()`.
+  - 6 in-memory SQLite test suites (20 tests) verifying schema, cross-user isolation, CRUD, atomic backup/restore, rollback safety, and DI context.
 
 ### Phase 9.2: Mobile Responsive UI & Touch Ergonomics
 * [ ] **Milestone 9.2A: Adaptive Navigation Shell**
@@ -160,7 +160,7 @@
 ## 📈 Quality Gates & System Health
 
 * **TypeScript Compilation**: `npm run type-check` (`tsc -b`) compiles with **0 errors**.
-* **Automated Test Coverage**: **283 passing tests** across 50 test suites (`vitest`).
+* **Automated Test Coverage**: **303 passing tests** across 56 test suites (`vitest`) — 100% green.
 * **Persona & Real-World Dogfooding**: Fully personalized to the **Vaghela Family** (`Ketan Vaghela`, `Parul Vaghela`, `Krisha Vaghela`, `Shamalbhai Vaghela HUF`, `Ramilaben Vaghela`) with strict global rule enforcement.
 * **Active Containers**:
   - Web App: `http://localhost:30000` (Nginx Proxy) / `http://localhost:5174` (Vite)

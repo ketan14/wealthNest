@@ -43,4 +43,7 @@ export * from './use-cases/admin/manage-platform-roles.js';
 export * from './use-cases/admin/get-admin-analytics.js';
 export * from './ports/support-session.port.js';
 export * from './use-cases/admin/manage-support-session.js';
+export * from './persistence/sqlite/sqlite-connection.js';
+export * from './persistence/sqlite/sqlite-schema.js';
+export * from './persistence/sqlite/sqlite-repositories.js';
 

@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/supabase/auth-context';
-import { SupabaseLiabilityAdapter } from '@/lib/supabase/liability.adapter';
-import { SupabaseHoldingAdapter } from '@/lib/supabase/holding.adapter';
+import { useRepositories } from '@/lib/persistence/repository-context';
 import {
   GetNetWorthSummaryUseCase,
   CreateLiabilityUseCase,
@@ -121,6 +120,8 @@ export function LiabilitiesPage() {
   // Filter state
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'closed'>('active');
 
+  const { liabilityRepo, holdingRepo } = useRepositories();
+
   // Query 1: Liabilities list
   const {
     data: liabilities = [],
@@ -130,8 +131,7 @@ export function LiabilitiesPage() {
     queryKey: ['liabilities-list', userId],
     queryFn: async () => {
       if (!userId) return [];
-      const adapter = new SupabaseLiabilityAdapter();
-      const res = await adapter.listLiabilitiesByUser(userId);
+      const res = await liabilityRepo.listLiabilitiesByUser(userId);
       if (!res.success) throw res.error;
       return res.value;
     },
@@ -147,9 +147,7 @@ export function LiabilitiesPage() {
     queryKey: ['net-worth-summary', userId, selectedMemberId],
     queryFn: async () => {
       if (!userId) return null;
-      const holdingAdapter = new SupabaseHoldingAdapter();
-      const liabilityAdapter = new SupabaseLiabilityAdapter();
-      const useCase = new GetNetWorthSummaryUseCase(holdingAdapter, liabilityAdapter);
+      const useCase = new GetNetWorthSummaryUseCase(holdingRepo, liabilityRepo);
       const res = await useCase.execute({ userId, memberId: selectedMemberId });
       if (!res.success) throw res.error;
       return res.value;
@@ -160,14 +158,13 @@ export function LiabilitiesPage() {
   // Mutation: Save / Create / Update Liability
   const saveLiabilityMutation = useMutation({
     mutationFn: async (params: CreateLiabilityParams | UpdateLiabilityParams) => {
-      const adapter = new SupabaseLiabilityAdapter();
       if ('id' in params) {
-        const useCase = new UpdateLiabilityUseCase(adapter);
+        const useCase = new UpdateLiabilityUseCase(liabilityRepo);
         const res = await useCase.execute(params);
         if (!res.success) throw res.error;
         return res.value;
       } else {
-        const useCase = new CreateLiabilityUseCase(adapter);
+        const useCase = new CreateLiabilityUseCase(liabilityRepo);
         const res = await useCase.execute(params);
         if (!res.success) throw res.error;
         return res.value;
@@ -183,8 +180,7 @@ export function LiabilitiesPage() {
   // Mutation: Delete Liability
   const deleteLiabilityMutation = useMutation({
     mutationFn: async (id: string) => {
-      const adapter = new SupabaseLiabilityAdapter();
-      const useCase = new DeleteLiabilityUseCase(adapter);
+      const useCase = new DeleteLiabilityUseCase(liabilityRepo);
       const res = await useCase.execute(id, userId);
       if (!res.success) throw res.error;
     },
