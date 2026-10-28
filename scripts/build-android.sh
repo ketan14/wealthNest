@@ -89,7 +89,7 @@ build_via_local_host() {
 
   echo ""
   echo "--- [4/5] Building Frontend & Compiling Android APK / AAB ---"
-  npx tauri android build --apk true
+  npx tauri android build --apk
 
   echo ""
   echo "--- [5/5] Ensuring Signed Installable APK (Android Package Verifier) ---"
