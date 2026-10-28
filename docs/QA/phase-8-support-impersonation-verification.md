@@ -48,7 +48,6 @@ Phase 8 introduces the **Admin View-as-User / Support Impersonation Mode** to We
   - `Shamalbhai Vaghela HUF` (Father / HUF Karta)
   - `Ramilaben Vaghela` (Mother)
   - `Krisha Vaghela` (Child)
-- **Zero Occurrences of Prohibited Surname**: Grep of workspace confirmed 0 occurrences of the prohibited surname ("Sharma").
 
 ---
 

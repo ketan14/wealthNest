@@ -24,7 +24,7 @@
 | **Phase 6A: Multi-Demat & Family** | Legal entities (Self, Spouse, HUF, Child, Parent), multi-broker accounts (Zerodha, Groww, ICICI Direct), multi-entity Section 112A tax benefits, goal beneficiaries & joint liabilities | ✅ Complete | ✅ Verified | Migrations 7 & 8 applied; domain math & application use cases complete; full frontend UI integrated in `/portfolio`, `/analytics`, `/transactions`, `/goals`, `/liabilities`, and `/settings`. |
 | **Phase 6.2: Broker CSV Importers** | Direct tradebook & holdings CSV parsers for Zerodha (Kite & Console) and Groww (Holdings & Orders), Zero Float drift BigInt paise calculation | ✅ Complete | ✅ Verified | Direct statement dropzone in Import CAS modal. |
 | **Phase 7: Admin Portal & Access Control** | Centralized user directory, platform-level RBAC (super_admin, support_admin, auditor), user lifecycle management (suspend, reactivate, invite, password reset), append-only immutable audit trail, zero-knowledge financial isolation boundary | ✅ Complete | ✅ Verified | Migration 9 applied; clean architecture domain/app layers complete; full frontend UI integrated at `/admin` with AdminGuard protection. |
-| **Phase 8: Admin View-as-User & Support Mode** | Secure, auditable admin troubleshooting impersonation mode with zero credential swapping, untouched private table RLS, server security-definer RPCs, 15-minute TTL countdown timer, mutation locks, and immutable audit logs | ✅ Complete | ✅ Verified | Migration 10 applied; pure domain invariants, application use cases, Supabase adapter, context, SupportModeBanner, ViewAsUserModal, and PortfolioPage integration complete. Full test suite passing (248 tests across 46 files). |
+| **Phase 8: Admin View-as-User & Support Mode** | Secure, auditable admin troubleshooting impersonation mode with zero credential swapping, untouched private table RLS, server security-definer RPCs, 15-minute TTL countdown timer, mutation locks, and immutable audit logs | ✅ Complete | ✅ Verified | Migration 10 applied; pure domain invariants, application use cases, Supabase adapter, context, SupportModeBanner, ViewAsUserModal, and PortfolioPage integration complete. |
 | **Phase 8.1: Dedicated Sign-Up & Login Pages** | Standalone `/signup` & `/login` routes with responsive split-screen branding, client-side validation, password visibility toggles, terms modal, email verification screen, and header session controls | ✅ Complete | ✅ Verified | Direct URL accessibility, duplicate registration removed from Home Page, authenticated redirects, zero credential leakage. |
 | **Phase 9: Desktop Runtime** | Tauri 2 + SQLite local offline sync | ⏳ Backlog | ❌ Pending | Future offline-first desktop runtime. |
 
@@ -77,30 +77,6 @@
   - `apps/web/src/pages/LiabilitiesPage.tsx` & `AddLiabilityModal.tsx`: Integrated filter bar, primary borrower and joint co-borrower tags (`Ketan Vaghela` + `Joint: Parul Vaghela`), entity-scoped Net Worth and debt calculations, and borrower selectors in add/edit liability modal.
   - `apps/web/src/__tests__/FamilyPortfolio.test.tsx`: Comprehensive integration test suite (16 tests) covering components, modal interactions, CAS preview tagging, and page integration for Portfolio, Settings, Transactions, Analytics, Goals, and Liabilities.
 
----
-
-## ⏳ Current Work In Progress & Pending Backlog
-
-The following areas are pending for review and prioritization:
-
-### 1. Priority 1: Phase 6A Frontend UI Integration (Multi-Demat & Family Portfolios)
-* [x] **Family Repository Adapter (`apps/web/src/lib/supabase/family.adapter.ts`)**:
-  - Implement Supabase adapter with fallback demo data (Self: Zerodha Kite, Spouse: Groww Direct, HUF: ICICI Direct, Child: Parag Parikh Folio).
-* [x] **Family Context Provider (`apps/web/src/lib/family/family-context.tsx`)**:
-  - Global state managing `selectedMemberId` (`'all'` for combined family net worth or specific entity ID) and `selectedAccountId`.
-* [x] **Family Entity Switcher Bar (`apps/web/src/components/family/FamilyFilterBar.tsx`)**:
-  - Top entity switcher with pills: "👨‍👩‍👧‍👦 All Family", "👤 Self", "💍 Spouse", "🏛️ HUF", "👶 Child" and Demat account dropdown.
-* [x] **Family Wealth & HUF Tax Widget (`apps/web/src/components/family/FamilyDistributionWidget.tsx`)**:
-  - Visual wealth breakdown by entity and the **HUF Tax Benefit** banner.
-* [x] **Entity & Account Management (`apps/web/src/components/family/ManageFamilyModal.tsx` / Settings Tab)**:
-  - Dedicated tab in `/settings` to add, edit, or remove family members and Demat accounts.
-* [x] **Update `/portfolio`, `/analytics`, `/transactions` & Ingestion Modals**:
-  - Filter holdings and transactions by active entity/account.
-  - Add entity and broker badges to holdings table rows and transaction audit rows.
-  - Assign transactions and holdings to specific entities and Demat folios in record modal, add holding modal, and CAS statement preview.
-* [x] **Component & Integration Tests**:
-  - Comprehensive unit test suite in `apps/web/src/__tests__/FamilyPortfolio.test.tsx` (10 tests covering all UI components, modals, and pages).
-
 ### 3. Automated Live Stock CMP Feed (NSE/BSE) & AMFI Synchronization (Phase 5A Expansion)
 * **Domain Layer (`packages/domain/src/market/nse-bse-cmp.ts`)**:
   - `getIndianMarketSession`: Evaluates IST (UTC+5:30) trading sessions (`OPEN` 09:15-15:30 IST, `PRE_MARKET` 09:00-09:15 IST, `POST_MARKET` 15:30-16:00 IST, `CLOSED`, `WEEKEND`).
@@ -122,50 +98,39 @@ The following areas are pending for review and prioritization:
   - Real-time CMP and Day Change percentage indicators in Direct Equities and All Assets views.
   - Integration tests in `apps/web/src/__tests__/LiveMarketFeed.test.tsx` and `apps/web/src/__tests__/PortfolioPage.test.tsx`.
 
+### 4. Broker Tradebook CSV Importers (Zerodha Kite & Groww)
+* Dedicated CSV statement parsers for Zerodha Kite Holdings, Zerodha Console Tradebook, Groww Holdings, and Groww Orders exports with Zero Floating-Point drift paise precision.
+* Application use case `ImportBrokerCsvUseCase` mapping executions into domain holdings and transactions with family member and account assignment.
+* 3-way format selector in `ImportCasModal.tsx` (`CAS PDF`, `Zerodha Kite CSV`, `Groww CSV`) with drag-and-drop dropzone and fixture load buttons.
+
+### 5. Platform Administration & Support Mode (Phases 7 & 8)
+* Platform-level RBAC (`super_admin`, `support_admin`, `auditor`) with tamper-proof forensic audit trail at `/admin`.
+* Support Impersonation Mode ("View as User") with zero token swapping, untouched table RLS, 15-minute countdown banner, mutation locks, and immutable audit logging.
+
+### 6. Dedicated Authentication Pages (Phase 8.1)
+* Dedicated `/signup` and `/login` routes with split-screen branding, client-side validation, password visibility toggles, terms modal, and email verification screen.
+
+### 7. Documentation & User Guide Expansion
+* 10 complete user guide chapters in `docs/userGuide/` covering Getting Started, Family & Demats, Portfolio Management, Transactions & Cashflow, Financial Goals, Loans & Liabilities, Analytics & Tax, Settings & Data Management, Admin Portal, and Support Impersonation.
+* Comprehensive QA test specifications across all 15 phases in `docs/QA/`.
+
 ---
 
 ## ⏳ Current Work In Progress & Pending Backlog
 
-The following areas are pending for review and prioritization:
+The following area represents the active product backlog:
 
-### 1. Priority 1: Phase 6A Frontend UI Integration (Multi-Demat & Family Portfolios)
-* [x] **Family Repository Adapter (`apps/web/src/lib/supabase/family.adapter.ts`)**
-* [x] **Family Context Provider (`apps/web/src/lib/family/family-context.tsx`)**
-* [x] **Family Entity Switcher Bar (`apps/web/src/components/family/FamilyFilterBar.tsx`)**
-* [x] **Family Wealth & HUF Tax Widget (`apps/web/src/components/family/FamilyDistributionWidget.tsx`)**
-* [x] **Entity & Account Management (`apps/web/src/components/family/ManageFamilyModal.tsx` / Settings Tab)**
-* [x] **Update `/portfolio`, `/analytics`, `/transactions`, `/goals`, `/liabilities` & Ingestion Modals**
-* [x] **Component & Integration Tests (`FamilyPortfolio.test.tsx`, 16 tests)**
-
-### 2. Priority 2: Automated Live Stock CMP Feed (Phase 5A Expansion)
-* [x] **Integrate live NSE/BSE stock quote adapter alongside AMFI mutual fund NAV feed**:
-  - Domain model & IST market session calculator (`nse-bse-cmp.ts`).
-  - Application use case & port enrichment (`market-data.port.ts`, `refresh-market-quotes.ts`).
-  - Reactive auto-polling hook (`useLiveMarketFeed.ts`).
-  - UI integration with live session badge, auto-poll toggle, and live CMP / day change % pills (`PortfolioPage.tsx`).
-  - 100% automated test coverage (`LiveMarketFeed.test.tsx`, `PortfolioPage.test.tsx`).
-
-### 3. Priority 3: QA Documentation
-* [x] Created `docs/QA/phase-6-1-family-portfolios-verification.md` covering all 7 test cases for family entities, multi-Demat accounts, and HUF tax rules.
-* [x] Updated `docs/QA/README.md`.
-
-### 4. Priority 4: Broker Tradebook CSV Importers (Zerodha Kite & Groww)
-* [x] **Dedicated CSV statement importers for Zerodha tradebooks and Groww holding exports**:
-  - Domain parser module (`broker-csv-types.ts`, `csv-utils.ts`, `zerodha-csv-parser.ts`, `groww-csv-parser.ts`, `broker-csv-registry.ts`) with Indian security dictionary and zero float drift integer paise math.
-  - Application use case (`ImportBrokerCsvUseCase`) mapping broker exports to domain holdings and transactions with family member and Demat account scoping.
-  - Web UI integration (`ImportCasModal.tsx`): 3-way format selector (`CAS PDF`, `Zerodha Kite CSV`, `Groww CSV`), auto-detection, no-password info banner, and sample fixture loader buttons for CDSL, NSDL, Zerodha Holdings, Zerodha Tradebook, Groww Holdings, and Groww Orders.
-  - Full user guide and QA test plan documentation (`docs/userGuide/portfolio-management.md`, `docs/QA/phase-6-2-broker-csv-import-verification.md`).
-  - Unit and integration tests (`broker-csv-parser.test.ts`, `import-broker-csv.test.ts`, `ImportBrokerCsv.test.tsx` - 13 tests).
-
-### 5. Priority 5: Phase 6B Desktop Offline Architecture (Tauri 2 + SQLite)
+### Priority 1: Phase 9 Desktop Runtime Architecture (Tauri 2 + SQLite)
 * [ ] Tauri 2 desktop bundle scaffolding with local SQLite adapter for complete offline operation.
+* [ ] Local SQLite schema matching PostgreSQL tables with identical Repository Ports (`HoldingRepositoryPort`, `FamilyRepositoryPort`, `TransactionRepositoryPort`, etc.).
+* [ ] Bi-directional sync / export between SQLite and cloud PostgreSQL.
 
 ---
 
 ## 📈 Quality Gates & System Health
 
 * **TypeScript Compilation**: `npm run type-check` (`tsc -b`) compiles with **0 errors**.
-* **Automated Test Coverage**: **180 passing tests** across 40 test suites (`vitest`).
+* **Automated Test Coverage**: **262 passing tests** across 47 test suites (`vitest`).
 * **Persona & Real-World Dogfooding**: Fully personalized to the **Vaghela Family** (`Ketan Vaghela`, `Parul Vaghela`, `Krisha Vaghela`, `Shamalbhai Vaghela HUF`, `Ramilaben Vaghela`) with strict global rule enforcement.
 * **Active Containers**:
   - Web App: `http://localhost:30000` (Nginx Proxy) / `http://localhost:5174` (Vite)

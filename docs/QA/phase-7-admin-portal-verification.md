@@ -70,7 +70,6 @@ Phase 7 implements an enterprise-grade Platform Administration Portal, user life
 
 ## 5. Persona & Vaghela Family Rule Compliance
 
-- **Prohibited Surname Check**: Grepped repository for "Sharma". Absolute 0 occurrences found (only defined in `GEMINI.md` rule).
 - **Vaghela Family Data**:
   - `Ketan Vaghela`: Primary Investor & Super Admin.
   - `Parul Vaghela`: Spouse, Bank of Baroda Clerk, Support Admin.

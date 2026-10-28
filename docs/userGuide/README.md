@@ -8,14 +8,16 @@ Welcome to the **WealthNest User Guide** — an institutional-grade, privacy-fir
 
 | Chapter | Topic | Description |
 | :--- | :--- | :--- |
-| **01. [Getting Started](./getting-started.md)** | Setup & Tour | Quickstart guide, local environment URLs, Interactive Demo Mode vs Registered User, and privacy architecture. |
+| **01. [Getting Started](./getting-started.md)** | Setup & Tour | Quickstart guide, local environment URLs, dedicated `/signup` & `/login` screens, Interactive Demo Mode vs Registered User, and privacy architecture. |
 | **02. [Family & Demats](./family-and-demats.md)** | Legal Entities & Brokers | Organizing household wealth across Self, Spouse, HUF, Children, and Parents; connecting Demats; and unlocking the **HUF Section 112A Tax Shield**. |
-| **03. [Portfolio Management](./portfolio-management.md)** | Assets & Live Feeds | Direct Equities, Mutual Funds, SGBs, Fixed Income, Automated CAS PDF Statement Ingestion, and Real-Time NSE/BSE CMP & AMFI NAV Feeds. |
-| **04. [Financial Goals](./financial-goals.md)** | Milestones & Reverse SIP | Inflation-adjusted milestone corpus planning (e.g. Higher Education, FIRE), linking family beneficiaries, required monthly SIP calculator, and emergency runway buffer. |
-| **05. [Loans & Liabilities](./loans-and-liabilities.md)** | Debt & True Net Worth | Tracking home and auto loans, managing primary and joint co-borrowers, EMI schedules, collateral linking, and net worth reconciliation. |
-| **06. [Analytics & Tax](./analytics-and-tax.md)** | Returns & Budget 2024 Tax | Performance math (XIRR, CAGR), Nifty 50 TRI benchmark comparison, Union Budget 2024 Capital Gains Tax (LTCG 12.5% over ₹1.25L, STCG 20%), and Tax-Loss Harvesting radar. |
-| **07. [Admin Portal](./admin-portal.md)** | User Lifecycle & Security | Centralized user directory, platform-level RBAC (super_admin, support_admin, auditor), multi-user household tenancy, and tamper-proof audit trail. |
-| **08. [Support Impersonation](./support-impersonation.md)** | View as User & Auditing | Ephemeral, read-only troubleshooting session with zero credential sharing, untouched private RLS, 15-minute countdown timer, and immutable audit logs. |
+| **03. [Portfolio Management](./portfolio-management.md)** | Assets & Live Feeds | Direct Equities, Mutual Funds, SGBs, Fixed Income, Automated CAS PDF Statement Ingestion, Broker CSV Importers, and Real-Time NSE/BSE CMP & AMFI NAV Feeds. |
+| **04. [Transactions & Cashflow](./transactions-and-cashflow.md)** | Cashflow & Audit Ledger | Comprehensive double-entry cashflow tracking, 6 transaction types, buy/sell executions, dividend credits, brokerage/tax fees, and tradebook syncing. |
+| **05. [Financial Goals](./financial-goals.md)** | Milestones & Reverse SIP | Inflation-adjusted milestone corpus planning (e.g. Higher Education, FIRE), linking family beneficiaries, required monthly SIP calculator, and emergency runway buffer. |
+| **06. [Loans & Liabilities](./loans-and-liabilities.md)** | Debt & True Net Worth | Tracking home and auto loans, managing primary and joint co-borrowers, EMI schedules, collateral linking, and net worth reconciliation. |
+| **07. [Analytics & Tax](./analytics-and-tax.md)** | Returns & Budget 2024 Tax | Performance math (XIRR, CAGR), Nifty 50 TRI benchmark comparison, Union Budget 2024 Capital Gains Tax (LTCG 12.5% over ₹1.25L, STCG 20%), and Tax-Loss Harvesting radar. |
+| **08. [Settings & Data Management](./settings-and-data-management.md)** | Localization & Backups | Number scale formatting (`₹ Lakh/Crore`), financial year cycles, offline full JSON backup exports, spreadsheet CSV exports, and safe in-memory restore. |
+| **09. [Admin Portal](./admin-portal.md)** | User Lifecycle & Security | Centralized user directory, platform-level RBAC (super_admin, support_admin, auditor), multi-user household tenancy, and tamper-proof audit trail. |
+| **10. [Support Impersonation](./support-impersonation.md)** | View as User & Auditing | Ephemeral, read-only troubleshooting session with zero credential sharing, untouched private RLS, 15-minute countdown timer, and immutable audit logs. |
 
 
 ---

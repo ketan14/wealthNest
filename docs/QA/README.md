@@ -22,7 +22,7 @@ This directory contains formal, executable Quality Assurance (QA) test suites, v
 | [Phase 6.2: Broker CSV Importers (Zerodha & Groww)](./phase-6-2-broker-csv-import-verification.md) | Phase 6.2 | Direct statement importers for Zerodha Kite Holdings & Console Tradebooks, Groww Holdings & Orders CSV exports, Zero Float drift paise parsing, and family assignment. | ✅ Verified |
 | [Phase 7: Admin Portal, User Management & Security](./phase-7-admin-portal-verification.md) | Phase 7 | Centralized user directory, platform-level RBAC (super_admin, support_admin, auditor), lifecycle management, append-only immutable audit trail, and zero-knowledge financial isolation boundary. | ✅ Verified |
 | [Phase 8: Admin View-as-User & Support Impersonation](./phase-8-support-impersonation-verification.md) | Phase 8 | Ephemeral, read-only troubleshooting session with zero credential sharing, untouched private RLS, 15-minute countdown timer, mutation locks, and immutable audit logs. | ✅ Verified |
-
+| [Phase 8.1: Dedicated Authentication Pages](./phase-8-1-auth-pages-verification.md) | Phase 8.1 | Standalone `/signup` & `/login` routes with responsive split-screen branding, client-side validation, password visibility toggles, terms modal, email verification screen, and header session controls. | ✅ Verified |
 
 ---
 
@@ -48,7 +48,7 @@ Run these automated verification commands in your terminal to ensure zero regres
 # 1. Type-check across all workspaces (@wealthnest/domain, application, shared, web)
 ./node_modules/.bin/tsc -b
 
-# 2. Run all unit & integration test suites (220 test cases across 43 test files)
+# 2. Run all unit & integration test suites (262 test cases across 47 test files)
 node node_modules/vitest/vitest.mjs run
 
 
