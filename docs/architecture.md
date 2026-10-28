@@ -164,9 +164,9 @@ Consolidated Account Statements (CAS) from CDSL and NSDL contain sensitive perso
 
 ---
 
-## 7. Future Offline-First Desktop Runtime (Tauri 2 + SQLite)
+## 7. Offline-First Desktop & Mobile Runtime (Tauri 2 + SQLite)
 
-Because core business rules in `packages/domain` have zero dependencies on web or database runtimes:
-1. `apps/web` can be packaged inside a Tauri 2 desktop shell.
-2. Local SQLite adapters will implement the identical `HoldingRepositoryPort`, `FamilyRepositoryPort`, and `MarketDataPort`.
-3. WealthNest will operate 100% offline with zero external cloud dependencies.
+Because core business rules in `packages/domain` and `packages/application` have zero dependencies on web or cloud database runtimes:
+1. `apps/web` is packaged inside a native **Tauri 2** desktop and mobile shell (`src-tauri/`).
+2. Local SQLite adapters (`SqliteHoldingAdapter`, `SqliteTransactionAdapter`, `SqliteLiabilityAdapter`, `SqliteGoalAdapter`, `SqliteFamilyAdapter`, `SqliteAssetClassAdapter`, `SqliteBackupAdapter`, `SqliteCasImportAdapter`) implement the identical outbound port interfaces and are automatically injected by `RepositoryProvider` when running inside Tauri.
+3. WealthNest operates 100% offline with zero external cloud dependencies when launched in Local Vault mode.

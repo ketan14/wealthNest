@@ -142,4 +142,48 @@ describe('MarketDataAdapter & useLiveMarketFeed', () => {
     });
     expect(onUpdated).toHaveBeenCalledTimes(2);
   });
+
+  it('useLiveMarketFeed pauses auto-polling when app is backgrounded and resumes on foreground', async () => {
+    const onUpdated = vi.fn();
+
+    renderHook(() =>
+      useLiveMarketFeed({
+        holdings: TEST_HOLDINGS,
+        onQuotesUpdated: onUpdated,
+        defaultPolling: true,
+        pollingIntervalMs: 5000,
+      })
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(onUpdated).toHaveBeenCalledTimes(1);
+
+    // Simulate app backgrounding (visibilityState = 'hidden')
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'hidden',
+    });
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    // Advance 15 seconds while backgrounded -> should NOT poll
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15000);
+    });
+    expect(onUpdated).toHaveBeenCalledTimes(1);
+
+    // Simulate app returning to foreground (visibilityState = 'visible')
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'visible',
+    });
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'));
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(onUpdated).toHaveBeenCalledTimes(2);
+  });
 });

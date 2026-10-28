@@ -1,0 +1,52 @@
+FROM rust:1-bookworm
+
+# 1. Install Node.js 20, OpenJDK 17, and required build dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    unzip \
+    file \
+    git \
+    build-essential \
+    openjdk-17-jdk-headless \
+    libssl-dev \
+    libsqlite3-dev \
+    pkg-config \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. Configure Java & Android SDK / NDK Environment Variables
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV ANDROID_HOME=/opt/android-sdk
+ENV ANDROID_SDK_ROOT=/opt/android-sdk
+ENV NDK_VERSION=26.2.11394342
+ENV NDK_HOME=/opt/android-sdk/ndk/${NDK_VERSION}
+ENV PATH="${PATH}:${JAVA_HOME}/bin:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools"
+
+# 3. Download Android Command-Line Tools and install SDK 34, Build-Tools, and NDK
+RUN mkdir -p ${ANDROID_HOME}/cmdline-tools \
+    && wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdline-tools.zip \
+    && unzip -q /tmp/cmdline-tools.zip -d ${ANDROID_HOME}/cmdline-tools \
+    && mv ${ANDROID_HOME}/cmdline-tools/cmdline-tools ${ANDROID_HOME}/cmdline-tools/latest \
+    && rm /tmp/cmdline-tools.zip \
+    && yes | sdkmanager --licenses >/dev/null \
+    && sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;${NDK_VERSION}"
+
+# 4. Add Rust Android cross-compilation targets
+RUN rustup target add \
+    aarch64-linux-android \
+    armv7-linux-androideabi \
+    i686-linux-android \
+    x86_64-linux-android
+
+WORKDIR /app
+
+# 5. Pre-install global Tauri 2 CLI
+RUN npm install -g @tauri-apps/cli@^2
+
+ENV CARGO_TARGET_DIR=/app/src-tauri/target
+
+# 6. Initialize Android Gradle project if needed, build APK & AAB, and sign the universal APK for direct phone installation
+CMD ["bash", "-c", "if [ ! -d src-tauri/gen/android ]; then tauri android init; fi && tauri android build --apk true && ./scripts/build-android.sh sign-only || true"]
+

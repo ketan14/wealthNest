@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/supabase/auth-context';
+import { isTauri } from '@/lib/tauri/tauri-runtime';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -15,10 +16,12 @@ import {
   AlertCircle,
   Loader2,
   KeyRound,
+  HardDrive,
 } from 'lucide-react';
 
 export function AuthCard() {
-  const { user, signOut } = useAuth();
+  const { user, isOfflineUser, enableOfflineUser, signOut } = useAuth();
+  const inTauri = isTauri();
   const [quickEmail, setQuickEmail] = useState('');
   const [quickPassword, setQuickPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -53,15 +56,30 @@ export function AuthCard() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <User className="w-5 h-5 text-primary" />
-              <CardTitle className="text-base">Authenticated User</CardTitle>
+              {isOfflineUser ? (
+                <HardDrive className="w-5 h-5 text-emerald-400" />
+              ) : (
+                <User className="w-5 h-5 text-primary" />
+              )}
+              <CardTitle className="text-base">
+                {isOfflineUser ? 'Offline Local User (SQLite Vault)' : 'Authenticated User'}
+              </CardTitle>
             </div>
-            <Badge variant="success">Active Session</Badge>
+            <Badge variant="success">
+              {isOfflineUser ? 'Local Offline Active' : 'Active Session'}
+            </Badge>
           </div>
-          <CardDescription>Supabase Auth session active in browser local storage.</CardDescription>
+          <CardDescription>
+            {isOfflineUser
+              ? 'Default local profile (Ketan Vaghela — Vaghela Household) persisted on-device without internet.'
+              : 'Supabase Auth session active in browser local storage.'}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="p-3 rounded-lg bg-secondary/40 border border-border/50 text-xs font-mono space-y-1">
+            <p className="text-muted-foreground">
+              Profile: <span className="text-foreground">{user.user_metadata?.full_name || 'Ketan Vaghela'}</span>
+            </p>
             <p className="text-muted-foreground">
               User ID: <span className="text-foreground">{user.id}</span>
             </p>
@@ -69,10 +87,12 @@ export function AuthCard() {
               Email: <span className="text-foreground">{user.email}</span>
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={signOut} className="gap-2">
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </Button>
+          {!inTauri && (
+            <Button variant="outline" size="sm" onClick={signOut} className="gap-2">
+              <LogOut className="w-4 h-4" />
+              {isOfflineUser ? 'Exit Offline Mode' : 'Sign Out'}
+            </Button>
+          )}
         </CardContent>
       </Card>
     );
@@ -115,16 +135,27 @@ export function AuthCard() {
           </div>
 
           {/* Quick inline login option for fast local testing */}
-          <div className="pt-2 border-t border-border/50">
+          <div className="pt-2 border-t border-border/50 flex flex-wrap items-center justify-between gap-2">
             {!showQuickLogin ? (
-              <button
-                type="button"
-                onClick={() => setShowQuickLogin(true)}
-                className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <KeyRound className="w-3 h-3 text-primary" />
-                <span>Quick Sign-In (Local Dev)</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowQuickLogin(true)}
+                  className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <KeyRound className="w-3 h-3 text-primary" />
+                  <span>Quick Sign-In (Local Dev)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={enableOfflineUser}
+                  data-testid="enable-offline-user-btn"
+                  className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 transition-colors cursor-pointer font-medium"
+                >
+                  <HardDrive className="w-3 h-3" />
+                  <span>Use Offline Default User (Ketan Vaghela)</span>
+                </button>
+              </>
             ) : (
               <form onSubmit={handleQuickLogin} className="space-y-2.5 pt-1 animate-in fade-in">
                 <div className="flex items-center justify-between">

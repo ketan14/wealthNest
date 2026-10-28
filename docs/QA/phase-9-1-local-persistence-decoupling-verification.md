@@ -39,12 +39,12 @@ The following test suites define the acceptance criteria for Phase 9.1 certifica
 
 | Test Suite | Target Location | Scope & Invariants Tested | Current Status |
 | :--- | :--- | :--- | :---: |
-| **SQLite Schema & Engine** | `packages/application/src/__tests__/sqlite-schema.test.ts` | Schema creation, 12 tables, indexes, and foreign key cascades. | ⏳ Pending |
-| **Cross-User SQLite Isolation** | `packages/application/src/__tests__/sqlite-isolation.test.ts` | Composite foreign key constraint checks; rejects cross-user entity references. | ⏳ Pending |
-| **SQLite Repository Adapters** | `packages/application/src/__tests__/sqlite-repositories.test.ts` | CRUD operations across holdings, transactions, liabilities, goals, and family entities matching port contracts. | ⏳ Pending |
-| **Repository Provider Decoupling** | `apps/web/src/__tests__/RepositoryProvider.test.tsx` | Verifies dynamic injection of SQLite vs Supabase adapters into UI without component changes. | ⏳ Pending |
-| **Atomic Backup & Restore Round-Trip** | `packages/application/src/__tests__/backup-restore-sqlite.test.ts` | Export $\rightarrow$ wipe database $\rightarrow$ restore round-trip with zero data drift or missing records. | ⏳ Pending |
-| **Malformed Restore & Rollback Safety** | `packages/application/src/__tests__/backup-security-sqlite.test.ts` | Invalid schema, duplicate IDs, negative balances, and mid-transaction failure rollback verification. | ⏳ Pending |
+| **SQLite Schema & Engine** | `packages/application/src/__tests__/sqlite-schema.test.ts` | Schema creation, 12 tables, indexes, and foreign key cascades. | ✅ PASSED |
+| **Cross-User SQLite Isolation** | `packages/application/src/__tests__/sqlite-isolation.test.ts` | Composite foreign key constraint checks; rejects cross-user entity references. | ✅ PASSED |
+| **SQLite Repository Adapters** | `packages/application/src/__tests__/sqlite-repositories.test.ts` | CRUD operations across holdings, transactions, liabilities, goals, family entities, and CAS import matching port contracts. | ✅ PASSED |
+| **Repository Provider Decoupling** | `apps/web/src/__tests__/RepositoryProvider.test.tsx` | Verifies dynamic injection of SQLite vs Supabase adapters into UI without component changes. | ✅ PASSED |
+| **Atomic Backup & Restore Round-Trip** | `packages/application/src/__tests__/backup-restore-sqlite.test.ts` | Export $\rightarrow$ wipe database $\rightarrow$ restore round-trip with zero data drift or missing records. | ✅ PASSED |
+| **Malformed Restore & Rollback Safety** | `packages/application/src/__tests__/backup-security-sqlite.test.ts` | Invalid schema, duplicate IDs, negative balances, and mid-transaction failure rollback verification. | ✅ PASSED |
 
 ---
 

@@ -8,6 +8,15 @@ import {
   AssetClassRepositoryPort,
   BackupPort,
   CasImportRepositoryPort,
+  SqliteDatabase,
+  SqliteHoldingAdapter,
+  SqliteTransactionAdapter,
+  SqliteLiabilityAdapter,
+  SqliteGoalAdapter,
+  SqliteFamilyAdapter,
+  SqliteAssetClassAdapter,
+  SqliteBackupAdapter,
+  SqliteCasImportAdapter,
 } from '@wealthnest/application';
 
 import { SupabaseHoldingAdapter } from '../supabase/holding.adapter';
@@ -18,6 +27,9 @@ import { SupabaseFamilyAdapter } from '../supabase/family.adapter';
 import { SupabaseAssetClassAdapter } from '../supabase/asset-class.adapter';
 import { SupabaseBackupAdapter } from '../supabase/backup.adapter';
 import { SupabaseCasImportAdapter } from '../supabase/cas-import.adapter';
+import { isTauri } from '../tauri/tauri-runtime';
+import { TauriSqliteAdapter } from '../tauri/tauri-sqlite-adapter';
+import { isOfflineLocalActive } from '../supabase/auth-context';
 
 export interface RepositoryBundle {
   readonly holdingRepo: HoldingRepositoryPort;
@@ -43,26 +55,74 @@ export const defaultSupabaseBundle: RepositoryBundle = {
   mode: 'supabase',
 };
 
+export function createSqliteRepositoryBundle(db?: SqliteDatabase): RepositoryBundle {
+  const sqliteDb =
+    db ??
+    (() => {
+      const adapter = new TauriSqliteAdapter();
+      adapter.initialize();
+      return adapter;
+    })();
+
+  const holdingRepo = new SqliteHoldingAdapter(sqliteDb);
+  const transactionRepo = new SqliteTransactionAdapter(sqliteDb);
+  const liabilityRepo = new SqliteLiabilityAdapter(sqliteDb);
+  const goalRepo = new SqliteGoalAdapter(sqliteDb);
+  const familyRepo = new SqliteFamilyAdapter(sqliteDb);
+  const assetClassRepo = new SqliteAssetClassAdapter(sqliteDb);
+  const backupRepo = new SqliteBackupAdapter(
+    sqliteDb,
+    holdingRepo,
+    transactionRepo,
+    liabilityRepo,
+    goalRepo
+  );
+  const casImportRepo = new SqliteCasImportAdapter(sqliteDb);
+
+  return {
+    holdingRepo,
+    transactionRepo,
+    liabilityRepo,
+    goalRepo,
+    familyRepo,
+    assetClassRepo,
+    backupRepo,
+    casImportRepo,
+    mode: 'sqlite',
+  };
+}
+
 const RepositoryContext = createContext<RepositoryBundle | null>(null);
 
 export interface RepositoryProviderProps {
   readonly children: React.ReactNode;
   readonly customRepositories?: Partial<RepositoryBundle>;
   readonly mode?: 'supabase' | 'sqlite';
+  readonly sqliteDb?: SqliteDatabase;
 }
 
 export function RepositoryProvider({
   children,
   customRepositories,
-  mode = 'supabase',
+  mode,
+  sqliteDb,
 }: RepositoryProviderProps) {
   const bundle = useMemo<RepositoryBundle>(() => {
+    const resolvedMode =
+      customRepositories?.mode ??
+      mode ??
+      (isTauri() || isOfflineLocalActive() ? 'sqlite' : 'supabase');
+    const baseBundle =
+      resolvedMode === 'sqlite'
+        ? createSqliteRepositoryBundle(sqliteDb)
+        : defaultSupabaseBundle;
+
     return {
-      ...defaultSupabaseBundle,
+      ...baseBundle,
       ...customRepositories,
-      mode: customRepositories?.mode ?? mode,
+      mode: resolvedMode,
     };
-  }, [customRepositories, mode]);
+  }, [customRepositories, mode, sqliteDb]);
 
   return (
     <RepositoryContext.Provider value={bundle}>

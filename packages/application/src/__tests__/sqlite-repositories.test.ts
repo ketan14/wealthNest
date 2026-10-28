@@ -8,6 +8,7 @@ import {
   SqliteTransactionAdapter,
   SqliteLiabilityAdapter,
   SqliteGoalAdapter,
+  SqliteCasImportAdapter,
 } from '../persistence/sqlite/sqlite-repositories.js';
 
 describe('Phase 9.1: SQLite Repository Adapters', () => {
@@ -18,6 +19,7 @@ describe('Phase 9.1: SQLite Repository Adapters', () => {
   let transactionAdapter: SqliteTransactionAdapter;
   let liabilityAdapter: SqliteLiabilityAdapter;
   let goalAdapter: SqliteGoalAdapter;
+  let casImportAdapter: SqliteCasImportAdapter;
 
   const testUserId = 'usr-vaghela-01';
 
@@ -29,6 +31,7 @@ describe('Phase 9.1: SQLite Repository Adapters', () => {
     transactionAdapter = new SqliteTransactionAdapter(db);
     liabilityAdapter = new SqliteLiabilityAdapter(db);
     goalAdapter = new SqliteGoalAdapter(db);
+    casImportAdapter = new SqliteCasImportAdapter(db);
 
     // Initialize test profile
     db.prepare("INSERT INTO profiles (id, display_name) VALUES (?, 'Ketan Vaghela');").run(testUserId);
@@ -224,5 +227,113 @@ describe('Phase 9.1: SQLite Repository Adapters', () => {
     expect(goals.value[0].linkedHoldings).toHaveLength(1);
     expect(goals.value[0].linkedHoldings[0].allocationPercentage).toBe(80.0);
     expect(goals.value[0].linkedHoldings[0].holdingName).toBe('Nippon India Small Cap Fund');
+  });
+
+  it('TC-9.1-03G: CasImportAdapter upserts holdings and deduplicates transactions in SQLite', async () => {
+    // 1. Initial CAS / Broker CSV import
+    const importRes = await casImportAdapter.upsertHoldingsFromCas({
+      userId: testUserId,
+      provider: 'CDSL',
+      statementDate: '2026-03-31',
+      items: [
+        {
+          isin: 'INE002A01018',
+          name: 'Reliance Industries Ltd',
+          ticker: 'RELIANCE',
+          assetClassId: 'equity',
+          quantity: 50,
+          unitCostCents: 250000,
+          currentValueCents: 14750000,
+          costBasisVerified: true,
+          currency: 'INR',
+          selected: true,
+        },
+        {
+          isin: 'INF879O01019',
+          name: 'Parag Parikh Flexi Cap Direct Growth',
+          ticker: 'PPFAS-FLEXI',
+          assetClassId: 'mutual_fund',
+          quantity: 1000,
+          unitCostCents: 5500,
+          currentValueCents: 7845000,
+          costBasisVerified: true,
+          currency: 'INR',
+          selected: true,
+        },
+      ],
+      transactions: [
+        {
+          isin: 'INE002A01018',
+          schemeName: 'Reliance Industries Ltd',
+          ticker: 'RELIANCE',
+          date: '2026-03-15',
+          description: 'ZERODHA BUY RELIANCE',
+          type: 'buy',
+          amountCents: 12500000,
+          units: 50,
+          navPriceCents: 250000,
+          currency: 'INR',
+          selected: true,
+        },
+      ],
+    });
+
+    expect(importRes.success).toBe(true);
+    if (!importRes.success) return;
+    expect(importRes.value.imported).toBe(2);
+    expect(importRes.value.updated).toBe(0);
+    expect(importRes.value.equitiesImported).toBe(1);
+    expect(importRes.value.mutualFundsImported).toBe(1);
+    expect(importRes.value.transactionsImported).toBe(1);
+
+    // 2. Re-importing same statement updates holding and deduplicates identical transaction
+    const reimportRes = await casImportAdapter.upsertHoldingsFromCas({
+      userId: testUserId,
+      provider: 'CDSL',
+      statementDate: '2026-04-30',
+      items: [
+        {
+          isin: 'INE002A01018',
+          name: 'Reliance Industries Ltd',
+          ticker: 'RELIANCE',
+          assetClassId: 'equity',
+          quantity: 80,
+          unitCostCents: 260000,
+          currentValueCents: 23600000,
+          costBasisVerified: true,
+          currency: 'INR',
+          selected: true,
+        },
+      ],
+      transactions: [
+        {
+          isin: 'INE002A01018',
+          schemeName: 'Reliance Industries Ltd',
+          ticker: 'RELIANCE',
+          date: '2026-03-15',
+          description: 'ZERODHA BUY RELIANCE',
+          type: 'buy',
+          amountCents: 12500000,
+          units: 50,
+          navPriceCents: 250000,
+          currency: 'INR',
+          selected: true,
+        },
+      ],
+    });
+
+    expect(reimportRes.success).toBe(true);
+    if (!reimportRes.success) return;
+    expect(reimportRes.value.imported).toBe(0);
+    expect(reimportRes.value.updated).toBe(1);
+    expect(reimportRes.value.equitiesUpdated).toBe(1);
+    expect(reimportRes.value.transactionsImported).toBe(0); // Deduplicated
+
+    const holdings = await holdingAdapter.listDetailsByUser(testUserId);
+    expect(holdings.success).toBe(true);
+    if (!holdings.success) return;
+    expect(holdings.value).toHaveLength(2);
+    const rel = holdings.value.find((h) => h.isin === 'INE002A01018');
+    expect(rel?.quantity).toBe(80);
   });
 });

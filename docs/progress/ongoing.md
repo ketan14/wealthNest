@@ -164,13 +164,44 @@
   - Generated valid binary icons (`32x32.png`, `128x128.png`, `128x128@2x.png`, `icon.png`, `icon.ico`, `icon.icns`).
   - Successfully compiled and packaged `WealthNest_0.1.0_amd64.deb` (`2.99 MiB` deb, `6.2 MiB` release binary) verified via `dpkg-deb`.
 
+---
+
+## 🎯 Prioritized Pending Backlog (Phase 10.5 — End-to-End Native Polish & Verification)
+
+| Priority | Task ID | Scope & Deliverable | Target Files / Modules | Status |
+| :---: | :---: | :--- | :--- | :---: |
+| **P0 (Critical)** | **TASK-01** | **Implement `SqliteCasImportAdapter` for Local/Offline Mode** | `packages/application/src/persistence/sqlite/sqlite-repositories.ts`<br>`packages/application/src/ports/cas-import.port.ts`<br>`apps/web/src/lib/persistence/repository-context.tsx` | ✅ Complete |
+| **P0 (Critical)** | **TASK-02** | **Wire `RepositoryProvider` to Auto-Select SQLite in Tauri Runtime** | `apps/web/src/lib/persistence/repository-context.tsx`<br>`apps/web/src/lib/tauri/tauri-sqlite-adapter.ts`<br>`apps/web/src/App.tsx` | ✅ Complete |
+| **P1 (High)** | **TASK-03** | **Wire Native File Dialogs (`saveTextFile` / `openTextFile`) into `SettingsPage`** | `apps/web/src/pages/SettingsPage.tsx`<br>`apps/web/src/lib/tauri/tauri-file-dialog.ts` | ✅ Complete |
+| **P1 (High)** | **TASK-04** | **Mobile/Background Lifecycle Polling Pause in `useLiveMarketFeed`** | `apps/web/src/lib/market/useLiveMarketFeed.ts`<br>`docs/QA/phase-10-desktop-mobile-runtime-verification.md` | ✅ Complete |
+| **P2 (Medium)** | **TASK-05** | **Multi-Platform Native Build Automation (`scripts/build-android.sh`, `Dockerfile.android`)** | `scripts/build-android.sh`<br>`infra/docker/Dockerfile.android`<br>`package.json` | ✅ Complete |
+| **P3 (Low)** | **TASK-06** | **Synchronize QA Trackers & Root Documentation Status** | `docs/QA/README.md`<br>`docs/QA/phase-9-1-local-persistence-decoupling-verification.md`<br>`README.md`<br>`docs/architecture.md` | ✅ Complete |
+
+### Detailed Pending Checklist
+* [x] **[P0] TASK-01: Implement `SqliteCasImportAdapter` (`CasImportRepositoryPort`)**
+  - Implemented `SqliteCasImportAdapter` in `packages/application/src/persistence/sqlite/sqlite-repositories.ts` supporting idempotent NSDL/CDSL CAS and Zerodha/Groww CSV imports into local SQLite with integer paise precision and family/account assignment.
+  - Added unit test `TC-9.1-03G` in `packages/application/src/__tests__/sqlite-repositories.test.ts`.
+* [x] **[P0] TASK-02: Auto-Bootstrap SQLite `RepositoryBundle` in Tauri Runtime**
+  - Updated `RepositoryProvider` (`apps/web/src/lib/persistence/repository-context.tsx`) with `createSqliteRepositoryBundle()` so that when `isTauri()` is `true` (or `mode === 'sqlite'`), it automatically initializes `TauriSqliteAdapter` and injects all 8 `Sqlite*Adapter` instances.
+  - Added unit test `TC-9.1-03D` in `apps/web/src/__tests__/RepositoryProvider.test.tsx`.
+* [x] **[P1] TASK-03: Integrate Tauri Native File Dialogs in `SettingsPage.tsx`**
+  - Wired `saveTextFile()` and `openTextFile()` from `apps/web/src/lib/tauri/tauri-file-dialog.ts` into `SettingsPage.tsx` for JSON backup and CSV exports/restores, with automatic browser fallback in web mode.
+* [x] **[P1] TASK-04: Background/Visibility Lifecycle Handling in `useLiveMarketFeed.ts`**
+  - Added `visibilitychange` listener (`document.visibilityState`) in `apps/web/src/lib/market/useLiveMarketFeed.ts` to pause auto-polling when backgrounded/minimized and resume when foregrounded.
+  - Added unit test in `apps/web/src/__tests__/LiveMarketFeed.test.tsx`.
+* [x] **[P2] TASK-05: Android & Desktop Build Automation (`scripts/build-android.sh` & `Dockerfile.android`)**
+  - Track 1 (Linux `.deb`) is compiled and verified (`WealthNest_0.1.0_amd64.deb` via `scripts/build-desktop-docker.sh`).
+  - Added automated Android APK/AAB build script `scripts/build-android.sh` (supporting both local host SDK/NDK and zero-install Docker builder `infra/docker/Dockerfile.android` via `npm run android:build` / `npm run android:docker`).
+* [x] **[P3] TASK-06: Documentation & QA Index Synchronization**
+  - Updated `docs/QA/README.md`, `docs/QA/phase-9-1-local-persistence-decoupling-verification.md`, `README.md`, `docs/architecture.md`, and `docs/cost/costAnalysis.md`.
+
 
 ---
 
 ## 📈 Quality Gates & System Health
 
 * **TypeScript Compilation**: `npm run type-check` (`tsc -b`) compiles with **0 errors**.
-* **Automated Test Coverage**: **332 passing tests** across 65 test suites (`vitest`) — 100% green.
+* **Automated Test Coverage**: **335 passing tests** across 65 test suites (`vitest`) — 100% green.
 * **Persona & Real-World Dogfooding**: Fully personalized to the **Vaghela Family** (`Ketan Vaghela`, `Parul Vaghela`, `Krisha Vaghela`, `Shamalbhai Vaghela HUF`, `Ramilaben Vaghela`) with strict global rule enforcement.
 * **Active Containers**:
   - Web App: `http://localhost:30000` (Nginx Proxy) / `http://localhost:5174` (Vite)

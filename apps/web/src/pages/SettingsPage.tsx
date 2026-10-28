@@ -40,6 +40,8 @@ import {
 import { useFamily } from '@/lib/family/family-context';
 import { FamilyDistributionWidget } from '@/components/family/FamilyDistributionWidget';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
+import { saveTextFile, openTextFile } from '@/lib/tauri/tauri-file-dialog';
+import { isTauri } from '@/lib/tauri/tauri-runtime';
 
 type SettingsTab = 'profile' | 'family' | 'localization' | 'data' | 'system';
 
@@ -119,16 +121,19 @@ export function SettingsPage() {
     setTimeout(() => setNameSavedSuccess(false), 3000);
   };
 
-  const handleDownloadFile = (content: string, filename: string, type: string) => {
-    const blob = new Blob([content], { type });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const handleDownloadFile = async (content: string, filename: string, _type: string): Promise<boolean> => {
+    const ext = filename.endsWith('.csv') ? 'csv' : 'json';
+    const saveRes = await saveTextFile({
+      defaultPath: filename,
+      content,
+      filters: [
+        {
+          name: ext === 'csv' ? 'CSV Spreadsheet' : 'WealthNest Backup JSON',
+          extensions: [ext],
+        },
+      ],
+    });
+    return saveRes.success;
   };
 
   const handleFullBackupExport = async () => {
@@ -137,13 +142,15 @@ export function SettingsPage() {
     try {
       const res = await exportUseCase.execute(user?.id || 'demo-user-001');
       if (res.success) {
-        handleDownloadFile(
+        const saved = await handleDownloadFile(
           res.value.backupJsonString,
           res.value.summaryFilename,
           'application/json'
         );
-        setExportSuccessMessage('Full JSON portfolio backup downloaded successfully!');
-        setTimeout(() => setExportSuccessMessage(null), 4000);
+        if (saved) {
+          setExportSuccessMessage('Full JSON portfolio backup downloaded successfully!');
+          setTimeout(() => setExportSuccessMessage(null), 4000);
+        }
       } else {
         alert(res.error.message);
       }
@@ -180,12 +187,41 @@ export function SettingsPage() {
             break;
         }
 
-        handleDownloadFile(content, filename, 'text/csv');
-        setExportSuccessMessage(`Downloaded ${filename} successfully!`);
-        setTimeout(() => setExportSuccessMessage(null), 4000);
+        const saved = await handleDownloadFile(content, filename, 'text/csv');
+        if (saved) {
+          setExportSuccessMessage(`Downloaded ${filename} successfully!`);
+          setTimeout(() => setExportSuccessMessage(null), 4000);
+        }
       }
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const parseAndPreviewBackupContent = (content: string) => {
+    setRestoreError(null);
+    setRestoreSuccess(false);
+    const res = validateBackupUseCase.execute(content);
+    if (res.success) {
+      setBackupPreview(res.value);
+      if (!res.value.isValid) {
+        setRestoreError(res.value.errors.join(', '));
+      }
+    } else {
+      setRestoreError(res.error.message);
+    }
+  };
+
+  const handleNativeBackupOpen = async (e: React.MouseEvent) => {
+    if (!isTauri()) return;
+    e.preventDefault();
+    const res = await openTextFile({
+      filters: [{ name: 'WealthNest Backup JSON', extensions: ['json'] }],
+    });
+    if (res.success && res.content) {
+      parseAndPreviewBackupContent(res.content);
+    } else if (res.error && !res.error.toLowerCase().includes('cancel')) {
+      setRestoreError(res.error);
     }
   };
 
@@ -193,21 +229,10 @@ export function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setRestoreError(null);
-    setRestoreSuccess(false);
-
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
-      const res = validateBackupUseCase.execute(content);
-      if (res.success) {
-        setBackupPreview(res.value);
-        if (!res.value.isValid) {
-          setRestoreError(res.value.errors.join(', '));
-        }
-      } else {
-        setRestoreError(res.error.message);
-      }
+      parseAndPreviewBackupContent(content);
     };
     reader.onerror = () => setRestoreError('Failed to read file');
     reader.readAsText(file);
@@ -1049,6 +1074,7 @@ export function SettingsPage() {
                   />
                   <label
                     htmlFor="backup-file-input"
+                    onClick={handleNativeBackupOpen}
                     className="cursor-pointer flex flex-col items-center justify-center space-y-2"
                   >
                     <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-300">

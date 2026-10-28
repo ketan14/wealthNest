@@ -2,10 +2,12 @@ import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/lib/supabase/auth-context';
-import { Globe, Terminal, User, LogIn, UserPlus, LogOut } from 'lucide-react';
+import { isTauri } from '@/lib/tauri/tauri-runtime';
+import { Globe, Terminal, User, LogIn, UserPlus, LogOut, HardDrive } from 'lucide-react';
 
 export function Header() {
-  const { user, signOut } = useAuth();
+  const { user, isOfflineUser, signOut } = useAuth();
+  const inTauri = isTauri();
 
   return (
     <header className="h-16 border-b border-border bg-card/40 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10">
@@ -31,6 +33,15 @@ export function Header() {
         {/* User Authentication state */}
         {user ? (
           <div className="flex items-center gap-3">
+            {isOfflineUser && (
+              <Badge
+                variant="secondary"
+                className="hidden sm:inline-flex gap-1.5 py-1 px-2.5 text-[11px] border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+              >
+                <HardDrive className="w-3 h-3" />
+                Offline Local Vault
+              </Badge>
+            )}
             <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-secondary/60 border border-border/60 text-xs">
               <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
                 <User className="w-3.5 h-3.5" />
@@ -39,16 +50,18 @@ export function Header() {
                 {user.email}
               </span>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={signOut}
-              title="Sign Out"
-              className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1.5"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Sign Out</span>
-            </Button>
+            {!inTauri && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={signOut}
+                title="Sign Out"
+                className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </Button>
+            )}
           </div>
         ) : (
           <div className="flex items-center gap-2">

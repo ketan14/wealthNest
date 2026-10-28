@@ -97,11 +97,29 @@ export function useLiveMarketFeed({
     return () => clearInterval(sessionTimer);
   }, []);
 
-  // Background polling timer
-  useEffect(() => {
-    if (!isPolling) return;
+  // Track app foreground/background visibility to prevent mobile battery drain
+  const [isDocumentVisible, setIsDocumentVisible] = useState<boolean>(() =>
+    typeof document !== 'undefined' ? document.visibilityState !== 'hidden' : true
+  );
 
-    // Run first refresh on enabling
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const handleVisibilityChange = () => {
+      setIsDocumentVisible(document.visibilityState !== 'hidden');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  // Background polling timer (pauses automatically when app/tab is hidden)
+  useEffect(() => {
+    if (!isPolling || !isDocumentVisible) return;
+
+    // Run first refresh on enabling or returning to foreground
     void refreshNow();
 
     const pollTimer = setInterval(() => {
@@ -109,7 +127,7 @@ export function useLiveMarketFeed({
     }, pollingIntervalMs);
 
     return () => clearInterval(pollTimer);
-  }, [isPolling, pollingIntervalMs, refreshNow]);
+  }, [isPolling, isDocumentVisible, pollingIntervalMs, refreshNow]);
 
   return {
     isPolling,

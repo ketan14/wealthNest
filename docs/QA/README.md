@@ -22,9 +22,9 @@ This directory contains formal, executable Quality Assurance (QA) test suites, v
 | [Phase 6.2: Broker CSV Importers (Zerodha & Groww)](./phase-6-2-broker-csv-import-verification.md) | Phase 6.2 | Direct statement importers for Zerodha Kite Holdings & Console Tradebooks, Groww Holdings & Orders CSV exports, Zero Float drift paise parsing, and family assignment. | ✅ Verified |
 | [Phase 7: Admin Portal, User Management & Security](./phase-7-admin-portal-verification.md) | Phase 7 | Centralized user directory, platform-level RBAC (super_admin, support_admin, auditor), lifecycle management, append-only immutable audit trail, and zero-knowledge financial isolation boundary. | ✅ Verified |
 | [Phase 8: Admin View-as-User & Support Impersonation](./phase-8-support-impersonation-verification.md) | Phase 8 | Ephemeral, read-only troubleshooting session with zero credential sharing, untouched private RLS, 15-minute countdown timer, mutation locks, and immutable audit logs. | ✅ Verified |
-| [Phase 9.1: Local-First Persistence & Repository Decoupling](./phase-9-1-local-persistence-decoupling-verification.md) | Phase 9.1 | Local SQLite schema (12 tables), composite foreign keys, RepositoryProvider dependency injection, in-memory SQLite parity testing, and atomic backup/restore. | ⏳ Pending |
-| [Phase 9.2: Mobile Responsive UI & Touch Ergonomics](./phase-9-2-mobile-responsive-touch-verification.md) | Phase 9.2 | Adaptive navigation (bottom tab bar on mobile, sidebar on desktop), responsive cards for holdings/transactions, touch targets $\ge 44\text{px}$, responsive SVG trajectory chart, and non-blocking modals. | ⏳ Pending |
-| [Phase 10: Cross-Platform Desktop & Mobile Runtime](./phase-10-desktop-mobile-runtime-verification.md) | Phase 10 | Tauri 2 native compilation, desktop packaging (.deb, .msi, .dmg), mobile runtimes (.apk, .ipa), native file dialogs, and OS sandbox persistence. | ⏳ Pending |
+| [Phase 9.1: Local-First Persistence & Repository Decoupling](./phase-9-1-local-persistence-decoupling-verification.md) | Phase 9.1 | Local SQLite schema (12 tables), composite foreign keys, RepositoryProvider dependency injection, in-memory SQLite parity testing, and atomic backup/restore. | ✅ Verified |
+| [Phase 9.2: Mobile Responsive UI & Touch Ergonomics](./phase-9-2-mobile-responsive-touch-verification.md) | Phase 9.2 | Adaptive navigation (bottom tab bar on mobile, sidebar on desktop), responsive cards for holdings/transactions, touch targets $\ge 44\text{px}$, responsive SVG trajectory chart, and non-blocking modals. | ✅ Verified |
+| [Phase 10: Cross-Platform Desktop & Mobile Runtime](./phase-10-desktop-mobile-runtime-verification.md) | Phase 10 | Tauri 2 native compilation, desktop packaging (.deb, .msi, .dmg), mobile runtimes (.apk, .ipa), native file dialogs, and OS sandbox persistence. | ✅ Verified |
 
 ---
 
@@ -50,7 +50,7 @@ Run these automated verification commands in your terminal to ensure zero regres
 # 1. Type-check across all workspaces (@wealthnest/domain, application, shared, web)
 ./node_modules/.bin/tsc -b
 
-# 2. Run all unit & integration test suites (283 test cases across 50 test files)
+# 2. Run all unit & integration test suites (335 test cases across 65 test files)
 node node_modules/vitest/vitest.mjs run
 
 
