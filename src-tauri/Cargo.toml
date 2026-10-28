@@ -5,6 +5,9 @@ description = "WealthNest — Institutional-Grade Personal Wealth & Asset Operat
 authors = ["Ketan Vaghela <ketan@wealthnest.local>"]
 edition = "2021"
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(mobile)'] }
+
 [lib]
 name = "wealthnest_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]

@@ -51,4 +51,5 @@ Thumbs.db
 # Supabase local CLI artifacts
 supabase/.temp/
 supabase/.branches/
-
+src-tauri/target
+src-tauri/gen

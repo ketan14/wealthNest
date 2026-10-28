@@ -65,17 +65,30 @@ export async function saveTextFile(options: SaveFileOptions): Promise<SaveFileRe
     }
   }
 
-  // Web Browser Fallback: Blob URL download
+  // Web Browser Fallback: Blob URL or data URL download
   try {
-    const blob = new Blob([options.content], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+    let url: string;
+    let isBlobUrl = false;
+
+    if (typeof URL.createObjectURL === 'function') {
+      const blob = new Blob([options.content], { type: 'application/json' });
+      url = URL.createObjectURL(blob);
+      isBlobUrl = true;
+    } else {
+      url = 'data:application/json;charset=utf-8,' + encodeURIComponent(options.content);
+    }
+
     const a = document.createElement('a');
     a.href = url;
     a.download = options.defaultPath || 'wealthnest_portfolio_backup.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+
+    if (isBlobUrl && typeof URL.revokeObjectURL === 'function') {
+      URL.revokeObjectURL(url);
+    }
+
     return { success: true, filePath: a.download };
   } catch (err) {
     return { success: false, error: (err as Error).message };
