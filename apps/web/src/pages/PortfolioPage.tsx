@@ -637,7 +637,7 @@ export function PortfolioPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
               Portfolio & Asset Allocation
             </h2>
@@ -947,7 +947,7 @@ export function PortfolioPage() {
             {/* View Mode Toggle and Filter/Search */}
             <div className="flex flex-wrap items-center gap-3">
               {/* Specialized View Switcher */}
-              <div className="flex items-center p-0.5 bg-secondary/60 rounded-lg border border-border text-xs">
+              <div className="flex items-center p-0.5 bg-secondary/60 rounded-lg border border-border text-xs max-w-full overflow-x-auto scrollbar-none">
                 <button
                   type="button"
                   onClick={() => setViewMode('all')}
