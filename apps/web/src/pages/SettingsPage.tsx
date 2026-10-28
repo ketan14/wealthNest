@@ -3,6 +3,7 @@ import { CurrencyCode } from '@wealthnest/domain';
 import {
   ExportPortfolioDataUseCase,
   ValidateAndParseBackupUseCase,
+  RestorePortfolioFromBackupUseCase,
   ParsedBackupPreview,
   GetSystemStatusUseCase,
   SystemStatusDto,
@@ -13,6 +14,7 @@ import { SupabaseHoldingAdapter } from '@/lib/supabase/holding.adapter';
 import { SupabaseTransactionAdapter } from '@/lib/supabase/transaction.adapter';
 import { SupabaseLiabilityAdapter } from '@/lib/supabase/liability.adapter';
 import { SupabaseGoalAdapter } from '@/lib/supabase/goal.adapter';
+import { SupabaseBackupAdapter } from '@/lib/supabase/backup.adapter';
 import { userAdapter } from '@/lib/supabase/user.adapter';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -75,6 +77,7 @@ export function SettingsPage() {
   const [backupPreview, setBackupPreview] = useState<ParsedBackupPreview | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const [restoreSuccess, setRestoreSuccess] = useState<boolean>(false);
+  const [isRestoring, setIsRestoring] = useState<boolean>(false);
 
   // System status
   const systemStatus: SystemStatusDto = useMemo(() => {
@@ -89,7 +92,7 @@ export function SettingsPage() {
         };
   }, []);
 
-  // Adapters for export
+  // Adapters for export & restore
   const exportUseCase = useMemo(() => {
     return new ExportPortfolioDataUseCase(
       userAdapter,
@@ -102,6 +105,10 @@ export function SettingsPage() {
 
   const validateBackupUseCase = useMemo(() => {
     return new ValidateAndParseBackupUseCase();
+  }, []);
+
+  const restoreUseCase = useMemo(() => {
+    return new RestorePortfolioFromBackupUseCase(new SupabaseBackupAdapter());
   }, []);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -208,14 +215,30 @@ export function SettingsPage() {
     reader.readAsText(file);
   };
 
-  const handleExecuteRestore = () => {
-    if (!backupPreview || !backupPreview.isValid) return;
-    setRestoreSuccess(true);
-    setTimeout(() => {
-      setBackupPreview(null);
-      setRestoreSuccess(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }, 4000);
+  const handleExecuteRestore = async () => {
+    if (!backupPreview || !backupPreview.isValid || !backupPreview.data) return;
+    const targetUserId = user?.id || 'usr-local-default';
+
+    setIsRestoring(true);
+    setRestoreError(null);
+
+    const res = await restoreUseCase.execute({
+      targetUserId,
+      backupData: backupPreview.data,
+    });
+
+    setIsRestoring(false);
+
+    if (res.success) {
+      setRestoreSuccess(true);
+      setTimeout(() => {
+        setBackupPreview(null);
+        setRestoreSuccess(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }, 4000);
+    } else {
+      setRestoreError(res.error.message);
+    }
   };
 
   return (
@@ -1089,9 +1112,10 @@ export function SettingsPage() {
 
                     <Button
                       onClick={handleExecuteRestore}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs mt-2"
+                      disabled={isRestoring}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs mt-2"
                     >
-                      Confirm & Restore Portfolio
+                      {isRestoring ? 'Restoring Portfolio...' : 'Confirm & Restore Portfolio'}
                     </Button>
                   </div>
                 )}

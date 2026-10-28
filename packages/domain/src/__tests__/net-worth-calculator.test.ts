@@ -276,4 +276,72 @@ describe('Loans & Liabilities Domain Engine — Net Worth & Calculations', () =>
     // Interest expense is exactly 30k and does NOT reduce loan balance
     expect(result.interestExpense.toDecimal()).toBe(30000);
   });
+
+  it('reproduces date-correct historical net worth across a multi-year progression', () => {
+    const historicalTimelineParams = {
+      assets: [
+        {
+          assetId: 'prop-vaghela-residence',
+          name: 'Ahmedabad Residential Apartment',
+          assetClassId: 'real_estate',
+          valuations: [
+            { asOfDate: '2024-01-01', value: Money.fromDecimal(5000000, 'INR') }, // ₹50 L
+            { asOfDate: '2025-01-01', value: Money.fromDecimal(6000000, 'INR') }, // ₹60 L
+            { asOfDate: '2026-01-01', value: Money.fromDecimal(7500000, 'INR') }, // ₹75 L
+          ],
+        },
+      ],
+      liabilities: [
+        {
+          liabilityId: 'loan-sbi-home',
+          name: 'SBI Home Loan',
+          loanType: 'home_loan' as const,
+          lender: 'SBI',
+          status: 'active' as const,
+          emiAmount: Money.fromDecimal(45000, 'INR'),
+          originalPrincipal: Money.fromDecimal(4500000, 'INR'),
+          startDate: '2023-12-01',
+          balances: [
+            { asOfDate: '2024-01-01', balance: Money.fromDecimal(4000000, 'INR') }, // ₹40 L
+            { asOfDate: '2025-01-01', balance: Money.fromDecimal(3500000, 'INR') }, // ₹35 L
+            { asOfDate: '2026-01-01', balance: Money.fromDecimal(2800000, 'INR') }, // ₹28 L
+          ],
+        },
+      ],
+    };
+
+    // 1. As of 2024-01-01: 50L - 40L = 10 Lakhs
+    const nw2024 = calculateHistoricalNetWorth({
+      ...historicalTimelineParams,
+      asOfDate: '2024-01-01',
+    });
+    expect(nw2024.totalAssets.toDecimal()).toBe(5000000);
+    expect(nw2024.totalLiabilities.toDecimal()).toBe(4000000);
+    expect(nw2024.netWorth.toDecimal()).toBe(1000000);
+
+    // 2. As of mid-year 2024 (2024-08-15): Strictly picks prior 2024-01-01 valuations
+    const nwMid2024 = calculateHistoricalNetWorth({
+      ...historicalTimelineParams,
+      asOfDate: '2024-08-15',
+    });
+    expect(nwMid2024.netWorth.toDecimal()).toBe(1000000);
+
+    // 3. As of 2025-01-01: 60L - 35L = 25 Lakhs
+    const nw2025 = calculateHistoricalNetWorth({
+      ...historicalTimelineParams,
+      asOfDate: '2025-01-01',
+    });
+    expect(nw2025.totalAssets.toDecimal()).toBe(6000000);
+    expect(nw2025.totalLiabilities.toDecimal()).toBe(3500000);
+    expect(nw2025.netWorth.toDecimal()).toBe(2500000);
+
+    // 4. As of 2026-01-01: 75L - 28L = 47 Lakhs
+    const nw2026 = calculateHistoricalNetWorth({
+      ...historicalTimelineParams,
+      asOfDate: '2026-01-01',
+    });
+    expect(nw2026.totalAssets.toDecimal()).toBe(7500000);
+    expect(nw2026.totalLiabilities.toDecimal()).toBe(2800000);
+    expect(nw2026.netWorth.toDecimal()).toBe(4700000);
+  });
 });

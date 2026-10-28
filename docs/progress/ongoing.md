@@ -25,8 +25,9 @@
 | **Phase 6.2: Broker CSV Importers** | Direct tradebook & holdings CSV parsers for Zerodha (Kite & Console) and Groww (Holdings & Orders), Zero Float drift BigInt paise calculation | ✅ Complete | ✅ Verified | Direct statement dropzone in Import CAS modal. |
 | **Phase 7: Admin Portal & Access Control** | Centralized user directory, platform-level RBAC (super_admin, support_admin, auditor), user lifecycle management (suspend, reactivate, invite, password reset), append-only immutable audit trail, zero-knowledge financial isolation boundary | ✅ Complete | ✅ Verified | Migration 9 applied; clean architecture domain/app layers complete; full frontend UI integrated at `/admin` with AdminGuard protection. |
 | **Phase 8: Admin View-as-User & Support Mode** | Secure, auditable admin troubleshooting impersonation mode with zero credential swapping, untouched private table RLS, server security-definer RPCs, 15-minute TTL countdown timer, mutation locks, and immutable audit logs | ✅ Complete | ✅ Verified | Migration 10 applied; pure domain invariants, application use cases, Supabase adapter, context, SupportModeBanner, ViewAsUserModal, and PortfolioPage integration complete. |
-| **Phase 8.1: Dedicated Sign-Up & Login Pages** | Standalone `/signup` & `/login` routes with responsive split-screen branding, client-side validation, password visibility toggles, terms modal, email verification screen, and header session controls | ✅ Complete | ✅ Verified | Direct URL accessibility, duplicate registration removed from Home Page, authenticated redirects, zero credential leakage. |
-| **Phase 9: Desktop Runtime** | Tauri 2 + SQLite local offline sync | ⏳ Backlog | ❌ Pending | Future offline-first desktop runtime. |
+| **Phase 9.1: Local Persistence & Decoupling** | Local SQLite schema (12 tables), composite foreign keys, dynamic RepositoryProvider injection, in-memory SQLite parity tests, and atomic restore | ⏳ In Progress | ⏳ Spec Defined | Eliminates direct Supabase coupling from UI pages; enables 100% offline persistence. |
+| **Phase 9.2: Mobile Responsive UI & Touch** | Adaptive navigation (bottom tab bar on mobile, sidebar on desktop), responsive cards for holdings/transactions, touch targets $\ge 44\text{px}$, responsive SVG trajectory chart | ⏳ Pending | ⏳ Spec Defined | Mobile phone (< 768px) and touch tablet ergonomics with safe-area insets. |
+| **Phase 10: Cross-Platform Desktop & Mobile Runtime** | Tauri 2 compilation for Desktop (Win, Mac, Linux) & Mobile (Android, iOS) with OS sandboxing, native file dialogs, and biometric unlock | ⏳ Pending | ⏳ Spec Defined | Native binary packaging; independent platform readiness tracks. |
 
 
 ---
@@ -118,19 +119,48 @@
 
 ## ⏳ Current Work In Progress & Pending Backlog
 
-The following area represents the active product backlog:
+### Phase 9.1: Local-First Persistence & Repository Decoupling (The Foundation)
+* [x] **Remediation P0: Financial History, Cross-User Isolation & Atomic Restore Engine**
+  - Standardized financial precision rules (`packages/domain/src/portfolio/precision-rules.ts`): quantity $\le 8$ decimal places, integer paise, separation of `unitCostPaise` (cost per share) and `currentValuationPaise` (aggregate market value), basis points return percentage.
+  - Implemented cross-user and cross-household isolation invariants (`packages/domain/src/admin/cross-user-isolation.ts`).
+  - Hardened deep backup validation (`ValidateAndParseBackupUseCase`): checks version `1.0.0`, duplicate IDs, malformed records, and cross-entity relational integrity.
+  - Implemented `RestorePortfolioFromBackupUseCase` (`packages/application/src/use-cases/restore-portfolio-from-backup.ts`) with rollback safety and atomic execution.
+  - Implemented `SupabaseBackupAdapter` (`apps/web/src/lib/supabase/backup.adapter.ts`) implementing `BackupPort`.
+  - Wired `SettingsPage.tsx` restore button to real async restore use case with progress indicator and error reporting.
+  - Verified historical net worth multi-year timeline reproducibility in pure domain calculator.
+* [ ] **Milestone 9.1A: Local SQLite Schema & Migration Engine**
+  - Local SQLite schema with integer paise precision and composite foreign keys `(user_id, id)`.
+  - Implement SQLite repository adapters adhering to existing ports (`HoldingRepositoryPort`, `TransactionRepositoryPort`, `FamilyRepositoryPort`, `LiabilityRepositoryPort`, `GoalRepositoryPort`, `BackupPort`).
+* [ ] **Milestone 9.1B: Dynamic Repository Decoupling**
+  - Centralized `RepositoryProvider` / `useRepositories()` hook to decouple UI pages from `new Supabase*Adapter()`.
+  - In-memory SQLite test suite in Vitest validating full export -> wipe -> restore parity.
 
-### Priority 1: Phase 9 Desktop Runtime Architecture (Tauri 2 + SQLite)
-* [ ] Tauri 2 desktop bundle scaffolding with local SQLite adapter for complete offline operation.
-* [ ] Local SQLite schema matching PostgreSQL tables with identical Repository Ports (`HoldingRepositoryPort`, `FamilyRepositoryPort`, `TransactionRepositoryPort`, etc.).
-* [ ] Bi-directional sync / export between SQLite and cloud PostgreSQL.
+### Phase 9.2: Mobile Responsive UI & Touch Ergonomics
+* [ ] **Milestone 9.2A: Adaptive Navigation Shell**
+  - Responsive bottom navigation bar for mobile viewports $< 768\text{px}$ with safe-area insets (`env(safe-area-inset-bottom)`).
+  - Responsive collapse/hide for desktop `Sidebar`.
+* [ ] **Milestone 9.2B: Mobile Card Presentations & Touch Target Enforcement**
+  - Stacked `HoldingCard` and `TransactionCard` list views replacing wide 7-9 column HTML tables on screens $< 640\text{px}$.
+  - Minimum $44 \times 44\text{px}$ touch target enforcement on all buttons and modal inputs.
+  - Responsive SVG trajectory chart with dynamic container `viewBox`.
+  - Non-blocking `ConfirmActionModal` replacing browser `window.confirm`.
+
+### Phase 10: Native Cross-Platform Desktop & Mobile Runtime (Tauri 2)
+* [ ] **Milestone 10.1: Native Tauri 2 Desktop Runtime**
+  - Desktop bundle packaging for Linux (`.deb`/AppImage), Windows (`.msi`), and macOS (`.dmg`) with `@tauri-apps/plugin-sql`.
+  - Native window titlebars and drag regions.
+  - Native file save/open dialogs via `@tauri-apps/plugin-dialog`.
+* [ ] **Milestone 10.2: Native Tauri 2 Mobile Runtime**
+  - Android (`.apk`) & iOS (`.ipa`) targets with native storage sandbox and local biometric unlock.
+* [ ] **Milestone 10.3: Cloud Synchronization (Postponed)**
+  - Evaluated only after local offline data integrity has been verified.
 
 ---
 
 ## 📈 Quality Gates & System Health
 
 * **TypeScript Compilation**: `npm run type-check` (`tsc -b`) compiles with **0 errors**.
-* **Automated Test Coverage**: **262 passing tests** across 47 test suites (`vitest`).
+* **Automated Test Coverage**: **283 passing tests** across 50 test suites (`vitest`).
 * **Persona & Real-World Dogfooding**: Fully personalized to the **Vaghela Family** (`Ketan Vaghela`, `Parul Vaghela`, `Krisha Vaghela`, `Shamalbhai Vaghela HUF`, `Ramilaben Vaghela`) with strict global rule enforcement.
 * **Active Containers**:
   - Web App: `http://localhost:30000` (Nginx Proxy) / `http://localhost:5174` (Vite)

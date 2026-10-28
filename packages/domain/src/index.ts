@@ -36,4 +36,6 @@ export * from './admin/admin-types.js';
 export * from './admin/admin-invariants.js';
 export * from './admin/support-session-types.js';
 export * from './admin/support-session-invariants.js';
+export * from './admin/cross-user-isolation.js';
+export * from './portfolio/precision-rules.js';
 

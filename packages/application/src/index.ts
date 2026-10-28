@@ -32,6 +32,7 @@ export * from './ports/admin-audit-log.port.js';
 export * from './use-cases/manage-goals.js';
 export * from './use-cases/export-portfolio-data.js';
 export * from './use-cases/validate-and-parse-backup.js';
+export * from './use-cases/restore-portfolio-from-backup.js';
 export * from './use-cases/manage-user-settings.js';
 export * from './use-cases/get-tax-harvesting-summary.js';
 export * from './use-cases/refresh-market-quotes.js';
