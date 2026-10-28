@@ -158,6 +158,12 @@
 * [x] **Milestone 10.3: Automated Test Matrix & Verification**
   - 4 new test suites (16 tests): `TauriRuntimeDetection.test.ts`, `TauriFileDialog.test.ts`, `TauriSqliteDatabase.test.ts`, `DesktopTitlebar.test.tsx`.
   - Total monorepo tests: **332 passed out of 332 tests across 65 test files**.
+* [x] **Milestone 10.4: Native Linux Docker Builder & Debian Package (.deb)**
+  - Dockerized isolated toolchain (`infra/docker/Dockerfile.tauri`) bundling Rust, Node 20, GTK3, WebKitGTK 4.1, and Tauri 2 CLI.
+  - Automated build script `scripts/build-desktop-docker.sh` and npm script `npm run desktop:docker`.
+  - Generated valid binary icons (`32x32.png`, `128x128.png`, `128x128@2x.png`, `icon.png`, `icon.ico`, `icon.icns`).
+  - Successfully compiled and packaged `WealthNest_0.1.0_amd64.deb` (`2.99 MiB` deb, `6.2 MiB` release binary) verified via `dpkg-deb`.
+
 
 ---
 

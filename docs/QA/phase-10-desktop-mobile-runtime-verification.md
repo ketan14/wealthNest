@@ -40,7 +40,7 @@ Platform support is verified across four distinct compilation and runtime tracks
 
 | Platform Track | Target Binary | Native Engine | Offline Sandbox Path | Status |
 | :--- | :--- | :--- | :--- | :---: |
-| **Track 1: Linux Desktop** | `.deb` / AppImage | WebKitGTK + SQLite | `~/.local/share/wealthnest/` | ✅ Scaffolding & Bridge Verified |
+| **Track 1: Linux Desktop** | `.deb` / AppImage | WebKitGTK + SQLite | `~/.local/share/wealthnest/` | ✅ Compiled & Packaged (`.deb` verified) |
 | **Track 2: Windows Desktop** | `.msi` / `.exe` | WebView2 + SQLite | `%APPDATA%\wealthnest\` | ✅ Scaffolding & Bridge Verified |
 | **Track 3: macOS Desktop** | `.dmg` / `.app` | WKWebView + SQLite | `~/Library/Application Support/wealthnest/` | ✅ Scaffolding & Bridge Verified |
 | **Track 4A: Android Mobile** | `.apk` / `.aab` | Android System WebView | `/data/user/0/in.wealthnest.app/files/` | ✅ Scaffolding & Bridge Verified |
