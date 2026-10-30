@@ -40,10 +40,11 @@ import {
 import { useFamily } from '@/lib/family/family-context';
 import { FamilyDistributionWidget } from '@/components/family/FamilyDistributionWidget';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
+import { ServerConnectionSettings } from '@/components/settings/ServerConnectionSettings';
 import { saveTextFile, openTextFile } from '@/lib/tauri/tauri-file-dialog';
 import { isTauri } from '@/lib/tauri/tauri-runtime';
 
-type SettingsTab = 'profile' | 'family' | 'localization' | 'data' | 'system';
+type SettingsTab = 'profile' | 'family' | 'connection' | 'localization' | 'data' | 'system';
 
 export function SettingsPage() {
   const {
@@ -323,6 +324,19 @@ export function SettingsPage() {
         >
           <Users className="w-4 h-4" />
           Family & Demats
+        </button>
+
+        <button
+          onClick={() => setActiveTab('connection')}
+          data-testid="tab-connection"
+          className={`flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+            activeTab === 'connection'
+              ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
+              : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
+          }`}
+        >
+          <HardDrive className="w-4 h-4 text-emerald-400" />
+          Server Connection
         </button>
 
         <button
@@ -724,6 +738,11 @@ export function SettingsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* TAB: Server Connection */}
+      {activeTab === 'connection' && (
+        <ServerConnectionSettings />
       )}
 
       {/* TAB 2: Localization & Tax Standards */}

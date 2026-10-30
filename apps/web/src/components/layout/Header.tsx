@@ -1,22 +1,71 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { isTauri } from '@/lib/tauri/tauri-runtime';
-import { Globe, Terminal, User, LogIn, UserPlus, LogOut, HardDrive } from 'lucide-react';
+import { connectionManager } from '@/lib/services/connection-manager';
+import { ServerConfig } from '@/lib/config/server-config';
+import { Globe, Terminal, User, LogIn, UserPlus, LogOut, HardDrive, Wifi, Server } from 'lucide-react';
 
 export function Header() {
   const { user, isOfflineUser, signOut } = useAuth();
   const inTauri = isTauri();
+  const [config, setConfig] = useState<ServerConfig>(() => connectionManager.getConfig());
+
+  useEffect(() => {
+    return connectionManager.subscribeConfig((cfg) => setConfig(cfg));
+  }, []);
+
+  const renderEnvironmentBadge = () => {
+    if (isOfflineUser) {
+      return (
+        <Badge variant="secondary" className="gap-1.5 py-1 px-3 border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+          <HardDrive className="w-3.5 h-3.5" />
+          <span>OFFLINE LOCAL VAULT</span>
+        </Badge>
+      );
+    }
+
+    if (config.mode === 'lan') {
+      return (
+        <Link to="/settings?tab=connection" title="Click to manage Server Connection">
+          <Badge variant="secondary" className="gap-1.5 py-1 px-3 bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20 transition-colors">
+            <Wifi className="w-3.5 h-3.5 animate-pulse text-amber-400" />
+            <span>LAN DEV ({config.host})</span>
+          </Badge>
+        </Link>
+      );
+    }
+
+    if (config.mode === 'remote') {
+      return (
+        <Link to="/settings?tab=connection" title="Click to manage Server Connection">
+          <Badge variant="outline" className="gap-1.5 py-1 px-3 bg-cyan-500/10 text-cyan-300 border-cyan-500/30 hover:bg-cyan-500/20 transition-colors">
+            <Globe className="w-3.5 h-3.5 text-cyan-400" />
+            <span>PRODUCTION</span>
+          </Badge>
+        </Link>
+      );
+    }
+
+    // Default Local Development
+    return (
+      <Link to="/settings?tab=connection" title="Click to manage Server Connection">
+        <Badge variant="success" className="gap-1.5 py-1 px-3 hover:bg-emerald-500/20 transition-colors">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <Server className="w-3 h-3 text-emerald-400" />
+          <span>LOCAL DEV (127.0.0.1)</span>
+        </Badge>
+      </Link>
+    );
+  };
 
   return (
     <header className="h-16 border-b border-border bg-card/40 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10">
       <div className="flex items-center gap-3">
         <span className="text-sm font-medium text-muted-foreground">Environment:</span>
-        <Badge variant="success" className="gap-1.5 py-1 px-3">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          wealthnest.local (WSL2 / Docker)
-        </Badge>
+        {renderEnvironmentBadge()}
       </div>
 
       <div className="flex items-center gap-4">

@@ -1,16 +1,27 @@
-import { createClient } from '@supabase/supabase-js';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { connectionManager } from '../services/connection-manager';
 
-// Default to standard local Supabase CLI credentials for local development
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
-
-// Standard Supabase local development anon key (pre-configured in Supabase CLI)
-const supabaseAnonKey =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
+/**
+ * Transparent SupabaseClient Proxy.
+ * Delegates all repository queries, auth invocations, and storage operations
+ * dynamically to the active Supabase client managed by ConnectionManager.
+ *
+ * This enables updating the backend server IPv4 address on the fly without
+ * rebuilding, redeploying, or breaking any existing repository imports.
+ */
+export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
+  get(_target, prop, receiver) {
+    const activeClient = connectionManager.getClient();
+    const value = Reflect.get(activeClient, prop, receiver);
+    if (typeof value === 'function') {
+      return value.bind(activeClient);
+    }
+    return value;
+  },
+  set(_target, prop, value, receiver) {
+    const activeClient = connectionManager.getClient();
+    return Reflect.set(activeClient, prop, value, receiver);
   },
 });
+
+export { connectionManager };
