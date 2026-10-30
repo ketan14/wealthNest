@@ -48,5 +48,5 @@ RUN npm install -g @tauri-apps/cli@^2
 ENV CARGO_TARGET_DIR=/app/src-tauri/target
 
 # 6. Initialize Android Gradle project if needed, build APK & AAB, and sign the universal APK for direct phone installation
-CMD ["bash", "-c", "if [ ! -d src-tauri/gen/android ]; then tauri android init; fi && tauri android build --apk && ./scripts/build-android.sh sign-only || true"]
+CMD ["bash", "-c", "if [ ! -d src-tauri/gen/android ]; then tauri android init; fi && if [ -d src-tauri/icons/android ]; then cp -r src-tauri/icons/android/mipmap-* src-tauri/gen/android/app/src/main/res/ 2>/dev/null || true; fi && tauri android build --apk && ./scripts/build-android.sh sign-only || true"]
 

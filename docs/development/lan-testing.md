@@ -8,7 +8,7 @@ This guide documents how to run WealthNest locally on a Windows host using **WSL
 
 ---
 
-## 1. Quick Architecture Overview
+## 1. Quick Architecture Overview   
 
 ```text
 [ Windows Host ]

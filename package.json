@@ -30,6 +30,7 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "desktop:docker": "bash scripts/build-desktop-docker.sh",
+    "icons:generate": "python3 scripts/generate-icons.py",
     "android:init": "tauri android init",
     "android:build": "bash scripts/build-android.sh local",
     "android:docker": "bash scripts/build-android.sh docker"

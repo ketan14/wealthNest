@@ -87,6 +87,12 @@ build_via_local_host() {
     echo "ℹ️  Android project already initialized at src-tauri/gen/android"
   fi
 
+  # Sync WealthNest branded launcher icons into Android resource directory
+  if [ -d "$PROJECT_ROOT/src-tauri/gen/android/app/src/main/res" ] && [ -d "$PROJECT_ROOT/src-tauri/icons/android" ]; then
+    echo "🎨 Syncing WealthNest app launcher icons to Android res/mipmap..."
+    cp -r "$PROJECT_ROOT"/src-tauri/icons/android/mipmap-* "$PROJECT_ROOT/src-tauri/gen/android/app/src/main/res/"
+  fi
+
   echo ""
   echo "--- [4/5] Building Frontend & Compiling Android APK / AAB ---"
   npx tauri android build --apk
