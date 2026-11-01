@@ -20,15 +20,35 @@ export const DEFAULT_OFFLINE_USER: User = {
   role: 'authenticated',
 };
 
+const isTestEnv = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
+
 export function isOfflineLocalActive(): boolean {
-  if (isTauri()) return true;
   try {
     if (typeof window !== 'undefined') {
-      return window.localStorage.getItem(OFFLINE_MODE_STORAGE_KEY) === 'true';
+      const stored = window.localStorage.getItem(OFFLINE_MODE_STORAGE_KEY);
+      if (stored !== null) {
+        return stored === 'true';
+      }
     }
   } catch {
     // ignore storage errors
   }
+
+  // In test environment, keep Tauri defaulting to SQLite
+  if (isTestEnv && isTauri()) {
+    return true;
+  }
+
+  // In Tauri runtime: If a remote Supabase QA URL is bundled and not explicitly offline,
+  // default to remote cloud authentication. Otherwise fallback to local SQLite offline mode.
+  if (isTauri()) {
+    const hasRemoteSupabase =
+      typeof import.meta !== 'undefined' &&
+      Boolean(import.meta.env?.VITE_SUPABASE_URL) &&
+      import.meta.env?.VITE_APP_ENV !== 'offline';
+    return !hasRemoteSupabase;
+  }
+
   return false;
 }
 

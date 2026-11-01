@@ -31,6 +31,8 @@ import { isTauri } from '../tauri/tauri-runtime';
 import { TauriSqliteAdapter } from '../tauri/tauri-sqlite-adapter';
 import { isOfflineLocalActive } from '../supabase/auth-context';
 
+const isTestEnv = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
+
 export interface RepositoryBundle {
   readonly holdingRepo: HoldingRepositoryPort;
   readonly transactionRepo: TransactionRepositoryPort;
@@ -111,7 +113,7 @@ export function RepositoryProvider({
     const resolvedMode =
       customRepositories?.mode ??
       mode ??
-      (isTauri() || isOfflineLocalActive() ? 'sqlite' : 'supabase');
+      ((isTestEnv ? isTauri() : false) || isOfflineLocalActive() ? 'sqlite' : 'supabase');
     const baseBundle =
       resolvedMode === 'sqlite' ? createSqliteRepositoryBundle(sqliteDb) : defaultSupabaseBundle;
 

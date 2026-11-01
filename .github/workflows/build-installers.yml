@@ -4,10 +4,18 @@ on:
   # Trigger manually from GitHub -> Actions -> "Run workflow" button
   workflow_dispatch:
     inputs:
+      target_env:
+        description: 'Target backend environment (qa = Remote QA Supabase, offline = Local SQLite)'
+        required: true
+        default: 'qa'
+        type: choice
+        options:
+          - 'qa'
+          - 'offline'
       release_tag:
-        description: 'Optional version label (e.g., v0.1.0-offline)'
+        description: 'Optional version label (e.g., v0.1.0-qa)'
         required: false
-        default: 'v0.1.0-offline'
+        default: 'v0.1.0-qa'
   # Automatically build & publish a GitHub Release whenever a version tag is pushed (e.g., git tag v0.1.0 && git push --tags)
   push:
     tags:
@@ -15,6 +23,12 @@ on:
 
 permissions:
   contents: write
+
+env:
+  VITE_APP_ENV: ${{ inputs.target_env || 'qa' }}
+  VITE_SUPABASE_URL: ${{ (inputs.target_env == 'offline') && '' || vars.VITE_SUPABASE_URL || 'https://jdgucgsvvxcpxbeubqpi.supabase.co' }}
+  VITE_SUPABASE_ANON_KEY: ${{ (inputs.target_env == 'offline') && '' || vars.VITE_SUPABASE_ANON_KEY || 'sb_publishable_N2AiCMr6xGgiL4SVt5ykOg_RcFUtEw5' }}
+  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ (inputs.target_env == 'offline') && '' || vars.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_N2AiCMr6xGgiL4SVt5ykOg_RcFUtEw5' }}
 
 jobs:
   # ============================================================================

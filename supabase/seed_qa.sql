@@ -35,9 +35,10 @@ BEGIN
     RAISE EXCEPTION 'Target user_id cannot be null. No user found in auth.users. Please sign up first via the web app (http://localhost:30000/signup) or pass a user UUID: SELECT public.seed_qa_grant_admin(''user-uuid'');';
   END IF;
 
+  DELETE FROM public.platform_admin_roles WHERE user_id = v_user_id AND role = p_role;
+
   INSERT INTO public.platform_admin_roles (user_id, role, is_active, granted_at)
-  VALUES (v_user_id, p_role, true, now())
-  ON CONFLICT (user_id, role) DO UPDATE SET is_active = true;
+  VALUES (v_user_id, p_role, true, now());
 
   RETURN jsonb_build_object(
     'status', 'success',
@@ -361,3 +362,10 @@ BEGIN
   );
 END;
 $$;
+
+-- ==============================================================================
+-- 4. Auto-Execute Primary QA Seed
+-- ==============================================================================
+SELECT public.seed_qa_primary_household();
+SELECT public.seed_qa_grant_admin();
+
