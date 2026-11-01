@@ -44,12 +44,40 @@ export function LoginPage() {
   const [activeUrl, setActiveUrl] = useState(() => connectionManager.getSupabaseUrl());
   const [connectionSwitched, setConnectionSwitched] = useState(false);
 
+  const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+
+  const handleSwitchToRemote = async () => {
+    const remoteUrl =
+      (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) ||
+      'https://jdgucgsvvxcpxbeubqpi.supabase.co';
+    const remoteKey =
+      (typeof import.meta !== 'undefined' &&
+        (import.meta.env?.VITE_SUPABASE_ANON_KEY || import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY)) ||
+      'sb_publishable_N2AiCMr6xGgiL4SVt5ykOg_RcFUtEw5';
+
+    await connectionManager.switchServer({
+      mode: 'remote',
+      customSupabaseUrl: remoteUrl,
+      supabaseAnonKey: remoteKey,
+    });
+    setActiveUrl(remoteUrl);
+    setServerError(null);
+    setConnectionSwitched(true);
+  };
+
   useEffect(() => {
     const unsub = connectionManager.subscribeConfig(() => {
       setActiveUrl(connectionManager.getSupabaseUrl());
     });
+
+    // Auto-heal: If running over HTTPS (Cloudflare Workers) and mode is set to insecure http:// LAN,
+    // upgrade immediately to remote QA endpoint to prevent Mixed Content network errors
+    if (isHttps && connectionManager.getConfig().mode === 'lan') {
+      handleSwitchToRemote();
+    }
+
     return () => unsub();
-  }, []);
+  }, [isHttps]);
 
   const handleSwitchToLocal = async () => {
     await connectionManager.switchServer({
@@ -249,11 +277,13 @@ export function LoginPage() {
                   {serverError.includes('Cannot reach backend') && (
                     <button
                       type="button"
-                      onClick={handleSwitchToLocal}
+                      onClick={isHttps ? handleSwitchToRemote : handleSwitchToLocal}
                       className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 font-medium transition-colors text-[11px] border border-slate-700"
                     >
                       <RotateCcw className="w-3 h-3" />
-                      Switch to Local Server (127.0.0.1:54321)
+                      {isHttps
+                        ? 'Switch to QA Cloud (Supabase)'
+                        : 'Switch to Local Server (127.0.0.1:54321)'}
                     </button>
                   )}
                 </div>
@@ -414,15 +444,15 @@ export function LoginPage() {
               </span>
               <button
                 type="button"
-                onClick={handleSwitchToLocal}
+                onClick={isHttps ? handleSwitchToRemote : handleSwitchToLocal}
                 className="text-emerald-400 hover:text-emerald-300 transition-colors text-xs font-medium ml-2 shrink-0"
               >
-                Use 127.0.0.1
+                {isHttps ? 'Use QA Cloud' : 'Use 127.0.0.1'}
               </button>
             </div>
             {connectionSwitched && (
               <p className="mt-2 text-[11px] text-emerald-400 text-center animate-in fade-in">
-                ✓ Switched to local server (http://127.0.0.1:54321). You can now sign in.
+                ✓ Switched to {activeUrl}. You can now sign in.
               </p>
             )}
           </div>

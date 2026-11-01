@@ -23,18 +23,24 @@ export const DEFAULT_LAN_HOST = '192.168.1.105';
 export const DEFAULT_FRONTEND_PORT = 30000;
 export const DEFAULT_SUPABASE_PORT = 54321;
 
+export const DEFAULT_SUPABASE_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || undefined;
+
 // Standard Supabase local development anon key (supports legacy anon key and new publishable key)
 export const DEFAULT_SUPABASE_ANON_KEY =
   (typeof import.meta !== 'undefined' &&
     (import.meta.env?.VITE_SUPABASE_ANON_KEY || import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY)) ||
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
 
+const isTestEnv = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
+
 export const DEFAULT_SERVER_CONFIG: ServerConfig = {
   version: 1,
-  mode: 'lan',
+  mode: !isTestEnv && DEFAULT_SUPABASE_URL ? 'remote' : 'lan',
   host: DEFAULT_LAN_HOST,
   frontendPort: DEFAULT_FRONTEND_PORT,
   supabasePort: DEFAULT_SUPABASE_PORT,
+  customSupabaseUrl: !isTestEnv ? DEFAULT_SUPABASE_URL : undefined,
   supabaseAnonKey: DEFAULT_SUPABASE_ANON_KEY,
 };
 
@@ -86,13 +92,26 @@ export function buildSupabaseUrl(config: ServerConfig): string {
     if (config.customSupabaseUrl && isValidHttpUrl(config.customSupabaseUrl)) {
       return config.customSupabaseUrl.trim().replace(/\/+$/, '');
     }
-    return 'https://project-id.supabase.co';
+    if (DEFAULT_SUPABASE_URL && isValidHttpUrl(DEFAULT_SUPABASE_URL)) {
+      return DEFAULT_SUPABASE_URL.trim().replace(/\/+$/, '');
+    }
+    return 'https://jdgucgsvvxcpxbeubqpi.supabase.co';
   }
 
   if (config.mode === 'lan') {
+    const isTest = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
+
+    // If running on HTTPS (production/cloud edge) where HTTP LAN is blocked by browser Mixed Content policy,
+    // route directly to remote QA endpoint
+    if (!isTest && typeof window !== 'undefined' && window.location.protocol === 'https:') {
+      if (DEFAULT_SUPABASE_URL && isValidHttpUrl(DEFAULT_SUPABASE_URL)) {
+        return DEFAULT_SUPABASE_URL.trim().replace(/\/+$/, '');
+      }
+      return 'https://jdgucgsvvxcpxbeubqpi.supabase.co';
+    }
+
     // If accessed via localhost / 127.0.0.1 and host is the default template IP (192.168.1.105),
     // route directly to 127.0.0.1 to avoid network timeout on developer machine (bypassed in vitest)
-    const isTest = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
     if (
       !isTest &&
       typeof window !== 'undefined' &&
@@ -139,9 +158,20 @@ export function loadServerConfig(): ServerConfig {
 
     const parsed = JSON.parse(raw);
     if (parsed && parsed.version === 1) {
+      const isTest = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
+      let mode = parsed.mode === 'lan' || parsed.mode === 'remote' ? parsed.mode : 'local';
+      let customUrl =
+        typeof parsed.customSupabaseUrl === 'string' ? parsed.customSupabaseUrl : undefined;
+
+      // On HTTPS production, upgrade legacy or stale http:// LAN config to remote QA
+      if (!isTest && typeof window !== 'undefined' && window.location.protocol === 'https:' && mode === 'lan') {
+        mode = 'remote';
+        customUrl = customUrl || DEFAULT_SUPABASE_URL || 'https://jdgucgsvvxcpxbeubqpi.supabase.co';
+      }
+
       return {
         version: 1,
-        mode: parsed.mode === 'lan' || parsed.mode === 'remote' ? parsed.mode : 'local',
+        mode,
         host: typeof parsed.host === 'string' ? parsed.host : DEFAULT_LOCAL_HOST,
         frontendPort: isValidPort(parsed.frontendPort)
           ? parsed.frontendPort
@@ -149,8 +179,7 @@ export function loadServerConfig(): ServerConfig {
         supabasePort: isValidPort(parsed.supabasePort)
           ? parsed.supabasePort
           : DEFAULT_SUPABASE_PORT,
-        customSupabaseUrl:
-          typeof parsed.customSupabaseUrl === 'string' ? parsed.customSupabaseUrl : undefined,
+        customSupabaseUrl: customUrl,
         supabaseAnonKey:
           typeof parsed.supabaseAnonKey === 'string' && parsed.supabaseAnonKey
             ? parsed.supabaseAnonKey
