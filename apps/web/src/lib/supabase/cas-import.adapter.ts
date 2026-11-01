@@ -2,6 +2,7 @@ import { Result, ok, err } from '@wealthnest/shared';
 import { CasImportRepositoryPort, ConfirmCasImportParams } from '@wealthnest/application';
 import { ImportSummaryResult } from '@wealthnest/domain';
 import { supabase } from './client';
+import { toValidUuidOrNull } from './uuid-utils';
 
 export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
   async upsertHoldingsFromCas(
@@ -192,8 +193,8 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
               scheme_plan: item.schemePlan || null,
               cost_basis_verified: Boolean(item.costBasisVerified),
               source: 'cas_import',
-              member_id: params.memberId || null,
-              account_id: params.accountId || null,
+              member_id: toValidUuidOrNull(params.memberId),
+              account_id: toValidUuidOrNull(params.accountId),
             });
 
             if (insertErr) {
@@ -304,8 +305,8 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
                   currency: tx.currency || 'INR',
                   transaction_date: tx.date,
                   notes: tx.description || null,
-                  member_id: params.memberId || null,
-                  account_id: params.accountId || null,
+                  member_id: toValidUuidOrNull(params.memberId),
+                  account_id: toValidUuidOrNull(params.accountId),
                 });
 
                 if (!txErr) {

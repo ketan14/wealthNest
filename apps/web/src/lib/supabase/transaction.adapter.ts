@@ -6,6 +6,7 @@ import {
 } from '@wealthnest/application';
 import { TransactionType } from '@wealthnest/domain';
 import { supabase } from './client';
+import { toValidUuidOrNull } from './uuid-utils';
 
 interface JoinedTransactionRow {
   id: string;
@@ -99,8 +100,8 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
           currency: params.currency || 'INR',
           transaction_date: transactionDate,
           notes: params.notes || null,
-          member_id: params.memberId || null,
-          account_id: params.accountId || null,
+          member_id: toValidUuidOrNull(params.memberId),
+          account_id: toValidUuidOrNull(params.accountId),
         })
         .select('id, created_at, transaction_date')
         .single();

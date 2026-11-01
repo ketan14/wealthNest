@@ -11,6 +11,7 @@ import {
   RecordAssetValuationParams,
 } from '@wealthnest/application';
 import { supabase } from './client';
+import { toValidUuidOrNull } from './uuid-utils';
 
 interface JoinedLiabilityRow {
   id: string;
@@ -246,9 +247,11 @@ export class SupabaseLiabilityAdapter implements LiabilityRepositoryPort {
           start_date: params.startDate || null,
           end_date: params.endDate || null,
           status: params.status || 'active',
-          linked_asset_id: params.linkedAssetId || null,
-          member_id: params.memberId || null,
-          co_borrower_ids: params.coBorrowerMemberIds ? [...params.coBorrowerMemberIds] : [],
+          linked_asset_id: toValidUuidOrNull(params.linkedAssetId),
+          member_id: toValidUuidOrNull(params.memberId),
+          co_borrower_ids: params.coBorrowerMemberIds
+            ? [...params.coBorrowerMemberIds].filter((id) => toValidUuidOrNull(id) !== null)
+            : [],
           notes: params.notes || null,
         })
         .select()
@@ -305,10 +308,10 @@ export class SupabaseLiabilityAdapter implements LiabilityRepositoryPort {
       if (params.emiAmountCents !== undefined)
         updateData.emi_amount_cents = Number(params.emiAmountCents);
       if (params.status !== undefined) updateData.status = params.status;
-      if (params.linkedAssetId !== undefined) updateData.linked_asset_id = params.linkedAssetId;
-      if (params.memberId !== undefined) updateData.member_id = params.memberId;
+      if (params.linkedAssetId !== undefined) updateData.linked_asset_id = toValidUuidOrNull(params.linkedAssetId);
+      if (params.memberId !== undefined) updateData.member_id = toValidUuidOrNull(params.memberId);
       if (params.coBorrowerMemberIds !== undefined)
-        updateData.co_borrower_ids = [...params.coBorrowerMemberIds];
+        updateData.co_borrower_ids = [...params.coBorrowerMemberIds].filter((id) => toValidUuidOrNull(id) !== null);
       if (params.notes !== undefined) updateData.notes = params.notes;
 
       const { data, error } = await supabase

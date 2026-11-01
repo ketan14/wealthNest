@@ -6,6 +6,7 @@ import {
   UpdateHoldingValuesParams,
 } from '@wealthnest/application';
 import { supabase } from './client';
+import { toValidUuidOrNull } from './uuid-utils';
 
 interface JoinedHoldingQueryRow {
   id: string;
@@ -152,8 +153,8 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
           amc_name: params.amcName || null,
           scheme_plan: params.schemePlan || null,
           cost_basis_verified: Boolean(params.costBasisVerified),
-          member_id: params.memberId || null,
-          account_id: params.accountId || null,
+          member_id: toValidUuidOrNull(params.memberId),
+          account_id: toValidUuidOrNull(params.accountId),
         })
         .select('id, updated_at')
         .single();

@@ -9,6 +9,7 @@ import {
 } from '@wealthnest/application';
 import { GoalCategory, GoalPriority } from '@wealthnest/domain';
 import { supabase } from './client';
+import { toValidUuidOrNull } from './uuid-utils';
 
 interface JoinedAllocationRow {
   goal_id: string;
@@ -155,7 +156,7 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
           priority: params.priority || 'medium',
           currency: params.currency || 'INR',
           notes: params.notes || null,
-          member_id: params.memberId || null,
+          member_id: toValidUuidOrNull(params.memberId),
         })
         .select()
         .single();
@@ -211,7 +212,7 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
       if (params.inflationRate !== undefined) updates.inflation_rate = params.inflationRate;
       if (params.priority !== undefined) updates.priority = params.priority;
       if (params.notes !== undefined) updates.notes = params.notes;
-      if (params.memberId !== undefined) updates.member_id = params.memberId;
+      if (params.memberId !== undefined) updates.member_id = toValidUuidOrNull(params.memberId);
 
       const { data, error } = await supabase
         .from('goals')
