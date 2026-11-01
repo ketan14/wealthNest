@@ -126,7 +126,8 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
       if (params.search) {
         const query = params.search.toLowerCase();
         filtered = filtered.filter(
-          (u) => u.displayName.toLowerCase().includes(query) || u.email.toLowerCase().includes(query)
+          (u) =>
+            u.displayName.toLowerCase().includes(query) || u.email.toLowerCase().includes(query)
         );
       }
       if (params.status) {
@@ -212,7 +213,8 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
           {
             id: 'a0000000-0000-0000-0000-000000000001',
             name: 'Vaghela Household',
-            householdRole: user.id === '4c4fa116-57d5-4fc8-af89-be56b5069b50' ? 'primary_owner' : 'member',
+            householdRole:
+              user.id === '4c4fa116-57d5-4fc8-af89-be56b5069b50' ? 'primary_owner' : 'member',
             joinedAt: user.createdAt,
             totalMembers: 5,
           },
@@ -220,7 +222,6 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
         recentAudits: demoAuditLogsStore.filter((l) => l.targetUserId === user.id),
       };
     }
-
   }
 
   async setUserStatus(

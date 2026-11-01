@@ -189,9 +189,7 @@ export class ValidateAndParseBackupUseCase {
         }
 
         if (g.targetAmountCents !== undefined && Number(g.targetAmountCents) <= 0) {
-          errors.push(
-            `Goal '${gId || i}' has non-positive target amount: ${g.targetAmountCents}`
-          );
+          errors.push(`Goal '${gId || i}' has non-positive target amount: ${g.targetAmountCents}`);
         }
       }
 

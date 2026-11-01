@@ -120,9 +120,7 @@ export function AddLiabilityModal({
       setEndDate('');
       setStatus('active');
       setLinkedAssetId('');
-      setMemberId(
-        selectedMemberId && selectedMemberId !== 'all' ? selectedMemberId : 'mem-self'
-      );
+      setMemberId(selectedMemberId && selectedMemberId !== 'all' ? selectedMemberId : 'mem-self');
       setCoBorrowerMemberIds([]);
       setNotes('');
     }
@@ -291,7 +289,10 @@ export function AddLiabilityModal({
                             : 'bg-background border-border/60 text-muted-foreground hover:border-border'
                         }`}
                       >
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: m.colorHex }} />
+                        <span
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: m.colorHex }}
+                        />
                         {m.name}
                       </button>
                     );

@@ -1,0 +1,39 @@
+name: WealthNest QA — Keep-Alive Ping
+
+on:
+  schedule:
+    # Runs every Monday and Thursday at 06:00 UTC (11:30 AM IST)
+    # Prevents Supabase Cloud Free Tier from auto-pausing after 7 days of inactivity
+    - cron: '0 6 * * 1,4'
+  workflow_dispatch:
+
+jobs:
+  ping-supabase-qa:
+    name: Ping Supabase QA Endpoint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping PostgREST Health Check
+        env:
+          SUPABASE_QA_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_QA_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_QA_URL" ] || [ -z "$SUPABASE_QA_KEY" ]; then
+            echo "ℹ️  Notice: VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY secrets not set in GitHub repository settings."
+            echo "👉 To enable automated keep-alive, add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY under Settings -> Secrets and variables -> Actions."
+            exit 0
+          fi
+
+          echo "Pinging Supabase QA instance: $SUPABASE_QA_URL"
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: $SUPABASE_QA_KEY" \
+            -H "Authorization: Bearer $SUPABASE_QA_KEY" \
+            "$SUPABASE_QA_URL/rest/v1/asset_classes?select=id&limit=1")
+
+          echo "Response HTTP Status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then
+            echo "✅ Supabase QA database is warm, healthy, and active."
+          else
+            echo "⚠️ Warning: Received unexpected HTTP status $HTTP_STATUS from QA endpoint."
+            exit 1
+          fi
+

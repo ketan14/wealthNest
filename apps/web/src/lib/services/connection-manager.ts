@@ -175,7 +175,9 @@ export class ConnectionManager {
       const troubleshooting = [
         'Ensure the host machine is running and connected to the same Wi-Fi network.',
         'Verify Supabase is running (run "supabase status" on the host).',
-        'Check that Windows Firewall allows inbound connections on port ' + configToTest.supabasePort + '.',
+        'Check that Windows Firewall allows inbound connections on port ' +
+          configToTest.supabasePort +
+          '.',
         'If running inside WSL2, verify port forwarding rule: "netsh interface portproxy add v4tov4 ...".',
         'Verify the configured IPv4 address matches your host machine current Wi-Fi IP (ipconfig).',
       ];
@@ -288,4 +290,3 @@ export class ConnectionManager {
 }
 
 export const connectionManager = ConnectionManager.getInstance();
-

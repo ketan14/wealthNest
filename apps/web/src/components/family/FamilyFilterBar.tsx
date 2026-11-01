@@ -111,9 +111,7 @@ export function FamilyFilterBar({
               aria-label="Filter by Demat or Broker Account"
               className="text-xs bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
             >
-              <option value="all">
-                All Demats / Folios ({relevantAccounts.length})
-              </option>
+              <option value="all">All Demats / Folios ({relevantAccounts.length})</option>
               {relevantAccounts.map((acc) => (
                 <option key={acc.id} value={acc.id}>
                   {acc.brokerName}: {acc.accountName} ({acc.depository})

@@ -101,7 +101,12 @@ export class GetPerformanceAnalyticsUseCase {
     }));
 
     // 5. Execute pure domain analytics calculation
-    const summary = calculatePortfolioAnalytics(domainHoldings, domainTransactions, currency, modelType);
+    const summary = calculatePortfolioAnalytics(
+      domainHoldings,
+      domainTransactions,
+      currency,
+      modelType
+    );
 
     // 6. Return serializable DTO
     const dto: PerformanceAnalyticsDto = {

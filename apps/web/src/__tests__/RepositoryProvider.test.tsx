@@ -1,9 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import {
-  RepositoryProvider,
-  useRepositories,
-} from '../lib/persistence/repository-context';
+import { RepositoryProvider, useRepositories } from '../lib/persistence/repository-context';
 import {
   AuthProvider,
   useAuth,

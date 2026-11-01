@@ -51,7 +51,7 @@ export const BUDGET_2024_TAX_RULES = {
   /** Equity LTCG tax rate (holding period > 365 days): 12.5% */
   EQUITY_LTCG_RATE: 0.125,
   /** Equity STCG tax rate (holding period <= 365 days): 20% */
-  EQUITY_STCG_RATE: 0.20,
+  EQUITY_STCG_RATE: 0.2,
   /** Holding period in days to qualify as Long Term for Listed Equity and Mutual Funds */
   EQUITY_LONG_TERM_DAYS: 365,
 };
@@ -92,7 +92,9 @@ export function calculateCapitalGainsTaxSummary(
     const isGain = gainLossCents >= 0n;
 
     // Determine holding period
-    const buyDate = h.purchaseDate ? new Date(h.purchaseDate) : new Date(currentDate.getTime() - 400 * 86400000);
+    const buyDate = h.purchaseDate
+      ? new Date(h.purchaseDate)
+      : new Date(currentDate.getTime() - 400 * 86400000);
     const diffTime = Math.max(0, currentDate.getTime() - buyDate.getTime());
     const holdingDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
@@ -121,9 +123,7 @@ export function calculateCapitalGainsTaxSummary(
       }
     }
 
-    const estimatedHoldingTax = isGain
-      ? BigInt(Math.round(Number(gainLossCents) * taxRate))
-      : 0n;
+    const estimatedHoldingTax = isGain ? BigInt(Math.round(Number(gainLossCents) * taxRate)) : 0n;
 
     assessments.push({
       holdingId: h.holdingId,
@@ -145,14 +145,12 @@ export function calculateCapitalGainsTaxSummary(
   }
 
   // Net LTCG after setting off LTCG losses
-  const netLtcgCents = totalLtcgGainsCents > totalLtcgLossesCents
-    ? totalLtcgGainsCents - totalLtcgLossesCents
-    : 0n;
+  const netLtcgCents =
+    totalLtcgGainsCents > totalLtcgLossesCents ? totalLtcgGainsCents - totalLtcgLossesCents : 0n;
 
   // Net STCG after setting off STCG losses
-  const netStcgCents = totalStcgGainsCents > totalStcgLossesCents
-    ? totalStcgGainsCents - totalStcgLossesCents
-    : 0n;
+  const netStcgCents =
+    totalStcgGainsCents > totalStcgLossesCents ? totalStcgGainsCents - totalStcgLossesCents : 0n;
 
   // Under Section 112A, the first ₹1.25 Lakh of LTCG is tax-exempt
   const exemptionCents = BUDGET_2024_TAX_RULES.EQUITY_LTCG_EXEMPTION_PAISE;
@@ -170,14 +168,17 @@ export function calculateCapitalGainsTaxSummary(
   const potentialSavingsCents = BigInt(
     Math.round(
       Number(totalStcgLossesCents) * BUDGET_2024_TAX_RULES.EQUITY_STCG_RATE +
-      Number(totalLtcgLossesCents) * BUDGET_2024_TAX_RULES.EQUITY_LTCG_RATE
+        Number(totalLtcgLossesCents) * BUDGET_2024_TAX_RULES.EQUITY_LTCG_RATE
     )
   );
 
   // Compute Indian Fiscal Year
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth() + 1; // 1-indexed
-  const fyString = month >= 4 ? `FY ${year}-${String(year + 1).slice(2)}` : `FY ${year - 1}-${String(year).slice(2)}`;
+  const fyString =
+    month >= 4
+      ? `FY ${year}-${String(year + 1).slice(2)}`
+      : `FY ${year - 1}-${String(year).slice(2)}`;
 
   return {
     asOfDate: currentDateStr,

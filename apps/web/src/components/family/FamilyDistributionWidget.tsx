@@ -12,11 +12,7 @@ export function FamilyDistributionWidget() {
     return null;
   }
 
-  const {
-    totalFamilyWealthPaise,
-    memberDistributions,
-    hufTaxHarvestBenefitPaise,
-  } = familySummary;
+  const { totalFamilyWealthPaise, memberDistributions, hufTaxHarvestBenefitPaise } = familySummary;
 
   const hufBenefitNumber = Number(hufTaxHarvestBenefitPaise);
 
@@ -35,18 +31,24 @@ export function FamilyDistributionWidget() {
             <div>
               <CardTitle className="text-base text-slate-100 font-semibold flex items-center gap-2">
                 Family Wealth Distribution & Multi-PAN Architecture
-                <Badge variant="outline" className="border-purple-500/40 text-purple-300 bg-purple-500/10 text-[10px]">
+                <Badge
+                  variant="outline"
+                  className="border-purple-500/40 text-purple-300 bg-purple-500/10 text-[10px]"
+                >
                   Phase 6A
                 </Badge>
               </CardTitle>
               <CardDescription className="text-xs text-slate-400">
-                Aggregated household net worth across {members.length} legal entities and {accounts.length} Demat/MF folios
+                Aggregated household net worth across {members.length} legal entities and{' '}
+                {accounts.length} Demat/MF folios
               </CardDescription>
             </div>
           </div>
 
           <div className="text-right">
-            <div className="text-xs text-slate-400 uppercase tracking-wider font-medium">Total Family Wealth</div>
+            <div className="text-xs text-slate-400 uppercase tracking-wider font-medium">
+              Total Family Wealth
+            </div>
             <div className="text-lg font-bold text-white tracking-tight">
               {formatAmount(Number(totalFamilyWealthPaise))}
             </div>
@@ -116,7 +118,9 @@ export function FamilyDistributionWidget() {
 
                 <div className="flex items-center justify-between text-[11px] text-slate-400">
                   <span>{dist.percentageOfTotal}% of total</span>
-                  <span>{dist.accountCount} {dist.accountCount === 1 ? 'Demat' : 'Demats'}</span>
+                  <span>
+                    {dist.accountCount} {dist.accountCount === 1 ? 'Demat' : 'Demats'}
+                  </span>
                 </div>
               </div>
             );
@@ -137,16 +141,21 @@ export function FamilyDistributionWidget() {
                 </span>
               </div>
               <p className="text-[11px] text-slate-300 leading-relaxed mt-0.5">
-                Hindu Undivided Family (HUF) provides an independent PAN entity with its own ₹1,25,000 annual LTCG exemption.
+                Hindu Undivided Family (HUF) provides an independent PAN entity with its own
+                ₹1,25,000 annual LTCG exemption.
               </p>
             </div>
           </div>
 
           <div className="shrink-0 text-left sm:text-right pl-2 sm:pl-0 border-l sm:border-l-0 border-purple-800/40">
-            <div className="text-[10px] uppercase tracking-wider text-purple-400 font-semibold">Annual Tax Advantage</div>
+            <div className="text-[10px] uppercase tracking-wider text-purple-400 font-semibold">
+              Annual Tax Advantage
+            </div>
             <div className="text-sm font-bold text-emerald-400 flex items-center sm:justify-end gap-1">
               <CheckCircle className="w-3.5 h-3.5" />
-              <span>{hufBenefitNumber > 0 ? formatAmount(hufBenefitNumber) : '₹15,625 / year'}</span>
+              <span>
+                {hufBenefitNumber > 0 ? formatAmount(hufBenefitNumber) : '₹15,625 / year'}
+              </span>
             </div>
           </div>
         </div>

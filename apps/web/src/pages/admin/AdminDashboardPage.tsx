@@ -69,10 +69,11 @@ export function AdminDashboardPage() {
                 Tenant Isolation & Confidentiality Boundary Active
               </h3>
               <p className="text-sm text-slate-300 mt-1 leading-relaxed">
-                WealthNest enforces strict Row Level Security (RLS). Platform administrators possess elevated
-                authorities to manage identity, lifecycle states, and platform access, but are{' '}
-                <span className="text-amber-300 font-medium">cryptographically prevented</span> from viewing
-                personal financial holdings, net worth valuations, and private family transactions.
+                WealthNest enforces strict Row Level Security (RLS). Platform administrators possess
+                elevated authorities to manage identity, lifecycle states, and platform access, but
+                are <span className="text-amber-300 font-medium">cryptographically prevented</span>{' '}
+                from viewing personal financial holdings, net worth valuations, and private family
+                transactions.
               </p>
             </div>
           </div>
@@ -161,7 +162,8 @@ export function AdminDashboardPage() {
               <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
             </h4>
             <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-              Explore all registered investors, invite new members, suspend compromised accounts, or trigger password resets.
+              Explore all registered investors, invite new members, suspend compromised accounts, or
+              trigger password resets.
             </p>
           </Link>
 
@@ -177,7 +179,8 @@ export function AdminDashboardPage() {
               <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
             </h4>
             <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-              Oversee platform staff, grant Super Admin or Support Admin entitlements, and enforce RBAC invariants.
+              Oversee platform staff, grant Super Admin or Support Admin entitlements, and enforce
+              RBAC invariants.
             </p>
           </Link>
 
@@ -193,7 +196,8 @@ export function AdminDashboardPage() {
               <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
             </h4>
             <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-              Inspect tamper-proof audit records for every status change, password reset, and role assignment.
+              Inspect tamper-proof audit records for every status change, password reset, and role
+              assignment.
             </p>
           </Link>
         </div>
@@ -202,7 +206,9 @@ export function AdminDashboardPage() {
         <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-md">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-base font-semibold text-white">Recent Security &amp; Administrative Events</h3>
+              <h3 className="text-base font-semibold text-white">
+                Recent Security &amp; Administrative Events
+              </h3>
               <p className="text-xs text-slate-400 mt-0.5">
                 Real-time append-only stream of platform actions
               </p>
@@ -246,9 +252,7 @@ export function AdminDashboardPage() {
                           minute: '2-digit',
                         })}
                       </td>
-                      <td className="py-3 font-semibold text-white font-mono">
-                        {event.action}
-                      </td>
+                      <td className="py-3 font-semibold text-white font-mono">{event.action}</td>
                       <td className="py-3 text-slate-300">{event.actorName}</td>
                       <td className="py-3 text-slate-300">{event.targetName}</td>
                       <td className="py-3">
@@ -257,8 +261,8 @@ export function AdminDashboardPage() {
                             event.outcome === 'success'
                               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                               : event.outcome === 'denied'
-                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                              : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                           }`}
                         >
                           {event.outcome}

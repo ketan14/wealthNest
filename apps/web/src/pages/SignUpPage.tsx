@@ -165,9 +165,12 @@ export function SignUpPage() {
                 <TrendingUp className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-white">Understand your total net worth.</h2>
+                <h2 className="text-sm font-semibold text-white">
+                  Understand your total net worth.
+                </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Automated calculations across cash balances, demat holdings, physical gold, and liabilities.
+                  Automated calculations across cash balances, demat holdings, physical gold, and
+                  liabilities.
                 </p>
               </div>
             </div>
@@ -177,9 +180,12 @@ export function SignUpPage() {
                 <Landmark className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-white">Track investments and property values.</h2>
+                <h2 className="text-sm font-semibold text-white">
+                  Track investments and property values.
+                </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Live NSE/BSE quotes, mutual fund NAV feeds, CAS/Tradebook statement importers, and loan amortization.
+                  Live NSE/BSE quotes, mutual fund NAV feeds, CAS/Tradebook statement importers, and
+                  loan amortization.
                 </p>
               </div>
             </div>
@@ -189,9 +195,12 @@ export function SignUpPage() {
                 <Users className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-white">Manage household assets and liabilities.</h2>
+                <h2 className="text-sm font-semibold text-white">
+                  Manage household assets and liabilities.
+                </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Coordinate portfolios across household entities with Section 112A tax shields and secure RLS.
+                  Coordinate portfolios across household entities with Section 112A tax shields and
+                  secure RLS.
                 </p>
               </div>
             </div>
@@ -201,7 +210,9 @@ export function SignUpPage() {
         {/* Security & Precision footer note */}
         <div className="relative z-10 pt-4 border-t border-slate-800/60 flex items-center gap-3 text-xs text-slate-400">
           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>PostgreSQL Row Level Security &bull; Zero floating-point drift (integer paise)</span>
+          <span>
+            PostgreSQL Row Level Security &bull; Zero floating-point drift (integer paise)
+          </span>
         </div>
       </div>
 
@@ -214,10 +225,13 @@ export function SignUpPage() {
               <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6 text-emerald-400 shadow-inner">
                 <MailCheck className="w-8 h-8" />
               </div>
-              <h2 className="text-2xl font-bold text-white tracking-tight mb-2">Check your email</h2>
+              <h2 className="text-2xl font-bold text-white tracking-tight mb-2">
+                Check your email
+              </h2>
               <p className="text-sm text-slate-300 mb-6 leading-relaxed">
                 We have sent an activation link to{' '}
-                <span className="font-semibold text-white font-mono">{email}</span>. Please click the link to confirm your account and get started.
+                <span className="font-semibold text-white font-mono">{email}</span>. Please click
+                the link to confirm your account and get started.
               </p>
               <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-lg text-xs text-slate-400 mb-6 flex items-center gap-2 text-left">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -440,11 +454,17 @@ export function SignUpPage() {
                     <button
                       type="button"
                       data-testid="toggle-confirm-password-btn"
-                      aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                      aria-label={
+                        showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'
+                      }
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white transition-colors"
                     >
-                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showConfirmPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                   {errors.confirmPassword && (
@@ -476,7 +496,10 @@ export function SignUpPage() {
                       }}
                       className="mt-1 w-4 h-4 rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500/30 focus:ring-offset-0 cursor-pointer"
                     />
-                    <label htmlFor="agreeTerms" className="text-xs text-slate-400 leading-relaxed cursor-pointer select-none">
+                    <label
+                      htmlFor="agreeTerms"
+                      className="text-xs text-slate-400 leading-relaxed cursor-pointer select-none"
+                    >
                       I agree to the{' '}
                       <button
                         type="button"
@@ -565,21 +588,30 @@ export function SignUpPage() {
             </div>
             <div className="p-5 overflow-y-auto space-y-4 text-xs text-slate-300 leading-relaxed">
               <div>
-                <h4 className="font-semibold text-white mb-1">1. Data Privacy & Financial Encryption</h4>
+                <h4 className="font-semibold text-white mb-1">
+                  1. Data Privacy & Financial Encryption
+                </h4>
                 <p>
-                  WealthNest encrypts your portfolio records with household-level Row Level Security (RLS). Your financial data, bank balances, demat holdings, and loan accounts are accessible only to authorized members of your household.
+                  WealthNest encrypts your portfolio records with household-level Row Level Security
+                  (RLS). Your financial data, bank balances, demat holdings, and loan accounts are
+                  accessible only to authorized members of your household.
                 </p>
               </div>
               <div>
                 <h4 className="font-semibold text-white mb-1">2. Zero Floating-Point Precision</h4>
                 <p>
-                  All monetary calculations are performed in integer paise with zero floating-point drift, ensuring mathematical compliance with Indian taxation (Section 112A LTCG) and financial accounting standards.
+                  All monetary calculations are performed in integer paise with zero floating-point
+                  drift, ensuring mathematical compliance with Indian taxation (Section 112A LTCG)
+                  and financial accounting standards.
                 </p>
               </div>
               <div>
-                <h4 className="font-semibold text-white mb-1">3. Non-Commercial Personal Wealth Management</h4>
+                <h4 className="font-semibold text-white mb-1">
+                  3. Non-Commercial Personal Wealth Management
+                </h4>
                 <p>
-                  WealthNest does not sell your personal financial records or telemetry to third-party ad networks or brokers.
+                  WealthNest does not sell your personal financial records or telemetry to
+                  third-party ad networks or brokers.
                 </p>
               </div>
             </div>

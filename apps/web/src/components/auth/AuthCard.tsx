@@ -78,7 +78,10 @@ export function AuthCard() {
         <CardContent className="space-y-4">
           <div className="p-3 rounded-lg bg-secondary/40 border border-border/50 text-xs font-mono space-y-1">
             <p className="text-muted-foreground">
-              Profile: <span className="text-foreground">{user.user_metadata?.full_name || 'Ketan Vaghela'}</span>
+              Profile:{' '}
+              <span className="text-foreground">
+                {user.user_metadata?.full_name || 'Ketan Vaghela'}
+              </span>
             </p>
             <p className="text-muted-foreground">
               User ID: <span className="text-foreground">{user.id}</span>
@@ -110,7 +113,8 @@ export function AuthCard() {
             <Badge variant="secondary">Protected with RLS</Badge>
           </div>
           <CardDescription>
-            Sign in or create an account to manage your family assets, demat tradebooks, and loan amortizations.
+            Sign in or create an account to manage your family assets, demat tradebooks, and loan
+            amortizations.
           </CardDescription>
         </CardHeader>
 
@@ -207,7 +211,12 @@ export function AuthCard() {
                   </div>
                 )}
 
-                <Button type="submit" disabled={loading} size="sm" className="w-full h-8 text-xs gap-1.5">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  size="sm"
+                  className="w-full h-8 text-xs gap-1.5"
+                >
                   {loading && <Loader2 className="w-3 h-3 animate-spin" />}
                   Sign In (Direct)
                 </Button>

@@ -36,16 +36,18 @@ export async function saveTextFile(options: SaveFileOptions): Promise<SaveFileRe
   if (isTauri()) {
     try {
       // Dynamic import to avoid bundling issues in pure browser builds
-      const dialog = (window as unknown as {
-        __TAURI__?: {
-          dialog?: {
-            save: (opts: unknown) => Promise<string | null>;
+      const dialog = (
+        window as unknown as {
+          __TAURI__?: {
+            dialog?: {
+              save: (opts: unknown) => Promise<string | null>;
+            };
+            fs?: {
+              writeTextFile: (path: string, data: string) => Promise<void>;
+            };
           };
-          fs?: {
-            writeTextFile: (path: string, data: string) => Promise<void>;
-          };
-        };
-      }).__TAURI__;
+        }
+      ).__TAURI__;
 
       if (dialog?.dialog?.save && dialog?.fs?.writeTextFile) {
         const filePath = await dialog.dialog.save({
@@ -102,16 +104,18 @@ export async function saveTextFile(options: SaveFileOptions): Promise<SaveFileRe
 export async function openTextFile(options?: OpenFileOptions): Promise<OpenFileResult> {
   if (isTauri()) {
     try {
-      const tauri = (window as unknown as {
-        __TAURI__?: {
-          dialog?: {
-            open: (opts: unknown) => Promise<string | null>;
+      const tauri = (
+        window as unknown as {
+          __TAURI__?: {
+            dialog?: {
+              open: (opts: unknown) => Promise<string | null>;
+            };
+            fs?: {
+              readTextFile: (path: string) => Promise<string>;
+            };
           };
-          fs?: {
-            readTextFile: (path: string) => Promise<string>;
-          };
-        };
-      }).__TAURI__;
+        }
+      ).__TAURI__;
 
       if (tauri?.dialog?.open && tauri?.fs?.readTextFile) {
         const selected = await tauri.dialog.open({
@@ -137,9 +141,7 @@ export async function openTextFile(options?: OpenFileOptions): Promise<OpenFileR
     const input = document.createElement('input');
     input.type = 'file';
     if (options?.filters?.length) {
-      input.accept = options.filters
-        .flatMap((f) => f.extensions.map((ext) => `.${ext}`))
-        .join(',');
+      input.accept = options.filters.flatMap((f) => f.extensions.map((ext) => `.${ext}`)).join(',');
     }
 
     input.onchange = () => {

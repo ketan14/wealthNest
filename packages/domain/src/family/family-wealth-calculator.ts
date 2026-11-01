@@ -20,7 +20,7 @@ export interface HoldingFamilyItem {
 // Section 112A maximum annual LTCG exemption: ₹1,25,000 (12,500,000 paise) per legal tax entity
 export const SECTION_112A_EXEMPTION_PAISE = 12_500_000n;
 export const EQUITY_LTCG_RATE = 0.125; // 12.5%
-export const EQUITY_STCG_RATE = 0.20; // 20%
+export const EQUITY_STCG_RATE = 0.2; // 20%
 
 export function calculateFamilyPortfolioSummary(
   members: readonly FamilyMember[],
@@ -156,7 +156,9 @@ export function calculateFamilyPortfolioSummary(
 
     const taxableLtcgPaise = entityGrossLtcgPaise - exemptionAppliedPaise;
     const estimatedLtcgTaxPaise = BigInt(Math.round(Number(taxableLtcgPaise) * EQUITY_LTCG_RATE));
-    const estimatedStcgTaxPaise = BigInt(Math.round(Number(entityGrossStcgPaise) * EQUITY_STCG_RATE));
+    const estimatedStcgTaxPaise = BigInt(
+      Math.round(Number(entityGrossStcgPaise) * EQUITY_STCG_RATE)
+    );
     const totalEntityTaxPaise = estimatedLtcgTaxPaise + estimatedStcgTaxPaise;
 
     combinedFamilyTaxPaise += totalEntityTaxPaise;

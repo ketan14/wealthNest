@@ -342,7 +342,9 @@ export function AddHoldingModal({
                 onChange={(e) => setHoldingAccountId(e.target.value)}
                 className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
               >
-                <option value="" className="bg-slate-900 text-foreground">-- None / General --</option>
+                <option value="" className="bg-slate-900 text-foreground">
+                  -- None / General --
+                </option>
                 {relevantAccounts.map((a) => (
                   <option key={a.id} value={a.id} className="bg-slate-900 text-foreground">
                     {a.brokerName}: {a.accountName}

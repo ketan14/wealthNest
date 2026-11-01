@@ -89,7 +89,8 @@ const DEMO_GOALS: GoalDetailDto[] = [
     inflationRate: 6.0,
     priority: 'critical',
     currency: 'INR',
-    notes: 'Ketan (Freelance Contractor, ex-MNC) & Parul (Bank of Baroda) long-term equity, PPF, and NPS accumulation.',
+    notes:
+      'Ketan (Freelance Contractor, ex-MNC) & Parul (Bank of Baroda) long-term equity, PPF, and NPS accumulation.',
     memberId: 'mem-self',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -127,7 +128,8 @@ const DEMO_GOALS: GoalDetailDto[] = [
     inflationRate: 8.5,
     priority: 'high',
     currency: 'INR',
-    notes: 'Krisha Vaghela (Age 6, 1st Std) targeting university & professional degree corpus at age 18.',
+    notes:
+      'Krisha Vaghela (Age 6, 1st Std) targeting university & professional degree corpus at age 18.',
     memberId: 'mem-child',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -180,7 +182,7 @@ export function GoalsPage() {
     enabled: true,
   });
 
-  const activeGoalsList: GoalDetailDto[] = userId ? (dbGoals || DEMO_GOALS) : demoGoalsState;
+  const activeGoalsList: GoalDetailDto[] = userId ? dbGoals || DEMO_GOALS : demoGoalsState;
 
   // Filter goals by selected family member entity
   const filteredGoalsList = useMemo(() => {
@@ -230,7 +232,9 @@ export function GoalsPage() {
         name: g.name,
         category: g.category,
         targetAmount: Money.fromCents(BigInt(g.targetAmountCents), gCurrency),
-        targetDate: isNaN(targetDate.getTime()) ? new Date(Date.now() + 365 * 24 * 3600 * 1000) : targetDate,
+        targetDate: isNaN(targetDate.getTime())
+          ? new Date(Date.now() + 365 * 24 * 3600 * 1000)
+          : targetDate,
         initialSaved: Money.fromCents(BigInt(g.initialSavedCents), gCurrency),
         monthlyContribution: Money.fromCents(BigInt(g.monthlyContributionCents), gCurrency),
         expectedReturnRate: g.expectedReturnRate,
@@ -323,12 +327,18 @@ export function GoalsPage() {
               India First (₹ INR)
             </Badge>
             {userId ? (
-              <Badge variant="secondary" className="text-[11px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+              <Badge
+                variant="secondary"
+                className="text-[11px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+              >
                 <Database className="w-3 h-3 mr-1 inline" />
                 Live PostgreSQL Data
               </Badge>
             ) : (
-              <Badge variant="secondary" className="text-[11px] bg-blue-500/10 text-blue-400 border-blue-500/20">
+              <Badge
+                variant="secondary"
+                className="text-[11px] bg-blue-500/10 text-blue-400 border-blue-500/20"
+              >
                 Demo Mode
               </Badge>
             )}
@@ -346,7 +356,9 @@ export function GoalsPage() {
           <Button
             onClick={() => setIsAddModalOpen(true)}
             disabled={isSupportModeActive}
-            title={isSupportModeActive ? 'Disabled in Support Impersonation Mode (Read-Only)' : undefined}
+            title={
+              isSupportModeActive ? 'Disabled in Support Impersonation Mode (Read-Only)' : undefined
+            }
             className="gap-2 shadow-md disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
@@ -365,7 +377,9 @@ export function GoalsPage() {
           <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-semibold uppercase tracking-wider">Emergency Runway</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">
+                Emergency Runway
+              </span>
               <ShieldAlert className="w-4 h-4 text-emerald-400" />
             </div>
           </CardHeader>
@@ -380,15 +394,20 @@ export function GoalsPage() {
                   (summary?.emergencyFund.monthsRunway || 0) >= 6
                     ? 'text-emerald-400 border-emerald-500/30'
                     : (summary?.emergencyFund.monthsRunway || 0) >= 3
-                    ? 'text-amber-400 border-amber-500/30'
-                    : 'text-rose-400 border-rose-500/30'
+                      ? 'text-amber-400 border-amber-500/30'
+                      : 'text-rose-400 border-rose-500/30'
                 }`}
               >
-                {(summary?.emergencyFund.monthsRunway || 0) >= 6 ? 'Optimal Buffer' : 'Action Needed'}
+                {(summary?.emergencyFund.monthsRunway || 0) >= 6
+                  ? 'Optimal Buffer'
+                  : 'Action Needed'}
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
-              Liquid Cash: <span className="font-semibold text-foreground font-mono">{liquidCorpusMoney.formatIndianCompact()}</span>
+              Liquid Cash:{' '}
+              <span className="font-semibold text-foreground font-mono">
+                {liquidCorpusMoney.formatIndianCompact()}
+              </span>
             </p>
           </CardContent>
         </Card>
@@ -398,7 +417,9 @@ export function GoalsPage() {
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-semibold uppercase tracking-wider">Target Corpus Sum</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">
+                Target Corpus Sum
+              </span>
               <Target className="w-4 h-4 text-blue-400" />
             </div>
           </CardHeader>
@@ -412,7 +433,10 @@ export function GoalsPage() {
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
-              Across <span className="font-semibold text-foreground">{summary?.totalGoalsCount || 0} active milestones</span>
+              Across{' '}
+              <span className="font-semibold text-foreground">
+                {summary?.totalGoalsCount || 0} active milestones
+              </span>
             </p>
           </CardContent>
         </Card>
@@ -422,7 +446,9 @@ export function GoalsPage() {
           <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl pointer-events-none" />
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-semibold uppercase tracking-wider">Accumulated Corpus</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">
+                Accumulated Corpus
+              </span>
               <Wallet className="w-4 h-4 text-purple-400" />
             </div>
           </CardHeader>
@@ -435,9 +461,7 @@ export function GoalsPage() {
                 ({summary ? summary.overallFundedPercentage.toFixed(1) : 0}%)
               </span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Funded of overall target requirements
-            </p>
+            <p className="text-xs text-muted-foreground">Funded of overall target requirements</p>
           </CardContent>
         </Card>
 
@@ -446,7 +470,9 @@ export function GoalsPage() {
           <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-semibold uppercase tracking-wider">Committed Monthly SIP</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">
+                Committed Monthly SIP
+              </span>
               <TrendingUp className="w-4 h-4 text-emerald-400" />
             </div>
           </CardHeader>
@@ -455,13 +481,21 @@ export function GoalsPage() {
               <span className="text-3xl font-extrabold tracking-tight text-foreground font-mono">
                 {totalCommittedMoney.formatIndianCompact()}/m
               </span>
-              <Badge variant="outline" className="text-[10px] text-emerald-400 border-emerald-500/30">
+              <Badge
+                variant="outline"
+                className="text-[10px] text-emerald-400 border-emerald-500/30"
+              >
                 {summary?.goalsOnTrackCount || 0}/{summary?.totalGoalsCount || 0} On Track
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground truncate">
-              Required SIP: <span className="font-semibold text-foreground font-mono">
-                {Money.fromCents(BigInt(summary?.totalRequiredMonthlySip.cents || '0'), 'INR').formatIndianCompact()}/m
+              Required SIP:{' '}
+              <span className="font-semibold text-foreground font-mono">
+                {Money.fromCents(
+                  BigInt(summary?.totalRequiredMonthlySip.cents || '0'),
+                  'INR'
+                ).formatIndianCompact()}
+                /m
               </span>
             </p>
           </CardContent>
@@ -478,12 +512,15 @@ export function GoalsPage() {
                 Emergency Reserve Buffer & Burn Rate Analyzer
               </CardTitle>
               <CardDescription className="text-xs">
-                Indian personal finance guideline recommends maintaining 3 to 6 months of mandatory living expenses in liquid cash or overnight arbitrage funds.
+                Indian personal finance guideline recommends maintaining 3 to 6 months of mandatory
+                living expenses in liquid cash or overnight arbitrage funds.
               </CardDescription>
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-xs text-muted-foreground font-medium">Monthly Living Expense:</span>
+              <span className="text-xs text-muted-foreground font-medium">
+                Monthly Living Expense:
+              </span>
               <div className="flex items-center gap-1.5 px-3 py-1 bg-accent/40 rounded-xl border border-border/80 text-xs font-mono font-bold text-foreground">
                 <span>₹</span>
                 <span>{monthlyExpenseRupees.toLocaleString('en-IN')}</span>
@@ -496,8 +533,16 @@ export function GoalsPage() {
           {/* Progress bar visual */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-muted-foreground">Current Buffer: <b className="text-foreground">{liquidCorpusMoney.formatIndianCompact()}</b></span>
-              <span className="text-muted-foreground">6-Month Target: <b className="text-emerald-400">{Money.fromDecimal(monthlyExpenseRupees * 6, 'INR').formatIndianCompact()}</b></span>
+              <span className="text-muted-foreground">
+                Current Buffer:{' '}
+                <b className="text-foreground">{liquidCorpusMoney.formatIndianCompact()}</b>
+              </span>
+              <span className="text-muted-foreground">
+                6-Month Target:{' '}
+                <b className="text-emerald-400">
+                  {Money.fromDecimal(monthlyExpenseRupees * 6, 'INR').formatIndianCompact()}
+                </b>
+              </span>
             </div>
             <div className="w-full bg-secondary rounded-full h-3 overflow-hidden relative">
               <div
@@ -505,10 +550,12 @@ export function GoalsPage() {
                   (summary?.emergencyFund.monthsRunway || 0) >= 6
                     ? 'bg-gradient-to-r from-emerald-500 to-teal-400'
                     : (summary?.emergencyFund.monthsRunway || 0) >= 3
-                    ? 'bg-amber-400'
-                    : 'bg-rose-500'
+                      ? 'bg-amber-400'
+                      : 'bg-rose-500'
                 }`}
-                style={{ width: `${Math.min(100, ((summary?.emergencyFund.monthsRunway || 0) / 6) * 100)}%` }}
+                style={{
+                  width: `${Math.min(100, ((summary?.emergencyFund.monthsRunway || 0) / 6) * 100)}%`,
+                }}
               />
             </div>
           </div>
@@ -550,12 +597,16 @@ export function GoalsPage() {
             const currentCorpusMoney = evalResult.currentTotalCorpus;
             const monthlySipMoney = goal.monthlyContribution;
             const requiredSipMoney = evalResult.requiredMonthlySip;
-            const targetDateStr = goal.targetDate instanceof Date
-              ? goal.targetDate.toISOString().split('T')[0]!
-              : String(goal.targetDate);
+            const targetDateStr =
+              goal.targetDate instanceof Date
+                ? goal.targetDate.toISOString().split('T')[0]!
+                : String(goal.targetDate);
 
             return (
-              <Card key={goal.id} className="border-border/80 bg-card/60 backdrop-blur-md hover:border-primary/40 transition-all flex flex-col justify-between">
+              <Card
+                key={goal.id}
+                className="border-border/80 bg-card/60 backdrop-blur-md hover:border-primary/40 transition-all flex flex-col justify-between"
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3">
@@ -564,13 +615,17 @@ export function GoalsPage() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-base text-foreground leading-snug">{goal.name}</h4>
+                          <h4 className="font-bold text-base text-foreground leading-snug">
+                            {goal.name}
+                          </h4>
                           {goal.memberId && (
                             <span
                               className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border"
                               style={{
                                 backgroundColor: `${members.find((m) => m.id === goal.memberId)?.colorHex || '#3b82f6'}15`,
-                                color: members.find((m) => m.id === goal.memberId)?.colorHex || '#3b82f6',
+                                color:
+                                  members.find((m) => m.id === goal.memberId)?.colorHex ||
+                                  '#3b82f6',
                                 borderColor: `${members.find((m) => m.id === goal.memberId)?.colorHex || '#3b82f6'}30`,
                               }}
                             >
@@ -599,12 +654,12 @@ export function GoalsPage() {
                           evalResult.status === 'achieved'
                             ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
                             : evalResult.status === 'ahead'
-                            ? 'text-blue-400 border-blue-500/30 bg-blue-500/10'
-                            : evalResult.status === 'on_track'
-                            ? 'text-teal-400 border-teal-500/30 bg-teal-500/10'
-                            : evalResult.status === 'behind'
-                            ? 'text-amber-400 border-amber-500/30 bg-amber-500/10'
-                            : 'text-rose-400 border-rose-500/30 bg-rose-500/10'
+                              ? 'text-blue-400 border-blue-500/30 bg-blue-500/10'
+                              : evalResult.status === 'on_track'
+                                ? 'text-teal-400 border-teal-500/30 bg-teal-500/10'
+                                : evalResult.status === 'behind'
+                                  ? 'text-amber-400 border-amber-500/30 bg-amber-500/10'
+                                  : 'text-rose-400 border-rose-500/30 bg-rose-500/10'
                         }`}
                       >
                         {evalResult.status.replace('_', ' ')}
@@ -627,10 +682,14 @@ export function GoalsPage() {
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs font-mono">
                       <span className="text-muted-foreground">
-                        Accumulated: <b className="text-foreground">{currentCorpusMoney.formatIndianCompact()}</b>
+                        Accumulated:{' '}
+                        <b className="text-foreground">
+                          {currentCorpusMoney.formatIndianCompact()}
+                        </b>
                       </span>
                       <span className="text-muted-foreground">
-                        Target: <b className="text-foreground">{targetMoney.formatIndianCompact()}</b>
+                        Target:{' '}
+                        <b className="text-foreground">{targetMoney.formatIndianCompact()}</b>
                       </span>
                     </div>
 
@@ -644,11 +703,18 @@ export function GoalsPage() {
                     </div>
 
                     <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                      <span>Funded: <b className="text-emerald-400 font-mono">{evalResult.fundedPercentage.toFixed(1)}%</b></span>
+                      <span>
+                        Funded:{' '}
+                        <b className="text-emerald-400 font-mono">
+                          {evalResult.fundedPercentage.toFixed(1)}%
+                        </b>
+                      </span>
                       {goal.inflationRate > 0 && (
                         <span>
                           Inflation-adjusted target ({goal.inflationRate}% p.a.):{' '}
-                          <b className="text-foreground font-mono">{futureTargetMoney.formatIndianCompact()}</b>
+                          <b className="text-foreground font-mono">
+                            {futureTargetMoney.formatIndianCompact()}
+                          </b>
                         </span>
                       )}
                     </div>
@@ -657,15 +723,25 @@ export function GoalsPage() {
                   {/* Monthly SIP Breakdown */}
                   <div className="p-3 rounded-xl bg-accent/20 border border-border/60 flex items-center justify-between text-xs font-mono">
                     <div>
-                      <span className="text-muted-foreground block text-[10px] uppercase">Committed SIP</span>
-                      <span className="font-bold text-foreground text-sm">{monthlySipMoney.formatIndianCompact()}/mo</span>
+                      <span className="text-muted-foreground block text-[10px] uppercase">
+                        Committed SIP
+                      </span>
+                      <span className="font-bold text-foreground text-sm">
+                        {monthlySipMoney.formatIndianCompact()}/mo
+                      </span>
                     </div>
 
                     <div className="text-right">
-                      <span className="text-muted-foreground block text-[10px] uppercase">Required SIP</span>
-                      <span className={`font-bold text-sm ${
-                        monthlySipMoney.cents >= requiredSipMoney.cents ? 'text-emerald-400' : 'text-amber-400'
-                      }`}>
+                      <span className="text-muted-foreground block text-[10px] uppercase">
+                        Required SIP
+                      </span>
+                      <span
+                        className={`font-bold text-sm ${
+                          monthlySipMoney.cents >= requiredSipMoney.cents
+                            ? 'text-emerald-400'
+                            : 'text-amber-400'
+                        }`}
+                      >
                         {requiredSipMoney.formatIndianCompact()}/mo
                       </span>
                     </div>
@@ -694,10 +770,7 @@ export function GoalsPage() {
       />
 
       {/* Phase 6A: Manage Family Entities Modal */}
-      <ManageFamilyModal
-        isOpen={isManageFamilyOpen}
-        onClose={() => setIsManageFamilyOpen(false)}
-      />
+      <ManageFamilyModal isOpen={isManageFamilyOpen} onClose={() => setIsManageFamilyOpen(false)} />
 
       {/* Phase 9.2: Accessible Non-Blocking Delete Confirmation Modal */}
       <ConfirmActionModal

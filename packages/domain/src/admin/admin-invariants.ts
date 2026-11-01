@@ -12,7 +12,7 @@ export const PRIVATE_FINANCIAL_TABLES = [
   'portfolio_accounts',
 ] as const;
 
-export type PrivateFinancialTable = typeof PRIVATE_FINANCIAL_TABLES[number];
+export type PrivateFinancialTable = (typeof PRIVATE_FINANCIAL_TABLES)[number];
 
 /**
  * Validates whether an actor with a given platform role is permitted to modify user access status.
@@ -41,10 +41,14 @@ export function validateStatusChange(
     };
   }
 
-  if ((newStatus === 'suspended' || newStatus === 'deactivated') && (!reasonCode || reasonCode.trim() === '')) {
+  if (
+    (newStatus === 'suspended' || newStatus === 'deactivated') &&
+    (!reasonCode || reasonCode.trim() === '')
+  ) {
     return {
       allowed: false,
-      reason: 'Administrative Invariant: A reason code is required when suspending or deactivating a user',
+      reason:
+        'Administrative Invariant: A reason code is required when suspending or deactivating a user',
     };
   }
 

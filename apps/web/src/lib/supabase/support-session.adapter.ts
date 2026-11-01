@@ -14,7 +14,11 @@ import { DEMO_ADMIN_USERS } from './admin.adapter';
 const activeDemoSessions = new Map<string, SupportSession>();
 
 export class SupabaseSupportSessionAdapter implements SupportSessionPort {
-  async startSession(adminId: string, targetUserId: string, reason: string): Promise<SupportSession> {
+  async startSession(
+    adminId: string,
+    targetUserId: string,
+    reason: string
+  ): Promise<SupportSession> {
     try {
       const { data, error } = await supabase.rpc('admin_start_support_session', {
         p_target_user_id: targetUserId,
@@ -406,7 +410,10 @@ export class SupabaseSupportSessionAdapter implements SupportSessionPort {
     ];
   }
 
-  async getSupportTransactions(sessionId: string, limit: number = 50): Promise<SupportTransactionItem[]> {
+  async getSupportTransactions(
+    sessionId: string,
+    limit: number = 50
+  ): Promise<SupportTransactionItem[]> {
     try {
       const { data, error } = await supabase.rpc('support_get_user_transactions', {
         p_session_id: sessionId,

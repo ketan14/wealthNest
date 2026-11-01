@@ -143,10 +143,7 @@ export function SupportSessionProvider({ children }: { children: React.ReactNode
 
       setLoading(true);
       try {
-        const useCase = new StartSupportSessionUseCase(
-          supportSessionAdapter,
-          adminAuditLogAdapter
-        );
+        const useCase = new StartSupportSessionUseCase(supportSessionAdapter, adminAuditLogAdapter);
 
         const result = await useCase.execute(adminActor, {
           targetUserId,
@@ -178,10 +175,7 @@ export function SupportSessionProvider({ children }: { children: React.ReactNode
     setLoading(true);
     try {
       if (adminActor) {
-        const useCase = new EndSupportSessionUseCase(
-          supportSessionAdapter,
-          adminAuditLogAdapter
-        );
+        const useCase = new EndSupportSessionUseCase(supportSessionAdapter, adminAuditLogAdapter);
         await useCase.execute(adminActor, {
           sessionId: activeSession.id,
           targetUserId: activeSession.targetUserId,
@@ -234,7 +228,8 @@ export function SupportSessionProvider({ children }: { children: React.ReactNode
       loading,
       startSupportSession,
       endSupportSession,
-      refreshSupportData: () => (activeSession ? fetchSupportData(activeSession.id) : Promise.resolve()),
+      refreshSupportData: () =>
+        activeSession ? fetchSupportData(activeSession.id) : Promise.resolve(),
     }),
     [
       activeSession,

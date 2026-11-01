@@ -7,11 +7,11 @@
 export type Exchange = 'NSE' | 'BSE';
 
 export type TradingSessionStatus =
-  | 'PRE_MARKET'   // 09:00 - 09:15 IST
-  | 'OPEN'         // 09:15 - 15:30 IST (Regular trading session)
-  | 'POST_MARKET'  // 15:30 - 16:00 IST
-  | 'CLOSED'       // 16:00 - 09:00 IST
-  | 'WEEKEND';     // Saturday & Sunday
+  | 'PRE_MARKET' // 09:00 - 09:15 IST
+  | 'OPEN' // 09:15 - 15:30 IST (Regular trading session)
+  | 'POST_MARKET' // 15:30 - 16:00 IST
+  | 'CLOSED' // 16:00 - 09:00 IST
+  | 'WEEKEND'; // Saturday & Sunday
 
 export interface MarketSessionInfo {
   readonly status: TradingSessionStatus;
@@ -21,20 +21,20 @@ export interface MarketSessionInfo {
 }
 
 export interface StockCmpRecord {
-  readonly symbol: string;          // e.g. 'RELIANCE', 'TCS'
-  readonly exchange: Exchange;       // 'NSE' | 'BSE'
-  readonly isin?: string;            // e.g. 'INE002A01018'
+  readonly symbol: string; // e.g. 'RELIANCE', 'TCS'
+  readonly exchange: Exchange; // 'NSE' | 'BSE'
+  readonly isin?: string; // e.g. 'INE002A01018'
   readonly companyName?: string;
-  readonly cmp: number;              // in ₹ Rupees, e.g. 2950.45
-  readonly cmpPaise: bigint;         // Zero Floating-Point Drift: integer paise
-  readonly previousClose: number;    // in ₹ Rupees
+  readonly cmp: number; // in ₹ Rupees, e.g. 2950.45
+  readonly cmpPaise: bigint; // Zero Floating-Point Drift: integer paise
+  readonly previousClose: number; // in ₹ Rupees
   readonly previousClosePaise: bigint;
   readonly dayHigh?: number;
   readonly dayLow?: number;
-  readonly change: number;           // ₹ delta
-  readonly changePercent: number;    // % delta
+  readonly change: number; // ₹ delta
+  readonly changePercent: number; // % delta
   readonly volume?: number;
-  readonly asOfDate: string;         // ISO string or YYYY-MM-DD
+  readonly asOfDate: string; // ISO string or YYYY-MM-DD
   readonly isLive: boolean;
 }
 

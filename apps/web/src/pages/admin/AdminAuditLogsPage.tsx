@@ -1,13 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  FileText,
-  Filter,
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  X,
-  Lock,
-} from 'lucide-react';
+import { FileText, Filter, ChevronLeft, ChevronRight, Eye, X, Lock } from 'lucide-react';
 
 import { AdminHeader } from '../../components/admin/AdminHeader';
 import { adminAdapter } from '../../lib/supabase/admin.adapter';
@@ -63,9 +55,10 @@ export function AdminAuditLogsPage() {
               Append-Only Immutability Guarantee
             </h4>
             <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-              Every audit record is tamper-proof and strictly append-only. Modification (<code className="text-purple-300">UPDATE</code>)
-              and removal (<code className="text-purple-300">DELETE</code>) are prohibited by automated database triggers.
-              Sensitive identifiers and tokens are sanitized prior to ingestion.
+              Every audit record is tamper-proof and strictly append-only. Modification (
+              <code className="text-purple-300">UPDATE</code>) and removal (
+              <code className="text-purple-300">DELETE</code>) are prohibited by automated database
+              triggers. Sensitive identifiers and tokens are sanitized prior to ingestion.
             </p>
           </div>
         </div>
@@ -92,9 +85,7 @@ export function AdminAuditLogsPage() {
             </select>
           </div>
 
-          <div className="text-xs text-slate-500 font-mono">
-            {total} Total Audit Records
-          </div>
+          <div className="text-xs text-slate-500 font-mono">{total} Total Audit Records</div>
         </div>
 
         {/* Logs Table */}
@@ -148,8 +139,8 @@ export function AdminAuditLogsPage() {
                             l.outcome === 'success'
                               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                               : l.outcome === 'denied'
-                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                              : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                           }`}
                         >
                           {l.outcome}
@@ -218,7 +209,10 @@ export function AdminAuditLogsPage() {
                   Audit Event Payload ({activeLog.action})
                 </h3>
               </div>
-              <button onClick={() => setActiveLog(null)} className="text-slate-500 hover:text-white">
+              <button
+                onClick={() => setActiveLog(null)}
+                className="text-slate-500 hover:text-white"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -231,7 +225,9 @@ export function AdminAuditLogsPage() {
                 </div>
                 <div>
                   <span className="text-slate-500">Outcome:</span>{' '}
-                  <span className="font-semibold uppercase text-emerald-400">{activeLog.outcome}</span>
+                  <span className="font-semibold uppercase text-emerald-400">
+                    {activeLog.outcome}
+                  </span>
                 </div>
                 <div>
                   <span className="text-slate-500">Actor:</span>{' '}

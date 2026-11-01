@@ -111,7 +111,11 @@ export function HoldingCard({ holding, onDelete, isDeleting = false }: HoldingCa
               isGain ? 'text-emerald-400' : 'text-rose-400'
             }`}
           >
-            {isGain ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+            {isGain ? (
+              <TrendingUp className="w-3.5 h-3.5" />
+            ) : (
+              <TrendingDown className="w-3.5 h-3.5" />
+            )}
             <span>
               {isGain ? '+' : '-'}
               {gainLossFormatted} ({isGain ? '+' : ''}

@@ -424,7 +424,9 @@ export function TransactionsPage() {
           <Button
             onClick={() => setIsModalOpen(true)}
             disabled={isSupportModeActive}
-            title={isSupportModeActive ? 'Disabled in Support Impersonation Mode (Read-Only)' : undefined}
+            title={
+              isSupportModeActive ? 'Disabled in Support Impersonation Mode (Read-Only)' : undefined
+            }
             className="gap-2 shadow-sm disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
@@ -738,190 +740,196 @@ export function TransactionsPage() {
                 /* Tablet/Desktop Dense Table (>= 640px) */
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-y border-border/80 bg-secondary/20 text-muted-foreground">
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">Date</th>
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">Type</th>
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">
-                      Asset / Description
-                    </th>
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
-                      Quantity
-                    </th>
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
-                      Amount (₹)
-                    </th>
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">
-                      Audit Notes
-                    </th>
-                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-center">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/50 font-mono">
-                  {filteredTransactions.map((tx) => {
-                    const isTxInflow = isInflow(tx.type);
-                    const formattedDate = new Date(tx.transactionDate).toLocaleDateString('en-IN', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                    });
-                    const formattedAmount = (tx.amountCents / 100).toLocaleString('en-IN', {
-                      style: 'currency',
-                      currency: tx.currency || 'INR',
-                    });
+                    <thead>
+                      <tr className="border-y border-border/80 bg-secondary/20 text-muted-foreground">
+                        <th className="py-3 px-4 font-semibold uppercase tracking-wider">Date</th>
+                        <th className="py-3 px-4 font-semibold uppercase tracking-wider">Type</th>
+                        <th className="py-3 px-4 font-semibold uppercase tracking-wider">
+                          Asset / Description
+                        </th>
+                        <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                          Quantity
+                        </th>
+                        <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                          Amount (₹)
+                        </th>
+                        <th className="py-3 px-4 font-semibold uppercase tracking-wider">
+                          Audit Notes
+                        </th>
+                        <th className="py-3 px-4 font-semibold uppercase tracking-wider text-center">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/50 font-mono">
+                      {filteredTransactions.map((tx) => {
+                        const isTxInflow = isInflow(tx.type);
+                        const formattedDate = new Date(tx.transactionDate).toLocaleDateString(
+                          'en-IN',
+                          {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          }
+                        );
+                        const formattedAmount = (tx.amountCents / 100).toLocaleString('en-IN', {
+                          style: 'currency',
+                          currency: tx.currency || 'INR',
+                        });
 
-                    // Type color badges
-                    const typeBadgeStyles: Record<
-                      TransactionType,
-                      { bg: string; text: string; label: string }
-                    > = {
-                      deposit: {
-                        bg: 'bg-emerald-500/15 border-emerald-500/30',
-                        text: 'text-emerald-400',
-                        label: 'Deposit',
-                      },
-                      dividend: {
-                        bg: 'bg-emerald-500/15 border-emerald-500/30',
-                        text: 'text-emerald-400',
-                        label: 'Dividend',
-                      },
-                      sell: {
-                        bg: 'bg-teal-500/15 border-teal-500/30',
-                        text: 'text-teal-400',
-                        label: 'Sell',
-                      },
-                      buy: {
-                        bg: 'bg-blue-500/15 border-blue-500/30',
-                        text: 'text-blue-400',
-                        label: 'Buy',
-                      },
-                      withdrawal: {
-                        bg: 'bg-rose-500/15 border-rose-500/30',
-                        text: 'text-rose-400',
-                        label: 'Withdrawal',
-                      },
-                      fee: {
-                        bg: 'bg-amber-500/15 border-amber-500/30',
-                        text: 'text-amber-400',
-                        label: 'Charges',
-                      },
-                    };
+                        // Type color badges
+                        const typeBadgeStyles: Record<
+                          TransactionType,
+                          { bg: string; text: string; label: string }
+                        > = {
+                          deposit: {
+                            bg: 'bg-emerald-500/15 border-emerald-500/30',
+                            text: 'text-emerald-400',
+                            label: 'Deposit',
+                          },
+                          dividend: {
+                            bg: 'bg-emerald-500/15 border-emerald-500/30',
+                            text: 'text-emerald-400',
+                            label: 'Dividend',
+                          },
+                          sell: {
+                            bg: 'bg-teal-500/15 border-teal-500/30',
+                            text: 'text-teal-400',
+                            label: 'Sell',
+                          },
+                          buy: {
+                            bg: 'bg-blue-500/15 border-blue-500/30',
+                            text: 'text-blue-400',
+                            label: 'Buy',
+                          },
+                          withdrawal: {
+                            bg: 'bg-rose-500/15 border-rose-500/30',
+                            text: 'text-rose-400',
+                            label: 'Withdrawal',
+                          },
+                          fee: {
+                            bg: 'bg-amber-500/15 border-amber-500/30',
+                            text: 'text-amber-400',
+                            label: 'Charges',
+                          },
+                        };
 
-                    const badge = typeBadgeStyles[tx.type] || {
-                      bg: 'bg-secondary',
-                      text: 'text-foreground',
-                      label: tx.type,
-                    };
+                        const badge = typeBadgeStyles[tx.type] || {
+                          bg: 'bg-secondary',
+                          text: 'text-foreground',
+                          label: tx.type,
+                        };
 
-                    return (
-                      <tr key={tx.id} className="hover:bg-secondary/30 transition-colors">
-                        {/* Date */}
-                        <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
-                          {formattedDate}
-                        </td>
+                        return (
+                          <tr key={tx.id} className="hover:bg-secondary/30 transition-colors">
+                            {/* Date */}
+                            <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
+                              {formattedDate}
+                            </td>
 
-                        {/* Type Badge */}
-                        <td className="py-3.5 px-4 font-sans whitespace-nowrap">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${badge.bg} ${badge.text}`}
-                          >
-                            {isTxInflow ? (
-                              <ArrowDownLeft className="w-3 h-3" />
-                            ) : (
-                              <ArrowUpRight className="w-3 h-3" />
-                            )}
-                            {badge.label}
-                          </span>
-                        </td>
+                            {/* Type Badge */}
+                            <td className="py-3.5 px-4 font-sans whitespace-nowrap">
+                              <span
+                                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${badge.bg} ${badge.text}`}
+                              >
+                                {isTxInflow ? (
+                                  <ArrowDownLeft className="w-3 h-3" />
+                                ) : (
+                                  <ArrowUpRight className="w-3 h-3" />
+                                )}
+                                {badge.label}
+                              </span>
+                            </td>
 
-                        {/* Asset / Description */}
-                        <td className="py-3.5 px-4 font-sans">
-                          {tx.assetName ? (
-                            <div className="font-semibold text-foreground text-sm flex items-center gap-1.5">
-                              {tx.assetName}
-                              {tx.assetTicker && (
-                                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-secondary/80 border border-border text-primary font-bold">
-                                  {tx.assetTicker}
+                            {/* Asset / Description */}
+                            <td className="py-3.5 px-4 font-sans">
+                              {tx.assetName ? (
+                                <div className="font-semibold text-foreground text-sm flex items-center gap-1.5">
+                                  {tx.assetName}
+                                  {tx.assetTicker && (
+                                    <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-secondary/80 border border-border text-primary font-bold">
+                                      {tx.assetTicker}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground capitalize font-medium">
+                                  {tx.type}
                                 </span>
                               )}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground capitalize font-medium">
-                              {tx.type}
-                            </span>
-                          )}
-                          {(() => {
-                            const mem = members.find((m) => m.id === (tx.memberId || 'mem-self'));
-                            const acc = accounts.find((a) => a.id === tx.accountId);
-                            return (
-                              <div className="flex items-center gap-1.5 mt-1 font-sans">
-                                {mem && (
-                                  <span
-                                    className="text-[10px] px-1.5 py-0.2 rounded font-medium flex items-center gap-1"
-                                    style={{
-                                      backgroundColor: `${mem.colorHex}22`,
-                                      border: `1px solid ${mem.colorHex}55`,
-                                      color: mem.colorHex,
-                                    }}
-                                  >
-                                    <span
-                                      className="w-1.5 h-1.5 rounded-full"
-                                      style={{ backgroundColor: mem.colorHex }}
-                                    />
-                                    {mem.name.split(' ')[0]} {mem.relationship === 'huf' ? 'HUF' : ''}
-                                  </span>
-                                )}
-                                {acc && (
-                                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-secondary text-muted-foreground font-mono border border-border">
-                                    {acc.brokerName}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })()}
-                        </td>
+                              {(() => {
+                                const mem = members.find(
+                                  (m) => m.id === (tx.memberId || 'mem-self')
+                                );
+                                const acc = accounts.find((a) => a.id === tx.accountId);
+                                return (
+                                  <div className="flex items-center gap-1.5 mt-1 font-sans">
+                                    {mem && (
+                                      <span
+                                        className="text-[10px] px-1.5 py-0.2 rounded font-medium flex items-center gap-1"
+                                        style={{
+                                          backgroundColor: `${mem.colorHex}22`,
+                                          border: `1px solid ${mem.colorHex}55`,
+                                          color: mem.colorHex,
+                                        }}
+                                      >
+                                        <span
+                                          className="w-1.5 h-1.5 rounded-full"
+                                          style={{ backgroundColor: mem.colorHex }}
+                                        />
+                                        {mem.name.split(' ')[0]}{' '}
+                                        {mem.relationship === 'huf' ? 'HUF' : ''}
+                                      </span>
+                                    )}
+                                    {acc && (
+                                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-secondary text-muted-foreground font-mono border border-border">
+                                        {acc.brokerName}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </td>
 
-                        {/* Quantity */}
-                        <td className="py-3.5 px-4 text-right text-foreground">
-                          {tx.quantity !== undefined
-                            ? tx.quantity.toLocaleString('en-IN', { maximumFractionDigits: 4 })
-                            : '—'}
-                        </td>
+                            {/* Quantity */}
+                            <td className="py-3.5 px-4 text-right text-foreground">
+                              {tx.quantity !== undefined
+                                ? tx.quantity.toLocaleString('en-IN', { maximumFractionDigits: 4 })
+                                : '—'}
+                            </td>
 
-                        {/* Amount */}
-                        <td className="py-3.5 px-4 text-right font-bold whitespace-nowrap">
-                          <span className={isTxInflow ? 'text-emerald-400' : 'text-rose-400'}>
-                            {isTxInflow ? '+' : '-'}
-                            {formattedAmount}
-                          </span>
-                        </td>
+                            {/* Amount */}
+                            <td className="py-3.5 px-4 text-right font-bold whitespace-nowrap">
+                              <span className={isTxInflow ? 'text-emerald-400' : 'text-rose-400'}>
+                                {isTxInflow ? '+' : '-'}
+                                {formattedAmount}
+                              </span>
+                            </td>
 
-                        {/* Notes */}
-                        <td className="py-3.5 px-4 font-sans text-xs text-muted-foreground max-w-xs truncate">
-                          {tx.notes || '—'}
-                        </td>
+                            {/* Notes */}
+                            <td className="py-3.5 px-4 font-sans text-xs text-muted-foreground max-w-xs truncate">
+                              {tx.notes || '—'}
+                            </td>
 
-                        {/* Actions */}
-                        <td className="py-3.5 px-4 text-center">
-                          <button
-                            onClick={() => handleDeleteRequest(tx)}
-                            title="Delete Transaction"
-                            className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center mx-auto"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                            {/* Actions */}
+                            <td className="py-3.5 px-4 text-center">
+                              <button
+                                onClick={() => handleDeleteRequest(tx)}
+                                title="Delete Transaction"
+                                className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center mx-auto"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
         </CardContent>
       </Card>
 
@@ -941,10 +949,7 @@ export function TransactionsPage() {
       />
 
       {/* Phase 6A: Manage Family Entities & Demat Accounts Modal */}
-      <ManageFamilyModal
-        isOpen={isManageFamilyOpen}
-        onClose={() => setIsManageFamilyOpen(false)}
-      />
+      <ManageFamilyModal isOpen={isManageFamilyOpen} onClose={() => setIsManageFamilyOpen(false)} />
 
       {/* Phase 9.2: Accessible Non-Blocking Delete Confirmation Modal */}
       <ConfirmActionModal

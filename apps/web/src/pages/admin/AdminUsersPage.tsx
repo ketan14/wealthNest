@@ -51,7 +51,6 @@ export function AdminUsersPage() {
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
@@ -81,7 +80,9 @@ export function AdminUsersPage() {
   const handleOpenStatusModal = (user: AdminUserSummary) => {
     setStatusModalUser(user);
     setNewStatus(user.status === 'suspended' ? 'active' : 'suspended');
-    setReasonCode(user.status === 'suspended' ? 'REMEDIAL_ACTION_COMPLETE' : 'SUSPICIOUS_LOGIN_ATTEMPTS');
+    setReasonCode(
+      user.status === 'suspended' ? 'REMEDIAL_ACTION_COMPLETE' : 'SUSPICIOUS_LOGIN_ATTEMPTS'
+    );
     setReasonDetails('');
     setModalError(null);
   };
@@ -141,11 +142,7 @@ export function AdminUsersPage() {
     setIsSubmitting(true);
     try {
       const displayName = inviteName.trim() || inviteEmail.split('@')[0] || 'Investor';
-      await adminAdapter.inviteUser(
-        inviteEmail.trim(),
-        displayName,
-        inviteRole || undefined
-      );
+      await adminAdapter.inviteUser(inviteEmail.trim(), displayName, inviteRole || undefined);
 
       await adminAdapter.recordLog({
         actorUserId: adminActor.userId,
@@ -156,7 +153,6 @@ export function AdminUsersPage() {
         reasonCode: 'ONBOARDING_INVITATION',
         safeMetadata: { email: inviteEmail, role: inviteRole },
       });
-
 
       setShowInviteModal(false);
       setInviteEmail('');
@@ -172,7 +168,11 @@ export function AdminUsersPage() {
   };
 
   const handlePasswordReset = async (user: AdminUserSummary) => {
-    if (!confirm(`Trigger an administrative password reset email for ${user.displayName} (${user.email})?`)) {
+    if (
+      !confirm(
+        `Trigger an administrative password reset email for ${user.displayName} (${user.email})?`
+      )
+    ) {
       return;
     }
 
@@ -325,10 +325,10 @@ export function AdminUsersPage() {
                             u.status === 'active'
                               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                               : u.status === 'suspended'
-                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                              : u.status === 'invited'
-                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                              : 'bg-slate-800 text-slate-400 border border-slate-700'
+                                ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                : u.status === 'invited'
+                                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                  : 'bg-slate-800 text-slate-400 border border-slate-700'
                           }`}
                         >
                           <span
@@ -336,10 +336,10 @@ export function AdminUsersPage() {
                               u.status === 'active'
                                 ? 'bg-emerald-400'
                                 : u.status === 'suspended'
-                                ? 'bg-rose-400'
-                                : u.status === 'invited'
-                                ? 'bg-amber-400'
-                                : 'bg-slate-500'
+                                  ? 'bg-rose-400'
+                                  : u.status === 'invited'
+                                    ? 'bg-amber-400'
+                                    : 'bg-slate-500'
                             }`}
                           />
                           {u.status}
@@ -522,12 +522,16 @@ export function AdminUsersPage() {
                     required
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-500"
                   >
-                    <option value="SUSPICIOUS_LOGIN_ATTEMPTS">Suspicious Login Attempts / MFA Failures</option>
+                    <option value="SUSPICIOUS_LOGIN_ATTEMPTS">
+                      Suspicious Login Attempts / MFA Failures
+                    </option>
                     <option value="POLICY_VIOLATION">Terms of Service / Policy Violation</option>
                     <option value="FRAUD_PREVENTION">Fraud Prevention / AML Review</option>
                     <option value="USER_REQUEST">Voluntary User Request</option>
                     <option value="PAYMENT_FAILURE">Billing or Subscription Delinquency</option>
-                    <option value="SECURITY_INCIDENT">Active Security Incident Investigation</option>
+                    <option value="SECURITY_INCIDENT">
+                      Active Security Incident Investigation
+                    </option>
                     <option value="OTHER">Other Administrative Reason</option>
                   </select>
                 </div>

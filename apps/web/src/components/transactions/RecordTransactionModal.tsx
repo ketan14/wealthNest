@@ -1,7 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { TransactionType } from '@wealthnest/domain';
 import { Button } from '@/components/ui/Button';
-import { X, Plus, AlertCircle, Loader2, ArrowDownLeft, ArrowUpRight, Users, Briefcase } from 'lucide-react';
+import {
+  X,
+  Plus,
+  AlertCircle,
+  Loader2,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Users,
+  Briefcase,
+} from 'lucide-react';
 import { useFamily } from '@/lib/family/family-context';
 
 export interface NewTransactionFormValues {
@@ -275,7 +284,9 @@ export function RecordTransactionModal({
                 onChange={(e) => setTxAccountId(e.target.value)}
                 className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
               >
-                <option value="" className="bg-slate-900 text-foreground">-- None / General --</option>
+                <option value="" className="bg-slate-900 text-foreground">
+                  -- None / General --
+                </option>
                 {relevantAccounts.map((a) => (
                   <option key={a.id} value={a.id} className="bg-slate-900 text-foreground">
                     {a.brokerName}: {a.accountName}

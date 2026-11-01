@@ -1,10 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import {
-  isTauri,
-  getAppPlatform,
-  isTauriDesktop,
-  isTauriMobile,
-} from '../lib/tauri/tauri-runtime';
+import { isTauri, getAppPlatform, isTauriDesktop, isTauriMobile } from '../lib/tauri/tauri-runtime';
 
 describe('Phase 10: Tauri 2 Runtime Environment & Platform Detection', () => {
   const originalTauri = (window as unknown as { __TAURI__?: unknown }).__TAURI__;
@@ -25,7 +20,8 @@ describe('Phase 10: Tauri 2 Runtime Environment & Platform Detection', () => {
     }
 
     if (originalInternals) {
-      (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = originalInternals;
+      (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ =
+        originalInternals;
     } else {
       delete (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
     }
@@ -63,7 +59,8 @@ describe('Phase 10: Tauri 2 Runtime Environment & Platform Detection', () => {
     (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {};
 
     Object.defineProperty(navigator, 'userAgent', {
-      value: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36',
+      value:
+        'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36',
       configurable: true,
     });
 
@@ -77,7 +74,8 @@ describe('Phase 10: Tauri 2 Runtime Environment & Platform Detection', () => {
     (window as unknown as { __TAURI__?: unknown }).__TAURI__ = {};
 
     Object.defineProperty(navigator, 'userAgent', {
-      value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148',
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148',
       configurable: true,
     });
 

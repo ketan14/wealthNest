@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { syncHoldingWithTransaction, SynchronizableHolding } from '../portfolio/holding-synchronizer.js';
+import {
+  syncHoldingWithTransaction,
+  SynchronizableHolding,
+} from '../portfolio/holding-synchronizer.js';
 
 describe('syncHoldingWithTransaction Domain Logic', () => {
   const initialHolding: SynchronizableHolding = {

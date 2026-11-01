@@ -121,7 +121,9 @@ describe('Support Session Application Use Cases', () => {
 
     mockAuditRepo = {
       recordLog: vi.fn().mockResolvedValue('audit-log-id'),
-      listLogs: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, limit: 10, totalPages: 0 }),
+      listLogs: vi
+        .fn()
+        .mockResolvedValue({ items: [], total: 0, page: 1, limit: 10, totalPages: 0 }),
     };
   });
 
@@ -201,7 +203,9 @@ describe('Support Session Application Use Cases', () => {
 
       expect(isErr(res)).toBe(true);
       if (isErr(res)) {
-        expect(res.error.message).toContain('cannot initiate a support view session for your own administrator account');
+        expect(res.error.message).toContain(
+          'cannot initiate a support view session for your own administrator account'
+        );
       }
 
       expect(mockSupportPort.startSession).not.toHaveBeenCalled();

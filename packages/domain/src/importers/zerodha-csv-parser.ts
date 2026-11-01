@@ -84,8 +84,8 @@ function parseZerodhaHoldings(rows: string[][]): ParsedBrokerCsvResult {
       (rawSymbol.endsWith('BEES') || rawSymbol.includes('ETF')
         ? 'equity'
         : rawSymbol.startsWith('SGB')
-        ? 'commodity'
-        : 'equity');
+          ? 'commodity'
+          : 'equity');
 
     holdings.push({
       symbol: rawSymbol,
@@ -94,7 +94,8 @@ function parseZerodhaHoldings(rows: string[][]): ParsedBrokerCsvResult {
       quantity: qty,
       unitCost,
       currentPrice,
-      currentValue: currentValue || (currentPrice ? currentPrice.multiply(qty) : unitCost.multiply(qty)),
+      currentValue:
+        currentValue || (currentPrice ? currentPrice.multiply(qty) : unitCost.multiply(qty)),
       assetType,
       rawBroker: 'ZERODHA',
     });

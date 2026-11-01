@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase/client';
+import { connectionManager } from '@/lib/services/connection-manager';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { Button } from '@/components/ui/Button';
 import {
@@ -17,6 +18,7 @@ import {
   X,
   KeyRound,
   ShieldAlert,
+  RotateCcw,
 } from 'lucide-react';
 
 export function LoginPage() {
@@ -34,7 +36,31 @@ export function LoginPage() {
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSubmitting, setForgotSubmitting] = useState(false);
-  const [forgotMessage, setForgotMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [forgotMessage, setForgotMessage] = useState<{
+    text: string;
+    type: 'success' | 'error';
+  } | null>(null);
+
+  const [activeUrl, setActiveUrl] = useState(() => connectionManager.getSupabaseUrl());
+  const [connectionSwitched, setConnectionSwitched] = useState(false);
+
+  useEffect(() => {
+    const unsub = connectionManager.subscribeConfig(() => {
+      setActiveUrl(connectionManager.getSupabaseUrl());
+    });
+    return () => unsub();
+  }, []);
+
+  const handleSwitchToLocal = async () => {
+    await connectionManager.switchServer({
+      mode: 'local',
+      host: '127.0.0.1',
+      supabasePort: 54321,
+    });
+    setActiveUrl('http://127.0.0.1:54321');
+    setServerError(null);
+    setConnectionSwitched(true);
+  };
 
   // If already authenticated, redirect to home page
   if (!authLoading && user) {
@@ -77,10 +103,18 @@ export function LoginPage() {
 
       navigate('/', { replace: true });
     } catch (err: unknown) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : 'Invalid email or password. Please try again.';
+      let message = 'Invalid email or password. Please try again.';
+      if (err instanceof Error) {
+        if (
+          err.message.includes('Failed to fetch') ||
+          err.message.includes('NetworkError') ||
+          err.name === 'TypeError'
+        ) {
+          message = `Cannot reach backend at ${connectionManager.getSupabaseUrl()}. Verify local Supabase is running or switch to Local (127.0.0.1).`;
+        } else {
+          message = err.message;
+        }
+      }
       setServerError(message);
     } finally {
       setSubmitting(false);
@@ -149,7 +183,8 @@ export function LoginPage() {
             Welcome back to WealthNest.
           </h1>
           <p className="text-base sm:text-lg text-slate-300 mb-8 leading-relaxed">
-            Access your encrypted wealth portfolio, track real-time valuations, and manage family finances securely.
+            Access your encrypted wealth portfolio, track real-time valuations, and manage family
+            finances securely.
           </p>
 
           {/* Quick highlights */}
@@ -161,7 +196,8 @@ export function LoginPage() {
               <div>
                 <h2 className="text-sm font-semibold text-white">Consolidated Family Portfolio</h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Track Zerodha Kite, Groww, and CAS statements in one place with zero floating-point drift.
+                  Track Zerodha Kite, Groww, and CAS statements in one place with zero
+                  floating-point drift.
                 </p>
               </div>
             </div>
@@ -173,7 +209,8 @@ export function LoginPage() {
               <div>
                 <h2 className="text-sm font-semibold text-white">Smart Debt & Amortization</h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Prepayment simulations, interest savings calculations, and loan repayment timelines.
+                  Prepayment simulations, interest savings calculations, and loan repayment
+                  timelines.
                 </p>
               </div>
             </div>
@@ -208,7 +245,17 @@ export function LoginPage() {
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <p className="font-semibold">Authentication Failed</p>
-                  <p className="mt-0.5 text-rose-300/90">{serverError}</p>
+                  <p className="mt-0.5 text-rose-300/90 leading-relaxed">{serverError}</p>
+                  {serverError.includes('Cannot reach backend') && (
+                    <button
+                      type="button"
+                      onClick={handleSwitchToLocal}
+                      className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 font-medium transition-colors text-[11px] border border-slate-700"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Switch to Local Server (127.0.0.1:54321)
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -356,6 +403,28 @@ export function LoginPage() {
                 </Link>
               </p>
             </div>
+
+            {/* Active Server Connection Indicator */}
+            <div className="mt-5 pt-4 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-400">
+              <span className="flex items-center gap-1.5 truncate max-w-[240px]" title={activeUrl}>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                <span className="truncate">
+                  Backend: <code className="text-slate-300 font-mono text-[11px]">{activeUrl}</code>
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={handleSwitchToLocal}
+                className="text-emerald-400 hover:text-emerald-300 transition-colors text-xs font-medium ml-2 shrink-0"
+              >
+                Use 127.0.0.1
+              </button>
+            </div>
+            {connectionSwitched && (
+              <p className="mt-2 text-[11px] text-emerald-400 text-center animate-in fade-in">
+                ✓ Switched to local server (http://127.0.0.1:54321). You can now sign in.
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -401,7 +470,10 @@ export function LoginPage() {
 
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <div>
-                <label htmlFor="recoveryEmail" className="block text-xs font-medium text-slate-300 mb-1.5">
+                <label
+                  htmlFor="recoveryEmail"
+                  className="block text-xs font-medium text-slate-300 mb-1.5"
+                >
                   Recovery Email Address
                 </label>
                 <input

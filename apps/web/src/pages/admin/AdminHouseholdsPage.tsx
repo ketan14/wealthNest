@@ -57,9 +57,10 @@ export function AdminHouseholdsPage() {
               Tenant Data Isolation Principle
             </h4>
             <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-              Platform administration is strictly scoped to tenant metadata (name, primary owner, and member counts).
-              In accordance with WealthNest core architecture, consolidated family net worth, holdings, and liabilities
-              are accessible strictly to authorized household members and remain completely private from platform staff.
+              Platform administration is strictly scoped to tenant metadata (name, primary owner,
+              and member counts). In accordance with WealthNest core architecture, consolidated
+              family net worth, holdings, and liabilities are accessible strictly to authorized
+              household members and remain completely private from platform staff.
             </p>
           </div>
         </div>
@@ -110,7 +111,8 @@ export function AdminHouseholdsPage() {
 
                   <h3 className="text-base font-bold text-white tracking-tight">{h.name}</h3>
                   <div className="text-xs text-slate-400 mt-1">
-                    Primary Owner: <span className="text-slate-200 font-medium">{h.createdByName}</span>
+                    Primary Owner:{' '}
+                    <span className="text-slate-200 font-medium">{h.createdByName}</span>
                   </div>
                 </div>
 
@@ -163,4 +165,3 @@ export function AdminHouseholdsPage() {
     </div>
   );
 }
-

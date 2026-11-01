@@ -137,7 +137,10 @@ describe('Admin Application Layer Use Cases', () => {
 
     it('rejects unauthenticated or unprivileged actors', async () => {
       const useCase = new ListAdminUsersUseCase(mockAdminRepo);
-      const res = await useCase.execute({ ...superAdminActor, role: undefined as any }, { page: 1, limit: 20 });
+      const res = await useCase.execute(
+        { ...superAdminActor, role: undefined as any },
+        { page: 1, limit: 20 }
+      );
 
       expect(isErr(res)).toBe(true);
     });
@@ -331,7 +334,11 @@ describe('Admin Application Layer Use Cases', () => {
       });
 
       expect(isOk(res)).toBe(true);
-      expect(mockAdminRepo.managePlatformRole).toHaveBeenCalledWith(sampleUser.id, 'support_admin', 'grant');
+      expect(mockAdminRepo.managePlatformRole).toHaveBeenCalledWith(
+        sampleUser.id,
+        'support_admin',
+        'grant'
+      );
       expect(mockAuditRepo.recordLog).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'ROLE_GRANTED',

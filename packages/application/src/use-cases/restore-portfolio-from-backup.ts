@@ -36,9 +36,8 @@ export class RestorePortfolioFromBackupUseCase {
     }
 
     // 1. Deep validate the payload before performing any storage actions
-    const serialized = JSON.stringify(
-      backupData,
-      (_k, v) => (typeof v === 'bigint' ? v.toString() : v)
+    const serialized = JSON.stringify(backupData, (_k, v) =>
+      typeof v === 'bigint' ? v.toString() : v
     );
     const validationResult = this.validator.execute(serialized);
     if (!validationResult.success) {

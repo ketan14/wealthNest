@@ -13,7 +13,7 @@ describe('Financial Precision and Rounding Invariants', () => {
     const qty = 12.345678;
     const unitCostPaise = 123456n;
     const costBasis = calculateCostBasisPaise(qty, unitCostPaise);
-    
+
     // 12.345678 * 123456 = 1524148.029... -> rounds to 1524148 paise (₹15,241.48)
     expect(costBasis).toBe(1524148n);
   });

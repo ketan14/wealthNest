@@ -1,6 +1,6 @@
 /**
  * WealthNest Financial Precision and Calculation Rules
- * 
+ *
  * Rules:
  * 1. Money representation: Always stored as integer paise (1 INR = 100 paise, BigInt).
  *    Zero floating-point arithmetic drift allowed for all currency amounts.

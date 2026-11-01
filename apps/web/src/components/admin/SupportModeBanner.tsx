@@ -73,7 +73,9 @@ export function SupportModeBanner() {
             }`}
             title="Support Session Time Remaining"
           >
-            <Clock className={`w-3.5 h-3.5 ${isExpiringSoon ? 'text-rose-400 animate-spin' : 'text-amber-400'}`} />
+            <Clock
+              className={`w-3.5 h-3.5 ${isExpiringSoon ? 'text-rose-400 animate-spin' : 'text-amber-400'}`}
+            />
             <span>{formattedTimeRemaining}</span>
           </div>
 

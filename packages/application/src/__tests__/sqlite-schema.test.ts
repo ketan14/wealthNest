@@ -74,7 +74,9 @@ describe('Phase 9.1: SQLite Schema & Engine Initialization', () => {
     ).run();
 
     // Confirm existence
-    expect(db.prepare('SELECT COUNT(*) as cnt FROM holdings WHERE user_id = ?;').get('usr-1')).toEqual({
+    expect(
+      db.prepare('SELECT COUNT(*) as cnt FROM holdings WHERE user_id = ?;').get('usr-1')
+    ).toEqual({
       cnt: 1,
     });
 
@@ -82,10 +84,14 @@ describe('Phase 9.1: SQLite Schema & Engine Initialization', () => {
     db.prepare('DELETE FROM profiles WHERE id = ?;').run('usr-1');
 
     // Confirm cascade to assets and holdings
-    expect(db.prepare('SELECT COUNT(*) as cnt FROM assets WHERE user_id = ?;').get('usr-1')).toEqual({
+    expect(
+      db.prepare('SELECT COUNT(*) as cnt FROM assets WHERE user_id = ?;').get('usr-1')
+    ).toEqual({
       cnt: 0,
     });
-    expect(db.prepare('SELECT COUNT(*) as cnt FROM holdings WHERE user_id = ?;').get('usr-1')).toEqual({
+    expect(
+      db.prepare('SELECT COUNT(*) as cnt FROM holdings WHERE user_id = ?;').get('usr-1')
+    ).toEqual({
       cnt: 0,
     });
   });

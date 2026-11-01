@@ -31,9 +31,7 @@ function renderWithProviders(ui: React.ReactElement) {
       <AuthProvider>
         <PreferencesProvider>
           <FamilyProvider>
-            <MemoryRouter>
-              {ui}
-            </MemoryRouter>
+            <MemoryRouter>{ui}</MemoryRouter>
           </FamilyProvider>
         </PreferencesProvider>
       </AuthProvider>
@@ -46,9 +44,7 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
     it('renders combined family entity pills and account selector', () => {
       const handleOpenManage = vi.fn();
 
-      renderWithProviders(
-        <FamilyFilterBar onOpenManageModal={handleOpenManage} />
-      );
+      renderWithProviders(<FamilyFilterBar onOpenManageModal={handleOpenManage} />);
 
       // Verify "Combined Family" pill is present
       expect(screen.getByText('Combined Family')).toBeInTheDocument();
@@ -69,9 +65,7 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
     });
 
     it('allows selecting different family entity filters', () => {
-      renderWithProviders(
-        <FamilyFilterBar onOpenManageModal={() => {}} />
-      );
+      renderWithProviders(<FamilyFilterBar onOpenManageModal={() => {}} />);
 
       const hufPill = screen.getByText('Shamalbhai Vaghela HUF');
       fireEvent.click(hufPill);
@@ -81,13 +75,13 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
 
   describe('FamilyDistributionWidget Component', () => {
     it('renders family wealth distribution and HUF Section 112A Tax Shield', async () => {
-      renderWithProviders(
-        <FamilyDistributionWidget />
-      );
+      renderWithProviders(<FamilyDistributionWidget />);
 
       // Widget Header (loads asynchronously via familySummary)
       await waitFor(() => {
-        expect(screen.getByText(/Family Wealth Distribution & Multi-PAN Architecture/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Family Wealth Distribution & Multi-PAN Architecture/i)
+        ).toBeInTheDocument();
       });
 
       expect(screen.getByText('Phase 6A')).toBeInTheDocument();
@@ -105,9 +99,7 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
     it('renders entities and demat accounts tabs when opened', () => {
       const handleClose = vi.fn();
 
-      renderWithProviders(
-        <ManageFamilyModal isOpen={true} onClose={handleClose} />
-      );
+      renderWithProviders(<ManageFamilyModal isOpen={true} onClose={handleClose} />);
 
       expect(screen.getByText('Family Entities & Demat Accounts')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Family Entities/i })).toBeInTheDocument();
@@ -126,22 +118,20 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
     });
 
     it('toggles add member form', () => {
-      renderWithProviders(
-        <ManageFamilyModal isOpen={true} onClose={() => {}} />
-      );
+      renderWithProviders(<ManageFamilyModal isOpen={true} onClose={() => {}} />);
 
       const addBtn = screen.getByRole('button', { name: /Add Family Member or HUF Entity/i });
       fireEvent.click(addBtn);
 
-      expect(screen.getByPlaceholderText(/e\.g\. Parul Vaghela or Vaghela HUF/i)).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText(/e\.g\. Parul Vaghela or Vaghela HUF/i)
+      ).toBeInTheDocument();
       expect(screen.getByText(/Relationship \/ Entity Type/i)).toBeInTheDocument();
       expect(screen.getByText(/PAN Card \(Optional\)/i)).toBeInTheDocument();
     });
 
     it('switches to demat accounts tab and lists brokers', () => {
-      renderWithProviders(
-        <ManageFamilyModal isOpen={true} onClose={() => {}} />
-      );
+      renderWithProviders(<ManageFamilyModal isOpen={true} onClose={() => {}} />);
 
       const accountsTab = screen.getByRole('button', { name: /Demat & Folio Accounts/i });
       fireEvent.click(accountsTab);
@@ -151,15 +141,15 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
       expect(screen.getByText(/Groww.*Demat/i)).toBeInTheDocument();
 
       // Add account button
-      expect(screen.getByRole('button', { name: /Add Demat, MF Folio, or Bank Account/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Add Demat, MF Folio, or Bank Account/i })
+      ).toBeInTheDocument();
     });
   });
 
   describe('PortfolioPage Integration', () => {
     it('displays family filter bar, holding demat badges, and responds to entity filter', async () => {
-      renderWithProviders(
-        <PortfolioPage />
-      );
+      renderWithProviders(<PortfolioPage />);
 
       // Family Filter Bar exists on Portfolio Page
       expect(screen.getByText('Combined Family')).toBeInTheDocument();
@@ -196,9 +186,7 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
 
   describe('SettingsPage Integration', () => {
     it('navigates to Family & Demats tab and displays registered entities and tax shield advisory', () => {
-      renderWithProviders(
-        <SettingsPage />
-      );
+      renderWithProviders(<SettingsPage />);
 
       // Click Family & Demats tab
       const familyTab = screen.getByRole('button', { name: /Family & Demats/i });
@@ -207,7 +195,9 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
 
       // Verify tab content
       expect(screen.getByText(/Family Members & Demat Folios/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Manage Entities & Accounts/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Manage Entities & Accounts/i })
+      ).toBeInTheDocument();
 
       // Verify legal entities list
       expect(screen.getByText(/Family Entities/i)).toBeInTheDocument();
@@ -277,11 +267,7 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
   describe('AddHoldingModal Component Integration', () => {
     it('renders legal entity and demat account selectors and scopes accounts to member', () => {
       renderWithProviders(
-        <AddHoldingModal
-          isOpen={true}
-          onClose={() => {}}
-          onSubmit={async () => {}}
-        />
+        <AddHoldingModal isOpen={true} onClose={() => {}} onSubmit={async () => {}} />
       );
 
       // Verify Entity & Demat selectors exist
@@ -297,13 +283,7 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
 
   describe('ImportCasModal Component Integration', () => {
     it('renders legal entity and demat account assignment in statement preview step', async () => {
-      renderWithProviders(
-        <ImportCasModal
-          isOpen={true}
-          onClose={() => {}}
-          onSuccess={() => {}}
-        />
-      );
+      renderWithProviders(<ImportCasModal isOpen={true} onClose={() => {}} onSuccess={() => {}} />);
 
       // Verify Quick QA sample button is present
       const loadCdslBtn = screen.getByRole('button', {
@@ -363,11 +343,7 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
   describe('AddGoalModal Family Beneficiary Selector', () => {
     it('renders selectable family entity options for goal assignment', () => {
       renderWithProviders(
-        <AddGoalModal
-          isOpen={true}
-          onClose={() => {}}
-          onSubmit={async () => {}}
-        />
+        <AddGoalModal isOpen={true} onClose={() => {}} onSubmit={async () => {}} />
       );
 
       // Verify beneficiary section and member buttons

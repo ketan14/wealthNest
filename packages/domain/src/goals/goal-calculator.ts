@@ -41,21 +41,29 @@ export function calculateInflationAdjustedTarget(
 /**
  * Evaluates an individual financial goal.
  */
-export function evaluateGoal(goal: GoalDefinition, evaluationDate: Date = new Date()): GoalEvaluation {
+export function evaluateGoal(
+  goal: GoalDefinition,
+  evaluationDate: Date = new Date()
+): GoalEvaluation {
   const currency = goal.currency;
   const months = calculateMonthsRemaining(goal.targetDate, evaluationDate);
 
   // 1. Current total corpus (initial savings + sum of linked holdings)
   let currentCorpus = goal.initialSaved;
   for (const link of goal.linkedHoldings) {
-    const val = link.allocatedValue.currency === currency
-      ? link.allocatedValue
-      : link.allocatedValue.convertTo(currency);
+    const val =
+      link.allocatedValue.currency === currency
+        ? link.allocatedValue
+        : link.allocatedValue.convertTo(currency);
     currentCorpus = currentCorpus.add(val);
   }
 
   // 2. Inflation-adjusted future target amount
-  const futureTarget = calculateInflationAdjustedTarget(goal.targetAmount, goal.inflationRate, months);
+  const futureTarget = calculateInflationAdjustedTarget(
+    goal.targetAmount,
+    goal.inflationRate,
+    months
+  );
 
   // 3. Funded percentage
   let fundedPercentage = 0;
@@ -69,16 +77,16 @@ export function evaluateGoal(goal: GoalDefinition, evaluationDate: Date = new Da
 
   // 5. Future value of current corpus: FV = PV * (1 + r)^m
   const currentCents = Number(currentCorpus.cents);
-  const fvCurrentCents = monthlyRate > 0
-    ? currentCents * Math.pow(1 + monthlyRate, months)
-    : currentCents;
+  const fvCurrentCents =
+    monthlyRate > 0 ? currentCents * Math.pow(1 + monthlyRate, months) : currentCents;
 
   // 6. Future value of ongoing monthly SIP: FV_sip = PMT * ((1+r)^m - 1)/r * (1+r)
   const monthlySipCents = Number(goal.monthlyContribution.cents);
   let fvSipCents = 0;
   if (monthlySipCents > 0) {
     if (monthlyRate > 0) {
-      const annuityFactor = ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate) * (1 + monthlyRate);
+      const annuityFactor =
+        ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate) * (1 + monthlyRate);
       fvSipCents = monthlySipCents * annuityFactor;
     } else {
       fvSipCents = monthlySipCents * months;
@@ -95,7 +103,8 @@ export function evaluateGoal(goal: GoalDefinition, evaluationDate: Date = new Da
   let requiredSipCents = 0n;
   if (gapCents > 0 && months > 0) {
     if (monthlyRate > 0) {
-      const annuityFactor = ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate) * (1 + monthlyRate);
+      const annuityFactor =
+        ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate) * (1 + monthlyRate);
       requiredSipCents = BigInt(Math.max(0, Math.round(gapCents / annuityFactor)));
     } else {
       requiredSipCents = BigInt(Math.max(0, Math.round(gapCents / months)));
@@ -105,9 +114,10 @@ export function evaluateGoal(goal: GoalDefinition, evaluationDate: Date = new Da
   const requiredMonthlySip = Money.fromCents(requiredSipCents, currency);
 
   // Monthly shortfall
-  const shortfallCents = requiredSipCents > goal.monthlyContribution.cents
-    ? requiredSipCents - goal.monthlyContribution.cents
-    : 0n;
+  const shortfallCents =
+    requiredSipCents > goal.monthlyContribution.cents
+      ? requiredSipCents - goal.monthlyContribution.cents
+      : 0n;
   const monthlySipShortfall = Money.fromCents(shortfallCents, currency);
 
   // 8. Determine health status
@@ -166,7 +176,11 @@ export function calculateGoalsSummary(
     totalCommitted = totalCommitted.add(g.monthlyContribution);
     totalRequired = totalRequired.add(evalResult.requiredMonthlySip);
 
-    if (evalResult.status === 'on_track' || evalResult.status === 'ahead' || evalResult.status === 'achieved') {
+    if (
+      evalResult.status === 'on_track' ||
+      evalResult.status === 'ahead' ||
+      evalResult.status === 'achieved'
+    ) {
       onTrackCount++;
     }
   }

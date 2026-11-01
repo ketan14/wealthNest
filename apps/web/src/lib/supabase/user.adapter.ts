@@ -1,10 +1,5 @@
 import { Result, ok, err } from '@wealthnest/shared';
-import {
-  UserId,
-  UserProfile,
-  UserPreferences,
-  DEFAULT_USER_PREFERENCES,
-} from '@wealthnest/domain';
+import { UserId, UserProfile, UserPreferences, DEFAULT_USER_PREFERENCES } from '@wealthnest/domain';
 import { UserRepositoryPort } from '@wealthnest/application';
 import { supabase } from './client';
 
@@ -131,14 +126,17 @@ export class SupabaseUserAdapter implements UserRepositoryPort {
   ): Promise<Result<UserProfile>> {
     try {
       const existingRes = await this.getById(id);
-      const existing = existingRes.success && existingRes.value ? existingRes.value : {
-        id,
-        email: 'user@wealthnest.local',
-        displayName: 'WealthNest Investor',
-        defaultCurrency: 'INR',
-        preferences: DEFAULT_USER_PREFERENCES,
-        createdAt: new Date().toISOString(),
-      };
+      const existing =
+        existingRes.success && existingRes.value
+          ? existingRes.value
+          : {
+              id,
+              email: 'user@wealthnest.local',
+              displayName: 'WealthNest Investor',
+              defaultCurrency: 'INR',
+              preferences: DEFAULT_USER_PREFERENCES,
+              createdAt: new Date().toISOString(),
+            };
 
       const updatedPrefs: UserPreferences = {
         ...(existing.preferences || DEFAULT_USER_PREFERENCES),

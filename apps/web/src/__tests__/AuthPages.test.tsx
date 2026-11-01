@@ -128,7 +128,9 @@ describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
       expect(screen.getByText(/Email address is required/i)).toBeInTheDocument();
       expect(screen.getByText(/^Password is required$/i)).toBeInTheDocument();
       expect(screen.getByText(/Confirm your password/i)).toBeInTheDocument();
-      expect(screen.getByText(/You must agree to the Terms of Service & Privacy Policy/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/You must agree to the Terms of Service & Privacy Policy/i)
+      ).toBeInTheDocument();
 
       expect(supabase.auth.signUp).not.toHaveBeenCalled();
     });
@@ -137,7 +139,9 @@ describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
       renderWithProviders(<></>, '/signup');
 
       fireEvent.change(screen.getByLabelText(/Full Name/i), { target: { value: 'Ketan Vaghela' } });
-      fireEvent.change(screen.getByLabelText(/Email Address/i), { target: { value: 'not-an-email' } });
+      fireEvent.change(screen.getByLabelText(/Email Address/i), {
+        target: { value: 'not-an-email' },
+      });
       fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: '123' } });
       fireEvent.change(screen.getByLabelText(/^Confirm Password$/i), { target: { value: '456' } });
       fireEvent.click(screen.getByRole('checkbox', { name: /Terms of Service/i }));
@@ -165,9 +169,15 @@ describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
       renderWithProviders(<></>, '/signup');
 
       fireEvent.change(screen.getByLabelText(/Full Name/i), { target: { value: 'Ketan Vaghela' } });
-      fireEvent.change(screen.getByLabelText(/Email Address/i), { target: { value: 'investor@wealthnest.local' } });
-      fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'WealthNest@2026' } });
-      fireEvent.change(screen.getByLabelText(/^Confirm Password$/i), { target: { value: 'WealthNest@2026' } });
+      fireEvent.change(screen.getByLabelText(/Email Address/i), {
+        target: { value: 'investor@wealthnest.local' },
+      });
+      fireEvent.change(screen.getByLabelText(/^Password$/i), {
+        target: { value: 'WealthNest@2026' },
+      });
+      fireEvent.change(screen.getByLabelText(/^Confirm Password$/i), {
+        target: { value: 'WealthNest@2026' },
+      });
       fireEvent.click(screen.getByRole('checkbox', { name: /Terms of Service/i }));
 
       fireEvent.click(screen.getByRole('button', { name: /Create Account/i }));
@@ -201,16 +211,25 @@ describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
       renderWithProviders(<></>, '/signup');
 
       fireEvent.change(screen.getByLabelText(/Full Name/i), { target: { value: 'Parul Vaghela' } });
-      fireEvent.change(screen.getByLabelText(/Email Address/i), { target: { value: 'parul@wealthnest.local' } });
-      fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'WealthNest@2026' } });
-      fireEvent.change(screen.getByLabelText(/^Confirm Password$/i), { target: { value: 'WealthNest@2026' } });
+      fireEvent.change(screen.getByLabelText(/Email Address/i), {
+        target: { value: 'parul@wealthnest.local' },
+      });
+      fireEvent.change(screen.getByLabelText(/^Password$/i), {
+        target: { value: 'WealthNest@2026' },
+      });
+      fireEvent.change(screen.getByLabelText(/^Confirm Password$/i), {
+        target: { value: 'WealthNest@2026' },
+      });
       fireEvent.click(screen.getByRole('checkbox', { name: /Terms of Service/i }));
 
       fireEvent.click(screen.getByRole('button', { name: /Create Account/i }));
 
       expect(await screen.findByRole('heading', { name: /Check your email/i })).toBeInTheDocument();
       expect(screen.getByText(/parul@wealthnest\.local/i)).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Proceed to Sign In/i })).toHaveAttribute('href', '/login');
+      expect(screen.getByRole('link', { name: /Proceed to Sign In/i })).toHaveAttribute(
+        'href',
+        '/login'
+      );
     });
 
     it('displays server error banner when registration fails', async () => {
@@ -222,9 +241,15 @@ describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
       renderWithProviders(<></>, '/signup');
 
       fireEvent.change(screen.getByLabelText(/Full Name/i), { target: { value: 'Ketan Vaghela' } });
-      fireEvent.change(screen.getByLabelText(/Email Address/i), { target: { value: 'existing@wealthnest.local' } });
-      fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'WealthNest@2026' } });
-      fireEvent.change(screen.getByLabelText(/^Confirm Password$/i), { target: { value: 'WealthNest@2026' } });
+      fireEvent.change(screen.getByLabelText(/Email Address/i), {
+        target: { value: 'existing@wealthnest.local' },
+      });
+      fireEvent.change(screen.getByLabelText(/^Password$/i), {
+        target: { value: 'WealthNest@2026' },
+      });
+      fireEvent.change(screen.getByLabelText(/^Confirm Password$/i), {
+        target: { value: 'WealthNest@2026' },
+      });
       fireEvent.click(screen.getByRole('checkbox', { name: /Terms of Service/i }));
 
       fireEvent.click(screen.getByRole('button', { name: /Create Account/i }));
@@ -238,12 +263,17 @@ describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
     it('renders login page with email, password, and links', async () => {
       renderWithProviders(<></>, '/login');
 
-      expect(screen.getByRole('heading', { name: /Welcome back to WealthNest/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /Welcome back to WealthNest/i })
+      ).toBeInTheDocument();
       expect(screen.getByRole('heading', { name: /Sign in to your account/i })).toBeInTheDocument();
       expect(screen.getByLabelText(/Email Address/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/^Password$/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Sign In/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Create an account/i })).toHaveAttribute('href', '/signup');
+      expect(screen.getByRole('link', { name: /Create an account/i })).toHaveAttribute(
+        'href',
+        '/signup'
+      );
       expect(screen.getByRole('button', { name: /Forgot Password\?/i })).toBeInTheDocument();
     });
 
@@ -265,8 +295,12 @@ describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
 
       renderWithProviders(<></>, '/login');
 
-      fireEvent.change(screen.getByLabelText(/Email Address/i), { target: { value: 'investor@wealthnest.local' } });
-      fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'WealthNest@2026' } });
+      fireEvent.change(screen.getByLabelText(/Email Address/i), {
+        target: { value: 'investor@wealthnest.local' },
+      });
+      fireEvent.change(screen.getByLabelText(/^Password$/i), {
+        target: { value: 'WealthNest@2026' },
+      });
 
       fireEvent.click(screen.getByRole('button', { name: /Sign In/i }));
 
@@ -288,7 +322,9 @@ describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
 
       renderWithProviders(<></>, '/login');
 
-      fireEvent.change(screen.getByLabelText(/Email Address/i), { target: { value: 'wrong@wealthnest.local' } });
+      fireEvent.change(screen.getByLabelText(/Email Address/i), {
+        target: { value: 'wrong@wealthnest.local' },
+      });
       fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: 'WrongPass' } });
 
       fireEvent.click(screen.getByRole('button', { name: /Sign In/i }));
@@ -339,7 +375,9 @@ describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
 
       // The authenticated user should be automatically redirected to the home page
       expect(await screen.findByTestId('home-page')).toBeInTheDocument();
-      expect(screen.queryByRole('heading', { name: /Create your WealthNest account/i })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('heading', { name: /Create your WealthNest account/i })
+      ).not.toBeInTheDocument();
     });
   });
 });

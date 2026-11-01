@@ -1,9 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Shield,
-  Database,
-  CheckCircle2,
-} from 'lucide-react';
+import { Shield, Database, CheckCircle2 } from 'lucide-react';
 import { AdminHeader } from '../../components/admin/AdminHeader';
 
 export function AdminSettingsPage() {
@@ -13,7 +9,6 @@ export function AdminSettingsPage() {
   const [requireSymbols, setRequireSymbols] = useState(true);
   const [invitationExpiryDays, setInvitationExpiryDays] = useState(7);
   const [saved, setSaved] = useState(false);
-
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +35,9 @@ export function AdminSettingsPage() {
         <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-md">
           <div className="flex items-center gap-2 mb-4">
             <Database className="w-4 h-4 text-cyan-400" />
-            <h4 className="text-sm font-semibold text-white">System Architecture &amp; Integrity Diagnostics</h4>
+            <h4 className="text-sm font-semibold text-white">
+              System Architecture &amp; Integrity Diagnostics
+            </h4>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
@@ -80,10 +77,15 @@ export function AdminSettingsPage() {
         </div>
 
         {/* Security Policy Form */}
-        <form onSubmit={handleSave} className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-md space-y-6">
+        <form
+          onSubmit={handleSave}
+          className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-md space-y-6"
+        >
           <div className="flex items-center gap-2 pb-4 border-b border-slate-800">
             <Shield className="w-4 h-4 text-emerald-400" />
-            <h4 className="text-sm font-semibold text-white">Authentication &amp; Credential Policies</h4>
+            <h4 className="text-sm font-semibold text-white">
+              Authentication &amp; Credential Policies
+            </h4>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
@@ -147,7 +149,6 @@ export function AdminSettingsPage() {
                 </label>
               </div>
             </div>
-
 
             <div>
               <label className="block font-medium text-slate-300 mb-1.5">

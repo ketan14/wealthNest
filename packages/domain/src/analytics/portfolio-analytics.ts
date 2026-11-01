@@ -11,7 +11,10 @@ export interface TargetAllocation {
   readonly targetPercentage: number;
 }
 
-export const TARGET_ALLOCATION_MODELS: Record<AllocationModelType, { name: string; description: string; targets: TargetAllocation[] }> = {
+export const TARGET_ALLOCATION_MODELS: Record<
+  AllocationModelType,
+  { name: string; description: string; targets: TargetAllocation[] }
+> = {
   aggressive: {
     name: 'Aggressive Capital Appreciation',
     description: 'High equity exposure tailored for young investors with long horizons (>7 years).',
@@ -58,14 +61,16 @@ export const STANDARD_INDIAN_BENCHMARKS: readonly BenchmarkComparison[] = [
     name: 'Nifty 50 TRI',
     category: 'Large-Cap Indian Equity',
     annualizedReturn: 0.142, // 14.2% 5Y CAGR
-    description: 'Total Return Index of India top 50 blue-chip companies including reinvested dividends.',
+    description:
+      'Total Return Index of India top 50 blue-chip companies including reinvested dividends.',
   },
   {
     id: 'bse_sensex',
     name: 'BSE Sensex',
     category: 'Benchmark Equity Index',
     annualizedReturn: 0.138, // 13.8%
-    description: '30 financially sound and well-established companies listed on Bombay Stock Exchange.',
+    description:
+      '30 financially sound and well-established companies listed on Bombay Stock Exchange.',
   },
   {
     id: 'sgb_gold',
@@ -86,7 +91,8 @@ export const STANDARD_INDIAN_BENCHMARKS: readonly BenchmarkComparison[] = [
     name: 'Public Provident Fund (PPF)',
     category: 'Tax-Free Sovereign Debt',
     annualizedReturn: 0.071, // 7.1%
-    description: 'Government-backed 15-year EEE (exempt-exempt-exempt) sovereign savings instrument.',
+    description:
+      'Government-backed 15-year EEE (exempt-exempt-exempt) sovereign savings instrument.',
   },
 ];
 
@@ -166,7 +172,8 @@ export function calculatePortfolioAnalytics(
 
   // 1. Portfolio totals
   for (const h of holdings) {
-    const val = h.currentValue.currency === currency ? h.currentValue : h.currentValue.convertTo(currency);
+    const val =
+      h.currentValue.currency === currency ? h.currentValue : h.currentValue.convertTo(currency);
     const cost = h.costBasis.currency === currency ? h.costBasis : h.costBasis.convertTo(currency);
     totalValue = totalValue.add(val);
     totalCost = totalCost.add(cost);
@@ -175,7 +182,8 @@ export function calculatePortfolioAnalytics(
   const diffCents = totalValue.cents - totalCost.cents;
   const absGainCents = diffCents < 0n ? -diffCents : diffCents;
   const absoluteGain = Money.fromCents(absGainCents, currency);
-  const returnPercentage = totalCost.cents > 0n ? Number((diffCents * 10000n) / totalCost.cents) / 100 : 0;
+  const returnPercentage =
+    totalCost.cents > 0n ? Number((diffCents * 10000n) / totalCost.cents) / 100 : 0;
 
   // 2. XIRR Cashflows
   const cashflows: CashflowItem[] = [];
@@ -222,7 +230,9 @@ export function calculatePortfolioAnalytics(
   const isOutperforming = alphaVsNifty >= 0;
 
   // 5. Concentration Risk Metrics
-  const sortedByVal = [...holdings].sort((a, b) => (b.currentValue.cents > a.currentValue.cents ? 1 : -1));
+  const sortedByVal = [...holdings].sort((a, b) =>
+    b.currentValue.cents > a.currentValue.cents ? 1 : -1
+  );
   let topAssetWeight = 0;
   let topAssetName = 'N/A';
   let top3AssetsWeight = 0;
@@ -249,13 +259,17 @@ export function calculatePortfolioAnalytics(
 
   const diversificationScore = Math.max(
     10,
-    Math.min(100, Math.round(100 - (topAssetWeight * 0.8 + (top3AssetsWeight - topAssetWeight) * 0.4)))
+    Math.min(
+      100,
+      Math.round(100 - (topAssetWeight * 0.8 + (top3AssetsWeight - topAssetWeight) * 0.4))
+    )
   );
 
   // 6. Asset Class Allocation Drift
   const classValueMap = new Map<string, { name: string; colorHex: string; totalValue: Money }>();
   for (const h of holdings) {
-    const val = h.currentValue.currency === currency ? h.currentValue : h.currentValue.convertTo(currency);
+    const val =
+      h.currentValue.currency === currency ? h.currentValue : h.currentValue.convertTo(currency);
     const existing = classValueMap.get(h.assetClassId);
     if (existing) {
       existing.totalValue = existing.totalValue.add(val);
@@ -269,7 +283,9 @@ export function calculatePortfolioAnalytics(
   }
 
   const model = TARGET_ALLOCATION_MODELS[modelType] || TARGET_ALLOCATION_MODELS.balanced;
-  const targetMap = new Map<string, number>(model.targets.map((t) => [t.assetClassId, t.targetPercentage]));
+  const targetMap = new Map<string, number>(
+    model.targets.map((t) => [t.assetClassId, t.targetPercentage])
+  );
 
   const drifts: AllocationDriftItem[] = [];
 
@@ -277,7 +293,8 @@ export function calculatePortfolioAnalytics(
   for (const target of model.targets) {
     const classData = classValueMap.get(target.assetClassId);
     const currentVal = classData ? classData.totalValue : Money.zero(currency);
-    const currentPct = totalValue.cents > 0n ? Number((currentVal.cents * 10000n) / totalValue.cents) / 100 : 0;
+    const currentPct =
+      totalValue.cents > 0n ? Number((currentVal.cents * 10000n) / totalValue.cents) / 100 : 0;
     const targetPct = target.targetPercentage;
     const driftPct = Number((currentPct - targetPct).toFixed(2));
 
@@ -308,7 +325,10 @@ export function calculatePortfolioAnalytics(
   // Include any extra held classes not in target model (e.g. real estate, crypto)
   for (const [classId, classData] of classValueMap.entries()) {
     if (!targetMap.has(classId)) {
-      const currentPct = totalValue.cents > 0n ? Number((classData.totalValue.cents * 10000n) / totalValue.cents) / 100 : 0;
+      const currentPct =
+        totalValue.cents > 0n
+          ? Number((classData.totalValue.cents * 10000n) / totalValue.cents) / 100
+          : 0;
       drifts.push({
         assetClassId: classId,
         name: classData.name,
@@ -340,7 +360,9 @@ export function calculatePortfolioAnalytics(
 
     const investedCents = (totalCost.cents * BigInt(Math.max(10, Math.round(factor * 100)))) / 100n;
     const valCents = (totalValue.cents * BigInt(Math.max(10, Math.round(valFactor * 100)))) / 100n;
-    const benchmarkCents = (totalCost.cents * BigInt(Math.max(10, Math.round((1 + benchmarkFactor * 0.14) * 100)))) / 100n;
+    const benchmarkCents =
+      (totalCost.cents * BigInt(Math.max(10, Math.round((1 + benchmarkFactor * 0.14) * 100)))) /
+      100n;
 
     trajectory.push({
       date: dateStr,

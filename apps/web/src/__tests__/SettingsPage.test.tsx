@@ -37,7 +37,9 @@ describe('SettingsPage Component (Sprint 3)', () => {
 
     // Tabs
     expect(screen.getByRole('button', { name: /Profile & Security/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Localization & Tax Standards/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Localization & Tax Standards/i })
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Data Portability & Backup/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /System Diagnostics/i })).toBeInTheDocument();
 

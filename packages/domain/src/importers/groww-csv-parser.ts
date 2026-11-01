@@ -16,8 +16,13 @@ export function isGrowwCsv(content: string): boolean {
   const upper = content.toUpperCase();
   // Check for typical Groww headers
   const isHoldings =
-    (upper.includes('STOCK NAME') || upper.includes('COMPANY NAME') || upper.includes('SCHEME NAME')) &&
-    (upper.includes('AVERAGE PRICE') || upper.includes('AVG BUY PRICE') || upper.includes('AVERAGE NAV') || upper.includes('CURRENT VALUE'));
+    (upper.includes('STOCK NAME') ||
+      upper.includes('COMPANY NAME') ||
+      upper.includes('SCHEME NAME')) &&
+    (upper.includes('AVERAGE PRICE') ||
+      upper.includes('AVG BUY PRICE') ||
+      upper.includes('AVERAGE NAV') ||
+      upper.includes('CURRENT VALUE'));
   const isOrders =
     (upper.includes('STOCK NAME') || upper.includes('COMPANY NAME')) &&
     (upper.includes('ORDER TYPE') || (upper.includes('TYPE') && upper.includes('STATUS')));
@@ -39,7 +44,9 @@ export function parseGrowwCsv(content: string): ParsedBrokerCsvResult {
   }
 
   const headerRow = rows[0]!.map((h) => h.toUpperCase().replace(/\s+/g, '_'));
-  const isOrders = headerRow.includes('ORDER_TYPE') || (headerRow.includes('TYPE') && headerRow.includes('STATUS'));
+  const isOrders =
+    headerRow.includes('ORDER_TYPE') ||
+    (headerRow.includes('TYPE') && headerRow.includes('STATUS'));
 
   if (isOrders) {
     return parseGrowwOrders(rows);
@@ -54,7 +61,8 @@ function parseGrowwHoldings(rows: string[][]): ParsedBrokerCsvResult {
   );
   const symbolIdx = header.findIndex((h) => h === 'SYMBOL' || h === 'TICKER' || h === 'ISIN');
   const qtyIdx = header.findIndex(
-    (h) => h.startsWith('QTY') || h.includes('QUANTITY') || h.includes('SHARES') || h.includes('UNITS')
+    (h) =>
+      h.startsWith('QTY') || h.includes('QUANTITY') || h.includes('SHARES') || h.includes('UNITS')
   );
   const avgPriceIdx = header.findIndex(
     (h) => h.includes('AVG') || h.includes('AVERAGE') || h.includes('BUY PRICE')
@@ -78,7 +86,8 @@ function parseGrowwHoldings(rows: string[][]): ParsedBrokerCsvResult {
     if (!rawSymbol && rawName) {
       const upperName = rawName.toUpperCase();
       if (upperName.includes('RELIANCE')) rawSymbol = 'RELIANCE';
-      else if (upperName.includes('TCS') || upperName.includes('TATA CONSULTANCY')) rawSymbol = 'TCS';
+      else if (upperName.includes('TCS') || upperName.includes('TATA CONSULTANCY'))
+        rawSymbol = 'TCS';
       else if (upperName.includes('HDFC BANK')) rawSymbol = 'HDFCBANK';
       else if (upperName.includes('INFOSYS')) rawSymbol = 'INFY';
       else if (upperName.includes('TATA MOTORS')) rawSymbol = 'TATAMOTORS';
@@ -110,7 +119,8 @@ function parseGrowwHoldings(rows: string[][]): ParsedBrokerCsvResult {
       quantity: qty,
       unitCost,
       currentPrice,
-      currentValue: currentValue || (currentPrice ? currentPrice.multiply(qty) : unitCost.multiply(qty)),
+      currentValue:
+        currentValue || (currentPrice ? currentPrice.multiply(qty) : unitCost.multiply(qty)),
       assetType,
       rawBroker: 'GROWW',
     });

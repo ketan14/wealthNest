@@ -24,18 +24,77 @@ interface AddGoalModalProps {
   isSubmitting?: boolean;
 }
 
-const CATEGORY_OPTIONS: { id: GoalCategory; label: string; icon: any; defaultReturn: number; defaultInflation: number }[] = [
-  { id: 'emergency_fund', label: 'Emergency Fund', icon: ShieldAlert, defaultReturn: 6.5, defaultInflation: 0 },
-  { id: 'retirement', label: 'Retirement / FIRE', icon: Target, defaultReturn: 12.0, defaultInflation: 6.0 },
-  { id: 'home_purchase', label: 'Home Down Payment', icon: Building2, defaultReturn: 10.0, defaultInflation: 6.0 },
-  { id: 'education', label: 'Child Education', icon: GraduationCap, defaultReturn: 11.0, defaultInflation: 9.0 },
-  { id: 'wealth_creation', label: 'Wealth Creation', icon: Sparkles, defaultReturn: 13.0, defaultInflation: 6.0 },
-  { id: 'vehicle', label: 'Vehicle Purchase', icon: Car, defaultReturn: 8.0, defaultInflation: 5.0 },
-  { id: 'vacation', label: 'Annual Vacation', icon: Plane, defaultReturn: 7.0, defaultInflation: 5.0 },
-  { id: 'other', label: 'Custom Milestone', icon: HeartHandshake, defaultReturn: 10.0, defaultInflation: 6.0 },
+const CATEGORY_OPTIONS: {
+  id: GoalCategory;
+  label: string;
+  icon: any;
+  defaultReturn: number;
+  defaultInflation: number;
+}[] = [
+  {
+    id: 'emergency_fund',
+    label: 'Emergency Fund',
+    icon: ShieldAlert,
+    defaultReturn: 6.5,
+    defaultInflation: 0,
+  },
+  {
+    id: 'retirement',
+    label: 'Retirement / FIRE',
+    icon: Target,
+    defaultReturn: 12.0,
+    defaultInflation: 6.0,
+  },
+  {
+    id: 'home_purchase',
+    label: 'Home Down Payment',
+    icon: Building2,
+    defaultReturn: 10.0,
+    defaultInflation: 6.0,
+  },
+  {
+    id: 'education',
+    label: 'Child Education',
+    icon: GraduationCap,
+    defaultReturn: 11.0,
+    defaultInflation: 9.0,
+  },
+  {
+    id: 'wealth_creation',
+    label: 'Wealth Creation',
+    icon: Sparkles,
+    defaultReturn: 13.0,
+    defaultInflation: 6.0,
+  },
+  {
+    id: 'vehicle',
+    label: 'Vehicle Purchase',
+    icon: Car,
+    defaultReturn: 8.0,
+    defaultInflation: 5.0,
+  },
+  {
+    id: 'vacation',
+    label: 'Annual Vacation',
+    icon: Plane,
+    defaultReturn: 7.0,
+    defaultInflation: 5.0,
+  },
+  {
+    id: 'other',
+    label: 'Custom Milestone',
+    icon: HeartHandshake,
+    defaultReturn: 10.0,
+    defaultInflation: 6.0,
+  },
 ];
 
-export function AddGoalModal({ isOpen, onClose, onSubmit, isSubmitting = false }: AddGoalModalProps) {
+export function AddGoalModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  isSubmitting = false,
+}: AddGoalModalProps) {
   const { members, selectedMemberId } = useFamily();
   const [name, setName] = useState('');
   const [category, setCategory] = useState<GoalCategory>('wealth_creation');
@@ -131,7 +190,9 @@ export function AddGoalModal({ isOpen, onClose, onSubmit, isSubmitting = false }
             </div>
             <div>
               <h3 className="font-bold text-lg text-foreground">Create Financial Goal</h3>
-              <p className="text-xs text-muted-foreground">Target corpus math, inflation adjustments & SIP planning</p>
+              <p className="text-xs text-muted-foreground">
+                Target corpus math, inflation adjustments & SIP planning
+              </p>
             </div>
           </div>
           <button
@@ -228,13 +289,18 @@ export function AddGoalModal({ isOpen, onClose, onSubmit, isSubmitting = false }
               <label className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
                 <span>Target Corpus (₹ INR)</span>
                 {targetCents > 0 && (
-                  <Badge variant="outline" className="text-[10px] text-emerald-400 font-mono border-emerald-500/30">
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] text-emerald-400 font-mono border-emerald-500/30"
+                  >
                     {targetPreviewMoney.formatIndianCompact()}
                   </Badge>
                 )}
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-mono">₹</span>
+                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-mono">
+                  ₹
+                </span>
                 <input
                   type="number"
                   required
@@ -249,7 +315,9 @@ export function AddGoalModal({ isOpen, onClose, onSubmit, isSubmitting = false }
 
             {/* Target Date */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground">Target Maturity Date</label>
+              <label className="text-xs font-semibold text-muted-foreground">
+                Target Maturity Date
+              </label>
               <input
                 type="date"
                 required
@@ -263,9 +331,13 @@ export function AddGoalModal({ isOpen, onClose, onSubmit, isSubmitting = false }
           {/* Initial Saved & Monthly SIP */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground">Already Saved (Optional)</label>
+              <label className="text-xs font-semibold text-muted-foreground">
+                Already Saved (Optional)
+              </label>
               <div className="relative">
-                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-mono">₹</span>
+                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-mono">
+                  ₹
+                </span>
                 <input
                   type="number"
                   step="any"
@@ -278,9 +350,13 @@ export function AddGoalModal({ isOpen, onClose, onSubmit, isSubmitting = false }
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground">Committed Monthly SIP</label>
+              <label className="text-xs font-semibold text-muted-foreground">
+                Committed Monthly SIP
+              </label>
               <div className="relative">
-                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-mono">₹</span>
+                <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-mono">
+                  ₹
+                </span>
                 <input
                   type="number"
                   step="any"
@@ -297,7 +373,9 @@ export function AddGoalModal({ isOpen, onClose, onSubmit, isSubmitting = false }
           <div className="p-4 rounded-xl bg-accent/20 border border-border/60 space-y-4">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-foreground">Expected Annual CAGR (% p.a.)</span>
-              <span className="font-mono font-bold text-primary">{expectedReturnRate.toFixed(1)}%</span>
+              <span className="font-mono font-bold text-primary">
+                {expectedReturnRate.toFixed(1)}%
+              </span>
             </div>
             <input
               type="range"
@@ -310,8 +388,12 @@ export function AddGoalModal({ isOpen, onClose, onSubmit, isSubmitting = false }
             />
 
             <div className="flex items-center justify-between text-xs pt-1 border-t border-border/40">
-              <span className="font-semibold text-foreground">Assumed Annual Inflation (% p.a.)</span>
-              <span className="font-mono font-bold text-amber-400">{inflationRate.toFixed(1)}%</span>
+              <span className="font-semibold text-foreground">
+                Assumed Annual Inflation (% p.a.)
+              </span>
+              <span className="font-mono font-bold text-amber-400">
+                {inflationRate.toFixed(1)}%
+              </span>
             </div>
             <input
               type="range"
@@ -347,7 +429,9 @@ export function AddGoalModal({ isOpen, onClose, onSubmit, isSubmitting = false }
 
           {/* Notes */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground">Notes / Strategy (Optional)</label>
+            <label className="text-xs font-semibold text-muted-foreground">
+              Notes / Strategy (Optional)
+            </label>
             <input
               type="text"
               placeholder="e.g. Linking to Parag Parikh Flexi Cap SIP"

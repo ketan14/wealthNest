@@ -53,12 +53,14 @@ export class ImportBrokerCsvUseCase {
               h.assetType === 'mutual_fund'
                 ? 'mutual_fund'
                 : h.assetType === 'commodity'
-                ? 'commodity'
-                : 'equity',
+                  ? 'commodity'
+                  : 'equity',
             currency: 'INR',
             quantity: h.quantity,
             unitCostCents: Number(h.unitCost.cents),
-            currentValueCents: Number(h.currentValue?.cents ?? h.unitCost.multiply(h.quantity).cents),
+            currentValueCents: Number(
+              h.currentValue?.cents ?? h.unitCost.multiply(h.quantity).cents
+            ),
             costBasisVerified: true,
             memberId: params.targetMemberId,
             accountId: params.targetAccountId,

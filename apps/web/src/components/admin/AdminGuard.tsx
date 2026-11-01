@@ -34,8 +34,8 @@ export function AdminGuard({ children, requiredRole }: AdminGuardProps) {
             Platform Access Restricted
           </h2>
           <p className="text-sm text-slate-400 mb-6 leading-relaxed">
-            This area requires elevated WealthNest platform administration authority. Your account does
-            not possess active administrative entitlements.
+            This area requires elevated WealthNest platform administration authority. Your account
+            does not possess active administrative entitlements.
           </p>
           <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-lg text-xs text-slate-500 mb-6 font-mono">
             Security Event: ACCESS_UNAUTHORIZED &bull; Logged
@@ -63,8 +63,9 @@ export function AdminGuard({ children, requiredRole }: AdminGuardProps) {
             Super Administrator Authority Required
           </h2>
           <p className="text-sm text-slate-400 mb-4 leading-relaxed">
-            Your current platform role is <span className="text-amber-400 font-semibold font-mono">{currentAdminRole}</span>.
-            This administrative operation is strictly restricted to Super Administrators.
+            Your current platform role is{' '}
+            <span className="text-amber-400 font-semibold font-mono">{currentAdminRole}</span>. This
+            administrative operation is strictly restricted to Super Administrators.
           </p>
           <Link
             to="/admin"

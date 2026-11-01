@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  parseZerodhaCsv,
-  parseGrowwCsv,
-  detectAndParseBrokerCsv,
-} from '../index.js';
+import { parseZerodhaCsv, parseGrowwCsv, detectAndParseBrokerCsv } from '../index.js';
 
 describe('Broker CSV Importers (Zerodha Kite & Groww)', () => {
   describe('Zerodha Kite Holdings CSV', () => {
@@ -133,7 +129,8 @@ Infosys,BUY,18-Apr-2024,50,1420.00,EXECUTED
   describe('Auto-Detection Registry', () => {
     it('detects Zerodha and Groww CSV formats automatically', () => {
       const zerodhaSample = 'Instrument,Qty.,Avg. cost,LTP,Cur. val\nRELIANCE,10,2500,2900,29000';
-      const growwSample = 'Company Name,Symbol,Shares,Average Price,Current Value\nInfosys,INFY,20,1500,30000';
+      const growwSample =
+        'Company Name,Symbol,Shares,Average Price,Current Value\nInfosys,INFY,20,1500,30000';
 
       const res1 = detectAndParseBrokerCsv(zerodhaSample);
       expect(res1.provider).toBe('ZERODHA');

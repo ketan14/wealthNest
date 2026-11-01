@@ -6,7 +6,10 @@ import {
 } from '@wealthnest/application';
 
 export interface TauriRawDatabaseConnection {
-  execute(query: string, bindValues?: unknown[]): Promise<{ rowsAffected: number; lastInsertId: number }>;
+  execute(
+    query: string,
+    bindValues?: unknown[]
+  ): Promise<{ rowsAffected: number; lastInsertId: number }>;
   select<T = unknown>(query: string, bindValues?: unknown[]): Promise<T[]>;
 }
 
@@ -172,7 +175,8 @@ export class TauriSqliteAdapter implements SqliteDatabase {
         pan_masked: 'AAACH9999H',
         color_hex: '#8b5cf6',
         is_primary: 0,
-        notes: 'Karta: Shamalbhai (Age 68, Retired Govt) — Section 112A ₹1.25L Annual LTCG Tax Shield',
+        notes:
+          'Karta: Shamalbhai (Age 68, Retired Govt) — Section 112A ₹1.25L Annual LTCG Tax Shield',
         created_at: now,
       },
       {
@@ -514,7 +518,8 @@ export class TauriSqliteAdapter implements SqliteDatabase {
         inflation_rate: 8.5,
         priority: 'high',
         currency: 'INR',
-        notes: 'Krisha Vaghela (Age 6, 1st Std) targeting university & professional degree corpus at age 18.',
+        notes:
+          'Krisha Vaghela (Age 6, 1st Std) targeting university & professional degree corpus at age 18.',
         member_id: 'mem-child',
         created_at: now,
       },
@@ -531,7 +536,8 @@ export class TauriSqliteAdapter implements SqliteDatabase {
         inflation_rate: 6.0,
         priority: 'critical',
         currency: 'INR',
-        notes: 'Ketan (Freelance Contractor, ex-MNC) & Parul (Bank of Baroda) long-term equity, PPF, and NPS accumulation.',
+        notes:
+          'Ketan (Freelance Contractor, ex-MNC) & Parul (Bank of Baroda) long-term equity, PPF, and NPS accumulation.',
         member_id: 'mem-self',
         created_at: now,
       }
@@ -827,7 +833,11 @@ export class TauriSqliteAdapter implements SqliteDatabase {
       return 1;
     }
 
-    if (/UPDATE holdings SET quantity = \?, unit_cost_paise = \?, current_value_paise = \?, demat_account_id/i.test(sql)) {
+    if (
+      /UPDATE holdings SET quantity = \?, unit_cost_paise = \?, current_value_paise = \?, demat_account_id/i.test(
+        sql
+      )
+    ) {
       const [
         quantity,
         unit_cost_paise,
@@ -847,7 +857,8 @@ export class TauriSqliteAdapter implements SqliteDatabase {
         h.quantity = quantity;
         h.unit_cost_paise = unit_cost_paise;
         h.current_value_paise = current_value_paise;
-        if (demat_account_id !== null && demat_account_id !== undefined) h.demat_account_id = demat_account_id;
+        if (demat_account_id !== null && demat_account_id !== undefined)
+          h.demat_account_id = demat_account_id;
         if (folio_number !== null && folio_number !== undefined) h.folio_number = folio_number;
         if (amc_name !== null && amc_name !== undefined) h.amc_name = amc_name;
         if (scheme_plan !== null && scheme_plan !== undefined) h.scheme_plan = scheme_plan;
@@ -860,7 +871,9 @@ export class TauriSqliteAdapter implements SqliteDatabase {
       return 0;
     }
 
-    if (/UPDATE holdings SET quantity = \?, unit_cost_paise = \?, current_value_paise = \?/i.test(sql)) {
+    if (
+      /UPDATE holdings SET quantity = \?, unit_cost_paise = \?, current_value_paise = \?/i.test(sql)
+    ) {
       const [quantity, unit_cost_paise, current_value_paise, id, user_id] = params;
       const h = this.state.holdings.find((r) => r.id === id && r.user_id === user_id);
       if (h) {
@@ -1003,13 +1016,19 @@ export class TauriSqliteAdapter implements SqliteDatabase {
         if (name !== null && name !== undefined) lia.name = name;
         if (loan_type !== null && loan_type !== undefined) lia.loan_type = loan_type;
         if (lender !== null && lender !== undefined) lia.lender = lender;
-        if (account_number !== null && account_number !== undefined) lia.account_number = account_number;
-        if (interest_rate !== null && interest_rate !== undefined) lia.interest_rate = interest_rate;
-        if (interest_type !== null && interest_type !== undefined) lia.interest_type = interest_type;
-        if (tenure_months !== null && tenure_months !== undefined) lia.tenure_months = tenure_months;
-        if (emi_amount_paise !== null && emi_amount_paise !== undefined) lia.emi_amount_paise = emi_amount_paise;
+        if (account_number !== null && account_number !== undefined)
+          lia.account_number = account_number;
+        if (interest_rate !== null && interest_rate !== undefined)
+          lia.interest_rate = interest_rate;
+        if (interest_type !== null && interest_type !== undefined)
+          lia.interest_type = interest_type;
+        if (tenure_months !== null && tenure_months !== undefined)
+          lia.tenure_months = tenure_months;
+        if (emi_amount_paise !== null && emi_amount_paise !== undefined)
+          lia.emi_amount_paise = emi_amount_paise;
         if (status !== null && status !== undefined) lia.status = status;
-        if (linked_asset_id !== null && linked_asset_id !== undefined) lia.linked_asset_id = linked_asset_id;
+        if (linked_asset_id !== null && linked_asset_id !== undefined)
+          lia.linked_asset_id = linked_asset_id;
         if (member_id !== null && member_id !== undefined) lia.member_id = member_id;
         if (notes !== null && notes !== undefined) lia.notes = notes;
         return 1;
@@ -1104,7 +1123,8 @@ export class TauriSqliteAdapter implements SqliteDatabase {
       const [user_id, asset_id, liability_id] = params;
       const before = this.state.asset_liability_links.length;
       this.state.asset_liability_links = this.state.asset_liability_links.filter(
-        (r) => !(r.user_id === user_id && r.asset_id === asset_id && r.liability_id === liability_id)
+        (r) =>
+          !(r.user_id === user_id && r.asset_id === asset_id && r.liability_id === liability_id)
       );
       return before - this.state.asset_liability_links.length;
     }
@@ -1172,12 +1192,17 @@ export class TauriSqliteAdapter implements SqliteDatabase {
       if (gol) {
         if (name !== null && name !== undefined) gol.name = name;
         if (category !== null && category !== undefined) gol.category = category;
-        if (target_amount_paise !== null && target_amount_paise !== undefined) gol.target_amount_paise = target_amount_paise;
+        if (target_amount_paise !== null && target_amount_paise !== undefined)
+          gol.target_amount_paise = target_amount_paise;
         if (target_date !== null && target_date !== undefined) gol.target_date = target_date;
-        if (initial_saved_paise !== null && initial_saved_paise !== undefined) gol.initial_saved_paise = initial_saved_paise;
-        if (monthly_contribution_paise !== null && monthly_contribution_paise !== undefined) gol.monthly_contribution_paise = monthly_contribution_paise;
-        if (expected_return_rate !== null && expected_return_rate !== undefined) gol.expected_return_rate = expected_return_rate;
-        if (inflation_rate !== null && inflation_rate !== undefined) gol.inflation_rate = inflation_rate;
+        if (initial_saved_paise !== null && initial_saved_paise !== undefined)
+          gol.initial_saved_paise = initial_saved_paise;
+        if (monthly_contribution_paise !== null && monthly_contribution_paise !== undefined)
+          gol.monthly_contribution_paise = monthly_contribution_paise;
+        if (expected_return_rate !== null && expected_return_rate !== undefined)
+          gol.expected_return_rate = expected_return_rate;
+        if (inflation_rate !== null && inflation_rate !== undefined)
+          gol.inflation_rate = inflation_rate;
         if (priority !== null && priority !== undefined) gol.priority = priority;
         if (notes !== null && notes !== undefined) gol.notes = notes;
         if (member_id !== null && member_id !== undefined) gol.member_id = member_id;
@@ -1266,9 +1291,7 @@ export class TauriSqliteAdapter implements SqliteDatabase {
     }
     if (/FROM portfolio_accounts WHERE user_id = \?/i.test(sql)) {
       const [user_id] = params;
-      return this.state.portfolio_accounts.filter(
-        (r) => r.user_id === user_id
-      ) as unknown as T[];
+      return this.state.portfolio_accounts.filter((r) => r.user_id === user_id) as unknown as T[];
     }
     if (/FROM portfolio_accounts WHERE id = \?/i.test(sql)) {
       const [id] = params;
@@ -1285,12 +1308,11 @@ export class TauriSqliteAdapter implements SqliteDatabase {
             (a) => a.user_id === h.user_id && a.id === h.asset_id
           );
           if (!asset) return null;
-          const ac =
-            this.state.asset_classes.find((c) => c.id === asset.asset_class_id) || {
-              id: asset.asset_class_id || 'equity',
-              name: 'Equity & Stocks',
-              color_hex: '#10B981',
-            };
+          const ac = this.state.asset_classes.find((c) => c.id === asset.asset_class_id) || {
+            id: asset.asset_class_id || 'equity',
+            name: 'Equity & Stocks',
+            color_hex: '#10B981',
+          };
           return {
             holdingId: h.id,
             assetId: asset.id,
@@ -1422,7 +1444,9 @@ export class TauriSqliteAdapter implements SqliteDatabase {
       const [user_id] = params;
       return this.state.financial_goals
         .filter((g) => g.user_id === user_id)
-        .sort((a, b) => String(a.target_date).localeCompare(String(b.target_date))) as unknown as T[];
+        .sort((a, b) =>
+          String(a.target_date).localeCompare(String(b.target_date))
+        ) as unknown as T[];
     }
 
     if (/FROM goal_holdings gh JOIN holdings h/i.test(sql)) {

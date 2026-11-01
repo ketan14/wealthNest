@@ -70,7 +70,10 @@ export class ManageFamilyMembersUseCase {
         return err(new Error('Member name cannot be empty'));
       }
 
-      const id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `mem-${Date.now()}`;
+      const id =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `mem-${Date.now()}`;
       const member: FamilyMemberDto = {
         id,
         userId: params.userId,
@@ -122,7 +125,10 @@ export class ManagePortfolioAccountsUseCase {
         return err(new Error('Account name cannot be empty'));
       }
 
-      const id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `acc-${Date.now()}`;
+      const id =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `acc-${Date.now()}`;
       const account: PortfolioAccountDto = {
         id,
         userId: params.userId,

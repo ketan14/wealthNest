@@ -16,12 +16,7 @@ interface ViewAsUserModalProps {
   onSuccess?: () => void;
 }
 
-export function ViewAsUserModal({
-  isOpen,
-  onClose,
-  targetUser,
-  onSuccess,
-}: ViewAsUserModalProps) {
+export function ViewAsUserModal({ isOpen, onClose, targetUser, onSuccess }: ViewAsUserModalProps) {
   const { startSupportSession, loading } = useSupportSession();
   const { adminActor } = useAdmin();
   const navigate = useNavigate();
@@ -42,11 +37,7 @@ export function ViewAsUserModal({
       return;
     }
 
-    const result = await startSupportSession(
-      targetUser.id,
-      targetUser.displayName,
-      reason.trim()
-    );
+    const result = await startSupportSession(targetUser.id, targetUser.displayName, reason.trim());
 
     if (result.success) {
       onClose();
@@ -78,9 +69,7 @@ export function ViewAsUserModal({
               <h3 id="view-as-user-title" className="text-base font-bold text-white">
                 Support View as User
               </h3>
-              <p className="text-xs text-slate-400">
-                Audited ephemeral troubleshooting session
-              </p>
+              <p className="text-xs text-slate-400">Audited ephemeral troubleshooting session</p>
             </div>
           </div>
           <button
@@ -98,9 +87,7 @@ export function ViewAsUserModal({
             <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
               Target User Account
             </div>
-            <div className="text-sm font-bold text-white mt-0.5">
-              {targetUser.displayName}
-            </div>
+            <div className="text-sm font-bold text-white mt-0.5">{targetUser.displayName}</div>
             <div className="text-slate-400 font-mono mt-0.5">{targetUser.email}</div>
           </div>
           <div className="text-right">
@@ -123,7 +110,8 @@ export function ViewAsUserModal({
           <p className="leading-relaxed text-[11px]">
             You will view the permitted application experience as{' '}
             <strong className="text-white">{targetUser.displayName}</strong> while remaining
-            authenticated as <strong className="text-white">{adminActor?.displayName || 'Administrator'}</strong>.
+            authenticated as{' '}
+            <strong className="text-white">{adminActor?.displayName || 'Administrator'}</strong>.
             Zero credentials are exchanged. All private financial data is delivered via strictly
             read-only server-side RPCs with zero write capabilities.
           </p>
@@ -144,8 +132,7 @@ export function ViewAsUserModal({
               htmlFor="support-reason"
               className="block text-xs font-semibold text-slate-300 mb-1.5"
             >
-              Support Reason / Ticket ID{' '}
-              <span className="text-rose-400 font-bold">*</span>
+              Support Reason / Ticket ID <span className="text-rose-400 font-bold">*</span>
             </label>
             <textarea
               id="support-reason"
@@ -161,7 +148,9 @@ export function ViewAsUserModal({
               <span>A detailed reason is permanently logged in the audit ledger.</span>
               <span
                 className={
-                  reason.trim().length >= 8 ? 'text-emerald-400 font-mono' : 'text-slate-500 font-mono'
+                  reason.trim().length >= 8
+                    ? 'text-emerald-400 font-mono'
+                    : 'text-slate-500 font-mono'
                 }
               >
                 {reason.trim().length} / 8 chars min

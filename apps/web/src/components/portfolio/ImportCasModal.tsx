@@ -189,10 +189,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
   };
 
   // Helper: Parse broker CSV text directly
-  const handleParseBrokerCsvText = (
-    csvContent: string,
-    preferredBroker?: 'ZERODHA' | 'GROWW'
-  ) => {
+  const handleParseBrokerCsvText = (csvContent: string, preferredBroker?: 'ZERODHA' | 'GROWW') => {
     setError(null);
     try {
       const parsed = detectAndParseBrokerCsv(csvContent, preferredBroker);
@@ -214,14 +211,14 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
           h.assetType === 'mutual_fund'
             ? 'mutual_fund'
             : h.assetType === 'commodity'
-            ? 'commodity'
-            : 'equity',
+              ? 'commodity'
+              : 'equity',
         instrumentType:
           h.assetType === 'mutual_fund'
             ? 'mutual_fund_scheme'
             : h.assetType === 'commodity'
-            ? 'sovereign_gold_bond'
-            : 'equity_share',
+              ? 'sovereign_gold_bond'
+              : 'equity_share',
         quantity: h.quantity,
         unitCostCents: Number(h.unitCost.cents),
         currentValueCents: Number(h.currentValue?.cents ?? h.unitCost.multiply(h.quantity).cents),
@@ -291,8 +288,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
           importSource === 'zerodha_csv'
             ? 'ZERODHA'
             : importSource === 'groww_csv'
-            ? 'GROWW'
-            : undefined;
+              ? 'GROWW'
+              : undefined;
         handleParseBrokerCsvText(text, preferredBroker);
         return null;
       }
@@ -550,7 +547,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                 </p>
                 <p className="text-[11px] leading-relaxed mt-0.5">
                   Your files (PDF or CSV) and data are parsed strictly in-memory inside your local
-                  browser environment. They are never sent to third-party tracking services or logged.
+                  browser environment. They are never sent to third-party tracking services or
+                  logged.
                 </p>
               </div>
             </div>
@@ -598,15 +596,15 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                       {importSource === 'cas_pdf'
                         ? 'Click to choose or drag-and-drop your CAS PDF'
                         : importSource === 'zerodha_csv'
-                        ? 'Click to choose or drag-and-drop your Zerodha Holdings or Tradebook CSV'
-                        : 'Click to choose or drag-and-drop your Groww Holdings or Orders CSV'}
+                          ? 'Click to choose or drag-and-drop your Zerodha Holdings or Tradebook CSV'
+                          : 'Click to choose or drag-and-drop your Groww Holdings or Orders CSV'}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {importSource === 'cas_pdf'
                         ? 'Supports standard NSDL and CDSL e-CAS statements (up to 25 MB)'
                         : importSource === 'zerodha_csv'
-                        ? 'Supports Kite Holdings CSV (holdings.csv) and Console Tradebook CSV (tradebook.csv)'
-                        : 'Supports Groww Holdings CSV (Holdings.csv) and Orders History CSV (Orders.csv)'}
+                          ? 'Supports Kite Holdings CSV (holdings.csv) and Console Tradebook CSV (tradebook.csv)'
+                          : 'Supports Groww Holdings CSV (Holdings.csv) and Orders History CSV (Orders.csv)'}
                     </p>
                   </div>
                 )}
@@ -671,15 +669,24 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         title={showPassword ? 'Hide password' : 'Show password'}
                       >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
                       </button>
                     </div>
 
                     <p className="text-[11px] text-muted-foreground leading-relaxed">
                       Tip: CDSL & NSDL PDFs are typically protected with your{' '}
-                      <span className="font-semibold text-foreground">10-digit PAN in UPPERCASE</span>{' '}
+                      <span className="font-semibold text-foreground">
+                        10-digit PAN in UPPERCASE
+                      </span>{' '}
                       +{' '}
-                      <span className="font-semibold text-foreground">Date of Birth (DDMMYYYY)</span>.
+                      <span className="font-semibold text-foreground">
+                        Date of Birth (DDMMYYYY)
+                      </span>
+                      .
                     </p>
                   </div>
                 );
@@ -690,8 +697,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                 <div>
                   <p className="font-semibold text-blue-200">No Document Password Required</p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Broker CSV files exported from Zerodha Kite Console or Groww are unencrypted plain
-                    text. They will be parsed completely client-side in your browser.
+                    Broker CSV files exported from Zerodha Kite Console or Groww are unencrypted
+                    plain text. They will be parsed completely client-side in your browser.
                   </p>
                 </div>
               </div>
@@ -725,7 +732,9 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handleParseBrokerCsvText(SANITIZED_ZERODHA_HOLDINGS_CSV, 'ZERODHA')}
+                  onClick={() =>
+                    handleParseBrokerCsvText(SANITIZED_ZERODHA_HOLDINGS_CSV, 'ZERODHA')
+                  }
                   className="text-xs font-mono gap-1.5 h-8 border-blue-500/30 hover:bg-blue-500/10 text-blue-300"
                 >
                   Load Sample Zerodha Holdings CSV (Reliance, TCS, Gold BeES)
@@ -734,7 +743,9 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handleParseBrokerCsvText(SANITIZED_ZERODHA_TRADEBOOK_CSV, 'ZERODHA')}
+                  onClick={() =>
+                    handleParseBrokerCsvText(SANITIZED_ZERODHA_TRADEBOOK_CSV, 'ZERODHA')
+                  }
                   className="text-xs font-mono gap-1.5 h-8 border-blue-500/30 hover:bg-blue-500/10 text-blue-300"
                 >
                   Load Sample Zerodha Tradebook CSV (Buy/Sell Executions)
@@ -876,7 +887,9 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                   onChange={(e) => setImportAccountId(e.target.value)}
                   className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
                 >
-                  <option value="" className="bg-slate-900 text-foreground">-- Auto / Statement Folios --</option>
+                  <option value="" className="bg-slate-900 text-foreground">
+                    -- Auto / Statement Folios --
+                  </option>
                   {relevantAccounts.map((a) => (
                     <option key={a.id} value={a.id} className="bg-slate-900 text-foreground">
                       {a.brokerName}: {a.accountName}

@@ -28,7 +28,8 @@ export function syncHoldingWithTransaction(
   transaction: HoldingSyncTransactionInput
 ): HoldingSyncAdjustment {
   if (transaction.type === 'buy') {
-    const buyQty = transaction.quantity !== undefined && transaction.quantity > 0 ? transaction.quantity : 1;
+    const buyQty =
+      transaction.quantity !== undefined && transaction.quantity > 0 ? transaction.quantity : 1;
     const oldTotalCost = Math.round(holding.quantity * holding.unitCostCents);
     const newQty = holding.quantity + buyQty;
     const newTotalCost = oldTotalCost + transaction.amountCents;
@@ -46,7 +47,8 @@ export function syncHoldingWithTransaction(
   }
 
   if (transaction.type === 'sell') {
-    const sellQty = transaction.quantity !== undefined && transaction.quantity > 0 ? transaction.quantity : 1;
+    const sellQty =
+      transaction.quantity !== undefined && transaction.quantity > 0 ? transaction.quantity : 1;
     const actualSoldQty = Math.min(sellQty, holding.quantity);
     const remainingQty = Math.max(0, holding.quantity - actualSoldQty);
 
@@ -55,7 +57,8 @@ export function syncHoldingWithTransaction(
     const realizedGainLoss = proceeds - costBasisOfSoldUnits;
 
     // Remaining units retain the existing weighted average unit cost
-    const currentPricePerUnit = holding.quantity > 0 ? holding.currentValueCents / holding.quantity : 0;
+    const currentPricePerUnit =
+      holding.quantity > 0 ? holding.currentValueCents / holding.quantity : 0;
     const updatedCurrentVal = Math.round(remainingQty * currentPricePerUnit);
 
     return {

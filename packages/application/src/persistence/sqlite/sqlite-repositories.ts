@@ -12,10 +12,7 @@ import {
 } from '@wealthnest/domain';
 import { SqliteDatabase } from './sqlite-connection.js';
 import { AssetClassRepositoryPort } from '../../ports/asset-class-repository.port.js';
-import {
-  CasImportRepositoryPort,
-  ConfirmCasImportParams,
-} from '../../ports/cas-import.port.js';
+import { CasImportRepositoryPort, ConfirmCasImportParams } from '../../ports/cas-import.port.js';
 import {
   HoldingRepositoryPort,
   HoldingDetailDto,
@@ -104,7 +101,9 @@ export class SqliteFamilyAdapter implements FamilyRepositoryPort {
           is_primary: number;
           notes?: string;
           created_at: string;
-        }>('SELECT * FROM family_members WHERE user_id = ? ORDER BY is_primary DESC, created_at ASC;')
+        }>(
+          'SELECT * FROM family_members WHERE user_id = ? ORDER BY is_primary DESC, created_at ASC;'
+        )
         .all(userId);
 
       const mapped: FamilyMemberDto[] = rows.map((r) => ({
@@ -459,9 +458,7 @@ export class SqliteHoldingAdapter implements HoldingRepositoryPort {
 
   async deleteHolding(holdingId: string, userId: string): Promise<Result<void>> {
     try {
-      this.db
-        .prepare('DELETE FROM holdings WHERE id = ? AND user_id = ?;')
-        .run(holdingId, userId);
+      this.db.prepare('DELETE FROM holdings WHERE id = ? AND user_id = ?;').run(holdingId, userId);
       return ok(undefined);
     } catch (errEx) {
       return err(errEx instanceof Error ? errEx : new Error(String(errEx)));
@@ -793,16 +790,16 @@ export class SqliteLiabilityAdapter implements LiabilityRepositoryPort {
 
   async deleteLiability(id: string, userId: string): Promise<Result<void>> {
     try {
-      this.db
-        .prepare('DELETE FROM liabilities WHERE id = ? AND user_id = ?;')
-        .run(id, userId);
+      this.db.prepare('DELETE FROM liabilities WHERE id = ? AND user_id = ?;').run(id, userId);
       return ok(undefined);
     } catch (errEx) {
       return err(errEx instanceof Error ? errEx : new Error(String(errEx)));
     }
   }
 
-  async recordLiabilityBalance(params: RecordLiabilityBalanceParams): Promise<Result<LiabilityBalanceDto>> {
+  async recordLiabilityBalance(
+    params: RecordLiabilityBalanceParams
+  ): Promise<Result<LiabilityBalanceDto>> {
     try {
       const id = generateId('lbal');
       this.db
@@ -839,7 +836,10 @@ export class SqliteLiabilityAdapter implements LiabilityRepositoryPort {
     }
   }
 
-  async listLiabilityBalances(liabilityId: string, userId: string): Promise<Result<readonly LiabilityBalanceDto[]>> {
+  async listLiabilityBalances(
+    liabilityId: string,
+    userId: string
+  ): Promise<Result<readonly LiabilityBalanceDto[]>> {
     try {
       const rows = this.db
         .prepare<{
@@ -851,7 +851,9 @@ export class SqliteLiabilityAdapter implements LiabilityRepositoryPort {
           source: string;
           notes?: string;
           created_at: string;
-        }>('SELECT * FROM liability_balances WHERE liability_id = ? AND user_id = ? ORDER BY as_of_date DESC;')
+        }>(
+          'SELECT * FROM liability_balances WHERE liability_id = ? AND user_id = ? ORDER BY as_of_date DESC;'
+        )
         .all(liabilityId, userId);
 
       const mapped: LiabilityBalanceDto[] = rows.map((r) => ({
@@ -871,7 +873,9 @@ export class SqliteLiabilityAdapter implements LiabilityRepositoryPort {
     }
   }
 
-  async recordAssetValuation(params: RecordAssetValuationParams): Promise<Result<AssetValuationDto>> {
+  async recordAssetValuation(
+    params: RecordAssetValuationParams
+  ): Promise<Result<AssetValuationDto>> {
     try {
       const id = generateId('aval');
       this.db
@@ -910,7 +914,10 @@ export class SqliteLiabilityAdapter implements LiabilityRepositoryPort {
     }
   }
 
-  async listAssetValuations(assetId: string, userId: string): Promise<Result<readonly AssetValuationDto[]>> {
+  async listAssetValuations(
+    assetId: string,
+    userId: string
+  ): Promise<Result<readonly AssetValuationDto[]>> {
     try {
       const rows = this.db
         .prepare<{
@@ -923,7 +930,9 @@ export class SqliteLiabilityAdapter implements LiabilityRepositoryPort {
           source: string;
           notes?: string;
           created_at: string;
-        }>('SELECT * FROM asset_valuations WHERE asset_id = ? AND user_id = ? ORDER BY as_of_date DESC;')
+        }>(
+          'SELECT * FROM asset_valuations WHERE asset_id = ? AND user_id = ? ORDER BY as_of_date DESC;'
+        )
         .all(assetId, userId);
 
       const mapped: AssetValuationDto[] = rows.map((r) => ({
@@ -1006,10 +1015,16 @@ export class SqliteLiabilityAdapter implements LiabilityRepositoryPort {
     }
   }
 
-  async unlinkAssetLiability(userId: string, assetId: string, liabilityId: string): Promise<Result<void>> {
+  async unlinkAssetLiability(
+    userId: string,
+    assetId: string,
+    liabilityId: string
+  ): Promise<Result<void>> {
     try {
       this.db
-        .prepare('DELETE FROM asset_liability_links WHERE user_id = ? AND asset_id = ? AND liability_id = ?;')
+        .prepare(
+          'DELETE FROM asset_liability_links WHERE user_id = ? AND asset_id = ? AND liability_id = ?;'
+        )
         .run(userId, assetId, liabilityId);
       return ok(undefined);
     } catch (errEx) {
@@ -1214,7 +1229,11 @@ export class SqliteGoalAdapter implements GoalRepositoryPort {
     }
   }
 
-  async unlinkHoldingFromGoal(goalId: string, holdingId: string, _userId: string): Promise<Result<void>> {
+  async unlinkHoldingFromGoal(
+    goalId: string,
+    holdingId: string,
+    _userId: string
+  ): Promise<Result<void>> {
     try {
       this.db
         .prepare('DELETE FROM goal_holdings WHERE goal_id = ? AND holding_id = ?;')
@@ -1319,7 +1338,11 @@ export class SqliteBackupAdapter implements BackupPort {
                display_name = excluded.display_name,
                default_currency = excluded.default_currency;`
           )
-          .run(userId, backup.user.displayName || 'Restored Investor', backup.user.defaultCurrency || 'INR');
+          .run(
+            userId,
+            backup.user.displayName || 'Restored Investor',
+            backup.user.defaultCurrency || 'INR'
+          );
 
         // Restore Holdings & Assets
         let restoredHoldings = 0;
@@ -1531,9 +1554,7 @@ export class SqliteCasImportAdapter implements CasImportRepositoryPort {
       let validMemberId: string | null = null;
       if (params.memberId) {
         const memRow = this.db
-          .prepare<{ id: string }>(
-            'SELECT id FROM family_members WHERE user_id = ? AND id = ?;'
-          )
+          .prepare<{ id: string }>('SELECT id FROM family_members WHERE user_id = ? AND id = ?;')
           .get(params.userId, params.memberId);
         if (memRow) {
           validMemberId = memRow.id;
@@ -1567,9 +1588,7 @@ export class SqliteCasImportAdapter implements CasImportRepositoryPort {
 
           if (item.isin) {
             const byIsin = this.db
-              .prepare<{ id: string }>(
-                'SELECT id FROM assets WHERE user_id = ? AND isin = ?;'
-              )
+              .prepare<{ id: string }>('SELECT id FROM assets WHERE user_id = ? AND isin = ?;')
               .get(params.userId, item.isin);
 
             if (byIsin) {
@@ -1737,9 +1756,7 @@ export class SqliteCasImportAdapter implements CasImportRepositoryPort {
             let assetId: string | null = null;
             if (tx.isin) {
               const byIsin = this.db
-                .prepare<{ id: string }>(
-                  'SELECT id FROM assets WHERE user_id = ? AND isin = ?;'
-                )
+                .prepare<{ id: string }>('SELECT id FROM assets WHERE user_id = ? AND isin = ?;')
                 .get(params.userId, tx.isin);
               if (byIsin) {
                 assetId = byIsin.id;

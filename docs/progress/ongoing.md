@@ -28,6 +28,9 @@
 | **Phase 9.1: Local Persistence & Decoupling** | Local SQLite schema (12 tables), composite foreign keys, dynamic RepositoryProvider injection, in-memory SQLite parity tests, and atomic restore | ✅ Complete | ✅ Verified | Eliminates direct Supabase coupling from UI pages; enables 100% offline persistence. 303/303 tests passing. |
 | **Phase 9.2: Mobile Responsive UI & Touch** | Adaptive navigation (bottom tab bar on mobile, sidebar on desktop), responsive cards for holdings/transactions, touch targets $\ge 44\text{px}$, responsive SVG trajectory chart | ✅ Complete | ✅ Verified | Mobile phone (< 768px) and touch tablet ergonomics with safe-area insets. 316/316 tests passing. |
 | **Phase 10: Cross-Platform Desktop & Mobile Runtime** | Tauri 2 compilation for Desktop (Win, Mac, Linux) & Mobile (Android, iOS) with OS sandboxing, native file dialogs, runtime detection, and SQLite bridge | ✅ Complete | ✅ Verified | Scaffolding, runtime detection, native file dialogs, SQLite bridge, desktop titlebar, 332 tests passing. |
+| **Phase 10.6: Multi-Platform Installers & CI Pipeline** | Windows NSIS `.exe` / `.msi` and Android signed `.apk` automated GitHub Actions workflow, Node 22 upgrade, high-resolution multi-platform icon generator | ✅ Complete | ✅ Verified | `.github/workflows/build-installers.yml`, `scripts/generate-icons.py`, multi-res `.ico`/`.icns`, Android mipmaps, Web PWA icons. |
+| **Phase 10.7: LAN Testing & Dynamic Server Connection** | Dynamic server switcher (`ServerConnectionSettings`), transparent Supabase proxy client, automated Windows port forwarding | ✅ Complete | ✅ Verified | Connect mobile/desktop to LAN IP with zero rebuilds. `docs/development/lan-testing.md`, `setup-lan-portproxy.ps1`. 356 tests passing. |
+| **Phase 11: QA Cloud Hosting & Zero-Cost Architecture** | Step-by-step production-parity QA deployment plan, ₹0 billing guarantee (Supabase Free + Spend Cap + Cloudflare Pages), anonymized 3-tier seed script, 7-day inactivity keep-alive workflow | ✅ Complete | ✅ Verified | `docs/deployment/qa-environment-hosting.md`, `supabase/seed_qa.sql`, `.github/workflows/keep-qa-alive.yml`. |
 
 
 ---
@@ -194,18 +197,29 @@
   - Added automated Android APK/AAB build script `scripts/build-android.sh` (supporting both local host SDK/NDK and zero-install Docker builder `infra/docker/Dockerfile.android` via `npm run android:build` / `npm run android:docker`).
 * [x] **[P3] TASK-06: Documentation & QA Index Synchronization**
   - Updated `docs/QA/README.md`, `docs/QA/phase-9-1-local-persistence-decoupling-verification.md`, `README.md`, `docs/architecture.md`, and `docs/cost/costAnalysis.md`.
-
+* [x] **[P0] TASK-07: Multi-Platform Installers & Production CI Pipeline (Phase 10.6)**
+  - Windows NSIS `.exe` / `.msi` and Android signed `.apk` pipeline in `.github/workflows/build-installers.yml`.
+  - Upgraded CI runner and local Dockerfile to Node 22 for native `node:sqlite`.
+  - Icon generator script `scripts/generate-icons.py` creating high-res `.ico`, `.icns`, Android mipmaps, and Web PWA icons.
+* [x] **[P0] TASK-08: LAN Multi-Device Connection & Dynamic Server Switcher (Phase 10.7)**
+  - Configured `server-config.ts` and `connection-manager.ts` for dynamic Supabase client switching.
+  - Added `ServerConnectionSettings.tsx` to Settings page with 3 dedicated test suites.
+  - Documented LAN testing in `docs/development/lan-testing.md` and automated Windows portproxy setup.
+* [x] **[P1] TASK-09: QA Cloud Hosting Guide & Anonymized Seed Dataset (Phase 11)**
+  - Created step-by-step ₹0/month QA hosting guide (`docs/deployment/qa-environment-hosting.md`).
+  - Created 3-tier modular seed script (`supabase/seed_qa.sql`) with anonymized Sharma and Verma personas, full trade history, SIPs, dividends, and loan amortization.
+  - Created GitHub Actions keep-alive workflow (`.github/workflows/keep-qa-alive.yml`) to prevent 7-day Supabase auto-pause.
 
 ---
 
 ## 📈 Quality Gates & System Health
 
 * **TypeScript Compilation**: `npm run type-check` (`tsc -b`) compiles with **0 errors**.
-* **Automated Test Coverage**: **335 passing tests** across 65 test suites (`vitest`) — 100% green.
-* **Persona & Real-World Dogfooding**: Fully personalized to the **Vaghela Family** (`Ketan Vaghela`, `Parul Vaghela`, `Krisha Vaghela`, `Shamalbhai Vaghela HUF`, `Ramilaben Vaghela`) with strict global rule enforcement.
-* **Active Containers**:
-  - Web App: `http://localhost:30000` (Nginx Proxy) / `http://localhost:5174` (Vite)
+* **Automated Test Coverage**: **356 passing tests** across 68 test suites (`vitest`) — 100% green.
+* **Persona & Real-World Dogfooding**: Fully personalized to the **Vaghela Family** (`Ketan Vaghela`, `Parul Vaghela`, `Krisha Vaghela`, `Shamalbhai Vaghela HUF`, `Ramilaben Vaghela`) locally, with clean anonymized personas (`Arjun Sharma`, `Pooja Sharma`, etc.) for cloud QA.
+* **Active Containers & Endpoints**:
+  - Web App: `http://localhost:30000` (Nginx Proxy) / `http://localhost:5174` (Vite) / LAN `http://192.168.1.105:30000`
   - Supabase Studio: `http://localhost:54323`
   - PostgreSQL DB: `127.0.0.1:54322`
   - Inbucket Mock Email: `http://localhost:54324`
-  - Kong Gateway: `http://127.0.0.1:54321`
+  - Kong Gateway: `http://127.0.0.1:54321` (API)

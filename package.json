@@ -8,7 +8,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=@wealthnest/web",
+    "dev": "bash scripts/dev.sh",
+    "dev:web": "npm run dev --workspace=@wealthnest/web",
     "build": "tsc -b && npm run build --workspace=@wealthnest/web",
     "type-check": "tsc -b",
     "lint": "prettier --check \"packages/*/src/**/*.{ts,tsx}\" \"apps/web/src/**/*.{ts,tsx}\"",
@@ -17,6 +18,7 @@
     "verify": "bash scripts/verify.sh",
     "start:all": "bash scripts/start.sh",
     "stop:all": "bash scripts/stop.sh",
+    "reset:ports": "bash scripts/reset-ports.sh",
     "status:all": "bash scripts/status.sh",
     "docker:dev": "docker compose -p wealthnest -f infra/docker/docker-compose.yml up --build",
     "docker:dev:d": "docker compose -p wealthnest -f infra/docker/docker-compose.yml up -d --build",

@@ -2,7 +2,8 @@ export type FamilyRelationship = 'self' | 'spouse' | 'huf' | 'child' | 'parent' 
 
 export type DepositoryType = 'CDSL' | 'NSDL' | 'CAMS' | 'KFINTECH' | 'RBI' | 'OTHER';
 
-export type AccountType = 'demat' | 'mutual_fund_folio' | 'savings_bank' | 'ppf_epf' | 'nps' | 'other';
+export type AccountType =
+  'demat' | 'mutual_fund_folio' | 'savings_bank' | 'ppf_epf' | 'nps' | 'other';
 
 export interface FamilyMember {
   readonly id: string;

@@ -152,12 +152,14 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   };
 
   const activeMember = useMemo(
-    () => (selectedMemberId === 'all' ? null : members.find((m) => m.id === selectedMemberId) || null),
+    () =>
+      selectedMemberId === 'all' ? null : members.find((m) => m.id === selectedMemberId) || null,
     [selectedMemberId, members]
   );
 
   const activeAccount = useMemo(
-    () => (selectedAccountId === 'all' ? null : accounts.find((a) => a.id === selectedAccountId) || null),
+    () =>
+      selectedAccountId === 'all' ? null : accounts.find((a) => a.id === selectedAccountId) || null,
     [selectedAccountId, accounts]
   );
 

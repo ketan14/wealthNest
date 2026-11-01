@@ -12,7 +12,6 @@ import { AdminRolesPage } from '../pages/admin/AdminRolesPage';
 import { AdminAuditLogsPage } from '../pages/admin/AdminAuditLogsPage';
 import { AdminSettingsPage } from '../pages/admin/AdminSettingsPage';
 
-
 // Mock Supabase client to avoid network calls in test environment
 vi.mock('../lib/supabase/client', () => ({
   supabase: {
@@ -59,9 +58,7 @@ function renderWithProviders(ui: React.ReactElement, initialRoute = '/admin') {
   return render(
     <QueryClientProvider client={queryClient}>
       <AdminProvider>
-        <MemoryRouter initialEntries={[initialRoute]}>
-          {ui}
-        </MemoryRouter>
+        <MemoryRouter initialEntries={[initialRoute]}>{ui}</MemoryRouter>
       </AdminProvider>
     </QueryClientProvider>
   );
@@ -110,7 +107,9 @@ describe('Phase 7: Complete Admin Portal, User Management & Security Verificatio
       });
 
       // Assert confidentiality banner
-      expect(screen.getByText(/Tenant Isolation & Confidentiality Boundary Active/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Tenant Isolation & Confidentiality Boundary Active/i)
+      ).toBeInTheDocument();
       expect(screen.getByText(/Row Level Security/i)).toBeInTheDocument();
 
       // Assert metric cards
@@ -167,7 +166,6 @@ describe('Phase 7: Complete Admin Portal, User Management & Security Verificatio
       expect(actionButtons.length).toBeGreaterThan(0);
       fireEvent.click(actionButtons[1]!); // Parul
 
-
       await waitFor(() => {
         expect(screen.getByText(/Change Account Lifecycle Status/i)).toBeInTheDocument();
         expect(screen.getByText(/Mandatory Reason Code/i)).toBeInTheDocument();
@@ -185,7 +183,9 @@ describe('Phase 7: Complete Admin Portal, User Management & Security Verificatio
 
       await waitFor(() => {
         expect(screen.getByText(/Invite New Investor/i)).toBeInTheDocument();
-        expect(screen.getByPlaceholderText(/e.g. krisha.vaghela@wealthnest.local/i)).toBeInTheDocument();
+        expect(
+          screen.getByPlaceholderText(/e.g. krisha.vaghela@wealthnest.local/i)
+        ).toBeInTheDocument();
       });
     });
   });
@@ -205,7 +205,9 @@ describe('Phase 7: Complete Admin Portal, User Management & Security Verificatio
 
       // Verify financial data confidentiality boundary
       expect(screen.getByText(/Financial Data Confidentiality Boundary/i)).toBeInTheDocument();
-      expect(screen.getByText(/private financial records.*are cryptographically isolated/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/private financial records.*are cryptographically isolated/i)
+      ).toBeInTheDocument();
 
       // Verify household tenancy metadata
       expect(screen.getByText(/Multi-User Household Tenancy/i)).toBeInTheDocument();
@@ -232,13 +234,14 @@ describe('Phase 7: Complete Admin Portal, User Management & Security Verificatio
     });
   });
 
-
   describe('AdminRolesPage Component', () => {
     it('renders RBAC entitlement matrix and lists active administrative staff', async () => {
       renderWithProviders(<AdminRolesPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/Staff Entitlements & Role-Based Access Control/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Staff Entitlements & Role-Based Access Control/i)
+        ).toBeInTheDocument();
       });
 
       // Roles in matrix
@@ -270,7 +273,6 @@ describe('Phase 7: Complete Admin Portal, User Management & Security Verificatio
       fireEvent.click(payloadButtons[0]!);
 
       await waitFor(() => {
-
         expect(screen.getByText(/Audit Event Payload/i)).toBeInTheDocument();
         expect(screen.getByText(/Sanitized Metadata JSON/i)).toBeInTheDocument();
       });

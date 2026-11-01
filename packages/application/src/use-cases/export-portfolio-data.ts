@@ -1,7 +1,10 @@
 import { Result, ok, err, isOk } from '@wealthnest/shared';
 import { DEFAULT_USER_PREFERENCES } from '@wealthnest/domain';
 import { HoldingRepositoryPort, HoldingDetailDto } from '../ports/holding-repository.port.js';
-import { TransactionRepositoryPort, TransactionDetailDto } from '../ports/transaction-repository.port.js';
+import {
+  TransactionRepositoryPort,
+  TransactionDetailDto,
+} from '../ports/transaction-repository.port.js';
 import { LiabilityRepositoryPort, LiabilityDto } from '../ports/liability-repository.port.js';
 import { GoalRepositoryPort, GoalDetailDto } from '../ports/goal-repository.port.js';
 import { UserRepositoryPort } from '../ports/user-repository.port.js';
@@ -30,14 +33,17 @@ export class ExportPortfolioDataUseCase {
     try {
       // 1. Fetch user profile
       const userRes = await this.userRepo.getById(userId as any);
-      const userProfile = isOk(userRes) && userRes.value ? userRes.value : {
-        id: userId as any,
-        email: 'user@wealthnest.local',
-        displayName: 'WealthNest User',
-        defaultCurrency: 'INR',
-        preferences: DEFAULT_USER_PREFERENCES,
-        createdAt: new Date().toISOString(),
-      };
+      const userProfile =
+        isOk(userRes) && userRes.value
+          ? userRes.value
+          : {
+              id: userId as any,
+              email: 'user@wealthnest.local',
+              displayName: 'WealthNest User',
+              defaultCurrency: 'INR',
+              preferences: DEFAULT_USER_PREFERENCES,
+              createdAt: new Date().toISOString(),
+            };
 
       // 2. Fetch all modules in parallel
       const [holdingsRes, transactionsRes, liabilitiesRes, goalsRes] = await Promise.all([
@@ -145,8 +151,8 @@ export class ExportPortfolioDataUseCase {
     const rows = holdings.map((h) => {
       const unitCost = (h.unitCostCents / 100).toFixed(2);
       const currentVal = (h.currentValueCents / 100).toFixed(2);
-      const totalCost = (h.quantity * (h.unitCostCents / 100));
-      const gainLoss = ((h.currentValueCents / 100) - totalCost).toFixed(2);
+      const totalCost = h.quantity * (h.unitCostCents / 100);
+      const gainLoss = (h.currentValueCents / 100 - totalCost).toFixed(2);
 
       return [
         this.escapeCsvCell(h.holdingId),
@@ -181,17 +187,19 @@ export class ExportPortfolioDataUseCase {
       'Notes',
     ];
 
-    const rows = transactions.map((t) => [
-      this.escapeCsvCell(t.id),
-      this.escapeCsvCell(t.transactionDate),
-      this.escapeCsvCell(t.type),
-      this.escapeCsvCell(t.assetName || ''),
-      this.escapeCsvCell(t.assetTicker || ''),
-      this.escapeCsvCell(t.quantity || ''),
-      this.escapeCsvCell((t.amountCents / 100).toFixed(2)),
-      this.escapeCsvCell(t.currency),
-      this.escapeCsvCell(t.notes || ''),
-    ].join(','));
+    const rows = transactions.map((t) =>
+      [
+        this.escapeCsvCell(t.id),
+        this.escapeCsvCell(t.transactionDate),
+        this.escapeCsvCell(t.type),
+        this.escapeCsvCell(t.assetName || ''),
+        this.escapeCsvCell(t.assetTicker || ''),
+        this.escapeCsvCell(t.quantity || ''),
+        this.escapeCsvCell((t.amountCents / 100).toFixed(2)),
+        this.escapeCsvCell(t.currency),
+        this.escapeCsvCell(t.notes || ''),
+      ].join(',')
+    );
 
     return [headers.join(','), ...rows].join('\n');
   }
@@ -212,20 +220,22 @@ export class ExportPortfolioDataUseCase {
       'End Date',
     ];
 
-    const rows = liabilities.map((l) => [
-      this.escapeCsvCell(l.id),
-      this.escapeCsvCell(l.name),
-      this.escapeCsvCell(l.loanType),
-      this.escapeCsvCell(l.lender),
-      this.escapeCsvCell((Number(l.originalPrincipalCents) / 100).toFixed(2)),
-      this.escapeCsvCell((Number(l.currentBalanceCents) / 100).toFixed(2)),
-      this.escapeCsvCell(l.interestRate),
-      this.escapeCsvCell(l.interestType),
-      this.escapeCsvCell((Number(l.emiAmountCents) / 100).toFixed(2)),
-      this.escapeCsvCell(l.status),
-      this.escapeCsvCell(l.startDate || ''),
-      this.escapeCsvCell(l.endDate || ''),
-    ].join(','));
+    const rows = liabilities.map((l) =>
+      [
+        this.escapeCsvCell(l.id),
+        this.escapeCsvCell(l.name),
+        this.escapeCsvCell(l.loanType),
+        this.escapeCsvCell(l.lender),
+        this.escapeCsvCell((Number(l.originalPrincipalCents) / 100).toFixed(2)),
+        this.escapeCsvCell((Number(l.currentBalanceCents) / 100).toFixed(2)),
+        this.escapeCsvCell(l.interestRate),
+        this.escapeCsvCell(l.interestType),
+        this.escapeCsvCell((Number(l.emiAmountCents) / 100).toFixed(2)),
+        this.escapeCsvCell(l.status),
+        this.escapeCsvCell(l.startDate || ''),
+        this.escapeCsvCell(l.endDate || ''),
+      ].join(',')
+    );
 
     return [headers.join(','), ...rows].join('\n');
   }
@@ -245,19 +255,21 @@ export class ExportPortfolioDataUseCase {
       'Linked Holdings Count',
     ];
 
-    const rows = goals.map((g) => [
-      this.escapeCsvCell(g.id),
-      this.escapeCsvCell(g.name),
-      this.escapeCsvCell(g.category),
-      this.escapeCsvCell((g.targetAmountCents / 100).toFixed(2)),
-      this.escapeCsvCell(g.targetDate),
-      this.escapeCsvCell((g.initialSavedCents / 100).toFixed(2)),
-      this.escapeCsvCell((g.monthlyContributionCents / 100).toFixed(2)),
-      this.escapeCsvCell(g.expectedReturnRate),
-      this.escapeCsvCell(g.inflationRate),
-      this.escapeCsvCell(g.priority),
-      this.escapeCsvCell(g.linkedHoldings?.length || 0),
-    ].join(','));
+    const rows = goals.map((g) =>
+      [
+        this.escapeCsvCell(g.id),
+        this.escapeCsvCell(g.name),
+        this.escapeCsvCell(g.category),
+        this.escapeCsvCell((g.targetAmountCents / 100).toFixed(2)),
+        this.escapeCsvCell(g.targetDate),
+        this.escapeCsvCell((g.initialSavedCents / 100).toFixed(2)),
+        this.escapeCsvCell((g.monthlyContributionCents / 100).toFixed(2)),
+        this.escapeCsvCell(g.expectedReturnRate),
+        this.escapeCsvCell(g.inflationRate),
+        this.escapeCsvCell(g.priority),
+        this.escapeCsvCell(g.linkedHoldings?.length || 0),
+      ].join(',')
+    );
 
     return [headers.join(','), ...rows].join('\n');
   }

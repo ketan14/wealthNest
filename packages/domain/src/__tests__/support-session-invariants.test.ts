@@ -47,7 +47,9 @@ describe('Support Session Invariants', () => {
         'Testing my own portfolio in support view'
       );
       expect(result.allowed).toBe(false);
-      expect(result.reason).toContain('cannot initiate a support view session for your own administrator account');
+      expect(result.reason).toContain(
+        'cannot initiate a support view session for your own administrator account'
+      );
     });
 
     it('rejects empty or whitespace reason', () => {

@@ -121,10 +121,9 @@ describe('Phase 10: Tauri 2 SQLite Database Adapter & Offline Persistence', () =
       'SELECT id, name FROM holdings WHERE user_id = ?',
       ['usr-1']
     );
-    expect(mockSelect).toHaveBeenCalledWith(
-      'SELECT id, name FROM holdings WHERE user_id = ?',
-      ['usr-1']
-    );
+    expect(mockSelect).toHaveBeenCalledWith('SELECT id, name FROM holdings WHERE user_id = ?', [
+      'usr-1',
+    ]);
     expect(selectRes).toHaveLength(1);
     expect(selectRes[0]?.name).toBe('HDFC Bank');
   });

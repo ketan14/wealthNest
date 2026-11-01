@@ -34,7 +34,9 @@ describe('Phase 9.1: SQLite Repository Adapters', () => {
     casImportAdapter = new SqliteCasImportAdapter(db);
 
     // Initialize test profile
-    db.prepare("INSERT INTO profiles (id, display_name) VALUES (?, 'Ketan Vaghela');").run(testUserId);
+    db.prepare("INSERT INTO profiles (id, display_name) VALUES (?, 'Ketan Vaghela');").run(
+      testUserId
+    );
   });
 
   it('TC-9.1-03A: AssetClassAdapter returns default asset classes', async () => {

@@ -86,7 +86,9 @@ export class ChangeUserStatusUseCase {
             actorRole: actor.role,
           }),
         });
-        return err(new Error('Access Denied: Insufficient platform permissions to change user status'));
+        return err(
+          new Error('Access Denied: Insufficient platform permissions to change user status')
+        );
       }
 
       const validation = validateStatusChange(

@@ -118,7 +118,9 @@ describe('Backup Validation & Atomic Restore Use Cases', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.value.isValid).toBe(false);
-        expect(result.value.errors.some((e) => e.includes('Unsupported backup version'))).toBe(true);
+        expect(result.value.errors.some((e) => e.includes('Unsupported backup version'))).toBe(
+          true
+        );
       }
     });
 
@@ -134,7 +136,9 @@ describe('Backup Validation & Atomic Restore Use Cases', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.value.isValid).toBe(false);
-        expect(result.value.errors.some((e) => e.includes('Duplicate holding ID detected'))).toBe(true);
+        expect(result.value.errors.some((e) => e.includes('Duplicate holding ID detected'))).toBe(
+          true
+        );
       }
     });
 
@@ -150,7 +154,9 @@ describe('Backup Validation & Atomic Restore Use Cases', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.value.isValid).toBe(false);
-        expect(result.value.errors.some((e) => e.includes('Duplicate transaction ID detected'))).toBe(true);
+        expect(
+          result.value.errors.some((e) => e.includes('Duplicate transaction ID detected'))
+        ).toBe(true);
       }
     });
 
@@ -169,7 +175,9 @@ describe('Backup Validation & Atomic Restore Use Cases', () => {
         expect(result.value.errors.some((e) => e.includes('negative quantity'))).toBe(true);
         expect(result.value.errors.some((e) => e.includes('invalid type'))).toBe(true);
         expect(result.value.errors.some((e) => e.includes('negative current balance'))).toBe(true);
-        expect(result.value.errors.some((e) => e.includes('non-positive target amount'))).toBe(true);
+        expect(result.value.errors.some((e) => e.includes('non-positive target amount'))).toBe(
+          true
+        );
       }
     });
 
@@ -187,7 +195,9 @@ describe('Backup Validation & Atomic Restore Use Cases', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.value.isValid).toBe(false);
-        expect(result.value.errors.some((e) => e.includes('references unknown asset ID'))).toBe(true);
+        expect(result.value.errors.some((e) => e.includes('references unknown asset ID'))).toBe(
+          true
+        );
       }
     });
 
@@ -238,7 +248,10 @@ describe('Backup Validation & Atomic Restore Use Cases', () => {
         expect(result.value.restoredGoals).toBe(1);
         expect(result.value.durationMs).toBeGreaterThanOrEqual(0);
       }
-      expect(mockBackupPort.restoreFromBackup).toHaveBeenCalledWith('usr-synth-01', validSampleBackup);
+      expect(mockBackupPort.restoreFromBackup).toHaveBeenCalledWith(
+        'usr-synth-01',
+        validSampleBackup
+      );
     });
 
     it('rejects restore immediately if backup payload fails validation', async () => {
@@ -268,9 +281,11 @@ describe('Backup Validation & Atomic Restore Use Cases', () => {
     it('preserves existing data and reports rollback when storage adapter encounters error', async () => {
       const mockBackupPort: BackupPort = {
         createFullBackup: vi.fn(),
-        restoreFromBackup: vi.fn().mockResolvedValue(
-          err(new Error('Database write constraint violation on portfolio_accounts'))
-        ),
+        restoreFromBackup: vi
+          .fn()
+          .mockResolvedValue(
+            err(new Error('Database write constraint violation on portfolio_accounts'))
+          ),
       };
 
       const useCase = new RestorePortfolioFromBackupUseCase(mockBackupPort);

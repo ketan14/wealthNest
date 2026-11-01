@@ -199,11 +199,15 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
 
       if (params.name !== undefined) updates.name = params.name;
       if (params.category !== undefined) updates.category = params.category;
-      if (params.targetAmountCents !== undefined) updates.target_amount_cents = params.targetAmountCents;
+      if (params.targetAmountCents !== undefined)
+        updates.target_amount_cents = params.targetAmountCents;
       if (params.targetDate !== undefined) updates.target_date = params.targetDate;
-      if (params.initialSavedCents !== undefined) updates.initial_saved_cents = params.initialSavedCents;
-      if (params.monthlyContributionCents !== undefined) updates.monthly_contribution_cents = params.monthlyContributionCents;
-      if (params.expectedReturnRate !== undefined) updates.expected_return_rate = params.expectedReturnRate;
+      if (params.initialSavedCents !== undefined)
+        updates.initial_saved_cents = params.initialSavedCents;
+      if (params.monthlyContributionCents !== undefined)
+        updates.monthly_contribution_cents = params.monthlyContributionCents;
+      if (params.expectedReturnRate !== undefined)
+        updates.expected_return_rate = params.expectedReturnRate;
       if (params.inflationRate !== undefined) updates.inflation_rate = params.inflationRate;
       if (params.priority !== undefined) updates.priority = params.priority;
       if (params.notes !== undefined) updates.notes = params.notes;
@@ -268,17 +272,15 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
 
   async linkHoldingToGoal(params: LinkHoldingToGoalParams): Promise<Result<void>> {
     try {
-      const { error } = await supabase
-        .from('goal_holding_allocations')
-        .upsert(
-          {
-            goal_id: params.goalId,
-            holding_id: params.holdingId,
-            user_id: params.userId,
-            allocation_percentage: params.allocationPercentage,
-          },
-          { onConflict: 'goal_id,holding_id' }
-        );
+      const { error } = await supabase.from('goal_holding_allocations').upsert(
+        {
+          goal_id: params.goalId,
+          holding_id: params.holdingId,
+          user_id: params.userId,
+          allocation_percentage: params.allocationPercentage,
+        },
+        { onConflict: 'goal_id,holding_id' }
+      );
 
       if (error) {
         return err(new Error(error.message));
@@ -290,7 +292,11 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
     }
   }
 
-  async unlinkHoldingFromGoal(goalId: string, holdingId: string, userId: string): Promise<Result<void>> {
+  async unlinkHoldingFromGoal(
+    goalId: string,
+    holdingId: string,
+    userId: string
+  ): Promise<Result<void>> {
     try {
       const { error } = await supabase
         .from('goal_holding_allocations')

@@ -80,7 +80,9 @@ describe('Domain: Analytics Module', () => {
       const m2 = Money.fromDecimal(120000, 'INR');
       expect(calculateCagr({ beginningValue: m1, endingValue: m2, years: 0 })).toBe(0);
       expect(calculateCagr({ beginningValue: m1, endingValue: m2, years: -1 })).toBe(0);
-      expect(calculateCagr({ beginningValue: Money.zero('INR'), endingValue: m2, years: 2 })).toBe(0);
+      expect(calculateCagr({ beginningValue: Money.zero('INR'), endingValue: m2, years: 2 })).toBe(
+        0
+      );
     });
   });
 

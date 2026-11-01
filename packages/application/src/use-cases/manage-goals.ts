@@ -165,7 +165,9 @@ export class GetGoalsSummaryUseCase {
         name: g.name,
         category: g.category,
         targetAmount: Money.fromCents(BigInt(g.targetAmountCents), gCurrency),
-        targetDate: isNaN(targetDate.getTime()) ? new Date(Date.now() + 365 * 24 * 3600 * 1000) : targetDate,
+        targetDate: isNaN(targetDate.getTime())
+          ? new Date(Date.now() + 365 * 24 * 3600 * 1000)
+          : targetDate,
         initialSaved: Money.fromCents(BigInt(g.initialSavedCents), gCurrency),
         monthlyContribution: Money.fromCents(BigInt(g.monthlyContributionCents), gCurrency),
         expectedReturnRate: g.expectedReturnRate,

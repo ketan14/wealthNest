@@ -21,9 +21,8 @@ services:
       - /app/packages/application/node_modules
     networks:
       - wealthnest-net
-    ports:
-      # Direct port exposure for optional fallback access (5174 to avoid collision)
-      - "${VITE_PORT:-5174}:5173"
+    # Port 5173 is reached via the Nginx proxy on port 30000 inside wealthnest-net
+    # Avoid binding host 5174 to prevent collisions with Windows netsh or local Vite
 
   proxy:
     image: nginx:1.27-alpine

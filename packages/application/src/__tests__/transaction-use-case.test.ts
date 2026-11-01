@@ -235,4 +235,3 @@ describe('RecordTransactionUseCase', () => {
     expect(capturedParams.notes).toContain('Realized Gain: ₹2,000.00');
   });
 });
-

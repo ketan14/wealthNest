@@ -42,11 +42,7 @@ export class RecordTransactionUseCase {
     let finalParams = params;
 
     // Automatic portfolio holding synchronization for buy/sell trades
-    if (
-      this.holdingRepo &&
-      (params.type === 'buy' || params.type === 'sell') &&
-      params.assetId
-    ) {
+    if (this.holdingRepo && (params.type === 'buy' || params.type === 'sell') && params.assetId) {
       const holdingsRes = await this.holdingRepo.listDetailsByUser(params.userId);
       if (holdingsRes.success && holdingsRes.value) {
         const matchingHolding = holdingsRes.value.find((h) => h.assetId === params.assetId);
@@ -97,4 +93,3 @@ export class RecordTransactionUseCase {
     return this.transactionRepo.createTransaction(finalParams);
   }
 }
-

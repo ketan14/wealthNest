@@ -57,7 +57,7 @@ export class GetTaxHarvestingSummaryUseCase {
         .map((h) => {
           const savingsCents =
             h.term === 'short_term'
-              ? Math.round(Number(h.harvestableLoss.cents) * 0.20)
+              ? Math.round(Number(h.harvestableLoss.cents) * 0.2)
               : Math.round(Number(h.harvestableLoss.cents) * 0.125);
 
           return {
@@ -81,7 +81,10 @@ export class GetTaxHarvestingSummaryUseCase {
       const currentMonth = asOf.getMonth() + 1;
       const targetYear = currentMonth > 3 ? currentYear + 1 : currentYear;
       const fyEndDate = new Date(`${targetYear}-03-31T23:59:59Z`);
-      const daysRemaining = Math.max(0, Math.ceil((fyEndDate.getTime() - asOf.getTime()) / (1000 * 60 * 60 * 24)));
+      const daysRemaining = Math.max(
+        0,
+        Math.ceil((fyEndDate.getTime() - asOf.getTime()) / (1000 * 60 * 60 * 24))
+      );
 
       return ok({
         taxSummary,

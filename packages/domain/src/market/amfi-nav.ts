@@ -25,7 +25,12 @@ export function parseAmfiNavFeed(feedContent: string): Map<string, AmfiNavRecord
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('Scheme Code') || trimmed.startsWith('Open Ended') || trimmed.startsWith('Close Ended')) {
+    if (
+      !trimmed ||
+      trimmed.startsWith('Scheme Code') ||
+      trimmed.startsWith('Open Ended') ||
+      trimmed.startsWith('Close Ended')
+    ) {
       continue;
     }
 

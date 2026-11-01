@@ -34,14 +34,16 @@ export function validateSupportSessionRequest(
   if (adminId === targetUserId) {
     return {
       allowed: false,
-      reason: 'Administrative Invariant: You cannot initiate a support view session for your own administrator account',
+      reason:
+        'Administrative Invariant: You cannot initiate a support view session for your own administrator account',
     };
   }
 
   if (!reason || reason.trim().length < 8) {
     return {
       allowed: false,
-      reason: 'Administrative Invariant: A documented support justification (minimum 8 characters) is required',
+      reason:
+        'Administrative Invariant: A documented support justification (minimum 8 characters) is required',
     };
   }
 
@@ -51,8 +53,12 @@ export function validateSupportSessionRequest(
 /**
  * Calculates remaining seconds until support session expiration.
  */
-export function calculateRemainingSeconds(expiresAt: string | Date, now: Date = new Date()): number {
-  const expiryTime = typeof expiresAt === 'string' ? new Date(expiresAt).getTime() : expiresAt.getTime();
+export function calculateRemainingSeconds(
+  expiresAt: string | Date,
+  now: Date = new Date()
+): number {
+  const expiryTime =
+    typeof expiresAt === 'string' ? new Date(expiresAt).getTime() : expiresAt.getTime();
   const currentTime = now.getTime();
   const diffMs = expiryTime - currentTime;
   return Math.max(0, Math.floor(diffMs / 1000));

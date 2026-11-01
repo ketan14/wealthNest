@@ -56,14 +56,16 @@ export function ServerConnectionSettings() {
   const computedSupabaseUrl = buildSupabaseUrl(config);
   const computedFrontendUrl = buildFrontendUrl(config);
 
-  const isLanValid = config.mode !== 'lan' || (isValidIPv4(config.host) && isValidPort(config.supabasePort));
+  const isLanValid =
+    config.mode !== 'lan' || (isValidIPv4(config.host) && isValidPort(config.supabasePort));
   const isRemoteValid = config.mode !== 'remote' || isValidHttpUrl(config.customSupabaseUrl || '');
 
   const handleModeChange = (newMode: ConnectionMode) => {
     setConfig((prev) => ({
       ...prev,
       mode: newMode,
-      host: newMode === 'local' ? '127.0.0.1' : prev.host === '127.0.0.1' ? '192.168.1.105' : prev.host,
+      host:
+        newMode === 'local' ? '127.0.0.1' : prev.host === '127.0.0.1' ? '192.168.1.105' : prev.host,
     }));
     setTestResult(null);
     setSaveSuccessMsg(null);
@@ -117,11 +119,17 @@ export function ServerConnectionSettings() {
   };
 
   const handleResetToDefaults = async () => {
-    if (window.confirm('Reset server connection settings back to default LAN settings (192.168.1.105:30000 / 54321)?')) {
+    if (
+      window.confirm(
+        'Reset server connection settings back to default LAN settings (192.168.1.105:30000 / 54321)?'
+      )
+    ) {
       await connectionManager.resetToDefaults();
       setConfig(connectionManager.getConfig());
       setTestResult(null);
-      setSaveSuccessMsg('Server configuration reset to default LAN settings (http://192.168.1.105:30000).');
+      setSaveSuccessMsg(
+        'Server configuration reset to default LAN settings (http://192.168.1.105:30000).'
+      );
       setTimeout(() => setSaveSuccessMsg(null), 4000);
     }
   };
@@ -138,7 +146,8 @@ export function ServerConnectionSettings() {
               <div>
                 <CardTitle className="text-lg">Server & Local Network (LAN) Connection</CardTitle>
                 <CardDescription>
-                  Configure backend IPv4 address for Wi-Fi access from mobile devices without rebuilding.
+                  Configure backend IPv4 address for Wi-Fi access from mobile devices without
+                  rebuilding.
                 </CardDescription>
               </div>
             </div>
@@ -147,7 +156,13 @@ export function ServerConnectionSettings() {
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">Status:</span>
               <Badge
-                variant={status === 'connected' ? 'success' : status === 'connecting' ? 'secondary' : 'destructive'}
+                variant={
+                  status === 'connected'
+                    ? 'success'
+                    : status === 'connecting'
+                      ? 'secondary'
+                      : 'destructive'
+                }
                 className="gap-1.5 py-1 px-3"
               >
                 <span
@@ -155,8 +170,8 @@ export function ServerConnectionSettings() {
                     status === 'connected'
                       ? 'bg-emerald-400 animate-pulse'
                       : status === 'connecting'
-                      ? 'bg-amber-400 animate-pulse'
-                      : 'bg-rose-400'
+                        ? 'bg-amber-400 animate-pulse'
+                        : 'bg-rose-400'
                   }`}
                 />
                 <span className="capitalize font-mono">{status}</span>
@@ -216,7 +231,9 @@ export function ServerConnectionSettings() {
                 <Globe className="w-4 h-4 mt-0.5 text-cyan-400 shrink-0" />
                 <div>
                   <div className="text-xs font-semibold">Remote / Production</div>
-                  <div className="text-[11px] opacity-80">Deployed cloud project (.supabase.co)</div>
+                  <div className="text-[11px] opacity-80">
+                    Deployed cloud project (.supabase.co)
+                  </div>
                 </div>
               </button>
             </div>
@@ -228,9 +245,14 @@ export function ServerConnectionSettings() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {/* Host IPv4 */}
                 <div className="sm:col-span-2 space-y-1.5">
-                  <label htmlFor="server-ip-input" className="text-xs font-medium text-foreground flex items-center justify-between">
+                  <label
+                    htmlFor="server-ip-input"
+                    className="text-xs font-medium text-foreground flex items-center justify-between"
+                  >
                     <span>Host Machine IPv4 Address</span>
-                    <span className="text-[11px] text-muted-foreground">From Windows "ipconfig"</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      From Windows "ipconfig"
+                    </span>
                   </label>
                   <input
                     id="server-ip-input"
@@ -250,14 +272,19 @@ export function ServerConnectionSettings() {
 
                 {/* Supabase Port */}
                 <div className="space-y-1.5">
-                  <label htmlFor="supabase-port-input" className="text-xs font-medium text-foreground">
+                  <label
+                    htmlFor="supabase-port-input"
+                    className="text-xs font-medium text-foreground"
+                  >
                     Supabase API Port
                   </label>
                   <input
                     id="supabase-port-input"
                     type="number"
                     value={config.supabasePort}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, supabasePort: Number(e.target.value) }))}
+                    onChange={(e) =>
+                      setConfig((prev) => ({ ...prev, supabasePort: Number(e.target.value) }))
+                    }
                     placeholder="54321"
                     min="1"
                     max="65535"
@@ -269,26 +296,34 @@ export function ServerConnectionSettings() {
               {/* Frontend Port & Note */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
                 <div className="space-y-1.5">
-                  <label htmlFor="frontend-port-input" className="text-xs font-medium text-foreground">
+                  <label
+                    htmlFor="frontend-port-input"
+                    className="text-xs font-medium text-foreground"
+                  >
                     Frontend Web Port
                   </label>
                   <input
                     id="frontend-port-input"
                     type="number"
                     value={config.frontendPort}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, frontendPort: Number(e.target.value) }))}
+                    onChange={(e) =>
+                      setConfig((prev) => ({ ...prev, frontendPort: Number(e.target.value) }))
+                    }
                     placeholder="30000"
                     min="1"
                     max="65535"
                     className="w-full h-9 rounded-md bg-background border border-border px-3 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
-                  <p className="text-[10px] text-muted-foreground">Default: 30000 (Docker Nginx) or 5174/5173</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Default: 30000 (Docker Nginx) or 5174/5173
+                  </p>
                 </div>
 
                 <div className="sm:col-span-2 flex items-center p-3 rounded-lg bg-background/50 border border-border/50 text-[11px] text-muted-foreground leading-relaxed">
                   <Info className="w-4 h-4 text-primary shrink-0 mr-2" />
                   <span>
-                    Access the app from your mobile browser at: <strong className="font-mono text-foreground">{computedFrontendUrl}</strong>.
+                    Access the app from your mobile browser at:{' '}
+                    <strong className="font-mono text-foreground">{computedFrontendUrl}</strong>.
                   </span>
                 </div>
               </div>
@@ -297,30 +332,38 @@ export function ServerConnectionSettings() {
 
           {config.mode === 'remote' && (
             <div className="p-4 rounded-xl bg-secondary/30 border border-border/60 space-y-3">
-              <label htmlFor="remote-url-input" className="text-xs font-medium text-foreground block">
+              <label
+                htmlFor="remote-url-input"
+                className="text-xs font-medium text-foreground block"
+              >
                 Remote Supabase Project URL
               </label>
               <input
                 id="remote-url-input"
                 type="url"
                 value={config.customSupabaseUrl || ''}
-                onChange={(e) => setConfig((prev) => ({ ...prev, customSupabaseUrl: e.target.value }))}
+                onChange={(e) =>
+                  setConfig((prev) => ({ ...prev, customSupabaseUrl: e.target.value }))
+                }
                 placeholder="https://your-project.supabase.co"
                 className="w-full h-9 rounded-md bg-background border border-border px-3 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
-              {!isValidHttpUrl(config.customSupabaseUrl || '') && (config.customSupabaseUrl || '').length > 0 && (
-                <p className="text-[11px] text-rose-400 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  Must be a valid HTTPS URL (e.g. https://your-project.supabase.co).
-                </p>
-              )}
+              {!isValidHttpUrl(config.customSupabaseUrl || '') &&
+                (config.customSupabaseUrl || '').length > 0 && (
+                  <p className="text-[11px] text-rose-400 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Must be a valid HTTPS URL (e.g. https://your-project.supabase.co).
+                  </p>
+                )}
             </div>
           )}
 
           {/* Constructed API Endpoint Preview */}
           <div className="p-3 rounded-lg bg-secondary/40 border border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
             <div className="space-y-0.5">
-              <span className="text-muted-foreground block text-[11px]">Active Supabase API Endpoint:</span>
+              <span className="text-muted-foreground block text-[11px]">
+                Active Supabase API Endpoint:
+              </span>
               <span className="font-mono text-primary font-medium">{computedSupabaseUrl}</span>
             </div>
             {config.lastConnectedAt && (
@@ -342,18 +385,24 @@ export function ServerConnectionSettings() {
 
             {showAdvanced && (
               <div className="mt-3 p-3.5 rounded-lg bg-secondary/30 border border-border/50 space-y-2 animate-in fade-in">
-                <label htmlFor="anon-key-input" className="text-xs font-medium text-foreground block">
+                <label
+                  htmlFor="anon-key-input"
+                  className="text-xs font-medium text-foreground block"
+                >
                   Supabase Anon Key (Public)
                 </label>
                 <textarea
                   id="anon-key-input"
                   rows={2}
                   value={config.supabaseAnonKey}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, supabaseAnonKey: e.target.value }))}
+                  onChange={(e) =>
+                    setConfig((prev) => ({ ...prev, supabaseAnonKey: e.target.value }))
+                  }
                   className="w-full rounded-md bg-background border border-border p-2 text-[11px] font-mono text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none"
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  Never input a service_role secret key here. Only public client anon keys are allowed.
+                  Never input a service_role secret key here. Only public client anon keys are
+                  allowed.
                 </p>
               </div>
             )}
@@ -379,7 +428,9 @@ export function ServerConnectionSettings() {
 
               {testResult.troubleshooting && testResult.troubleshooting.length > 0 && (
                 <div className="pt-1 border-t border-rose-500/20">
-                  <span className="font-semibold block mb-1 text-[11px]">Troubleshooting Checklist:</span>
+                  <span className="font-semibold block mb-1 text-[11px]">
+                    Troubleshooting Checklist:
+                  </span>
                   <ul className="list-disc list-inside space-y-0.5 text-[11px] opacity-90">
                     {testResult.troubleshooting.map((item, idx) => (
                       <li key={idx}>{item}</li>
@@ -408,7 +459,11 @@ export function ServerConnectionSettings() {
                 disabled={isTesting || !isLanValid || !isRemoteValid}
                 className="gap-2 text-xs h-9 border-border hover:bg-secondary"
               >
-                {isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Radio className="w-3.5 h-3.5 text-primary" />}
+                {isTesting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Radio className="w-3.5 h-3.5 text-primary" />
+                )}
                 Test Connection
               </Button>
 
@@ -419,7 +474,11 @@ export function ServerConnectionSettings() {
                 disabled={isSaving || !isLanValid || !isRemoteValid}
                 className="gap-2 text-xs h-9 bg-primary hover:bg-emerald-400 text-slate-950 font-semibold"
               >
-                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                {isSaving ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                )}
                 Save & Reconnect
               </Button>
             </div>

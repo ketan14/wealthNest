@@ -41,7 +41,7 @@ describe('Cross-User and Cross-Household Isolation Invariants', () => {
     const invalidAssetResult = validateAssetLiabilityLinkIsolation(
       KETAN_USER_ID,
       STRANGER_USER_ID, // stranger asset
-      KETAN_USER_ID     // ketan loan
+      KETAN_USER_ID // ketan loan
     );
     expect(invalidAssetResult.success).toBe(false);
     if (!invalidAssetResult.success) {
@@ -51,8 +51,8 @@ describe('Cross-User and Cross-Household Isolation Invariants', () => {
     // Stranger's loan linked to Ketan's property
     const invalidLoanResult = validateAssetLiabilityLinkIsolation(
       KETAN_USER_ID,
-      KETAN_USER_ID,    // ketan asset
-      STRANGER_USER_ID  // stranger loan
+      KETAN_USER_ID, // ketan asset
+      STRANGER_USER_ID // stranger loan
     );
     expect(invalidLoanResult.success).toBe(false);
     if (!invalidLoanResult.success) {
@@ -79,11 +79,7 @@ describe('Cross-User and Cross-Household Isolation Invariants', () => {
       expect(invalidResult.error.message).toContain('Family member owner');
     }
 
-    const validResult = validateAccountMemberIsolation(
-      KETAN_USER_ID,
-      KETAN_USER_ID,
-      KETAN_USER_ID
-    );
+    const validResult = validateAccountMemberIsolation(KETAN_USER_ID, KETAN_USER_ID, KETAN_USER_ID);
     expect(validResult.success).toBe(true);
   });
 });

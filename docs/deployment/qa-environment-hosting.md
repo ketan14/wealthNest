@@ -121,17 +121,22 @@ Then in Supabase Dashboard ➔ **SQL Editor**, run the appropriate seed command 
 
 ```sql
 -- 1. Seed Primary QA Household (Family, Demats, Holdings, 15+ Trades, SIPs, Dividends, Goals, Loans):
-SELECT public.seed_qa_primary_household(auth.uid());
+-- Automatically binds to your latest registered user account:
+SELECT public.seed_qa_primary_household();
 
 -- 2. Grant Platform Super Admin Role (Enables /admin Portal & Support Impersonation testing):
-SELECT public.seed_qa_grant_admin(auth.uid());
+SELECT public.seed_qa_grant_admin();
+
+-- Note: You can also pass an explicit user UUID if desired:
+-- SELECT public.seed_qa_primary_household('your-user-uuid-here');
+-- SELECT public.seed_qa_grant_admin('your-user-uuid-here');
 
 -- 3. (Optional) For a Second Registered Test Account, Seed an Isolated Tenant (Tests Cross-User RLS):
-SELECT public.seed_qa_secondary_user(auth.uid());
+-- SELECT public.seed_qa_secondary_user('secondary-user-uuid-here');
 ```
 
 #### What is Seeded:
-- **Family Entities (5):** Arjun Sharma (Self), Pooja Sharma (Spouse), Harishbhai Sharma HUF (HUF), Ananya Sharma (Child), Kavitaben Sharma (Mother).
+- **Family Entities (5):** Arjun Bharti (Self), Pooja Bharti (Spouse), Harishbhai Bharti HUF (HUF), Ananya Bharti (Child), Kavitaben Bharti (Mother).
 - **Portfolio Accounts (5):** Zerodha Primary, Groww MF Direct, HDFC Securities HUF, SBI Staff Salary & Savings, RBI Retail Direct SGB.
 - **Holdings & Assets (6):** HDFC Bank, Reliance, TCS, Parag Parikh Flexi Cap, Sovereign Gold Bond 28-29, 7.5% Senior Citizen FD.
 - **Trade History (15+):** Initial purchases, 6-month automated SIP run for Ananya, Section 112A LTCG tax-harvest trade, quarterly TCS & HDFC dividends, and FD interest payouts.

@@ -113,9 +113,7 @@ export function RepositoryProvider({
       mode ??
       (isTauri() || isOfflineLocalActive() ? 'sqlite' : 'supabase');
     const baseBundle =
-      resolvedMode === 'sqlite'
-        ? createSqliteRepositoryBundle(sqliteDb)
-        : defaultSupabaseBundle;
+      resolvedMode === 'sqlite' ? createSqliteRepositoryBundle(sqliteDb) : defaultSupabaseBundle;
 
     return {
       ...baseBundle,
@@ -124,11 +122,7 @@ export function RepositoryProvider({
     };
   }, [customRepositories, mode, sqliteDb]);
 
-  return (
-    <RepositoryContext.Provider value={bundle}>
-      {children}
-    </RepositoryContext.Provider>
-  );
+  return <RepositoryContext.Provider value={bundle}>{children}</RepositoryContext.Provider>;
 }
 
 export function useRepositories(): RepositoryBundle {

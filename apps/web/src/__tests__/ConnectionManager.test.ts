@@ -115,4 +115,3 @@ describe('Phase 10: ConnectionManager & Endpoint Switching', () => {
     expect(connectionManager.getSupabaseUrl()).toBe('http://192.168.1.105:54321');
   });
 });
-

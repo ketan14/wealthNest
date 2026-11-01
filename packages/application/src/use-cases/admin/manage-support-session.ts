@@ -46,7 +46,9 @@ export class StartSupportSessionUseCase {
             reason: command.reason,
           }),
         });
-        return err(new Error('Access Denied: Insufficient platform permissions to initiate support session'));
+        return err(
+          new Error('Access Denied: Insufficient platform permissions to initiate support session')
+        );
       }
 
       const validation = validateSupportSessionRequest(

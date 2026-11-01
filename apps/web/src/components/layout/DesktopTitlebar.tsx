@@ -8,15 +8,17 @@ export function DesktopTitlebar() {
 
   const handleMinimize = async () => {
     try {
-      const appWindow = (window as unknown as {
-        __TAURI__?: {
-          window?: {
-            getCurrentWindow: () => {
-              minimize: () => Promise<void>;
+      const appWindow = (
+        window as unknown as {
+          __TAURI__?: {
+            window?: {
+              getCurrentWindow: () => {
+                minimize: () => Promise<void>;
+              };
             };
           };
-        };
-      }).__TAURI__?.window?.getCurrentWindow();
+        }
+      ).__TAURI__?.window?.getCurrentWindow();
       await appWindow?.minimize();
     } catch (err) {
       console.error('Failed to minimize window:', err);
@@ -25,15 +27,17 @@ export function DesktopTitlebar() {
 
   const handleToggleMaximize = async () => {
     try {
-      const appWindow = (window as unknown as {
-        __TAURI__?: {
-          window?: {
-            getCurrentWindow: () => {
-              toggleMaximize: () => Promise<void>;
+      const appWindow = (
+        window as unknown as {
+          __TAURI__?: {
+            window?: {
+              getCurrentWindow: () => {
+                toggleMaximize: () => Promise<void>;
+              };
             };
           };
-        };
-      }).__TAURI__?.window?.getCurrentWindow();
+        }
+      ).__TAURI__?.window?.getCurrentWindow();
       await appWindow?.toggleMaximize();
     } catch (err) {
       console.error('Failed to toggle maximize window:', err);
@@ -42,15 +46,17 @@ export function DesktopTitlebar() {
 
   const handleClose = async () => {
     try {
-      const appWindow = (window as unknown as {
-        __TAURI__?: {
-          window?: {
-            getCurrentWindow: () => {
-              close: () => Promise<void>;
+      const appWindow = (
+        window as unknown as {
+          __TAURI__?: {
+            window?: {
+              getCurrentWindow: () => {
+                close: () => Promise<void>;
+              };
             };
           };
-        };
-      }).__TAURI__?.window?.getCurrentWindow();
+        }
+      ).__TAURI__?.window?.getCurrentWindow();
       await appWindow?.close();
     } catch (err) {
       console.error('Failed to close window:', err);

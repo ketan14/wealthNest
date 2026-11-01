@@ -347,7 +347,9 @@ export function LiabilitiesPage() {
               setIsAddModalOpen(true);
             }}
             disabled={isSupportModeActive}
-            title={isSupportModeActive ? 'Disabled in Support Impersonation Mode (Read-Only)' : undefined}
+            title={
+              isSupportModeActive ? 'Disabled in Support Impersonation Mode (Read-Only)' : undefined
+            }
             className="gap-2 shadow-lg shadow-primary/20 disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
@@ -731,7 +733,9 @@ export function LiabilitiesPage() {
                                     className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border"
                                     style={{
                                       backgroundColor: `${members.find((m) => m.id === l.memberId)?.colorHex || '#3b82f6'}15`,
-                                      color: members.find((m) => m.id === l.memberId)?.colorHex || '#3b82f6',
+                                      color:
+                                        members.find((m) => m.id === l.memberId)?.colorHex ||
+                                        '#3b82f6',
                                       borderColor: `${members.find((m) => m.id === l.memberId)?.colorHex || '#3b82f6'}30`,
                                     }}
                                   >
@@ -898,10 +902,7 @@ export function LiabilitiesPage() {
       )}
 
       {/* Phase 6A: Manage Family Modal */}
-      <ManageFamilyModal
-        isOpen={isManageFamilyOpen}
-        onClose={() => setIsManageFamilyOpen(false)}
-      />
+      <ManageFamilyModal isOpen={isManageFamilyOpen} onClose={() => setIsManageFamilyOpen(false)} />
 
       {/* Phase 9.2: Accessible Non-Blocking Delete Confirmation Modal */}
       <ConfirmActionModal

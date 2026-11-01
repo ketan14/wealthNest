@@ -5,10 +5,7 @@ import {
   MarketSessionDto,
   HoldingDetailDto,
 } from '@wealthnest/application';
-import {
-  getIndianMarketSession,
-  normalizeIndianTicker,
-} from '@wealthnest/domain';
+import { getIndianMarketSession, normalizeIndianTicker } from '@wealthnest/domain';
 
 export interface SecurityBaseline {
   readonly symbol: string;
@@ -261,9 +258,7 @@ export class MarketDataAdapter implements MarketDataPort {
     const previousClosePaise = baseline.previousClosePaise;
     const changePaise = Number(currentPricePaise - previousClosePaise);
     const changePercent =
-      previousClosePaise > 0n
-        ? +((changePaise / Number(previousClosePaise)) * 100).toFixed(2)
-        : 0;
+      previousClosePaise > 0n ? +((changePaise / Number(previousClosePaise)) * 100).toFixed(2) : 0;
 
     return {
       identifier: baseline.isin || baseline.symbol,

@@ -137,9 +137,7 @@ describe('Broker Tradebook & Holdings CSV Importers (Zerodha Kite & Groww)', () 
     fireEvent.click(mfTabBtn);
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Parag Parikh Flexi Cap Fund Direct-Growth/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Parag Parikh Flexi Cap Fund Direct-Growth/i)).toBeInTheDocument();
     });
   });
 

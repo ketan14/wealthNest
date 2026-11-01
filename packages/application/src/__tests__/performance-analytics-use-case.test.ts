@@ -82,7 +82,11 @@ describe('Application: GetPerformanceAnalyticsUseCase', () => {
     };
 
     const useCase = new GetPerformanceAnalyticsUseCase(mockHoldingRepo, mockTxRepo);
-    const result = await useCase.execute({ userId: 'user-123', currency: 'INR', modelType: 'balanced' });
+    const result = await useCase.execute({
+      userId: 'user-123',
+      currency: 'INR',
+      modelType: 'balanced',
+    });
 
     expect(result.success).toBe(true);
     if (!result.success) return;

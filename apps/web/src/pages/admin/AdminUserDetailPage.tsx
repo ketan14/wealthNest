@@ -31,7 +31,6 @@ export function AdminUserDetailPage() {
   const { userId } = useParams<{ userId: string }>();
   const { adminActor, isSuperAdmin, isSupportAdmin } = useAdmin();
 
-
   const [userDetail, setUserDetail] = useState<AdminUserDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -139,7 +138,6 @@ export function AdminUserDetailPage() {
         });
       }
       showToast(`Password recovery instructions triggered for ${userDetail.email}`);
-
     } catch {
       showToast('Error requesting password reset');
     }
@@ -241,10 +239,10 @@ export function AdminUserDetailPage() {
                       userDetail.status === 'active'
                         ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                         : userDetail.status === 'suspended'
-                        ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                        : userDetail.status === 'invited'
-                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                        : 'bg-slate-800 text-slate-400 border border-slate-700'
+                          ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                          : userDetail.status === 'invited'
+                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            : 'bg-slate-800 text-slate-400 border border-slate-700'
                     }`}
                   >
                     <span
@@ -252,8 +250,8 @@ export function AdminUserDetailPage() {
                         userDetail.status === 'active'
                           ? 'bg-emerald-400'
                           : userDetail.status === 'suspended'
-                          ? 'bg-rose-400'
-                          : 'bg-amber-400'
+                            ? 'bg-rose-400'
+                            : 'bg-amber-400'
                       }`}
                     />
                     {userDetail.status}
@@ -366,8 +364,9 @@ export function AdminUserDetailPage() {
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
               In strict accordance with WealthNest security architecture, private financial records
               (stock holdings, mutual funds, gold weights, bank deposits, loan liabilities, and goal
-              allocations) are cryptographically isolated via PostgreSQL Row Level Security. Platform
-              administrators cannot view, inspect, or query financial assets for this or any other user.
+              allocations) are cryptographically isolated via PostgreSQL Row Level Security.
+              Platform administrators cannot view, inspect, or query financial assets for this or
+              any other user.
             </p>
           </div>
         </div>
@@ -381,7 +380,9 @@ export function AdminUserDetailPage() {
 
           <div className="space-y-3">
             {userDetail.households.length === 0 ? (
-              <p className="text-xs text-slate-500">Not currently assigned to any household tenant.</p>
+              <p className="text-xs text-slate-500">
+                Not currently assigned to any household tenant.
+              </p>
             ) : (
               userDetail.households.map((h) => (
                 <div
@@ -438,7 +439,9 @@ export function AdminUserDetailPage() {
                 >
                   <option value="support_admin">Support Admin (User Lifecycle &amp; Resets)</option>
                   <option value="auditor">Compliance Auditor (Read-only Audit Log)</option>
-                  <option value="super_admin">Super Admin (Full RBAC &amp; Platform Governance)</option>
+                  <option value="super_admin">
+                    Super Admin (Full RBAC &amp; Platform Governance)
+                  </option>
                 </select>
               </div>
 
@@ -466,7 +469,9 @@ export function AdminUserDetailPage() {
         <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-md">
           <div className="flex items-center gap-2 mb-4">
             <FileText className="w-4 h-4 text-purple-400" />
-            <h4 className="text-sm font-semibold text-white">Target User Administrative Audit Trail</h4>
+            <h4 className="text-sm font-semibold text-white">
+              Target User Administrative Audit Trail
+            </h4>
           </div>
 
           <div className="overflow-x-auto">
@@ -551,9 +556,7 @@ export function AdminUserDetailPage() {
               )}
 
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  New Status
-                </label>
+                <label className="block text-xs font-medium text-slate-400 mb-1">New Status</label>
                 <select
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value as UserAccessStatus)}
@@ -576,12 +579,16 @@ export function AdminUserDetailPage() {
                     required
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-500"
                   >
-                    <option value="SUSPICIOUS_LOGIN_ATTEMPTS">Suspicious Login Attempts / MFA Failures</option>
+                    <option value="SUSPICIOUS_LOGIN_ATTEMPTS">
+                      Suspicious Login Attempts / MFA Failures
+                    </option>
                     <option value="POLICY_VIOLATION">Terms of Service / Policy Violation</option>
                     <option value="FRAUD_PREVENTION">Fraud Prevention / AML Review</option>
                     <option value="USER_REQUEST">Voluntary User Request</option>
                     <option value="PAYMENT_FAILURE">Billing or Subscription Delinquency</option>
-                    <option value="SECURITY_INCIDENT">Active Security Incident Investigation</option>
+                    <option value="SECURITY_INCIDENT">
+                      Active Security Incident Investigation
+                    </option>
                     <option value="OTHER">Other Administrative Reason</option>
                   </select>
                 </div>

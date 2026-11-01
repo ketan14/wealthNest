@@ -1,10 +1,5 @@
 import { Result, ok, err, isOk } from '@wealthnest/shared';
-import {
-  UserId,
-  UserProfile,
-  UserPreferences,
-  DEFAULT_USER_PREFERENCES,
-} from '@wealthnest/domain';
+import { UserId, UserProfile, UserPreferences, DEFAULT_USER_PREFERENCES } from '@wealthnest/domain';
 import { UserRepositoryPort } from '../ports/user-repository.port.js';
 
 export class ManageUserSettingsUseCase {

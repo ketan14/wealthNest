@@ -60,9 +60,7 @@ function renderWithProviders(ui: React.ReactElement, initialRoute = '/') {
         <SupportSessionProvider>
           <PreferencesProvider>
             <FamilyProvider>
-              <MemoryRouter initialEntries={[initialRoute]}>
-                {ui}
-              </MemoryRouter>
+              <MemoryRouter initialEntries={[initialRoute]}>{ui}</MemoryRouter>
             </FamilyProvider>
           </PreferencesProvider>
         </SupportSessionProvider>

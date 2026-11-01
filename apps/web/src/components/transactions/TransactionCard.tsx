@@ -12,10 +12,7 @@ export interface TransactionCardProps {
   isDeleting?: boolean;
 }
 
-const typeBadgeStyles: Record<
-  TransactionType,
-  { bg: string; text: string; label: string }
-> = {
+const typeBadgeStyles: Record<TransactionType, { bg: string; text: string; label: string }> = {
   deposit: {
     bg: 'bg-emerald-500/15 border-emerald-500/30',
     text: 'text-emerald-400',
@@ -47,7 +44,6 @@ const typeBadgeStyles: Record<
     label: 'Fee',
   },
 };
-
 
 export function TransactionCard({
   transaction,

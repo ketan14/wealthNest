@@ -50,10 +50,7 @@ export function parseCleanNumber(val: any): number {
   if (typeof val === 'number') return isNaN(val) ? 0 : val;
   if (!val || typeof val !== 'string') return 0;
 
-  const cleaned = val
-    .replace(/[₹$,]/g, '')
-    .replace(/Rs\.?/gi, '')
-    .trim();
+  const cleaned = val.replace(/[₹$,]/g, '').replace(/Rs\.?/gi, '').trim();
 
   const num = parseFloat(cleaned);
   return isNaN(num) ? 0 : num;

@@ -1,15 +1,7 @@
 import React, { useState } from 'react';
 import { useFamily } from '@/lib/family/family-context';
 import { FamilyMemberDto, PortfolioAccountDto } from '@wealthnest/application';
-import {
-  X,
-  Users,
-  Shield,
-  Briefcase,
-  Plus,
-  Trash2,
-  Building,
-} from 'lucide-react';
+import { X, Users, Shield, Briefcase, Plus, Trash2, Building } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 interface ManageFamilyModalProps {
@@ -43,14 +35,8 @@ const BROKER_OPTIONS = [
 ];
 
 export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
-  const {
-    members,
-    accounts,
-    createMember,
-    deleteMember,
-    createAccount,
-    deleteAccount,
-  } = useFamily();
+  const { members, accounts, createMember, deleteMember, createAccount, deleteAccount } =
+    useFamily();
 
   const [activeTab, setActiveTab] = useState<'members' | 'accounts'>('members');
   const [isAddingMember, setIsAddingMember] = useState(false);
@@ -67,7 +53,8 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
   const [newAccMemberId, setNewAccMemberId] = useState(members[0]?.id || '');
   const [newAccName, setNewAccName] = useState('');
   const [newAccBroker, setNewAccBroker] = useState('Zerodha');
-  const [newAccDepository, setNewAccDepository] = useState<PortfolioAccountDto['depository']>('CDSL');
+  const [newAccDepository, setNewAccDepository] =
+    useState<PortfolioAccountDto['depository']>('CDSL');
   const [newAccType, setNewAccType] = useState<PortfolioAccountDto['accountType']>('demat');
   const [newAccNumber, setNewAccNumber] = useState('');
 
@@ -199,7 +186,9 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
                           {member.panMasked && (
                             <>
                               <span>•</span>
-                              <span className="font-mono text-slate-300">PAN: {member.panMasked}</span>
+                              <span className="font-mono text-slate-300">
+                                PAN: {member.panMasked}
+                              </span>
                             </>
                           )}
                         </div>
@@ -320,7 +309,11 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
                     >
                       Cancel
                     </Button>
-                    <Button type="submit" size="sm" className="text-xs bg-blue-600 hover:bg-blue-500">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      className="text-xs bg-blue-600 hover:bg-blue-500"
+                    >
                       Save Entity
                     </Button>
                   </div>
@@ -363,11 +356,18 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
                           <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
                             <span className="font-medium text-blue-400">{acc.brokerName}</span>
                             <span>•</span>
-                            <span>Belongs to: <strong className="text-slate-300">{parentMember?.name || 'Self'}</strong></span>
+                            <span>
+                              Belongs to:{' '}
+                              <strong className="text-slate-300">
+                                {parentMember?.name || 'Self'}
+                              </strong>
+                            </span>
                             {acc.accountNumberMasked && (
                               <>
                                 <span>•</span>
-                                <span className="font-mono text-slate-400">{acc.accountNumberMasked}</span>
+                                <span className="font-mono text-slate-400">
+                                  {acc.accountNumberMasked}
+                                </span>
                               </>
                             )}
                           </div>
@@ -427,7 +427,9 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
                         className="w-full text-xs bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
                         {BROKER_OPTIONS.map((b) => (
-                          <option key={b} value={b}>{b}</option>
+                          <option key={b} value={b}>
+                            {b}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -506,7 +508,11 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
                     >
                       Cancel
                     </Button>
-                    <Button type="submit" size="sm" className="text-xs bg-blue-600 hover:bg-blue-500">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      className="text-xs bg-blue-600 hover:bg-blue-500"
+                    >
                       Save Account
                     </Button>
                   </div>
@@ -529,7 +535,11 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
 
         {/* Footer */}
         <div className="px-6 py-3 border-t border-slate-800 bg-slate-950/40 flex justify-end">
-          <Button onClick={onClose} size="sm" className="text-xs bg-slate-800 hover:bg-slate-700 text-white">
+          <Button
+            onClick={onClose}
+            size="sm"
+            className="text-xs bg-slate-800 hover:bg-slate-700 text-white"
+          >
             Close
           </Button>
         </div>

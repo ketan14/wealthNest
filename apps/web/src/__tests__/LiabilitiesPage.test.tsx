@@ -77,7 +77,9 @@ describe('LiabilitiesPage Component (Sprint 4)', () => {
     // Modal opens
     expect(screen.getByText('Add New Loan / Liability')).toBeInTheDocument();
     expect(
-      screen.getByText(/Track mortgages, vehicle loans, and personal debts integrated with your Net Worth/i)
+      screen.getByText(
+        /Track mortgages, vehicle loans, and personal debts integrated with your Net Worth/i
+      )
     ).toBeInTheDocument();
 
     // Close modal

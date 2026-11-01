@@ -2,10 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { useRepositories } from '@/lib/persistence/repository-context';
-import {
-  HoldingDetailDto,
-  TransactionDetailDto,
-} from '@wealthnest/application';
+import { HoldingDetailDto, TransactionDetailDto } from '@wealthnest/application';
 import {
   CurrencyCode,
   Money,
@@ -325,9 +322,18 @@ export function AnalyticsPage() {
 
     return filteredTrajectory.map((pt, i) => {
       const x = paddingX + (i / (count - 1)) * (chartWidth - paddingX * 2);
-      const yVal = chartHeight - paddingY - (Number(pt.portfolioValueCents) / Number(maxValCents)) * (chartHeight - paddingY * 2);
-      const yInv = chartHeight - paddingY - (Number(pt.investedAmountCents) / Number(maxValCents)) * (chartHeight - paddingY * 2);
-      const yBench = chartHeight - paddingY - (Number(pt.benchmarkValueCents) / Number(maxValCents)) * (chartHeight - paddingY * 2);
+      const yVal =
+        chartHeight -
+        paddingY -
+        (Number(pt.portfolioValueCents) / Number(maxValCents)) * (chartHeight - paddingY * 2);
+      const yInv =
+        chartHeight -
+        paddingY -
+        (Number(pt.investedAmountCents) / Number(maxValCents)) * (chartHeight - paddingY * 2);
+      const yBench =
+        chartHeight -
+        paddingY -
+        (Number(pt.benchmarkValueCents) / Number(maxValCents)) * (chartHeight - paddingY * 2);
 
       return {
         x,
@@ -344,7 +350,10 @@ export function AnalyticsPage() {
 
   const valuePath = useMemo(() => {
     if (points.length < 2) return '';
-    return points.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.yVal.toFixed(1)}`, '');
+    return points.reduce(
+      (acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.yVal.toFixed(1)}`,
+      ''
+    );
   }, [points]);
 
   const valueAreaPath = useMemo(() => {
@@ -357,10 +366,16 @@ export function AnalyticsPage() {
 
   const investedPath = useMemo(() => {
     if (points.length < 2) return '';
-    return points.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.yInv.toFixed(1)}`, '');
+    return points.reduce(
+      (acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.yInv.toFixed(1)}`,
+      ''
+    );
   }, [points]);
 
-  const activePoint = hoveredIndex !== null && points[hoveredIndex] ? points[hoveredIndex] : points[points.length - 1];
+  const activePoint =
+    hoveredIndex !== null && points[hoveredIndex]
+      ? points[hoveredIndex]
+      : points[points.length - 1];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -389,13 +404,19 @@ export function AnalyticsPage() {
                 {activeMember.name} ({activeMember.relationship.toUpperCase()})
               </Badge>
             ) : (
-              <Badge variant="secondary" className="text-[11px] bg-blue-500/10 text-blue-400 border-blue-500/20">
+              <Badge
+                variant="secondary"
+                className="text-[11px] bg-blue-500/10 text-blue-400 border-blue-500/20"
+              >
                 <Users className="w-3 h-3 mr-1 inline" />
                 Combined Family Portfolio ({members.length} Entities)
               </Badge>
             )}
             {userId && (
-              <Badge variant="secondary" className="text-[11px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+              <Badge
+                variant="secondary"
+                className="text-[11px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+              >
                 <Database className="w-3 h-3 mr-1 inline" />
                 Live PostgreSQL Data
               </Badge>
@@ -405,7 +426,8 @@ export function AnalyticsPage() {
             Performance & Wealth Analytics
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Institutional return engine (XIRR, CAGR), benchmark alpha, and strategic asset allocation drift.
+            Institutional return engine (XIRR, CAGR), benchmark alpha, and strategic asset
+            allocation drift.
           </p>
         </div>
 
@@ -421,7 +443,11 @@ export function AnalyticsPage() {
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent/40'
               }`}
             >
-              {type === 'aggressive' ? 'Aggressive (75/15)' : type === 'conservative' ? 'Conservative (30/50)' : 'Balanced (55/30)'}
+              {type === 'aggressive'
+                ? 'Aggressive (75/15)'
+                : type === 'conservative'
+                  ? 'Conservative (30/50)'
+                  : 'Balanced (55/30)'}
             </button>
           ))}
         </div>
@@ -446,13 +472,18 @@ export function AnalyticsPage() {
               <span className="text-3xl font-extrabold tracking-tight text-emerald-400 font-mono">
                 {analytics.xirr !== null && analytics.xirr >= 0 ? `+${xirrDisplay}` : xirrDisplay}
               </span>
-              <Badge variant="outline" className="text-[10px] text-emerald-400 border-emerald-500/30">
+              <Badge
+                variant="outline"
+                className="text-[10px] text-emerald-400 border-emerald-500/30"
+              >
                 Annualized
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <span>{analytics.isOutperforming ? 'Outperforming' : 'Tracking'} Nifty 50 by</span>
-              <span className={`font-semibold font-mono ${analytics.isOutperforming ? 'text-emerald-400' : 'text-amber-400'}`}>
+              <span
+                className={`font-semibold font-mono ${analytics.isOutperforming ? 'text-emerald-400' : 'text-amber-400'}`}
+              >
                 {alphaDisplay} Alpha
               </span>
             </p>
@@ -464,7 +495,9 @@ export function AnalyticsPage() {
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-semibold uppercase tracking-wider">Total Return & CAGR</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">
+                Total Return & CAGR
+              </span>
               <TrendingUp className="w-4 h-4 text-blue-400" />
             </div>
           </CardHeader>
@@ -473,9 +506,7 @@ export function AnalyticsPage() {
               <span className="text-3xl font-extrabold tracking-tight text-foreground font-mono">
                 +{analytics.returnPercentage.toFixed(2)}%
               </span>
-              <span className="text-xs text-muted-foreground font-mono">
-                (CAGR {cagrDisplay})
-              </span>
+              <span className="text-xs text-muted-foreground font-mono">(CAGR {cagrDisplay})</span>
             </div>
             <p className="text-xs text-muted-foreground flex items-center gap-1.5 font-mono">
               <span className="text-emerald-400 font-semibold">
@@ -491,15 +522,19 @@ export function AnalyticsPage() {
           <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl pointer-events-none" />
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-semibold uppercase tracking-wider">Benchmark Alpha</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">
+                Benchmark Alpha
+              </span>
               <Scale className="w-4 h-4 text-purple-400" />
             </div>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-baseline gap-2">
-              <span className={`text-3xl font-extrabold tracking-tight font-mono ${
-                analytics.isOutperforming ? 'text-emerald-400' : 'text-amber-400'
-              }`}>
+              <span
+                className={`text-3xl font-extrabold tracking-tight font-mono ${
+                  analytics.isOutperforming ? 'text-emerald-400' : 'text-amber-400'
+                }`}
+              >
                 {alphaDisplay}
               </span>
               <Badge variant="outline" className="text-[10px] text-purple-400 border-purple-500/30">
@@ -507,7 +542,8 @@ export function AnalyticsPage() {
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
-              Nifty 50 5Y CAGR: <span className="font-semibold text-foreground font-mono">14.20%</span>
+              Nifty 50 5Y CAGR:{' '}
+              <span className="font-semibold text-foreground font-mono">14.20%</span>
             </p>
           </CardContent>
         </Card>
@@ -517,7 +553,9 @@ export function AnalyticsPage() {
           <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-semibold uppercase tracking-wider">Diversification Score</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">
+                Diversification Score
+              </span>
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
             </div>
           </CardHeader>
@@ -533,15 +571,19 @@ export function AnalyticsPage() {
                   analytics.concentration.riskLevel === 'low'
                     ? 'text-emerald-400 border-emerald-500/30'
                     : analytics.concentration.riskLevel === 'moderate'
-                    ? 'text-amber-400 border-amber-500/30'
-                    : 'text-rose-400 border-rose-500/30'
+                      ? 'text-amber-400 border-amber-500/30'
+                      : 'text-rose-400 border-rose-500/30'
                 }`}
               >
                 {analytics.concentration.riskLevel} Risk
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground truncate">
-              Top Asset: <span className="font-semibold text-foreground">{analytics.concentration.topAssetName}</span> ({analytics.concentration.topAssetWeight.toFixed(1)}%)
+              Top Asset:{' '}
+              <span className="font-semibold text-foreground">
+                {analytics.concentration.topAssetName}
+              </span>{' '}
+              ({analytics.concentration.topAssetWeight.toFixed(1)}%)
             </p>
           </CardContent>
         </Card>
@@ -557,7 +599,8 @@ export function AnalyticsPage() {
                 Portfolio Trajectory & Capital Growth Timeline
               </CardTitle>
               <CardDescription className="text-xs">
-                Monthly progression comparing Current Portfolio Valuation, Cost Basis (Capital Invested), and Benchmark.
+                Monthly progression comparing Current Portfolio Valuation, Cost Basis (Capital
+                Invested), and Benchmark.
               </CardDescription>
             </div>
 
@@ -590,17 +633,23 @@ export function AnalyticsPage() {
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
                 <span className="text-muted-foreground">Portfolio Value:</span>
-                <span className="font-bold text-emerald-400">{activePoint.val.formatIndianCompact()}</span>
+                <span className="font-bold text-emerald-400">
+                  {activePoint.val.formatIndianCompact()}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
                 <span className="text-muted-foreground">Invested Capital:</span>
-                <span className="font-bold text-foreground">{activePoint.inv.formatIndianCompact()}</span>
+                <span className="font-bold text-foreground">
+                  {activePoint.inv.formatIndianCompact()}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
                 <span className="text-muted-foreground">Benchmark (Nifty):</span>
-                <span className="font-bold text-blue-400">{activePoint.bench.formatIndianCompact()}</span>
+                <span className="font-bold text-blue-400">
+                  {activePoint.bench.formatIndianCompact()}
+                </span>
               </div>
             </div>
           )}
@@ -674,7 +723,9 @@ export function AnalyticsPage() {
                     cy={p.yVal}
                     r={hoveredIndex === idx ? '6' : '4'}
                     className={`transition-all ${
-                      hoveredIndex === idx ? 'fill-emerald-300 stroke-background stroke-2' : 'fill-emerald-400'
+                      hoveredIndex === idx
+                        ? 'fill-emerald-300 stroke-background stroke-2'
+                        : 'fill-emerald-400'
                     }`}
                   />
                 </g>
@@ -726,14 +777,14 @@ export function AnalyticsPage() {
                   <Award className="w-4 h-4 text-primary" />
                   Your WealthNest Portfolio
                 </span>
-                <span className="font-mono text-emerald-400 text-sm font-bold">
-                  {xirrDisplay}
-                </span>
+                <span className="font-mono text-emerald-400 text-sm font-bold">{xirrDisplay}</span>
               </div>
               <div className="w-full bg-secondary rounded-full h-2.5 overflow-hidden">
                 <div
                   className="bg-emerald-400 h-2.5 rounded-full transition-all"
-                  style={{ width: `${Math.min(100, Math.max(10, (analytics.xirr || 0.15) * 400))}%` }}
+                  style={{
+                    width: `${Math.min(100, Math.max(10, (analytics.xirr || 0.15) * 400))}%`,
+                  }}
                 />
               </div>
             </div>
@@ -746,11 +797,16 @@ export function AnalyticsPage() {
                 const outperforming = diff >= 0;
 
                 return (
-                  <div key={bm.id} className="p-3 rounded-lg bg-accent/20 border border-border/60 hover:bg-accent/40 transition-all space-y-1.5">
+                  <div
+                    key={bm.id}
+                    className="p-3 rounded-lg bg-accent/20 border border-border/60 hover:bg-accent/40 transition-all space-y-1.5"
+                  >
                     <div className="flex items-center justify-between text-xs">
                       <div>
                         <span className="font-semibold text-foreground">{bm.name}</span>
-                        <span className="text-[11px] text-muted-foreground ml-2">({bm.category})</span>
+                        <span className="text-[11px] text-muted-foreground ml-2">
+                          ({bm.category})
+                        </span>
                       </div>
                       <div className="flex items-center gap-2 font-mono">
                         <span className="font-bold text-foreground">{bmReturnPct}%</span>
@@ -762,7 +818,8 @@ export function AnalyticsPage() {
                               : 'text-rose-400 border-rose-500/30'
                           }`}
                         >
-                          {outperforming ? '+' : ''}{(diff * 100).toFixed(1)}% Alpha
+                          {outperforming ? '+' : ''}
+                          {(diff * 100).toFixed(1)}% Alpha
                         </Badge>
                       </div>
                     </div>
@@ -801,10 +858,16 @@ export function AnalyticsPage() {
               const isBalanced = Math.abs(drift.driftPercentage) < 1.0;
 
               return (
-                <div key={drift.assetClassId} className="p-3 rounded-lg bg-accent/20 border border-border/60 hover:bg-accent/40 transition-all space-y-2">
+                <div
+                  key={drift.assetClassId}
+                  className="p-3 rounded-lg bg-accent/20 border border-border/60 hover:bg-accent/40 transition-all space-y-2"
+                >
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: drift.colorHex }} />
+                      <span
+                        className="w-2.5 h-2.5 rounded-full"
+                        style={{ backgroundColor: drift.colorHex }}
+                      />
                       <span className="font-semibold text-foreground">{drift.name}</span>
                     </div>
 
@@ -818,8 +881,8 @@ export function AnalyticsPage() {
                           isBalanced
                             ? 'text-slate-400 border-slate-500/30'
                             : isOver
-                            ? 'text-amber-400 border-amber-500/30'
-                            : 'text-blue-400 border-blue-500/30'
+                              ? 'text-amber-400 border-amber-500/30'
+                              : 'text-blue-400 border-blue-500/30'
                         }`}
                       >
                         {isBalanced
@@ -832,7 +895,10 @@ export function AnalyticsPage() {
                   {/* Rebalance recommendation action */}
                   <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border/40">
                     <span className="text-muted-foreground">
-                      Current Value: <span className="font-mono text-foreground">{drift.currentValue.formatIndianCompact()}</span>
+                      Current Value:{' '}
+                      <span className="font-mono text-foreground">
+                        {drift.currentValue.formatIndianCompact()}
+                      </span>
                     </span>
                     {isBalanced ? (
                       <span className="text-emerald-400 font-medium flex items-center gap-1">
@@ -840,11 +906,13 @@ export function AnalyticsPage() {
                       </span>
                     ) : drift.rebalanceAction === 'buy' ? (
                       <span className="text-blue-400 font-medium flex items-center gap-1">
-                        <ArrowUpRight className="w-3.5 h-3.5" /> Buy +{drift.rebalanceAmount.formatIndianCompact()}
+                        <ArrowUpRight className="w-3.5 h-3.5" /> Buy +
+                        {drift.rebalanceAmount.formatIndianCompact()}
                       </span>
                     ) : (
                       <span className="text-amber-400 font-medium flex items-center gap-1">
-                        <ArrowDownRight className="w-3.5 h-3.5" /> Trim -{drift.rebalanceAmount.formatIndianCompact()}
+                        <ArrowDownRight className="w-3.5 h-3.5" /> Trim -
+                        {drift.rebalanceAmount.formatIndianCompact()}
                       </span>
                     )}
                   </div>
@@ -861,7 +929,10 @@ export function AnalyticsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <Badge variant="outline" className="text-xs bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
+                <Badge
+                  variant="outline"
+                  className="text-xs bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+                >
                   Budget 2024 Rules Enforced
                 </Badge>
                 <span className="text-xs text-muted-foreground font-mono">
@@ -873,7 +944,8 @@ export function AnalyticsPage() {
                 Capital Gains Tax & Loss Harvesting Intelligence
               </CardTitle>
               <CardDescription className="text-xs">
-                Indian Section 112A Equity LTCG (12.5% over ₹1.25L exemption), Section 111A STCG (20%), and actionable tax loss offsets.
+                Indian Section 112A Equity LTCG (12.5% over ₹1.25L exemption), Section 111A STCG
+                (20%), and actionable tax loss offsets.
               </CardDescription>
             </div>
           </div>
@@ -883,7 +955,9 @@ export function AnalyticsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-3.5 rounded-xl bg-accent/30 border border-border/60 space-y-1">
               <span className="text-xs text-muted-foreground">
-                {activeMember?.relationship === 'huf' ? 'HUF Section 112A Exemption' : 'Section 112A LTCG Exemption'}
+                {activeMember?.relationship === 'huf'
+                  ? 'HUF Section 112A Exemption'
+                  : 'Section 112A LTCG Exemption'}
               </span>
               <div className="text-lg font-bold font-mono text-emerald-400">
                 {taxSummary.annualLtcgExemption.formatIndianCompact()}
@@ -896,7 +970,9 @@ export function AnalyticsPage() {
             </div>
 
             <div className="p-3.5 rounded-xl bg-accent/30 border border-border/60 space-y-1">
-              <span className="text-xs text-muted-foreground">Taxable LTCG (&gt;1 Year @ 12.5%)</span>
+              <span className="text-xs text-muted-foreground">
+                Taxable LTCG (&gt;1 Year @ 12.5%)
+              </span>
               <div className="text-lg font-bold font-mono text-foreground">
                 {taxSummary.taxableLtcg.formatIndianCompact()}
               </div>
@@ -937,9 +1013,7 @@ export function AnalyticsPage() {
                   <Coins className="w-4 h-4 text-amber-400" />
                   Tax Loss Harvesting Opportunities (Actionable Before March 31)
                 </span>
-                <span className="text-emerald-400 font-mono">
-                  Offset against STCG / LTCG
-                </span>
+                <span className="text-emerald-400 font-mono">Offset against STCG / LTCG</span>
               </div>
               <div className="space-y-2">
                 {taxSummary.holdings
@@ -952,15 +1026,24 @@ export function AnalyticsPage() {
                       <div>
                         <span className="font-semibold text-foreground">{h.assetName}</span>
                         <span className="text-muted-foreground ml-2">
-                          ({h.term === 'short_term' ? 'STCG Loss' : 'LTCG Loss'} • {h.holdingPeriodDays} days held)
+                          ({h.term === 'short_term' ? 'STCG Loss' : 'LTCG Loss'} •{' '}
+                          {h.holdingPeriodDays} days held)
                         </span>
                       </div>
                       <div className="flex items-center gap-3 font-mono">
                         <span className="text-rose-400 font-bold">
                           -{h.harvestableLoss.formatIndianCompact()}
                         </span>
-                        <Badge variant="outline" className="text-emerald-400 border-emerald-500/20 bg-emerald-500/10 text-[10px]">
-                          Save ~₹{(Number(h.harvestableLoss.cents) * (h.term === 'short_term' ? 0.20 : 0.125) / 100).toFixed(0)}
+                        <Badge
+                          variant="outline"
+                          className="text-emerald-400 border-emerald-500/20 bg-emerald-500/10 text-[10px]"
+                        >
+                          Save ~₹
+                          {(
+                            (Number(h.harvestableLoss.cents) *
+                              (h.term === 'short_term' ? 0.2 : 0.125)) /
+                            100
+                          ).toFixed(0)}
                         </Badge>
                       </div>
                     </div>
@@ -980,17 +1063,15 @@ export function AnalyticsPage() {
               Institutional Concentration Advisory
             </h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              {analytics.concentration.warning} Consider diversifying into debt or index funds to smooth out drawdowns.
+              {analytics.concentration.warning} Consider diversifying into debt or index funds to
+              smooth out drawdowns.
             </p>
           </div>
         </div>
       )}
 
       {/* Phase 6A: Manage Family Entities & Demat Accounts Modal */}
-      <ManageFamilyModal
-        isOpen={isManageFamilyOpen}
-        onClose={() => setIsManageFamilyOpen(false)}
-      />
+      <ManageFamilyModal isOpen={isManageFamilyOpen} onClose={() => setIsManageFamilyOpen(false)} />
     </div>
   );
 }

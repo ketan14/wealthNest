@@ -34,7 +34,9 @@ describe('Phase 9.1: Malformed Restore & Rollback Safety in SQLite', () => {
       goalAdapter
     );
 
-    db.prepare("INSERT INTO profiles (id, display_name) VALUES (?, 'Ketan Vaghela');").run(testUserId);
+    db.prepare("INSERT INTO profiles (id, display_name) VALUES (?, 'Ketan Vaghela');").run(
+      testUserId
+    );
 
     // Initial safe portfolio: 100 shares of Infosys at ₹1,500 = ₹1,50,000
     await holdingAdapter.createHoldingWithAsset({

@@ -2,7 +2,7 @@ import { Result, ok, err } from '@wealthnest/shared';
 
 /**
  * Cross-User and Cross-Household Isolation Invariants
- * 
+ *
  * Enforces zero cross-tenant contamination across all database adapters (PostgreSQL RLS,
  * offline SQLite, and in-memory caches). A user or household must NEVER be able to:
  * 1. Link a holding to an asset belonging to another user.
@@ -14,7 +14,8 @@ import { Result, ok, err } from '@wealthnest/shared';
 
 export interface OwnershipEntityReference {
   readonly entityId: string;
-  readonly entityType: 'asset' | 'holding' | 'transaction' | 'liability' | 'account' | 'member' | 'valuation';
+  readonly entityType:
+    'asset' | 'holding' | 'transaction' | 'liability' | 'account' | 'member' | 'valuation';
   readonly ownerUserId: string;
 }
 

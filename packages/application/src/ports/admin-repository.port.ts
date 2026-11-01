@@ -28,7 +28,9 @@ export interface AdminRepositoryPort {
     displayName: string,
     initialRole?: PlatformRole
   ): Promise<{ userId: string; invitationToken?: string }>;
-  requestPasswordReset(targetUserId: string): Promise<{ success: boolean; recoveryEmailSent: boolean }>;
+  requestPasswordReset(
+    targetUserId: string
+  ): Promise<{ success: boolean; recoveryEmailSent: boolean }>;
   getDashboardStats(): Promise<AdminDashboardStats>;
   listHouseholds(params: AdminPaginationParams): Promise<PaginatedResult<AdminHouseholdSummary>>;
   getActiveSuperAdminCount(): Promise<number>;

@@ -33,7 +33,9 @@ describe('Phase 9.1: SQLite Atomic Backup & Restore Round-Trip', () => {
       goalAdapter
     );
 
-    db.prepare("INSERT INTO profiles (id, display_name) VALUES (?, 'Ketan Vaghela');").run(testUserId);
+    db.prepare("INSERT INTO profiles (id, display_name) VALUES (?, 'Ketan Vaghela');").run(
+      testUserId
+    );
   });
 
   it('TC-9.1-04: performs full export -> wipe -> restore with zero data drift', async () => {

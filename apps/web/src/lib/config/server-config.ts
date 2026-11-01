@@ -23,9 +23,10 @@ export const DEFAULT_LAN_HOST = '192.168.1.105';
 export const DEFAULT_FRONTEND_PORT = 30000;
 export const DEFAULT_SUPABASE_PORT = 54321;
 
-// Standard Supabase local development anon key
+// Standard Supabase local development anon key (supports legacy anon key and new publishable key)
 export const DEFAULT_SUPABASE_ANON_KEY =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) ||
+  (typeof import.meta !== 'undefined' &&
+    (import.meta.env?.VITE_SUPABASE_ANON_KEY || import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY)) ||
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
 
 export const DEFAULT_SERVER_CONFIG: ServerConfig = {
@@ -89,6 +90,18 @@ export function buildSupabaseUrl(config: ServerConfig): string {
   }
 
   if (config.mode === 'lan') {
+    // If accessed via localhost / 127.0.0.1 and host is the default template IP (192.168.1.105),
+    // route directly to 127.0.0.1 to avoid network timeout on developer machine (bypassed in vitest)
+    const isTest = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
+    if (
+      !isTest &&
+      typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
+      config.host === DEFAULT_LAN_HOST
+    ) {
+      const port = isValidPort(config.supabasePort) ? config.supabasePort : DEFAULT_SUPABASE_PORT;
+      return `http://${DEFAULT_LOCAL_HOST}:${port}`;
+    }
     const host = isValidIPv4(config.host) ? config.host.trim() : DEFAULT_LAN_HOST;
     const port = isValidPort(config.supabasePort) ? config.supabasePort : DEFAULT_SUPABASE_PORT;
     return `http://${host}:${port}`;
@@ -130,8 +143,12 @@ export function loadServerConfig(): ServerConfig {
         version: 1,
         mode: parsed.mode === 'lan' || parsed.mode === 'remote' ? parsed.mode : 'local',
         host: typeof parsed.host === 'string' ? parsed.host : DEFAULT_LOCAL_HOST,
-        frontendPort: isValidPort(parsed.frontendPort) ? parsed.frontendPort : DEFAULT_FRONTEND_PORT,
-        supabasePort: isValidPort(parsed.supabasePort) ? parsed.supabasePort : DEFAULT_SUPABASE_PORT,
+        frontendPort: isValidPort(parsed.frontendPort)
+          ? parsed.frontendPort
+          : DEFAULT_FRONTEND_PORT,
+        supabasePort: isValidPort(parsed.supabasePort)
+          ? parsed.supabasePort
+          : DEFAULT_SUPABASE_PORT,
         customSupabaseUrl:
           typeof parsed.customSupabaseUrl === 'string' ? parsed.customSupabaseUrl : undefined,
         supabaseAnonKey:

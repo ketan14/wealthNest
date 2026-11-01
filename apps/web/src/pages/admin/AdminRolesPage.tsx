@@ -1,11 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  ShieldCheck,
-  Users,
-  CheckCircle2,
-  AlertCircle,
-  Lock,
-} from 'lucide-react';
+import { ShieldCheck, Users, CheckCircle2, AlertCircle, Lock } from 'lucide-react';
 import { AdminHeader } from '../../components/admin/AdminHeader';
 import { adminAdapter } from '../../lib/supabase/admin.adapter';
 import { useAdmin } from '../../lib/admin/admin-context';
@@ -47,7 +41,6 @@ export function AdminRolesPage() {
       // Ignored
     }
   }, [selectedUserId]);
-
 
   useEffect(() => {
     loadStaff();
@@ -293,8 +286,12 @@ export function AdminRolesPage() {
         {/* Current Platform Staff Table */}
         <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl overflow-hidden backdrop-blur-md">
           <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-white">Active Platform Administrative Staff</h4>
-            <span className="text-xs text-slate-400 font-mono">{staffUsers.length} active roles</span>
+            <h4 className="text-sm font-semibold text-white">
+              Active Platform Administrative Staff
+            </h4>
+            <span className="text-xs text-slate-400 font-mono">
+              {staffUsers.length} active roles
+            </span>
           </div>
 
           <div className="overflow-x-auto">
@@ -322,8 +319,8 @@ export function AdminRolesPage() {
                           u.platformRole === 'super_admin'
                             ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
                             : u.platformRole === 'support_admin'
-                            ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
-                            : 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
+                              ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
+                              : 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
                         }`}
                       >
                         {u.platformRole?.replace('_', ' ')}

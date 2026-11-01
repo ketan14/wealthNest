@@ -122,7 +122,11 @@ export function SettingsPage() {
     setTimeout(() => setNameSavedSuccess(false), 3000);
   };
 
-  const handleDownloadFile = async (content: string, filename: string, _type: string): Promise<boolean> => {
+  const handleDownloadFile = async (
+    content: string,
+    filename: string,
+    _type: string
+  ): Promise<boolean> => {
     const ext = filename.endsWith('.csv') ? 'csv' : 'json';
     const saveRes = await saveTextFile({
       defaultPath: filename,
@@ -160,7 +164,9 @@ export function SettingsPage() {
     }
   };
 
-  const handleExportCsv = async (moduleType: 'holdings' | 'transactions' | 'liabilities' | 'goals') => {
+  const handleExportCsv = async (
+    moduleType: 'holdings' | 'transactions' | 'liabilities' | 'goals'
+  ) => {
     setIsExporting(true);
     try {
       const res = await exportUseCase.execute(user?.id || 'demo-user-001');
@@ -283,7 +289,8 @@ export function SettingsPage() {
             Settings & Control Center
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Manage your account, customize India-First localization standards, export offline backups, and monitor system health.
+            Manage your account, customize India-First localization standards, export offline
+            backups, and monitor system health.
           </p>
         </div>
 
@@ -387,7 +394,8 @@ export function SettingsPage() {
                   User Profile Information
                 </CardTitle>
                 <CardDescription className="text-slate-400">
-                  Update your identity details. These are stored locally and synced to your Supabase RLS vault.
+                  Update your identity details. These are stored locally and synced to your Supabase
+                  RLS vault.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -417,7 +425,8 @@ export function SettingsPage() {
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
-                      Email authentication is handled via Supabase Auth magic link and password flows.
+                      Email authentication is handled via Supabase Auth magic link and password
+                      flows.
                     </p>
                   </div>
 
@@ -455,12 +464,16 @@ export function SettingsPage() {
                   <div className="space-y-0.5">
                     <div className="text-sm font-medium text-white flex items-center gap-2">
                       <span>Row-Level Security (RLS)</span>
-                      <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
+                      <Badge
+                        variant="outline"
+                        className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
+                      >
                         Active
                       </Badge>
                     </div>
                     <div className="text-xs text-slate-400">
-                      Multi-tenant PostgreSQL policies guarantee that only your user UUID can access holdings and logs.
+                      Multi-tenant PostgreSQL policies guarantee that only your user UUID can access
+                      holdings and logs.
                     </div>
                   </div>
                   <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
@@ -538,7 +551,8 @@ export function SettingsPage() {
                 Family Members & Demat Folios
               </h2>
               <p className="text-sm text-slate-400 mt-1">
-                Manage household legal entities (Individual PAN, HUF, Minor) and link Zerodha, Groww, Angel One, or CAMS accounts.
+                Manage household legal entities (Individual PAN, HUF, Minor) and link Zerodha,
+                Groww, Angel One, or CAMS accounts.
               </p>
             </div>
             <Button
@@ -623,9 +637,17 @@ export function SettingsPage() {
                             )}
                           </div>
                           <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
-                            <span>PAN: <span className="font-mono text-slate-300">{member.panMasked || 'Not provided'}</span></span>
+                            <span>
+                              PAN:{' '}
+                              <span className="font-mono text-slate-300">
+                                {member.panMasked || 'Not provided'}
+                              </span>
+                            </span>
                             <span>•</span>
-                            <span>{linkedAccounts.length} Demat/MF {linkedAccounts.length === 1 ? 'account' : 'accounts'}</span>
+                            <span>
+                              {linkedAccounts.length} Demat/MF{' '}
+                              {linkedAccounts.length === 1 ? 'account' : 'accounts'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -733,17 +755,20 @@ export function SettingsPage() {
           <div className="p-4 rounded-xl bg-purple-950/20 border border-purple-500/30 flex items-start gap-3">
             <Shield className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
             <div className="text-xs text-slate-300 leading-relaxed">
-              <span className="font-semibold text-purple-300">Indian Section 112A Tax Advantage:</span>{' '}
-              By allocating long-term capital assets across distinct PAN entities (e.g., Self, Spouse, HUF), your household unlocks multiple independent ₹1,25,000 annual LTCG exemption limits under Finance Act (No. 2) 2024. Tax savings are automatically calculated and reflected in your analytics.
+              <span className="font-semibold text-purple-300">
+                Indian Section 112A Tax Advantage:
+              </span>{' '}
+              By allocating long-term capital assets across distinct PAN entities (e.g., Self,
+              Spouse, HUF), your household unlocks multiple independent ₹1,25,000 annual LTCG
+              exemption limits under Finance Act (No. 2) 2024. Tax savings are automatically
+              calculated and reflected in your analytics.
             </div>
           </div>
         </div>
       )}
 
       {/* TAB: Server Connection */}
-      {activeTab === 'connection' && (
-        <ServerConnectionSettings />
-      )}
+      {activeTab === 'connection' && <ServerConnectionSettings />}
 
       {/* TAB 2: Localization & Tax Standards */}
       {activeTab === 'localization' && (
@@ -777,14 +802,18 @@ export function SettingsPage() {
                         <button
                           key={curr.code}
                           type="button"
-                          onClick={() => updatePreferences({ defaultCurrency: curr.code as CurrencyCode })}
+                          onClick={() =>
+                            updatePreferences({ defaultCurrency: curr.code as CurrencyCode })
+                          }
                           className={`p-3 rounded-lg border text-left transition-all ${
                             isSelected
                               ? 'border-indigo-500 bg-indigo-500/10 text-white'
                               : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
                           }`}
                         >
-                          <div className="text-lg font-bold text-white mb-0.5">{curr.symbol} {curr.code}</div>
+                          <div className="text-lg font-bold text-white mb-0.5">
+                            {curr.symbol} {curr.code}
+                          </div>
                           <div className="text-xs text-slate-400">{curr.name}</div>
                         </button>
                       );
@@ -898,7 +927,9 @@ export function SettingsPage() {
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-white text-sm">New Regime (Sec 115BAC)</span>
+                        <span className="font-semibold text-white text-sm">
+                          New Regime (Sec 115BAC)
+                        </span>
                         <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-medium">
                           Recommended
                         </span>
@@ -919,7 +950,8 @@ export function SettingsPage() {
                     >
                       <div className="font-semibold text-white text-sm mb-1">Old Regime</div>
                       <div className="text-xs text-slate-400">
-                        Supports 80C (PPF/ELSS up to ₹1.5L), 80D (health insurance), home loan interest (Sec 24b).
+                        Supports 80C (PPF/ELSS up to ₹1.5L), 80D (health insurance), home loan
+                        interest (Sec 24b).
                       </div>
                     </button>
                   </div>
@@ -1007,7 +1039,8 @@ export function SettingsPage() {
                       Complete JSON Backup
                     </div>
                     <div className="text-xs text-slate-400">
-                      Standard WealthNest v1.0.0 schema including all metadata, cost bases, and loans.
+                      Standard WealthNest v1.0.0 schema including all metadata, cost bases, and
+                      loans.
                     </div>
                   </div>
                   <Button
@@ -1231,7 +1264,8 @@ export function SettingsPage() {
                 Architectural Layer Verification
               </CardTitle>
               <CardDescription className="text-slate-400">
-                WealthNest Clean Architecture enforces strict dependency inversion principles across all packages.
+                WealthNest Clean Architecture enforces strict dependency inversion principles across
+                all packages.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1244,7 +1278,10 @@ export function SettingsPage() {
                     <div className="space-y-0.5">
                       <div className="text-sm font-semibold text-white flex items-center gap-2">
                         <span>{layer.name}</span>
-                        <Badge variant="outline" className="text-emerald-400 border-emerald-500/20 bg-emerald-500/10">
+                        <Badge
+                          variant="outline"
+                          className="text-emerald-400 border-emerald-500/20 bg-emerald-500/10"
+                        >
                           {layer.status}
                         </Badge>
                       </div>
@@ -1259,10 +1296,7 @@ export function SettingsPage() {
         </div>
       )}
 
-      <ManageFamilyModal
-        isOpen={isManageFamilyOpen}
-        onClose={() => setIsManageFamilyOpen(false)}
-      />
+      <ManageFamilyModal isOpen={isManageFamilyOpen} onClose={() => setIsManageFamilyOpen(false)} />
     </div>
   );
 }

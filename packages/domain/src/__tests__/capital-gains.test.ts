@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  calculateCapitalGainsTaxSummary,
-  BUDGET_2024_TAX_RULES,
-} from '../tax/capital-gains.js';
+import { calculateCapitalGainsTaxSummary, BUDGET_2024_TAX_RULES } from '../tax/capital-gains.js';
 
 describe('India Capital Gains & Tax-Loss Harvesting (Budget 2024)', () => {
   it('correctly applies Budget 2024 Section 112A ₹1,25,000 exemption and 12.5% LTCG rate', () => {

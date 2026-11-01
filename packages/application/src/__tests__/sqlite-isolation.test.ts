@@ -9,7 +9,9 @@ describe('Phase 9.1: Cross-User SQLite Isolation (Composite Foreign Keys)', () =
     db = createTestSqliteDb();
 
     // Setup User A (Ketan Vaghela)
-    db.prepare("INSERT INTO profiles (id, display_name) VALUES ('usr-ketan', 'Ketan Vaghela');").run();
+    db.prepare(
+      "INSERT INTO profiles (id, display_name) VALUES ('usr-ketan', 'Ketan Vaghela');"
+    ).run();
     db.prepare(
       "INSERT INTO family_members (id, user_id, name, relationship, color_hex) VALUES ('fm-ketan-self', 'usr-ketan', 'Ketan Vaghela', 'self', '#3B82F6');"
     ).run();
@@ -18,7 +20,9 @@ describe('Phase 9.1: Cross-User SQLite Isolation (Composite Foreign Keys)', () =
     ).run();
 
     // Setup User B (External User / Tenant B)
-    db.prepare("INSERT INTO profiles (id, display_name) VALUES ('usr-other', 'Other Investor');").run();
+    db.prepare(
+      "INSERT INTO profiles (id, display_name) VALUES ('usr-other', 'Other Investor');"
+    ).run();
     db.prepare(
       "INSERT INTO family_members (id, user_id, name, relationship, color_hex) VALUES ('fm-other-self', 'usr-other', 'Other Person', 'self', '#EF4444');"
     ).run();

@@ -1,8 +1,4 @@
-import {
-  AdminAuditLogEntry,
-  AdminPaginationParams,
-  PaginatedResult,
-} from '@wealthnest/domain';
+import { AdminAuditLogEntry, AdminPaginationParams, PaginatedResult } from '@wealthnest/domain';
 
 export interface AdminAuditLogPort {
   recordLog(entry: Omit<AdminAuditLogEntry, 'id' | 'createdAt'>): Promise<string>;

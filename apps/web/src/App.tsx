@@ -50,39 +50,39 @@ export function App() {
               <PreferencesProvider>
                 <FamilyProvider>
                   <BrowserRouter>
-                  <Routes>
-                    {/* Dedicated Authentication Routes */}
-                    <Route path="/signup" element={<SignUpPage />} />
-                    <Route path="/login" element={<LoginPage />} />
+                    <Routes>
+                      {/* Dedicated Authentication Routes */}
+                      <Route path="/signup" element={<SignUpPage />} />
+                      <Route path="/login" element={<LoginPage />} />
 
-                    {/* Investor App Shell */}
-                    <Route path="/" element={<AppShell />}>
-                      <Route index element={<HomePage />} />
-                      <Route path="portfolio" element={<PortfolioPage />} />
-                      <Route path="liabilities" element={<LiabilitiesPage />} />
-                      <Route path="transactions" element={<TransactionsPage />} />
-                      <Route path="analytics" element={<AnalyticsPage />} />
-                      <Route path="goals" element={<GoalsPage />} />
-                      <Route path="settings" element={<SettingsPage />} />
-                      <Route path="*" element={<NotFoundPage />} />
-                    </Route>
+                      {/* Investor App Shell */}
+                      <Route path="/" element={<AppShell />}>
+                        <Route index element={<HomePage />} />
+                        <Route path="portfolio" element={<PortfolioPage />} />
+                        <Route path="liabilities" element={<LiabilitiesPage />} />
+                        <Route path="transactions" element={<TransactionsPage />} />
+                        <Route path="analytics" element={<AnalyticsPage />} />
+                        <Route path="goals" element={<GoalsPage />} />
+                        <Route path="settings" element={<SettingsPage />} />
+                        <Route path="*" element={<NotFoundPage />} />
+                      </Route>
 
-                    {/* Dedicated Platform Admin Portal */}
-                    <Route path="/admin" element={<AdminLayout />}>
-                      <Route index element={<AdminDashboardPage />} />
-                      <Route path="users" element={<AdminUsersPage />} />
-                      <Route path="users/:userId" element={<AdminUserDetailPage />} />
-                      <Route path="households" element={<AdminHouseholdsPage />} />
-                      <Route path="roles" element={<AdminRolesPage />} />
-                      <Route path="audit-logs" element={<AdminAuditLogsPage />} />
-                      <Route path="settings" element={<AdminSettingsPage />} />
-                    </Route>
-                  </Routes>
-                </BrowserRouter>
-              </FamilyProvider>
-            </PreferencesProvider>
-          </SupportSessionProvider>
-        </AdminProvider>
+                      {/* Dedicated Platform Admin Portal */}
+                      <Route path="/admin" element={<AdminLayout />}>
+                        <Route index element={<AdminDashboardPage />} />
+                        <Route path="users" element={<AdminUsersPage />} />
+                        <Route path="users/:userId" element={<AdminUserDetailPage />} />
+                        <Route path="households" element={<AdminHouseholdsPage />} />
+                        <Route path="roles" element={<AdminRolesPage />} />
+                        <Route path="audit-logs" element={<AdminAuditLogsPage />} />
+                        <Route path="settings" element={<AdminSettingsPage />} />
+                      </Route>
+                    </Routes>
+                  </BrowserRouter>
+                </FamilyProvider>
+              </PreferencesProvider>
+            </SupportSessionProvider>
+          </AdminProvider>
         </RepositoryProvider>
       </AuthProvider>
     </QueryClientProvider>

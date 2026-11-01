@@ -28,9 +28,7 @@ export class RefreshMarketQuotesUseCase {
       }
 
       const quotes = quotesRes.value;
-      const equitiesCount = quotes.filter(
-        (q) => q.source === 'NSE' || q.source === 'BSE'
-      ).length;
+      const equitiesCount = quotes.filter((q) => q.source === 'NSE' || q.source === 'BSE').length;
       const mutualFundsCount = quotes.filter((q) => q.source === 'AMFI').length;
       const marketSession = this.marketDataPort.getMarketSession
         ? this.marketDataPort.getMarketSession()

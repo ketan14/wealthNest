@@ -85,10 +85,11 @@ describe('Phase 10: ServerConnectionSettings Component UI Tests', () => {
     fireEvent.click(saveBtn);
 
     await waitFor(() => {
-      expect(screen.getByText(/Reconnected successfully to http:\/\/192.168.1.108:54321/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Reconnected successfully to http:\/\/192.168.1.108:54321/i)
+      ).toBeInTheDocument();
     });
 
     expect(connectionManager.getConfig().host).toBe('192.168.1.108');
   });
 });
-
