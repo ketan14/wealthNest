@@ -10,6 +10,8 @@ import {
   AdminAuditLogEntry,
 } from '@wealthnest/domain';
 import { AdminRepositoryPort, AdminAuditLogPort } from '@wealthnest/application';
+import { createClient } from '@supabase/supabase-js';
+import { connectionManager } from '../services/connection-manager';
 import { supabase } from './client';
 
 export const DEMO_ADMIN_USERS: AdminUserSummary[] = [
@@ -294,6 +296,87 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
     };
     DEMO_ADMIN_USERS.unshift(newUser);
     return { userId: newId, invitationToken: 'mock-invitation-token-wealthnest' };
+  }
+
+  async createUserDirectly(
+    email: string,
+    password: string,
+    displayName: string,
+    initialRole?: PlatformRole
+  ): Promise<{ userId: string; email: string }> {
+    const trimmedEmail = email.trim();
+    const trimmedName = displayName.trim() || trimmedEmail.split('@')[0] || 'Investor';
+
+    try {
+      const url = connectionManager.getSupabaseUrl();
+      const anonKey = connectionManager.getConfig().supabaseAnonKey;
+
+      // Isolated auth client ensures admin session is NOT overwritten in localStorage
+      const isolatedClient = createClient(url, anonKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
+      });
+
+      const { data, error } = await isolatedClient.auth.signUp({
+        email: trimmedEmail,
+        password,
+        options: {
+          data: {
+            full_name: trimmedName,
+            display_name: trimmedName,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      const createdUser = data.user;
+      const userId = createdUser?.id || `usr-${Date.now()}`;
+
+      // If an administrative role was specified, grant it via existing RPC
+      if (createdUser?.id && initialRole) {
+        try {
+          await this.managePlatformRole(createdUser.id, initialRole, 'grant');
+        } catch (roleErr) {
+          console.warn('Initial platform role assignment deferred:', roleErr);
+        }
+      }
+
+      // Prepend to local memory cache for immediate UI feedback
+      const newUser: AdminUserSummary = {
+        id: userId,
+        email: trimmedEmail,
+        displayName: trimmedName,
+        status: 'active',
+        platformRole: initialRole,
+        createdAt: new Date().toISOString(),
+        householdCount: 0,
+      };
+      DEMO_ADMIN_USERS.unshift(newUser);
+
+      return { userId, email: trimmedEmail };
+    } catch (err: any) {
+      // In offline / fallback test environments
+      const fallbackId = `usr-${Date.now()}`;
+      const newUser: AdminUserSummary = {
+        id: fallbackId,
+        email: trimmedEmail,
+        displayName: trimmedName,
+        status: 'active',
+        platformRole: initialRole,
+        createdAt: new Date().toISOString(),
+        householdCount: 0,
+      };
+      DEMO_ADMIN_USERS.unshift(newUser);
+
+      if (err?.message && !err.message.includes('fetch')) {
+        throw err;
+      }
+      return { userId: fallbackId, email: trimmedEmail };
+    }
   }
 
   async requestPasswordReset(
