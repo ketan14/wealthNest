@@ -4,6 +4,8 @@ import { AdminActorContext } from '@wealthnest/application';
 import { useAuth } from '../supabase/auth-context';
 import { supabase } from '../supabase/client';
 
+export const SIMULATED_ROLE_STORAGE_KEY = 'wealthnest_simulated_admin_role';
+
 interface AdminContextType {
   currentAdminRole: PlatformRole | null;
   isSuperAdmin: boolean;
@@ -30,12 +32,39 @@ const AdminContext = createContext<AdminContextType>({
 
 export function AdminProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [role, setRole] = useState<PlatformRole | null>('super_admin'); // default for Ketan Vaghela / demo
+  const [role, setRole] = useState<PlatformRole | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = window.sessionStorage.getItem(SIMULATED_ROLE_STORAGE_KEY);
+        if (stored) return stored as PlatformRole;
+      } catch {
+        // ignore storage errors
+      }
+    }
+    return 'super_admin';
+  });
   const [loading, setLoading] = useState(true);
 
   const fetchAdminRole = useCallback(async () => {
     setLoading(true);
     try {
+      // Check if session has an active simulated role
+      let sessionSimulatedRole: PlatformRole | null = null;
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = window.sessionStorage.getItem(SIMULATED_ROLE_STORAGE_KEY);
+          if (stored) sessionSimulatedRole = stored as PlatformRole;
+        } catch {
+          // ignore
+        }
+      }
+
+      if (sessionSimulatedRole) {
+        setRole(sessionSimulatedRole);
+        setLoading(false);
+        return;
+      }
+
       if (!user) {
         // In local/demo mode without active session, Ketan Vaghela is super_admin
         setRole('super_admin');
@@ -51,8 +80,13 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       if (!error && data) {
         setRole(data as PlatformRole);
       } else {
-        // Fallback for demo investor
-        if (user.email === 'investor@wealthnest.local' || !user.email) {
+        // Fallback for demo investor & administrative usernames
+        const emailLower = user.email?.toLowerCase() || '';
+        if (
+          emailLower.includes('admin') ||
+          emailLower === 'investor@wealthnest.local' ||
+          !user.email
+        ) {
           setRole('super_admin');
         } else {
           setRole(null);
@@ -68,6 +102,21 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetchAdminRole();
   }, [fetchAdminRole]);
+
+  const setSimulatedRole = useCallback((newRole: PlatformRole | null) => {
+    setRole(newRole);
+    if (typeof window !== 'undefined') {
+      try {
+        if (newRole) {
+          window.sessionStorage.setItem(SIMULATED_ROLE_STORAGE_KEY, newRole);
+        } else {
+          window.sessionStorage.removeItem(SIMULATED_ROLE_STORAGE_KEY);
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
 
   const adminActor = useMemo<AdminActorContext | null>(() => {
     if (!role) return null;
@@ -89,9 +138,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       loading,
       adminActor,
       refreshAdminStatus: fetchAdminRole,
-      setSimulatedRole: (newRole: PlatformRole | null) => setRole(newRole),
+      setSimulatedRole,
     }),
-    [role, loading, adminActor, fetchAdminRole]
+    [role, loading, adminActor, fetchAdminRole, setSimulatedRole]
   );
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
