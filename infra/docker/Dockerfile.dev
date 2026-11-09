@@ -1,5 +1,7 @@
 FROM node:20-alpine
 
+RUN apk add --no-cache bash
+
 WORKDIR /app
 
 # Ensure non-root node user permissions
@@ -24,4 +26,4 @@ COPY --chown=node:node . .
 EXPOSE 5173
 
 # Launch web dev server with workspace flag
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "dev:web"]

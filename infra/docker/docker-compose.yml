@@ -7,6 +7,7 @@ services:
       dockerfile: infra/docker/Dockerfile.dev
     container_name: wealthnest-web-dev
     restart: unless-stopped
+    command: npm run dev:web
     environment:
       - NODE_ENV=development
       - VITE_HMR_CLIENT_PORT=${PROXY_PORT:-30000}
