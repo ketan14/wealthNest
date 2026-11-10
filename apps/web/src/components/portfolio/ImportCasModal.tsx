@@ -798,7 +798,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Provider:</span>
                 <Badge variant="success" className="font-mono text-xs">
-                  {previewData.provider}{' '}
+                  {previewData.provider.replace('_', '/')}{' '}
                   {previewData.provider === 'ZERODHA' || previewData.provider === 'GROWW'
                     ? 'Statement'
                     : 'CAS'}

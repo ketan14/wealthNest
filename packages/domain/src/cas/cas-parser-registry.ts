@@ -1,4 +1,5 @@
 import { ICasStatementParser } from './cas-parser.interface.js';
+import { CamsKfinCasParser } from './cams-kfin-cas-parser.js';
 import { CdslCasParser } from './cdsl-cas-parser.js';
 import { NsdlCasParser } from './nsdl-cas-parser.js';
 import { ParsedCasStatement } from './cas-types.js';
@@ -7,7 +8,8 @@ export class CasParserRegistry {
   private readonly parsers: ICasStatementParser[];
 
   constructor() {
-    this.parsers = [new CdslCasParser(), new NsdlCasParser()];
+    // CAMS/KFin summaries are matched first: they never carry depository identifiers
+    this.parsers = [new CamsKfinCasParser(), new CdslCasParser(), new NsdlCasParser()];
   }
 
   detectAndParse(pages: readonly string[]): ParsedCasStatement {
@@ -20,7 +22,7 @@ export class CasParserRegistry {
     }
 
     // Fallback: If neither strict provider match hits, try CDSL parser as default Indian CAS format
-    const fallbackParser = this.parsers[0]!;
+    const fallbackParser = this.parsers.find((p) => p instanceof CdslCasParser)!;
     const parsed = fallbackParser.parse(pages);
     return {
       ...parsed,

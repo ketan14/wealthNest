@@ -236,10 +236,10 @@ export class SupabaseFamilyAdapter implements FamilyRepositoryPort {
         return ok(this.getLocalMembers());
       }
 
-      if (!data || data.length === 0) {
-        // Return default self member if none exist in remote DB
-        return ok(this.getLocalMembers());
-      }
+      // if (!data || data.length === 0) {
+      //   // Return default self member if none exist in remote DB
+      //   return ok(this.getLocalMembers());
+      // }
 
       const mapped: FamilyMemberDto[] = data.map((r) => ({
         id: r.id,

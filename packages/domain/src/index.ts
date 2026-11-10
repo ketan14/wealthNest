@@ -15,6 +15,7 @@ export * from './cas/cas-types.js';
 export * from './cas/cas-parser.interface.js';
 export * from './cas/cdsl-cas-parser.js';
 export * from './cas/nsdl-cas-parser.js';
+export * from './cas/cams-kfin-cas-parser.js';
 export * from './cas/cas-parser-registry.js';
 export * from './analytics/xirr.js';
 export * from './analytics/cagr.js';
