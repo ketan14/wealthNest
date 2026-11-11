@@ -36,6 +36,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useFamily } from '@/lib/family/family-context';
+import { usePreferences } from '@/lib/preferences/preferences-context';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 
@@ -179,6 +180,8 @@ export function AnalyticsPage() {
   const { user } = useAuth();
   const userId = user?.id || '';
   const { selectedMemberId, selectedAccountId, members, activeMember } = useFamily();
+  const { currencySymbol, preferences } = usePreferences();
+  const locale = preferences.numberFormat || 'en-IN';
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const { holdingRepo, transactionRepo } = useRepositories();
 
@@ -1038,12 +1041,12 @@ export function AnalyticsPage() {
                           variant="outline"
                           className="text-emerald-400 border-emerald-500/20 bg-emerald-500/10 text-[10px]"
                         >
-                          Save ~₹
+                          Save ~{currencySymbol}
                           {(
                             (Number(h.harvestableLoss.cents) *
                               (h.term === 'short_term' ? 0.2 : 0.125)) /
                             100
-                          ).toFixed(0)}
+                          ).toLocaleString(locale, { maximumFractionDigits: 0 })}
                         </Badge>
                       </div>
                     </div>

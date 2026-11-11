@@ -31,6 +31,7 @@
 | **Phase 10.6: Multi-Platform Installers & CI Pipeline** | Windows NSIS `.exe` / `.msi` and Android signed `.apk` automated GitHub Actions workflow, Node 22 upgrade, high-resolution multi-platform icon generator | ✅ Complete | ✅ Verified | `.github/workflows/build-installers.yml`, `scripts/generate-icons.py`, multi-res `.ico`/`.icns`, Android mipmaps, Web PWA icons. |
 | **Phase 10.7: LAN Testing & Dynamic Server Connection** | Dynamic server switcher (`ServerConnectionSettings`), transparent Supabase proxy client, automated Windows port forwarding | ✅ Complete | ✅ Verified | Connect mobile/desktop to LAN IP with zero rebuilds. `docs/development/lan-testing.md`, `setup-lan-portproxy.ps1`. 356 tests passing. |
 | **Phase 11: QA Cloud Hosting & Zero-Cost Architecture** | Step-by-step production-parity QA deployment plan, ₹0 billing guarantee (Supabase Free + Spend Cap + Cloudflare Pages), anonymized 3-tier seed script, 7-day inactivity keep-alive workflow | ✅ Complete | ✅ Verified | `docs/deployment/qa-environment-hosting.md`, `supabase/seed_qa.sql`, `.github/workflows/keep-qa-alive.yml`. |
+| **Phase 12: Unified Multi-Currency & CAMS/KFintech Integration** | Single active visual currency display without FX drift, dynamic symbol reactivity across forms/tables, CAMS & KFintech CAS parser domain engine & UI surface | 🟡 In Progress | 🔄 In Review | Steps 1 & 2 complete; UI surface for CAMS in progress. 362 tests passing. |
 
 
 ---
@@ -210,12 +211,37 @@
   - Created 3-tier modular seed script (`supabase/seed_qa.sql`) with anonymized Sharma and Verma personas, full trade history, SIPs, dividends, and loan amortization.
   - Created GitHub Actions keep-alive workflow (`.github/workflows/keep-qa-alive.yml`) to prevent 7-day Supabase auto-pause.
 
+## 🎯 Prioritized Pending Backlog (Phase 12 — Visual Multi-Currency & CAMS/KFintech Integration)
+
+| Priority | Task ID | Scope & Deliverable | Target Files / Modules | Status |
+| :---: | :---: | :--- | :--- | :---: |
+| **P0 (Critical)** | **TASK-10** | **Step 1 & 2 Visual Currency Unification Across Web UI** | `apps/web/src/lib/preferences/preferences-context.tsx`<br>`apps/web/src/pages/HomePage.tsx`<br>`apps/web/src/pages/LiabilitiesPage.tsx`<br>`apps/web/src/pages/PortfolioPage.tsx`<br>`apps/web/src/pages/TransactionsPage.tsx`<br>`apps/web/src/pages/GoalsPage.tsx` | ✅ Complete |
+| **P1 (High)** | **TASK-11** | **Surface CAMS / KFintech e-CAS Support in `ImportCasModal.tsx`** | `apps/web/src/components/portfolio/ImportCasModal.tsx` | ✅ Complete |
+| **P1 (High)** | **TASK-12** | **Wire Dynamic Currency in `AnalyticsPage.tsx` Tax Harvest Cards** | `apps/web/src/pages/AnalyticsPage.tsx` | ✅ Complete |
+| **P2 (Medium)** | **TASK-13** | **Working Tree Commit & Database Migration Tracking** | `supabase/migrations/20260101000013_profiles_insert_policy_and_inr_default.sql`<br>`apps/web/src/lib/supabase/user.adapter.ts` | ⏳ Pending |
+| **P2 (Medium)** | **TASK-14** | **Execute Phase 11 QA Cloud Deployment (Cloudflare Pages + Supabase Free)** | `docs/deployment/qa-environment-hosting.md`<br>`supabase/seed_qa.sql` | ⏳ Pending |
+
+### Detailed Pending Checklist
+* [x] **[P0] TASK-10: Single Active Visual Currency Presentation (Step 1 & Step 2)**
+  - Centralized `currencyCode` and `currencySymbol` reactive helpers in `PreferencesContext`.
+  - Guaranteed 1:1 balance preservation (no FX conversion distortion).
+  - Standardized forms, input adornments, subtotal footers, and table columns across Home, Liabilities, Portfolio, Goals, and Transactions.
+* [x] **[P1] TASK-11: CAMS / KFintech UI Exposure in `ImportCasModal.tsx`**
+  - Updated modal header and dropzone copy to explicitly list CAMS and KFintech Mutual Fund CAS support alongside NSDL/CDSL.
+  - Added dedicated sample fixture button (`Load Sample CAMS / KFintech CAS (Bandhan, DSP, Nippon MF)`) for rapid 1-click test ingestion.
+* [x] **[P1] TASK-12: Wire Dynamic Currency in `AnalyticsPage.tsx`**
+  - Connected `usePreferences().currencySymbol` and `numberFormat` to tax harvesting opportunities (`Save ~${currencySymbol}...`).
+* [ ] **[P2] TASK-13: Git Commit & Migration Staging**
+  - Commit preference persistence fixes, profile INSERT RLS migration, and currency unification.
+* [ ] **[P2] TASK-14: Cloud QA Deployment Run**
+  - Run `supabase/seed_qa.sql` against remote QA Supabase project and configure Cloudflare Pages deployment.
+
 ---
 
 ## 📈 Quality Gates & System Health
 
 * **TypeScript Compilation**: `npm run type-check` (`tsc -b`) compiles with **0 errors**.
-* **Automated Test Coverage**: **356 passing tests** across 68 test suites (`vitest`) — 100% green.
+* **Automated Test Coverage**: **362 passing tests** across 69 test suites (`vitest`) — 100% green.
 * **Persona & Real-World Dogfooding**: Fully personalized to the **Vaghela Family** (`Ketan Vaghela`, `Parul Vaghela`, `Krisha Vaghela`, `Shamalbhai Vaghela HUF`, `Ramilaben Vaghela`) locally, with clean anonymized personas (`Arjun Sharma`, `Pooja Sharma`, etc.) for cloud QA.
 * **Active Containers & Endpoints**:
   - Web App: `http://localhost:30000` (Nginx Proxy) / `http://localhost:5174` (Vite) / LAN `http://192.168.1.105:30000`

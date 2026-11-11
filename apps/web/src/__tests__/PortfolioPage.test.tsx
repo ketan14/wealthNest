@@ -64,9 +64,10 @@ describe('PortfolioPage Component', () => {
 
     fireEvent.click(importBtns[0]!);
 
-    expect(screen.getByText(/Import Investments from NSDL \/ CDSL CAS/i)).toBeInTheDocument();
+    expect(screen.getByText(/Import Investments from NSDL \/ CDSL/i)).toBeInTheDocument();
     expect(screen.getByText(/Load Sample CDSL CAS/i)).toBeInTheDocument();
     expect(screen.getByText(/Load Sample NSDL CAS/i)).toBeInTheDocument();
+    expect(screen.getByText(/Load Sample CAMS \/ KFintech CAS/i)).toBeInTheDocument();
   });
 
   it('deletes demo holding like Sovereign Gold Bond 2028 when confirmed', async () => {

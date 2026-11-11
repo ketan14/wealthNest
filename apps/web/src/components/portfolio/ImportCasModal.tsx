@@ -70,6 +70,31 @@ const SANITIZED_NSDL_FIXTURE_PAGES = [
    INE040A01034  HDFC BANK LIMITED                 50.000        1600.00       80000.00`,
 ];
 
+const SANITIZED_CAMS_KFIN_FIXTURE_PAGES = [
+  `This Consolidated Account Summary  is brought  to you as  an  investor
+   friendly initiative by KFIN and CAMS and lists the balances and valuation
+   Closing Unit
+   Balance Scheme Name Folio No.  NAV Date  Registrar Price  Market Value
+   (INR)  (INR)
+   Cost Value
+   (INR) ISIN
+   CAMS 1895586  GD201-Bandhan Large & Mid Cap Fund-Direct
+   Plan-Growth ( Formerly Known as  Bandhan Core
+   Equity Fund-Direct Plan-Growth)  (Non-Demat)
+   2268.2390  09-NOV-2026  167.2240  379304 INF194K01V89  220948.23
+   CAMS 4685175  D782-DSP Mid Cap Fund - Direct Plan - Growth
+   (formerly DSP Small and Mid Cap Fund)
+   (Non-Demat)
+   625.5350  09-NOV-2026  168.6480  105495.23 INF740K01PX1  60708.71
+   KFINTECH 499236287077  RMFMFAGG-NIPPON INDIA MULTI ASSET
+   ALLOCATION FUND - DIRECT GROWTH PLAN (Non
+   Demat)
+   999.950  09-NOV-2026  26.8915  26890.16 INF204KB19V4  10000.00
+   Total  5,11,689.39 2,91,656.94
+   Consolidated Account Summary
+   As on 10-Nov-2026`,
+];
+
 const SANITIZED_ZERODHA_HOLDINGS_CSV = `Instrument,Qty.,Avg. cost,LTP,Cur. val,P&L,Net chg.,Day chg.
 RELIANCE,80,2500.00,2950.00,"2,36,000.00","36,000.00",18.00,1.25
 TCS,40,"3,600.00","4,150.00","1,66,000.00","22,000.00",15.28,-0.45
@@ -317,10 +342,15 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
     },
   });
 
-  // Helper: Test with Mock Sample CDSL or NSDL statement
-  const handleLoadSampleFixture = (type: 'CDSL' | 'NSDL') => {
+  // Helper: Test with Mock Sample CDSL, NSDL or CAMS/KFin statement
+  const handleLoadSampleFixture = (type: 'CDSL' | 'NSDL' | 'CAMS_KFIN') => {
     setError(null);
-    const pages = type === 'CDSL' ? SANITIZED_CDSL_FIXTURE_PAGES : SANITIZED_NSDL_FIXTURE_PAGES;
+    const pages =
+      type === 'CDSL'
+        ? SANITIZED_CDSL_FIXTURE_PAGES
+        : type === 'NSDL'
+          ? SANITIZED_NSDL_FIXTURE_PAGES
+          : SANITIZED_CAMS_KFIN_FIXTURE_PAGES;
 
     const mockExtractor = {
       extractPages: async () => ({
@@ -456,13 +486,13 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
             </div>
             <div>
               <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
-                Import Investments from NSDL / CDSL CAS
+                Import Investments from NSDL / CDSL / CAMS CAS
                 <Badge variant="default" className="text-[10px] bg-primary/15 text-primary">
-                  Phase 2.1
+                  Phase 2.1 & CAMS
                 </Badge>
               </h3>
               <p className="text-xs text-muted-foreground">
-                Automated ingestion of Demat shares, mutual fund folios, and SGBs
+                Automated ingestion of Demat shares, CAMS / KFintech mutual fund folios, and SGBs
               </p>
             </div>
           </div>
@@ -601,7 +631,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {importSource === 'cas_pdf'
-                        ? 'Supports standard NSDL and CDSL e-CAS statements (up to 25 MB)'
+                        ? 'Supports NSDL, CDSL, and CAMS / KFintech Consolidated Account Statements (up to 25 MB)'
                         : importSource === 'zerodha_csv'
                           ? 'Supports Kite Holdings CSV (holdings.csv) and Console Tradebook CSV (tradebook.csv)'
                           : 'Supports Groww Holdings CSV (Holdings.csv) and Orders History CSV (Orders.csv)'}
@@ -727,6 +757,15 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
                   className="text-xs font-mono gap-1.5 h-8"
                 >
                   Load Sample NSDL CAS (TCS, HDFC Bank)
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleLoadSampleFixture('CAMS_KFIN')}
+                  className="text-xs font-mono gap-1.5 h-8 border-cyan-500/30 hover:bg-cyan-500/10 text-cyan-300"
+                >
+                  Load Sample CAMS / KFintech CAS (Bandhan, DSP, Nippon MF)
                 </Button>
                 <Button
                   type="button"
