@@ -20,21 +20,19 @@ port = 54323
 [local_smtp]
 enabled = true
 port = 54325
-admin_port = 54324
 
 [storage]
 enabled = true
 file_size_limit = "50MiB"
 
 [auth]
-enabled = true
 site_url = "http://wealthnest.local"
 additional_redirect_urls = ["http://localhost:5173", "http://wealthnest.local"]
 jwt_expiry = 3600
 enable_signup = true
 
 [auth.email]
-enable_signup = true
+enabled = true
 double_confirm_changes = true
 enable_confirmations = false
 
