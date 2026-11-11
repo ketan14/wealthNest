@@ -125,6 +125,9 @@ export function LiabilitiesPage() {
   // Filter state
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'closed'>('active');
 
+  // Local state for demo liabilities when logged out or when previewing sample loans
+  const [localDemoLiabilities, setLocalDemoLiabilities] = useState<LiabilityDto[]>(DEMO_LIABILITIES);
+
   const { liabilityRepo, holdingRepo } = useRepositories();
 
   // Query 1: Liabilities list
@@ -185,13 +188,22 @@ export function LiabilitiesPage() {
   // Mutation: Delete Liability
   const deleteLiabilityMutation = useMutation({
     mutationFn: async (id: string) => {
+      // 1. If it's a demo loan, remove from local state without sending invalid UUID to PostgreSQL
+      if (id.startsWith('demo-')) {
+        setLocalDemoLiabilities((prev) => prev.filter((l) => l.id !== id));
+        return;
+      }
+
+      // 2. Real database loan for authenticated user
       const useCase = new DeleteLiabilityUseCase(liabilityRepo);
       const res = await useCase.execute(id, userId);
       if (!res.success) throw res.error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['liabilities-list', userId] });
-      queryClient.invalidateQueries({ queryKey: ['net-worth-summary', userId] });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ['liabilities-list', userId] });
+        queryClient.invalidateQueries({ queryKey: ['net-worth-summary', userId] });
+      }
     },
   });
 
@@ -250,14 +262,14 @@ export function LiabilitiesPage() {
         updatedAt: item.startDate,
       }));
     }
-    const base: readonly LiabilityDto[] = liabilities.length > 0 ? liabilities : DEMO_LIABILITIES;
+    const base: readonly LiabilityDto[] = liabilities.length > 0 ? liabilities : localDemoLiabilities;
     if (!selectedMemberId || selectedMemberId === 'all') return base;
     return base.filter(
       (l) =>
         l.memberId === selectedMemberId ||
         (l.coBorrowerMemberIds && l.coBorrowerMemberIds.includes(selectedMemberId))
     );
-  }, [isSupportModeActive, supportData, liabilities, selectedMemberId]);
+  }, [isSupportModeActive, supportData, liabilities, localDemoLiabilities, selectedMemberId]);
 
   const effectiveSummary: NetWorthSummary = useMemo(() => {
     if (netWorthSummary) return netWorthSummary;
