@@ -31,3 +31,4 @@ export class UpdateHoldingValuesUseCase {
     return ok(undefined);
   }
 }
+
