@@ -46,16 +46,27 @@ At the top of the Portfolio dashboard, the **Market Session Badge** continuously
 
 ---
 
-## 📄 Automated CAS Statement Import (CDSL & NSDL)
+## 📄 Automated CAS Statement Import (CDSL, NSDL, CAMS & KFintech)
 
 Instead of manually entering dozens of mutual fund folios and stock trades, you can import your official **Consolidated Account Statement (CAS)**:
 
+### Supported CAS Providers:
+1. **CDSL e-CAS** ([mycas.cdslindia.com](https://mycas.cdslindia.com)):
+   - Lists Demat equities, listed ETFs, and Sovereign Gold Bonds (SGBs).
+   - Password: Default is your **10-character PAN in uppercase** or **Date of Birth (DDMMYYYY)**.
+2. **NSDL CAS** ([nsdlcas.nsdl.com](https://nsdlcas.nsdl.com)):
+   - Lists NSDL depository holdings and connected mutual funds.
+   - Password: Default is your **10-character PAN in uppercase**.
+3. **CAMS & KFintech Mutual Fund CAS** ([camsonline.com](https://www.camsonline.com) / [mfs.kfintech.com](https://mfs.kfintech.com)):
+   - Consolidated Account Summary aggregating all AMC direct and regular mutual fund folios.
+   - Password: User-defined password created when submitting the email statement request on CAMS/KFintech portals.
+
 ### How to Import Your CAS Statement:
-1. Download your monthly or quarterly CAS PDF from **CDSL** ([mycas.cdslindia.com](https://mycas.cdslindia.com)) or **NSDL** ([nsdlcas.nsdl.com](https://nsdlcas.nsdl.com)).
+1. Download your CAS PDF from **CDSL**, **NSDL**, or request a Consolidated Summary from **CAMS / KFintech**.
 2. In WealthNest, click the **Import CAS** button on the Portfolio dashboard.
-3. Select your CAS PDF file and enter the statement password (typically your **10-character PAN in uppercase** or **PAN + Date of Birth in DDMMYYYY format**).
-4. WealthNest decrypts and extracts all folios, ISINs, units, and average costs in **browser memory**.
-5. In the preview step, select the **Owning Family Member** (e.g. `Parul Vaghela` or `Shamalbhai HUF`) and the **Target Demat Account**.
+3. Select your CAS PDF file and enter the statement password.
+4. WealthNest decrypts and extracts all folios, ISINs, units, reported NAVs, and cost bases in **browser memory**.
+5. In the preview step, select the **Owning Family Member** (e.g. `Parul Vaghela`, `Krisha Vaghela`, or `Shamalbhai HUF`) and the **Target Demat / Folio Account**.
 6. Click **Confirm & Import**. All positions are immediately synchronized into your active portfolio.
 
 > [!NOTE]

@@ -13,6 +13,7 @@
 The objective of **Phase 2.1** is to provide Indian retail investors with a zero-friction, privacy-first method to import their Consolidated Account Statements (CAS) issued by:
 1. **CDSL (Central Depository Services India Limited)** — e-CAS statements.
 2. **NSDL (National Securities Depository Limited)** — CAS statements.
+3. **CAMS & KFintech** — Consolidated Account Summary (Direct & Regular Mutual Fund folios).
 
 ### Key Capabilities Tested:
 - **Client-Side PDF Decryption & Extraction**: Parsing password-protected PDFs (PAN + DOB) entirely in-memory using `pdfjs-dist`.
@@ -103,6 +104,23 @@ docker exec wealthnest-web-dev npm run build
      - Row 1: **TATA CONSULTANCY SERVICES LTD** (`INE467B01029`) — Qty: 40, Price: ₹4,150.00, Value: ₹1,66,000.00.
      - Row 2: **HDFC BANK LIMITED** (`INE040A01034`) — Qty: 50, Price: ₹1,600.00, Value: ₹80,000.00.
 - **Pass Criteria**: Provider detected as NSDL, ISINs validated, prices and values match statement.
+
+---
+
+### TC-2.1-03B: Instant CAMS / KFintech CAS Fixture Verification (No PDF needed)
+- **Objective**: Verify CAMS & KFintech mutual fund Consolidated Account Summary extraction.
+- **Steps**:
+  1. Open the Import CAS modal.
+  2. Click **"Load Sample CAMS / KFintech CAS (Bandhan, DSP, Nippon MF)"**.
+  3. Verify metadata shows:
+     - **Statement Provider**: CAMS/KFIN CAS.
+     - **Extracted Positions**: 3 mutual fund schemes detected across Bandhan, DSP, and Nippon India.
+     - **Reported Value**: ₹5,11,689.39.
+  4. Inspect table rows under the Mutual Funds tab:
+     - Row 1: **Bandhan Large & Mid Cap Fund-Direct Plan-Growth** (`INF194K01V89`) — Folio: 1895586, Units: 2268.239, NAV: ₹167.224, Value: ₹3,79,304.00, Verified Cost: ₹2,20,948.23.
+     - Row 2: **DSP Mid Cap Fund - Direct Plan - Growth** (`INF740K01PX1`) — Folio: 4685175, Units: 625.535, NAV: ₹168.648, Value: ₹1,05,495.23.
+     - Row 3: **Nippon India Multi Asset Allocation Fund - Direct Growth** (`INF204KB19V4`) — Folio: 499236287077, Units: 999.950, NAV: ₹26.8915, Value: ₹26,890.16.
+- **Pass Criteria**: Provider detected as CAMS_KFIN, scheme names cleaned, units and cost basis verified, and zero floating-point drift.
 
 ---
 
