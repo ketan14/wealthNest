@@ -20,6 +20,7 @@ export * from './use-cases/manage-liability.js';
 export * from './use-cases/record-liability-balance.js';
 export * from './use-cases/record-asset-valuation.js';
 export * from './use-cases/add-holding.js';
+export * from './use-cases/update-holding-values.js';
 export * from './use-cases/delete-holding.js';
 export * from './use-cases/get-cashflow-summary.js';
 export * from './use-cases/record-transaction.js';

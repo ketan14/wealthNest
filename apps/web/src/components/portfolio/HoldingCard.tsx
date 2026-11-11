@@ -1,4 +1,4 @@
-import { Trash2, TrendingUp, TrendingDown } from 'lucide-react';
+import { Trash2, TrendingUp, TrendingDown, Edit2 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { HoldingDetailDto } from '@wealthnest/application';
@@ -8,11 +8,12 @@ export interface HoldingCardProps {
     memberName?: string;
     brokerName?: string;
   };
+  onEdit?: (holding: HoldingDetailDto) => void;
   onDelete?: (holding: HoldingDetailDto) => void;
   isDeleting?: boolean;
 }
 
-export function HoldingCard({ holding, onDelete, isDeleting = false }: HoldingCardProps) {
+export function HoldingCard({ holding, onEdit, onDelete, isDeleting = false }: HoldingCardProps) {
   const totalCostCents = Math.round(holding.quantity * holding.unitCostCents);
   const gainLossCents = holding.currentValueCents - totalCostCents;
   const isGain = gainLossCents >= 0;
@@ -78,19 +79,33 @@ export function HoldingCard({ holding, onDelete, isDeleting = false }: HoldingCa
           </div>
         </div>
 
-        {onDelete && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => onDelete(holding)}
-            disabled={isDeleting}
-            aria-label={`Delete ${holding.name}`}
-            className="text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 min-h-[44px] min-w-[44px] p-2 shrink-0 -mr-2 -mt-2"
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
-        )}
+        <div className="flex items-center gap-1 shrink-0 -mr-2 -mt-2">
+          {onEdit && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit(holding)}
+              aria-label={`Edit ${holding.name}`}
+              className="text-muted-foreground hover:text-primary hover:bg-primary/10 min-h-[44px] min-w-[44px] p-2"
+            >
+              <Edit2 className="w-4 h-4" />
+            </Button>
+          )}
+          {onDelete && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(holding)}
+              disabled={isDeleting}
+              aria-label={`Delete ${holding.name}`}
+              className="text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 min-h-[44px] min-w-[44px] p-2"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Financial Details Grid */}

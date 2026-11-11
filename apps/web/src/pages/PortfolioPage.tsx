@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { AddHoldingModal, NewHoldingFormValues } from '@/components/portfolio/AddHoldingModal';
+import { EditHoldingModal, UpdateHoldingFormValues } from '@/components/portfolio/EditHoldingModal';
 import { ImportCasModal } from '@/components/portfolio/ImportCasModal';
 import { HoldingCard } from '@/components/portfolio/HoldingCard';
 import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
@@ -26,6 +27,7 @@ import { useIsMobile } from '@/lib/hooks/use-is-mobile';
 import {
   PieChart,
   Plus,
+  Edit2,
   Trash2,
   TrendingUp,
   TrendingDown,
@@ -245,6 +247,7 @@ export function PortfolioPage() {
   const { currencySymbol, preferences } = usePreferences();
   const locale = preferences.numberFormat || 'en-IN';
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingHolding, setEditingHolding] = useState<HoldingDetailDto | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -602,11 +605,58 @@ export function PortfolioPage() {
       setDeletingId(null);
       if (user) {
         queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['portfolio-holdings', user.id] });
       }
     },
     onError: (err) => {
       setDeletingId(null);
       setDeleteError(err instanceof Error ? err.message : 'Failed to delete holding.');
+    },
+  });
+
+  // Mutation: Update Existing Holding Values (Valuations & Units)
+  const updateHoldingMutation = useMutation({
+    mutationFn: async (values: UpdateHoldingFormValues) => {
+      const unitCostCents = Math.round(values.unitCost * 100);
+      const currentValueCents = Math.round(values.currentValue * 100);
+
+      // 1. If it's a demo holding, update in local demo state
+      if (values.holdingId.startsWith('demo-')) {
+        setLocalDemoHoldings((prev) =>
+          prev.map((h) =>
+            h.holdingId === values.holdingId
+              ? {
+                  ...h,
+                  quantity: values.quantity,
+                  unitCostCents,
+                  currentValueCents,
+                  updatedAt: new Date().toISOString(),
+                }
+              : h
+          )
+        );
+        return;
+      }
+
+      // 2. If authenticated user and real database holding
+      if (user) {
+        if (holdingAdapter.updateHoldingValues) {
+          const res = await holdingAdapter.updateHoldingValues({
+            holdingId: values.holdingId,
+            userId: user.id,
+            quantity: values.quantity,
+            unitCostCents,
+            currentValueCents,
+          });
+          if (!res.success) throw res.error;
+        }
+      }
+    },
+    onSuccess: () => {
+      if (user) {
+        queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['portfolio-holdings', user.id] });
+      }
     },
   });
 
@@ -1253,18 +1303,27 @@ export function PortfolioPage() {
                             </div>
                           </td>
                           <td className="py-3.5 px-4 text-center">
-                            <button
-                              disabled={deletingId === h.holdingId}
-                              onClick={() => handleDeleteRequest(h)}
-                              title="Delete Position"
-                              className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                            >
-                              {deletingId === h.holdingId ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
-                              ) : (
-                                <Trash2 className="w-3.5 h-3.5" />
-                              )}
-                            </button>
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => setEditingHolding(h)}
+                                title="Edit / Update Valuation"
+                                className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                disabled={deletingId === h.holdingId}
+                                onClick={() => handleDeleteRequest(h)}
+                                title="Delete Position"
+                                className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                              >
+                                {deletingId === h.holdingId ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
+                                ) : (
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1488,18 +1547,27 @@ export function PortfolioPage() {
                             )}
                           </td>
                           <td className="py-3.5 px-4 text-center">
-                            <button
-                              disabled={deletingId === h.holdingId}
-                              onClick={() => handleDeleteRequest(h)}
-                              title="Delete Position"
-                              className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                            >
-                              {deletingId === h.holdingId ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
-                              ) : (
-                                <Trash2 className="w-3.5 h-3.5" />
-                              )}
-                            </button>
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => setEditingHolding(h)}
+                                title="Edit / Update Valuation"
+                                className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                disabled={deletingId === h.holdingId}
+                                onClick={() => handleDeleteRequest(h)}
+                                title="Delete Position"
+                                className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                              >
+                                {deletingId === h.holdingId ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
+                                ) : (
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1720,18 +1788,27 @@ export function PortfolioPage() {
                                   </div>
                                 </td>
                                 <td className="py-3 px-4 text-center">
-                                  <button
-                                    disabled={deletingId === h.holdingId}
-                                    onClick={() => handleDeleteRequest(h)}
-                                    title="Delete Position"
-                                    className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                                  >
-                                    {deletingId === h.holdingId ? (
-                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
-                                    ) : (
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    )}
-                                  </button>
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button
+                                      onClick={() => setEditingHolding(h)}
+                                      title="Edit / Update Valuation"
+                                      className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                    >
+                                      <Edit2 className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      disabled={deletingId === h.holdingId}
+                                      onClick={() => handleDeleteRequest(h)}
+                                      title="Delete Position"
+                                      className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                    >
+                                      {deletingId === h.holdingId ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
+                                      ) : (
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      )}
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -1778,6 +1855,7 @@ export function PortfolioPage() {
                     <HoldingCard
                       key={h.holdingId}
                       holding={h}
+                      onEdit={(item) => setEditingHolding(item)}
                       onDelete={() => handleDeleteRequest(h)}
                       isDeleting={deletingId === h.holdingId}
                     />
@@ -1998,20 +2076,29 @@ export function PortfolioPage() {
                               )}
                             </td>
 
-                            {/* Delete Action */}
+                            {/* Edit & Delete Action */}
                             <td className="py-3.5 px-4 text-center">
-                              <button
-                                disabled={deletingId === h.holdingId}
-                                onClick={() => handleDeleteRequest(h)}
-                                title="Delete Position"
-                                className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                              >
-                                {deletingId === h.holdingId ? (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
-                                ) : (
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                )}
-                              </button>
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={() => setEditingHolding(h)}
+                                  title="Edit / Update Valuation"
+                                  className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  disabled={deletingId === h.holdingId}
+                                  onClick={() => handleDeleteRequest(h)}
+                                  title="Delete Position"
+                                  className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                >
+                                  {deletingId === h.holdingId ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
+                                  ) : (
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -2033,6 +2120,17 @@ export function PortfolioPage() {
           await addHoldingMutation.mutateAsync(values);
         }}
         isLoading={addHoldingMutation.isPending}
+      />
+
+      {/* Edit Holding / Update Valuation Modal */}
+      <EditHoldingModal
+        isOpen={Boolean(editingHolding)}
+        holding={editingHolding}
+        onClose={() => setEditingHolding(null)}
+        onSubmit={async (values) => {
+          await updateHoldingMutation.mutateAsync(values);
+        }}
+        isLoading={updateHoldingMutation.isPending}
       />
 
       {/* CAS PDF Importer Modal */}
