@@ -8,6 +8,7 @@ import {
 } from '@wealthnest/application';
 import { useHoldingRepository } from '@/lib/persistence/repository-context';
 import { useFamily } from '@/lib/family/family-context';
+import { usePreferences } from '@/lib/preferences/preferences-context';
 import { Button } from '@/components/ui/Button';
 import { X, Landmark, AlertCircle, Building2, User, Users } from 'lucide-react';
 
@@ -48,6 +49,7 @@ export function AddLiabilityModal({
   const isEditing = Boolean(liabilityToEdit);
 
   const { members, selectedMemberId } = useFamily();
+  const { currencySymbol } = usePreferences();
   const [memberId, setMemberId] = useState<string>('mem-self');
   const [coBorrowerMemberIds, setCoBorrowerMemberIds] = useState<string[]>([]);
   const [name, setName] = useState('');
@@ -369,7 +371,7 @@ export function AddLiabilityModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                Original Sanctioned Principal (₹) <span className="text-destructive">*</span>
+                Original Sanctioned Principal ({currencySymbol}) <span className="text-destructive">*</span>
               </label>
               <input
                 type="number"
@@ -391,7 +393,7 @@ export function AddLiabilityModal({
             {!isEditing && (
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                  Current Outstanding Principal (₹)
+                  Current Outstanding Principal ({currencySymbol})
                 </label>
                 <input
                   type="number"
@@ -441,7 +443,7 @@ export function AddLiabilityModal({
 
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                Monthly EMI (₹)
+                Monthly EMI ({currencySymbol})
               </label>
               <input
                 type="number"

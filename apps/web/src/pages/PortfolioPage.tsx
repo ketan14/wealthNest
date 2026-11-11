@@ -49,6 +49,7 @@ import { MarketQuoteDto } from '@wealthnest/application';
 import { useLiveMarketFeed } from '@/lib/market/useLiveMarketFeed';
 import { useFamily } from '@/lib/family/family-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
+import { usePreferences } from '@/lib/preferences/preferences-context';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { FamilyDistributionWidget } from '@/components/family/FamilyDistributionWidget';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
@@ -241,6 +242,8 @@ export function PortfolioPage() {
   const queryClient = useQueryClient();
   const { selectedMemberId, selectedAccountId, members, accounts } = useFamily();
   const { isSupportModeActive, supportData } = useSupportSession();
+  const { currencySymbol, preferences } = usePreferences();
+  const locale = preferences.numberFormat || 'en-IN';
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
@@ -1196,8 +1199,8 @@ export function PortfolioPage() {
                               return (
                                 <div>
                                   <div className="font-bold text-foreground">
-                                    ₹
-                                    {price.toLocaleString('en-IN', {
+                                    {currencySymbol}
+                                    {price.toLocaleString(locale, {
                                       minimumFractionDigits: 2,
                                       maximumFractionDigits: 2,
                                     })}
@@ -1224,8 +1227,8 @@ export function PortfolioPage() {
                             })()}
                           </td>
                           <td className="py-3.5 px-4 text-right font-bold text-foreground">
-                            ₹
-                            {(h.currentValueCents / 100).toLocaleString('en-IN', {
+                            {currencySymbol}
+                            {(h.currentValueCents / 100).toLocaleString(locale, {
                               minimumFractionDigits: 2,
                             })}
                           </td>
@@ -1237,8 +1240,8 @@ export function PortfolioPage() {
                                   : 'text-rose-400 font-semibold'
                               }
                             >
-                              {isGain ? '+' : '-'}₹
-                              {(Math.abs(gainLossCents) / 100).toLocaleString('en-IN', {
+                              {isGain ? '+' : '-'}{currencySymbol}
+                              {(Math.abs(gainLossCents) / 100).toLocaleString(locale, {
                                 minimumFractionDigits: 2,
                               })}
                             </span>
@@ -1280,14 +1283,14 @@ export function PortfolioPage() {
                         })}
                       </td>
                       <td className="py-3 px-4 text-right text-muted-foreground">
-                        Cost: ₹
-                        {(equitiesSubtotals.totalCostCents / 100).toLocaleString('en-IN', {
+                        Cost: {currencySymbol}
+                        {(equitiesSubtotals.totalCostCents / 100).toLocaleString(locale, {
                           minimumFractionDigits: 2,
                         })}
                       </td>
                       <td className="py-3 px-4 text-right font-bold text-foreground">
-                        ₹
-                        {(equitiesSubtotals.totalValueCents / 100).toLocaleString('en-IN', {
+                        {currencySymbol}
+                        {(equitiesSubtotals.totalValueCents / 100).toLocaleString(locale, {
                           minimumFractionDigits: 2,
                         })}
                       </td>
@@ -1299,9 +1302,9 @@ export function PortfolioPage() {
                               : 'text-rose-400'
                           }
                         >
-                          {equitiesSubtotals.gainLossCents >= 0 ? '+' : '-'}₹
+                          {equitiesSubtotals.gainLossCents >= 0 ? '+' : '-'}{currencySymbol}
                           {(Math.abs(equitiesSubtotals.gainLossCents) / 100).toLocaleString(
-                            'en-IN',
+                            locale,
                             { minimumFractionDigits: 2 }
                           )}
                         </span>
@@ -1420,8 +1423,8 @@ export function PortfolioPage() {
                             {h.quantity.toLocaleString('en-IN', { maximumFractionDigits: 4 })}
                           </td>
                           <td className="py-3.5 px-4 text-right text-muted-foreground">
-                            ₹
-                            {navPerUnit.toLocaleString('en-IN', {
+                            {currencySymbol}
+                            {navPerUnit.toLocaleString(locale, {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 4,
                             })}
@@ -1430,8 +1433,8 @@ export function PortfolioPage() {
                             {h.costBasisVerified ? (
                               <div>
                                 <div className="text-foreground font-semibold">
-                                  ₹
-                                  {(totalCostCents / 100).toLocaleString('en-IN', {
+                                  {currencySymbol}
+                                  {(totalCostCents / 100).toLocaleString(locale, {
                                     minimumFractionDigits: 2,
                                   })}
                                 </div>
@@ -1451,8 +1454,8 @@ export function PortfolioPage() {
                             )}
                           </td>
                           <td className="py-3.5 px-4 text-right font-bold text-foreground">
-                            ₹
-                            {(h.currentValueCents / 100).toLocaleString('en-IN', {
+                            {currencySymbol}
+                            {(h.currentValueCents / 100).toLocaleString(locale, {
                               minimumFractionDigits: 2,
                             })}
                           </td>
@@ -1466,8 +1469,8 @@ export function PortfolioPage() {
                                       : 'text-rose-400 font-semibold'
                                   }
                                 >
-                                  {isGain ? '+' : '-'}₹
-                                  {(Math.abs(gainLossCents) / 100).toLocaleString('en-IN', {
+                                  {isGain ? '+' : '-'}{currencySymbol}
+                                  {(Math.abs(gainLossCents) / 100).toLocaleString(locale, {
                                     minimumFractionDigits: 2,
                                   })}
                                 </span>
@@ -1516,14 +1519,14 @@ export function PortfolioPage() {
                       </td>
                       <td className="py-3 px-4"></td>
                       <td className="py-3 px-4 text-right text-muted-foreground">
-                        Verified: ₹
-                        {(mfSubtotals.totalVerifiedCostCents / 100).toLocaleString('en-IN', {
+                        Verified: {currencySymbol}
+                        {(mfSubtotals.totalVerifiedCostCents / 100).toLocaleString(locale, {
                           minimumFractionDigits: 2,
                         })}
                       </td>
                       <td className="py-3 px-4 text-right font-bold text-foreground">
-                        ₹
-                        {(mfSubtotals.totalValueCents / 100).toLocaleString('en-IN', {
+                        {currencySymbol}
+                        {(mfSubtotals.totalValueCents / 100).toLocaleString(locale, {
                           minimumFractionDigits: 2,
                         })}
                       </td>
@@ -1535,9 +1538,9 @@ export function PortfolioPage() {
                               : 'text-rose-400'
                           }
                         >
-                          {mfSubtotals.verifiedGainLossCents >= 0 ? '+' : '-'}₹
+                          {mfSubtotals.verifiedGainLossCents >= 0 ? '+' : '-'}{currencySymbol}
                           {(Math.abs(mfSubtotals.verifiedGainLossCents) / 100).toLocaleString(
-                            'en-IN',
+                            locale,
                             { minimumFractionDigits: 2 }
                           )}
                         </span>
@@ -1686,8 +1689,8 @@ export function PortfolioPage() {
                                 <td className="py-3 px-4 text-right text-muted-foreground">
                                   <div>{costBasisFormatted}</div>
                                   <div className="text-[10px] text-muted-foreground/80">
-                                    ₹
-                                    {(h.unitCostCents / 100).toLocaleString('en-IN', {
+                                    {currencySymbol}
+                                    {(h.unitCostCents / 100).toLocaleString(locale, {
                                       minimumFractionDigits: 2,
                                     })}
                                     /u
@@ -1914,8 +1917,8 @@ export function PortfolioPage() {
                                 <>
                                   <div>{costBasisFormatted}</div>
                                   <div className="text-[10px] text-muted-foreground/80">
-                                    ₹
-                                    {(h.unitCostCents / 100).toLocaleString('en-IN', {
+                                    {currencySymbol}
+                                    {(h.unitCostCents / 100).toLocaleString(locale, {
                                       minimumFractionDigits: 2,
                                     })}
                                     /u
@@ -1945,8 +1948,8 @@ export function PortfolioPage() {
                                 return (
                                   <div className="flex items-center justify-end gap-1 text-[10px] mt-0.5 font-normal">
                                     <span className="text-muted-foreground font-mono">
-                                      {isStock ? 'CMP: ' : 'NAV: '}₹
-                                      {(q.priceCents / 100).toLocaleString('en-IN', {
+                                      {isStock ? 'CMP: ' : 'NAV: '}{currencySymbol}
+                                      {(q.priceCents / 100).toLocaleString(locale, {
                                         minimumFractionDigits: 2,
                                       })}
                                     </span>

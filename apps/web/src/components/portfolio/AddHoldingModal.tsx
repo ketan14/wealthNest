@@ -6,6 +6,7 @@ import { useAssetClassRepository } from '@/lib/persistence/repository-context';
 import { Button } from '@/components/ui/Button';
 import { X, Plus, AlertCircle, Loader2, Users, Briefcase } from 'lucide-react';
 import { useFamily } from '@/lib/family/family-context';
+import { usePreferences } from '@/lib/preferences/preferences-context';
 
 export interface NewHoldingFormValues {
   name: string;
@@ -99,6 +100,7 @@ export function AddHoldingModal({
   isLoading = false,
 }: AddHoldingModalProps) {
   const { members, accounts, selectedMemberId, selectedAccountId } = useFamily();
+  const { currencySymbol } = usePreferences();
 
   const [name, setName] = useState('');
   const [ticker, setTicker] = useState('');
@@ -538,7 +540,7 @@ export function AddHoldingModal({
 
             <div>
               <label className="text-xs font-medium text-muted-foreground block mb-1">
-                {isMutualFund ? 'Purchase NAV (₹)' : isEquity ? 'Buy Price (₹)' : 'Unit Cost (₹)'}{' '}
+                {isMutualFund ? `Purchase NAV (${currencySymbol})` : isEquity ? `Buy Price (${currencySymbol})` : `Unit Cost (${currencySymbol})`}{' '}
                 <span className="text-destructive">*</span>
               </label>
               <input
@@ -554,7 +556,7 @@ export function AddHoldingModal({
 
             <div>
               <label className="text-xs font-medium text-muted-foreground block mb-1">
-                Current Total Value (₹)
+                Current Total Value ({currencySymbol})
               </label>
               <input
                 type="number"

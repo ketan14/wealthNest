@@ -12,6 +12,7 @@ import {
   Briefcase,
 } from 'lucide-react';
 import { useFamily } from '@/lib/family/family-context';
+import { usePreferences } from '@/lib/preferences/preferences-context';
 
 export interface NewTransactionFormValues {
   type: TransactionType;
@@ -87,6 +88,7 @@ export function RecordTransactionModal({
   availableAssets = [],
 }: RecordTransactionModalProps) {
   const { members, accounts, selectedMemberId, selectedAccountId } = useFamily();
+  const { currencySymbol, currencyCode } = usePreferences();
 
   const [type, setType] = useState<TransactionType>('buy');
   const [selectedAssetId, setSelectedAssetId] = useState<string>('');
@@ -356,7 +358,7 @@ export function RecordTransactionModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-muted-foreground block mb-1">
-                Amount (INR ₹) <span className="text-destructive">*</span>
+                Amount ({currencyCode} {currencySymbol}) <span className="text-destructive">*</span>
               </label>
               <input
                 type="number"

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { GoalCategory, GoalPriority, Money } from '@wealthnest/domain';
 import { CreateGoalParams } from '@wealthnest/application';
 import { useFamily } from '@/lib/family/family-context';
+import { usePreferences } from '@/lib/preferences/preferences-context';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import {
@@ -96,6 +97,7 @@ export function AddGoalModal({
   isSubmitting = false,
 }: AddGoalModalProps) {
   const { members, selectedMemberId } = useFamily();
+  const { currencySymbol, currencyCode } = usePreferences();
   const [name, setName] = useState('');
   const [category, setCategory] = useState<GoalCategory>('wealth_creation');
   const [memberId, setMemberId] = useState<string>(
@@ -287,7 +289,7 @@ export function AddGoalModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
-                <span>Target Corpus (₹ INR)</span>
+                <span>Target Corpus ({currencySymbol} {currencyCode})</span>
                 {targetCents > 0 && (
                   <Badge
                     variant="outline"
@@ -299,7 +301,7 @@ export function AddGoalModal({
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-mono">
-                  ₹
+                  {currencySymbol}
                 </span>
                 <input
                   type="number"
@@ -336,7 +338,7 @@ export function AddGoalModal({
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-mono">
-                  ₹
+                  {currencySymbol}
                 </span>
                 <input
                   type="number"
@@ -355,7 +357,7 @@ export function AddGoalModal({
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-mono">
-                  ₹
+                  {currencySymbol}
                 </span>
                 <input
                   type="number"

@@ -45,6 +45,7 @@ import {
 import { Link } from 'react-router-dom';
 import { useFamily } from '@/lib/family/family-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
+import { usePreferences } from '@/lib/preferences/preferences-context';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 
@@ -207,6 +208,8 @@ export function TransactionsPage() {
   };
 
   const { transactionRepo: transactionAdapter, holdingRepo: holdingAdapter } = useRepositories();
+  const { currencySymbol, currencyCode, preferences } = usePreferences();
+  const locale = preferences.numberFormat || 'en-IN';
 
   // Query user holdings for asset dropdown in modal
   const { data: userHoldings } = useQuery({
@@ -751,7 +754,7 @@ export function TransactionsPage() {
                           Quantity
                         </th>
                         <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
-                          Amount (₹)
+                          Amount ({currencySymbol})
                         </th>
                         <th className="py-3 px-4 font-semibold uppercase tracking-wider">
                           Audit Notes
@@ -772,9 +775,9 @@ export function TransactionsPage() {
                             year: 'numeric',
                           }
                         );
-                        const formattedAmount = (tx.amountCents / 100).toLocaleString('en-IN', {
+                        const formattedAmount = (tx.amountCents / 100).toLocaleString(locale, {
                           style: 'currency',
-                          currency: tx.currency || 'INR',
+                          currency: tx.currency || currencyCode,
                         });
 
                         // Type color badges

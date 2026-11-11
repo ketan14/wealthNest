@@ -102,16 +102,34 @@ export class SupabaseUserAdapter implements UserRepositoryPort {
         return ok(undefined);
       }
 
-      const { error } = await supabase.from('profiles').upsert({
-        id: user.id,
+      const row = {
         display_name: user.displayName,
         default_currency: user.defaultCurrency,
         updated_at: new Date().toISOString(),
-      });
+      };
 
-      if (error) {
-        // If Supabase is in mock/offline mode, we still consider save succeeded locally
-        console.warn('Supabase profile upsert warning (offline mode fallback):', error.message);
+      // Profiles are created by the signup trigger, so UPDATE is the normal path (covered by the
+      // "update own profile" RLS policy). A bare upsert would also require an INSERT policy and
+      // silently left default_currency at its DB default after every refresh.
+      const { data: updatedRows, error: updateError } = await supabase
+        .from('profiles')
+        .update(row)
+        .eq('id', user.id)
+        .select('id');
+
+      if (updateError) {
+        console.error('Failed to persist user profile to Supabase:', updateError.message);
+        return err(new Error(`Could not save profile: ${updateError.message}`));
+      }
+
+      if (!updatedRows || updatedRows.length === 0) {
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({ id: user.id, ...row });
+        if (insertError) {
+          console.error('Failed to create user profile in Supabase:', insertError.message);
+          return err(new Error(`Could not save profile: ${insertError.message}`));
+        }
       }
 
       return ok(undefined);
@@ -150,7 +168,8 @@ export class SupabaseUserAdapter implements UserRepositoryPort {
         updatedAt: new Date().toISOString(),
       };
 
-      await this.save(updatedProfile);
+      const saveRes = await this.save(updatedProfile);
+      if (!saveRes.success) return err(saveRes.error);
       return ok(updatedProfile);
     } catch (e: any) {
       return err(new Error(e?.message || 'Error updating preferences'));

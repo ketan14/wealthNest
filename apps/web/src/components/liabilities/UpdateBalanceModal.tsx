@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { LiabilityDto } from '@wealthnest/application';
 import { useLiabilityRepository } from '@/lib/persistence/repository-context';
+import { usePreferences } from '@/lib/preferences/preferences-context';
 import { Button } from '@/components/ui/Button';
 import { X, History, AlertCircle, ArrowDownCircle } from 'lucide-react';
 
@@ -20,6 +21,8 @@ export function UpdateBalanceModal({
   userId,
   onSuccess,
 }: UpdateBalanceModalProps) {
+  const { currencySymbol, preferences } = usePreferences();
+  const locale = preferences.numberFormat || 'en-IN';
   const [balanceStr, setBalanceStr] = useState('');
   const [asOfDate, setAsOfDate] = useState('');
   const [source, setSource] = useState('loan_statement');
@@ -58,7 +61,7 @@ export function UpdateBalanceModal({
 
     const balance = parseFloat(balanceStr);
     if (isNaN(balance) || balance < 0) {
-      setErrorMsg('Please enter a valid outstanding balance (₹0 or greater).');
+      setErrorMsg(`Please enter a valid outstanding balance (${currencySymbol}0 or greater).`);
       return;
     }
 
@@ -130,20 +133,20 @@ export function UpdateBalanceModal({
             <div className="flex justify-between">
               <span>Original Sanctioned:</span>
               <span className="font-mono font-medium text-foreground">
-                ₹{(Number(liability.originalPrincipalCents) / 100).toLocaleString('en-IN')}
+                {currencySymbol}{(Number(liability.originalPrincipalCents) / 100).toLocaleString(locale)}
               </span>
             </div>
             <div className="flex justify-between">
               <span>Last Recorded Balance:</span>
               <span className="font-mono font-medium text-primary">
-                ₹{(Number(liability.currentBalanceCents) / 100).toLocaleString('en-IN')}
+                {currencySymbol}{(Number(liability.currentBalanceCents) / 100).toLocaleString(locale)}
               </span>
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-              New Outstanding Principal Balance (₹) <span className="text-destructive">*</span>
+              New Outstanding Principal Balance ({currencySymbol}) <span className="text-destructive">*</span>
             </label>
             <input
               type="number"
@@ -218,7 +221,7 @@ export function UpdateBalanceModal({
                   >
                     <div>
                       <span className="font-semibold text-foreground">
-                        ₹{(Number(b.balanceCents) / 100).toLocaleString('en-IN')}
+                        {currencySymbol}{(Number(b.balanceCents) / 100).toLocaleString(locale)}
                       </span>
                       {b.notes && (
                         <span className="text-[11px] text-muted-foreground ml-2">({b.notes})</span>

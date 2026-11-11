@@ -24,6 +24,7 @@ import { AddGoalModal } from '@/components/goals/AddGoalModal';
 import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
 import { useFamily } from '@/lib/family/family-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
+import { usePreferences } from '@/lib/preferences/preferences-context';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 import {
@@ -163,6 +164,8 @@ export function GoalsPage() {
   const { members, selectedMemberId } = useFamily();
   const { isSupportModeActive } = useSupportSession();
   const { goalRepo, holdingRepo } = useRepositories();
+  const { currencySymbol, preferences } = usePreferences();
+  const locale = preferences.numberFormat || 'en-IN';
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
@@ -522,8 +525,8 @@ export function GoalsPage() {
                 Monthly Living Expense:
               </span>
               <div className="flex items-center gap-1.5 px-3 py-1 bg-accent/40 rounded-xl border border-border/80 text-xs font-mono font-bold text-foreground">
-                <span>₹</span>
-                <span>{monthlyExpenseRupees.toLocaleString('en-IN')}</span>
+                <span>{currencySymbol}</span>
+                <span>{monthlyExpenseRupees.toLocaleString(locale)}</span>
               </div>
             </div>
           </div>

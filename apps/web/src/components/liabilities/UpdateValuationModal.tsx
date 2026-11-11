@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLiabilityRepository } from '@/lib/persistence/repository-context';
+import { usePreferences } from '@/lib/preferences/preferences-context';
 import { Button } from '@/components/ui/Button';
 import { X, Building2, AlertCircle } from 'lucide-react';
 
@@ -22,6 +23,7 @@ export function UpdateValuationModal({
   userId,
   onSuccess,
 }: UpdateValuationModalProps) {
+  const { currencySymbol } = usePreferences();
   const liabilityRepo = useLiabilityRepository();
   const [valuationStr, setValuationStr] = useState('');
   const [asOfDate, setAsOfDate] = useState('');
@@ -48,7 +50,7 @@ export function UpdateValuationModal({
 
     const val = parseFloat(valuationStr);
     if (isNaN(val) || val < 0) {
-      setErrorMsg('Please enter a valid property valuation (₹0 or greater).');
+      setErrorMsg(`Please enter a valid property valuation (${currencySymbol}0 or greater).`);
       return;
     }
 
@@ -115,7 +117,7 @@ export function UpdateValuationModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-              New Appraised Value (₹) <span className="text-destructive">*</span>
+              New Appraised Value ({currencySymbol}) <span className="text-destructive">*</span>
             </label>
             <input
               type="number"

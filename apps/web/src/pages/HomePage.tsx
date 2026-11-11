@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { AuthCard } from '@/components/auth/AuthCard';
 import { useRepositories } from '@/lib/persistence/repository-context';
 import { useAuth } from '@/lib/supabase/auth-context';
+import { usePreferences } from '@/lib/preferences/preferences-context';
 import {
   CheckCircle2,
   Layers,
@@ -32,6 +33,8 @@ export function HomePage() {
   const { user } = useAuth();
   const userId = user?.id || '';
   const { assetClassRepo, holdingRepo, liabilityRepo } = useRepositories();
+  const { currencySymbol, preferences } = usePreferences();
+  const locale = preferences.numberFormat || 'en-IN';
 
   // Query 1: System status use case
   const { data: systemStatus, isLoading } = useQuery<SystemStatusDto>({
@@ -154,13 +157,13 @@ export function HomePage() {
                 isSolvent ? 'text-emerald-400' : 'text-rose-400'
               }`}
             >
-              {isSolvent ? '₹' : '-₹'}
-              {netWorth.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              {isSolvent ? currencySymbol : `-${currencySymbol}`}
+              {netWorth.toLocaleString(locale, { maximumFractionDigits: 0 })}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-xs text-muted-foreground">
-              Assets (₹{totalAssets.toLocaleString('en-IN', { maximumFractionDigits: 0 })}) - Debt
+              Assets ({currencySymbol}{totalAssets.toLocaleString(locale, { maximumFractionDigits: 0 })}) - Debt
             </p>
           </CardContent>
         </Card>
@@ -173,7 +176,7 @@ export function HomePage() {
               <TrendingDown className="w-4 h-4 text-rose-400" />
             </div>
             <CardTitle className="text-2xl font-bold font-mono tracking-tight text-foreground pt-1">
-              ₹{totalLiabilities.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              {currencySymbol}{totalLiabilities.toLocaleString(locale, { maximumFractionDigits: 0 })}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
@@ -194,7 +197,7 @@ export function HomePage() {
               <Landmark className="w-4 h-4 text-amber-400" />
             </div>
             <CardTitle className="text-2xl font-bold font-mono tracking-tight text-foreground pt-1">
-              ₹{totalMonthlyEmi.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              {currencySymbol}{totalMonthlyEmi.toLocaleString(locale, { maximumFractionDigits: 0 })}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">

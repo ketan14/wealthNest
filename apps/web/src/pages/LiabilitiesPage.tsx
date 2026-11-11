@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useFamily } from '@/lib/family/family-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
+import { usePreferences } from '@/lib/preferences/preferences-context';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 import {
@@ -104,6 +105,8 @@ export function LiabilitiesPage() {
   const queryClient = useQueryClient();
   const { members, selectedMemberId } = useFamily();
   const { isSupportModeActive, supportData } = useSupportSession();
+  const { currencySymbol, preferences } = usePreferences();
+  const locale = preferences.numberFormat || 'en-IN';
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -371,7 +374,7 @@ export function LiabilitiesPage() {
               <TrendingDown className="w-4 h-4 text-rose-400" />
             </div>
             <CardTitle className="text-2xl font-bold font-mono tracking-tight text-foreground pt-1">
-              ₹{totalOutstanding.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              {currencySymbol}{totalOutstanding.toLocaleString(locale, { maximumFractionDigits: 0 })}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
@@ -390,12 +393,12 @@ export function LiabilitiesPage() {
               <Calendar className="w-4 h-4 text-amber-400" />
             </div>
             <CardTitle className="text-2xl font-bold font-mono tracking-tight text-foreground pt-1">
-              ₹{totalMonthlyEmi.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              {currencySymbol}{totalMonthlyEmi.toLocaleString(locale, { maximumFractionDigits: 0 })}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-xs text-muted-foreground">
-              ₹{(totalMonthlyEmi * 12).toLocaleString('en-IN', { maximumFractionDigits: 0 })}/year
+              {currencySymbol}{(totalMonthlyEmi * 12).toLocaleString(locale, { maximumFractionDigits: 0 })}/year
               in debt service
             </p>
           </CardContent>
@@ -443,8 +446,8 @@ export function LiabilitiesPage() {
                 isSolvent ? 'text-emerald-400' : 'text-rose-400'
               }`}
             >
-              {isSolvent ? '₹' : '-₹'}
-              {netWorthVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              {isSolvent ? currencySymbol : `-${currencySymbol}`}
+              {netWorthVal.toLocaleString(locale, { maximumFractionDigits: 0 })}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
@@ -504,7 +507,7 @@ export function LiabilitiesPage() {
                           Property Value
                         </span>
                         <span className="text-sm font-bold font-mono text-foreground">
-                          ₹{propVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                          {currencySymbol}{propVal.toLocaleString(locale, { maximumFractionDigits: 0 })}
                         </span>
                       </div>
 
@@ -513,7 +516,7 @@ export function LiabilitiesPage() {
                           Secured Debt
                         </span>
                         <span className="text-sm font-bold font-mono text-rose-400">
-                          ₹{debtVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                          {currencySymbol}{debtVal.toLocaleString(locale, { maximumFractionDigits: 0 })}
                         </span>
                       </div>
 
@@ -526,8 +529,8 @@ export function LiabilitiesPage() {
                             pe.isNegativeEquity ? 'text-rose-400' : 'text-emerald-400'
                           }`}
                         >
-                          {pe.isNegativeEquity ? '-₹' : '₹'}
-                          {eqVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                          {pe.isNegativeEquity ? `-${currencySymbol}` : currencySymbol}
+                          {eqVal.toLocaleString(locale, { maximumFractionDigits: 0 })}
                         </span>
                       </div>
                     </div>
@@ -767,13 +770,13 @@ export function LiabilitiesPage() {
 
                         {/* Original Principal */}
                         <td className="py-3.5 px-4 text-right font-mono text-muted-foreground">
-                          ₹{origPrincipal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                          {currencySymbol}{origPrincipal.toLocaleString(locale, { maximumFractionDigits: 0 })}
                         </td>
 
                         {/* Current Outstanding */}
                         <td className="py-3.5 px-4 text-right">
                           <div className="font-mono font-bold text-foreground">
-                            ₹{currentBal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                            {currencySymbol}{currentBal.toLocaleString(locale, { maximumFractionDigits: 0 })}
                           </div>
                           {l.lastBalanceDate && (
                             <span className="text-[10px] text-muted-foreground font-sans">
@@ -794,7 +797,7 @@ export function LiabilitiesPage() {
                         <td className="py-3.5 px-4 text-right font-mono">
                           {emi > 0 ? (
                             <span className="font-medium text-foreground">
-                              ₹{emi.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                              {currencySymbol}{emi.toLocaleString(locale, { maximumFractionDigits: 0 })}
                             </span>
                           ) : (
                             <span className="text-muted-foreground">—</span>

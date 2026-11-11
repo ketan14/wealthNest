@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { UserPreferences, DEFAULT_USER_PREFERENCES, Money, UserId } from '@wealthnest/domain';
+import { UserPreferences, DEFAULT_USER_PREFERENCES, Money, UserId, CURRENCIES, CurrencyCode } from '@wealthnest/domain';
 import { useAuth } from '../supabase/auth-context';
 import { userAdapter } from '../supabase/user.adapter';
 
 interface PreferencesContextType {
   preferences: UserPreferences;
+  currencyCode: CurrencyCode;
+  currencySymbol: string;
   displayName: string;
   email: string;
   isLoading: boolean;
@@ -16,6 +18,8 @@ interface PreferencesContextType {
 
 const PreferencesContext = createContext<PreferencesContextType>({
   preferences: DEFAULT_USER_PREFERENCES,
+  currencyCode: 'INR',
+  currencySymbol: '₹',
   displayName: 'WealthNest Investor',
   email: 'investor@wealthnest.in',
   isLoading: false,
@@ -62,9 +66,14 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   }, [userId, user]);
 
   const updatePreferencesHandler = async (partial: Partial<UserPreferences>) => {
-    const updated = { ...preferences, ...partial };
-    setPreferences(updated);
-    await userAdapter.updatePreferences(userId, partial);
+    const previous = preferences;
+    setPreferences({ ...preferences, ...partial });
+    const res = await userAdapter.updatePreferences(userId, partial);
+    if (!res.success) {
+      // Don't pretend a change was saved when it wasn't: roll back so a refresh matches the UI
+      console.error('Failed to save preferences:', res.error.message);
+      setPreferences(previous);
+    }
   };
 
   const updateDisplayNameHandler = async (name: string) => {
@@ -98,10 +107,15 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     };
   }, [preferences.defaultCurrency, preferences.numberFormat]);
 
+  const currencyCode = preferences.defaultCurrency || 'INR';
+  const currencySymbol = CURRENCIES[currencyCode]?.symbol || '₹';
+
   return (
     <PreferencesContext.Provider
       value={{
         preferences,
+        currencyCode,
+        currencySymbol,
         displayName,
         email,
         isLoading,
