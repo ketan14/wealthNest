@@ -31,7 +31,8 @@
 | **Phase 10.6: Multi-Platform Installers & CI Pipeline** | Windows NSIS `.exe` / `.msi` and Android signed `.apk` automated GitHub Actions workflow, Node 22 upgrade, high-resolution multi-platform icon generator | ✅ Complete | ✅ Verified | `.github/workflows/build-installers.yml`, `scripts/generate-icons.py`, multi-res `.ico`/`.icns`, Android mipmaps, Web PWA icons. |
 | **Phase 10.7: LAN Testing & Dynamic Server Connection** | Dynamic server switcher (`ServerConnectionSettings`), transparent Supabase proxy client, automated Windows port forwarding | ✅ Complete | ✅ Verified | Connect mobile/desktop to LAN IP with zero rebuilds. `docs/development/lan-testing.md`, `setup-lan-portproxy.ps1`. 356 tests passing. |
 | **Phase 11: QA Cloud Hosting & Zero-Cost Architecture** | Step-by-step production-parity QA deployment plan, ₹0 billing guarantee (Supabase Free + Spend Cap + Cloudflare Pages), anonymized 3-tier seed script, 7-day inactivity keep-alive workflow | ✅ Complete | ✅ Verified | `docs/deployment/qa-environment-hosting.md`, `supabase/seed_qa.sql`, `.github/workflows/keep-qa-alive.yml`. |
-| **Phase 12: Unified Multi-Currency & CAMS/KFintech Integration** | Single active visual currency display without FX drift, dynamic symbol reactivity across forms/tables, CAMS & KFintech CAS parser domain engine & UI surface | 🟡 In Progress | 🔄 In Review | Steps 1 & 2 complete; UI surface for CAMS in progress. 362 tests passing. |
+| **Phase 12: Unified Multi-Currency & CAMS/KFintech Integration** | Single active visual currency display without FX drift, dynamic symbol reactivity across forms/tables, CAMS & KFintech CAS parser domain engine & UI surface | ✅ Complete | ✅ Verified | Steps 1 & 2 complete; CAMS & KFintech UI and test fixtures active. 362 tests passing. |
+| **Phase 13: Holding Valuations & Dynamic Asset Re-evaluation** | Valuation & quantity update modal across all asset classes (Real Estate appraisal tracking, SGBs, Equities, Mutual Funds, Private Equity) | ✅ Complete | ✅ Verified | `UpdateHoldingValuesUseCase`, `EditHoldingModal.tsx`, desktop table & mobile card integrations. 362 tests passing. |
 
 
 ---
@@ -218,8 +219,10 @@
 | **P0 (Critical)** | **TASK-10** | **Step 1 & 2 Visual Currency Unification Across Web UI** | `apps/web/src/lib/preferences/preferences-context.tsx`<br>`apps/web/src/pages/HomePage.tsx`<br>`apps/web/src/pages/LiabilitiesPage.tsx`<br>`apps/web/src/pages/PortfolioPage.tsx`<br>`apps/web/src/pages/TransactionsPage.tsx`<br>`apps/web/src/pages/GoalsPage.tsx` | ✅ Complete |
 | **P1 (High)** | **TASK-11** | **Surface CAMS / KFintech e-CAS Support in `ImportCasModal.tsx`** | `apps/web/src/components/portfolio/ImportCasModal.tsx` | ✅ Complete |
 | **P1 (High)** | **TASK-12** | **Wire Dynamic Currency in `AnalyticsPage.tsx` Tax Harvest Cards** | `apps/web/src/pages/AnalyticsPage.tsx` | ✅ Complete |
-| **P2 (Medium)** | **TASK-13** | **Working Tree Commit & Database Migration Tracking** | `supabase/migrations/20260101000013_profiles_insert_policy_and_inr_default.sql`<br>`apps/web/src/lib/supabase/user.adapter.ts` | ⏳ Pending |
-| **P2 (Medium)** | **TASK-14** | **Execute Phase 11 QA Cloud Deployment (Cloudflare Pages + Supabase Free)** | `docs/deployment/qa-environment-hosting.md`<br>`supabase/seed_qa.sql` | ⏳ Pending |
+| **P0 (Critical)** | **TASK-13** | **Enable Holding Valuation & Quantity Updates Across All Asset Classes** | `packages/application/src/use-cases/update-holding-values.ts`<br>`apps/web/src/components/portfolio/EditHoldingModal.tsx`<br>`apps/web/src/components/portfolio/HoldingCard.tsx`<br>`apps/web/src/pages/PortfolioPage.tsx` | ✅ Complete |
+| **P1 (High)** | **TASK-14** | **Prevent Non-UUID Demo ID Queries in `LiabilitiesPage.tsx`** | `apps/web/src/pages/LiabilitiesPage.tsx` | ✅ Complete |
+| **P2 (Medium)** | **TASK-15** | **Automated Installers Workflow Execution (Windows .exe + Android .apk)** | `.github/workflows/build-installers.yml` | 🚀 Triggered (`v0.1.0-qa`) |
+| **P2 (Medium)** | **TASK-16** | **Execute Phase 11 QA Cloud Deployment & Database Seed** | `docs/deployment/qa-environment-hosting.md`<br>`supabase/seed_qa.sql` | 🔄 Ready / In Progress |
 
 ### Detailed Pending Checklist
 * [x] **[P0] TASK-10: Single Active Visual Currency Presentation (Step 1 & Step 2)**
@@ -231,10 +234,16 @@
   - Added dedicated sample fixture button (`Load Sample CAMS / KFintech CAS (Bandhan, DSP, Nippon MF)`) for rapid 1-click test ingestion.
 * [x] **[P1] TASK-12: Wire Dynamic Currency in `AnalyticsPage.tsx`**
   - Connected `usePreferences().currencySymbol` and `numberFormat` to tax harvesting opportunities (`Save ~${currencySymbol}...`).
-* [ ] **[P2] TASK-13: Git Commit & Migration Staging**
-  - Commit preference persistence fixes, profile INSERT RLS migration, and currency unification.
-* [ ] **[P2] TASK-14: Cloud QA Deployment Run**
-  - Run `supabase/seed_qa.sql` against remote QA Supabase project and configure Cloudflare Pages deployment.
+* [x] **[P0] TASK-13: Holding Valuations & Quantity Updates (All Asset Classes)**
+  - Implemented `UpdateHoldingValuesUseCase` in `packages/application`.
+  - Created `EditHoldingModal.tsx` with dual mode: manual appraisal tracking for Real Estate, Gold, and Private Equity, and units/buy price editing for traded stocks & mutual funds.
+  - Integrated into desktop tables and mobile `HoldingCard.tsx`.
+* [x] **[P1] TASK-14: Fix Non-UUID Demo Loan Deletion on QA Supabase**
+  - Added `localDemoLiabilities` state in `LiabilitiesPage.tsx` to prevent sending invalid `demo-loan-1` string to PostgreSQL `UUID` column.
+* [x] **[P2] TASK-15: Trigger Automated Windows & Android Installers Build**
+  - Created and pushed release tag `v0.1.0-qa` to origin triggering `.github/workflows/build-installers.yml`.
+* [ ] **[P2] TASK-16: Cloud QA Deployment Run & Seed Execution**
+  - Run `supabase/seed_qa.sql` against remote QA Supabase project.
 
 ---
 
