@@ -221,7 +221,7 @@
 | **P1 (High)** | **TASK-12** | **Wire Dynamic Currency in `AnalyticsPage.tsx` Tax Harvest Cards** | `apps/web/src/pages/AnalyticsPage.tsx` | ✅ Complete |
 | **P0 (Critical)** | **TASK-13** | **Enable Holding Valuation & Quantity Updates Across All Asset Classes** | `packages/application/src/use-cases/update-holding-values.ts`<br>`apps/web/src/components/portfolio/EditHoldingModal.tsx`<br>`apps/web/src/components/portfolio/HoldingCard.tsx`<br>`apps/web/src/pages/PortfolioPage.tsx` | ✅ Complete |
 | **P1 (High)** | **TASK-14** | **Prevent Non-UUID Demo ID Queries in `LiabilitiesPage.tsx`** | `apps/web/src/pages/LiabilitiesPage.tsx` | ✅ Complete |
-| **P2 (Medium)** | **TASK-15** | **Automated Installers Workflow Execution (Windows .exe + Android .apk)** | `.github/workflows/build-installers.yml` | 🚀 Triggered (`v0.1.0-qa`) |
+| **P2 (Medium)** | **TASK-15** | **Automated Installers Workflow Execution (Windows .exe + Android .apk)** | `.github/workflows/build-installers.yml` | ✅ Complete (`v0.1.0-qa`) |
 | **P2 (Medium)** | **TASK-16** | **Execute Phase 11 QA Cloud Deployment & Database Seed** | `docs/deployment/qa-environment-hosting.md`<br>`supabase/seed_qa.sql` | 🔄 Ready / In Progress |
 
 ### Detailed Pending Checklist
@@ -242,6 +242,11 @@
   - Added `localDemoLiabilities` state in `LiabilitiesPage.tsx` to prevent sending invalid `demo-loan-1` string to PostgreSQL `UUID` column.
 * [x] **[P2] TASK-15: Trigger Automated Windows & Android Installers Build**
   - Created and pushed release tag `v0.1.0-qa` to origin triggering `.github/workflows/build-installers.yml`.
+  - GitHub Actions successfully compiled, signed, and published release artifacts to [Release v0.1.0-qa](https://github.com/ketan14/wealthNest/releases/tag/v0.1.0-qa):
+    - `WealthNest_0.1.0_x64-setup.exe` (Windows NSIS Setup)
+    - `WealthNest_0.1.0_x64_en-US.msi` (Windows MSI Installer)
+    - `wealthnest.exe` (Standalone Windows Executable)
+    - `wealthnest-offline-signed.apk` (Signed Installable Android Package)
 * [ ] **[P2] TASK-16: Cloud QA Deployment Run & Seed Execution**
   - Run `supabase/seed_qa.sql` against remote QA Supabase project.
 
