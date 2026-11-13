@@ -41,6 +41,7 @@ import { useFamily } from '@/lib/family/family-context';
 import { FamilyDistributionWidget } from '@/components/family/FamilyDistributionWidget';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 import { ServerConnectionSettings } from '@/components/settings/ServerConnectionSettings';
+import { HouseholdSharingCard } from '@/components/settings/HouseholdSharingCard';
 import { saveTextFile, openTextFile } from '@/lib/tauri/tauri-file-dialog';
 import { isTauri } from '@/lib/tauri/tauri-runtime';
 
@@ -566,6 +567,9 @@ export function SettingsPage() {
 
           {/* Family Wealth & Multi-PAN Distribution Widget */}
           <FamilyDistributionWidget />
+
+          {/* Phase 14: Multi-User Household Collaboration & Login Sharing */}
+          <HouseholdSharingCard />
 
           {/* Two-Column Grid: Registered Members and Connected Demats */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

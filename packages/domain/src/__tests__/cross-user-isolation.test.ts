@@ -82,4 +82,27 @@ describe('Cross-User and Cross-Household Isolation Invariants', () => {
     const validResult = validateAccountMemberIsolation(KETAN_USER_ID, KETAN_USER_ID, KETAN_USER_ID);
     expect(validResult.success).toBe(true);
   });
+
+  it('allows cross-user references when users share an authorized household', () => {
+    const PARUL_USER_ID = 'usr-parul-02';
+    const authorizedHouseholdUsers = [PARUL_USER_ID];
+
+    // Ketan acting, accessing an asset registered by Parul within their shared household
+    const references = [
+      { entityId: 'asset-parul-sgb', entityType: 'asset' as const, ownerUserId: PARUL_USER_ID },
+      { entityId: 'acc-groww-parul', entityType: 'account' as const, ownerUserId: PARUL_USER_ID },
+    ];
+
+    const result = validateCrossUserOwnership(KETAN_USER_ID, references, authorizedHouseholdUsers);
+    expect(result.success).toBe(true);
+
+    // Linking Ketan's home loan to Parul's co-owned property within shared household
+    const linkResult = validateAssetLiabilityLinkIsolation(
+      KETAN_USER_ID,
+      PARUL_USER_ID,
+      KETAN_USER_ID,
+      authorizedHouseholdUsers
+    );
+    expect(linkResult.success).toBe(true);
+  });
 });

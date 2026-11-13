@@ -201,8 +201,8 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
 
       // Verify legal entities list
       expect(screen.getByText(/Family Entities/i)).toBeInTheDocument();
-      expect(screen.getByText('Ketan Vaghela')).toBeInTheDocument();
-      expect(screen.getByText('Parul Vaghela')).toBeInTheDocument();
+      expect(screen.getAllByText('Ketan Vaghela').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Parul Vaghela').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Shamalbhai Vaghela HUF')).toBeInTheDocument();
 
       // Verify Section 112A tax shield badges & advisory
