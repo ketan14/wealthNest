@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { HomePage } from '@/pages/HomePage';
 import { PortfolioPage } from '@/pages/PortfolioPage';
+import { RealEstatePage } from '@/pages/RealEstatePage';
 import { LiabilitiesPage } from '@/pages/LiabilitiesPage';
 import { TransactionsPage } from '@/pages/TransactionsPage';
 import { AnalyticsPage } from '@/pages/AnalyticsPage';
@@ -60,6 +61,7 @@ export function App() {
                       <Route path="/" element={<AppShell />}>
                         <Route index element={<HomePage />} />
                         <Route path="portfolio" element={<PortfolioPage />} />
+                        <Route path="real-estate" element={<RealEstatePage />} />
                         <Route path="liabilities" element={<LiabilitiesPage />} />
                         <Route path="transactions" element={<TransactionsPage />} />
                         <Route path="analytics" element={<AnalyticsPage />} />

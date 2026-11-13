@@ -10,6 +10,7 @@ import {
   ShieldAlert,
   Landmark,
   FolderLock,
+  Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAdmin } from '@/lib/admin/admin-context';
@@ -23,6 +24,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { title: 'System Overview', href: '/', icon: LayoutDashboard },
   { title: 'Portfolio', href: '/portfolio', icon: PieChart },
+  { title: 'Real Estate', href: '/real-estate', icon: Building2 },
   { title: 'Loans & Liabilities', href: '/liabilities', icon: Landmark },
   { title: 'Transactions', href: '/transactions', icon: ArrowLeftRight },
   { title: 'Analytics', href: '/analytics', icon: TrendingUp },
