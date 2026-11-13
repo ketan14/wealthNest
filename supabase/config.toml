@@ -27,7 +27,7 @@ file_size_limit = "50MiB"
 
 [auth]
 site_url = "http://wealthnest.local"
-additional_redirect_urls = ["http://localhost:5173", "http://wealthnest.local"]
+additional_redirect_urls = ["http://localhost:5173", "http://localhost:5173/reset-password", "http://wealthnest.local", "http://wealthnest.local/reset-password"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10

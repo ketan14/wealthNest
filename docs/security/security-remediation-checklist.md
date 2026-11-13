@@ -45,11 +45,11 @@
   - **Files:** `apps/web/src/App.tsx`, `apps/web/src/lib/supabase/auth-context.tsx`
   - **Verify:** Verified via `App.test.tsx`.
 
-- [~] **P1-4: Enforce Strong Password Policy & Email Confirmations** *(Repo complexity + CSPRNG generator + `config.toml` enforced; Supabase Cloud Dashboard HIBP/Auth check pending)*
-  - **Files:** `apps/web/src/lib/validation/password.ts`, `apps/web/src/pages/SignUpPage.tsx`, `apps/web/src/components/admin/AdminUserProvisionModal.tsx`, `supabase/functions/admin-create-user/index.ts`, `supabase/config.toml`
-  - **Verify:** Verified via `AuthPages.test.tsx`, `AdminPortal.test.tsx`, and `SecurityHardening.test.ts`. Still verify Supabase Cloud Auth breached-password / HIBP settings.
+- [~] **P1-4: Enforce Strong Password Policy, Recovery Landing & Email Confirmations** *(Repo complexity + CSPRNG generator + `/reset-password` `PASSWORD_RECOVERY` + `ProfileSecurityTab` password update + `config.toml` enforced; Supabase Cloud Dashboard HIBP/SMTP check pending)*
+  - **Files:** `apps/web/src/lib/validation/password.ts`, `apps/web/src/components/auth/UpdatePasswordForm.tsx`, `apps/web/src/pages/SignUpPage.tsx`, `apps/web/src/pages/ResetPasswordPage.tsx`, `apps/web/src/components/settings/ProfileSecurityTab.tsx`, `apps/web/src/components/admin/AdminUserProvisionModal.tsx`, `supabase/functions/admin-create-user/index.ts`, `supabase/config.toml`
+  - **Verify:** Verified via `AuthPages.test.tsx`, `ProfileSecurityTab.test.tsx`, `AdminPortal.test.tsx`, and `SecurityHardening.test.ts`. Still verify Supabase Cloud Auth breached-password / HIBP and SMTP delivery settings.
 
-- [~] **P1-5: Add HTTP Security Headers & TLS / CSP Policies** *(Cloudflare `_headers`, Nginx header-inheritance fix + `limit_req`, and Tauri CSP verified; upstream TLS termination check pending)*
+- [~] **P1-5: Add HTTP Security Headers & TLS / CSP Policies** *(Cloudflare `_headers`, Nginx header-inheritance fix + `limit_req`, custom-domain `connect-src` guidance, and Tauri CSP verified; upstream TLS termination check pending)*
   - **Files:** `apps/web/public/_headers`, `infra/docker/nginx-prod.conf`, `src-tauri/tauri.conf.json:26`
   - **Verify:** `apps/web/dist/_headers` confirmed generated during `npm run build`. Verify upstream TLS termination in front of Docker/Nginx.
 
@@ -72,7 +72,7 @@
 
 - [x] **P2-5: Move Admin User Provisioning to a Server-Side Edge Function** *(Verified in repo; automated via `supabase-migration.yml`)*
   - **Files:** `supabase/functions/admin-create-user/index.ts`, `apps/web/src/lib/supabase/admin.adapter.ts`, `.github/workflows/supabase-migration.yml`
-  - **Verify:** `AdminPortal.test.tsx` verifies `adminAdapter.createUserDirectly` invokes `supabase.functions.invoke('admin-create-user', ...)`. Deploys via `supabase functions deploy admin-create-user` (optionally set `ALLOWED_ORIGINS` secret).
+  - **Verify:** `AdminPortal.test.tsx` verifies `adminAdapter.createUserDirectly` invokes `supabase.functions.invoke('admin-create-user', ...)`. `supabase-migration.yml` guards missing `SUPABASE_*` secrets (`push` skip vs `workflow_dispatch` fail) and syncs optional `ALLOWED_ORIGINS` before `supabase functions deploy admin-create-user`.
 
 - [~] **P2-6: Enforce Client-Side Financial File Parsing Bounds & Safe PDF Extraction** *(Verified in repo; server-side AV not applicable to local-only parsing)*
   - **Files:** `apps/web/src/lib/validation/import-file.ts`, `apps/web/src/lib/pdf/pdfjs-extractor.adapter.ts`, `apps/web/src/components/portfolio/ImportCasModal.tsx`, `apps/web/src/components/analytics/CasReconciliationCard.tsx`

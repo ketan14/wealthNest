@@ -8,6 +8,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { SignUpPage } from '@/pages/SignUpPage';
 import { LoginPage } from '@/pages/LoginPage';
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 const PortfolioPage = lazy(() =>
@@ -83,10 +84,14 @@ import { FamilyProvider } from '@/lib/family/family-context';
 import { ToastProvider } from '@/components/ui/Toast';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isPasswordRecovery } = useAuth();
 
   if (isLoading) {
     return <RouteLoadingFallback />;
+  }
+
+  if (isPasswordRecovery) {
+    return <Navigate to="/reset-password" replace />;
   }
 
   if (!user) {
@@ -124,6 +129,7 @@ export function App() {
                         {/* Dedicated Authentication Routes */}
                         <Route path="/signup" element={<SignUpPage />} />
                         <Route path="/login" element={<LoginPage />} />
+                        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
                         {/* Investor App Shell (Authenticated / Tauri Local Vault) */}
                         <Route

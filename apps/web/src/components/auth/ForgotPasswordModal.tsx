@@ -37,7 +37,7 @@ export function ForgotPasswordModal({ isOpen, initialEmail, onClose }: ForgotPas
     setForgotSubmitting(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
-        redirectTo: `${window.location.origin}/login`,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) throw error;
 

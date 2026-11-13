@@ -1,3 +1,7 @@
+# WealthNest static-edge HTTP security headers (Cloudflare Pages).
+# Self-hosted / custom-domain Supabase note: keep *.supabase.co defaults strict here,
+# and append https://<your-supabase-host> wss://<your-supabase-host> to connect-src
+# only if connecting production clients to a custom ConnectionManager endpoint.
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: SAMEORIGIN
@@ -9,4 +13,3 @@
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
-

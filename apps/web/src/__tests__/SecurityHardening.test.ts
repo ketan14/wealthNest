@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   generateStrongPassword,
   PASSWORD_MIN_LENGTH,
+  validatePasswordChange,
   validatePasswordComplexity,
 } from '../lib/validation/password';
 import {
@@ -44,6 +45,17 @@ describe('Security Hardening Helpers (AUTH-02 & 3P-02)', () => {
       expect(p1.startsWith('WealthNest@')).toBe(false);
       expect(validatePasswordComplexity(p1)).toBeNull();
       expect(validatePasswordComplexity(p2)).toBeNull();
+    });
+
+    it('validates password change confirmation matching alongside complexity', () => {
+      expect(validatePasswordChange('short', '')).toEqual({
+        password: `Password must be at least ${PASSWORD_MIN_LENGTH} characters`,
+        confirmPassword: 'Please confirm your new password',
+      });
+      expect(validatePasswordChange('WealthNest@2026!', 'Mismatch@2026!')).toEqual({
+        confirmPassword: 'Passwords do not match',
+      });
+      expect(validatePasswordChange('WealthNest@2026!', 'WealthNest@2026!')).toEqual({});
     });
   });
 

@@ -83,3 +83,29 @@ export function generateStrongPassword(length = 16): string {
   return chars.join('');
 }
 
+export interface PasswordChangeErrors {
+  password?: string;
+  confirmPassword?: string;
+}
+
+/**
+ * Validates new password complexity and confirmation match for reset/change forms.
+ */
+export function validatePasswordChange(
+  password: string,
+  confirmPassword: string
+): PasswordChangeErrors {
+  const errors: PasswordChangeErrors = {};
+  const complexityError = validatePasswordComplexity(password);
+  if (complexityError) {
+    errors.password = complexityError;
+  }
+  if (!confirmPassword) {
+    errors.confirmPassword = 'Please confirm your new password';
+  } else if (password !== confirmPassword) {
+    errors.confirmPassword = 'Passwords do not match';
+  }
+  return errors;
+}
+
+

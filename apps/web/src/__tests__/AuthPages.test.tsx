@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '../lib/supabase/auth-context';
 import { SignUpPage } from '../pages/SignUpPage';
 import { LoginPage } from '../pages/LoginPage';
+import { ResetPasswordPage } from '../pages/ResetPasswordPage';
 import { supabase } from '../lib/supabase/client';
 
 // Mock Supabase client
@@ -20,6 +21,7 @@ vi.mock('../lib/supabase/client', () => ({
       signUp: vi.fn(),
       signInWithPassword: vi.fn(),
       resetPasswordForEmail: vi.fn(),
+      updateUser: vi.fn(),
       signOut: vi.fn(),
     },
   },
@@ -39,6 +41,7 @@ function renderWithProviders(ui: React.ReactElement, initialRoute = '/signup') {
           <Routes>
             <Route path="/signup" element={<SignUpPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/" element={<div data-testid="home-page">Home Dashboard</div>} />
           </Routes>
           {ui}
@@ -378,7 +381,7 @@ describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
       await waitFor(() => {
         expect(supabase.auth.resetPasswordForEmail).toHaveBeenCalledWith(
           'recovery@wealthnest.local',
-          expect.objectContaining({ redirectTo: expect.stringContaining('/login') })
+          expect.objectContaining({ redirectTo: expect.stringContaining('/reset-password') })
         );
       });
 
@@ -403,6 +406,72 @@ describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
       expect(
         screen.queryByRole('heading', { name: /Create your WealthNest account/i })
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Password Recovery & ResetPasswordPage Flow (AUTH-05)', () => {
+    it('shows expired/missing recovery link guidance when opened without a recovery session', async () => {
+      renderWithProviders(<></>, '/reset-password');
+
+      expect(
+        await screen.findByRole('heading', { name: /Recovery Link Missing or Expired/i })
+      ).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Back to Sign In/i })).toHaveAttribute(
+        'href',
+        '/login'
+      );
+    });
+
+    it('redirects PASSWORD_RECOVERY sessions to /reset-password, enforces complexity, and updates password', async () => {
+      let authCallback: ((event: string, session: any) => void) | null = null;
+      (supabase.auth.onAuthStateChange as any).mockImplementationOnce((cb: any) => {
+        authCallback = cb;
+        return { data: { subscription: { unsubscribe: vi.fn() } } };
+      });
+      (supabase.auth.updateUser as any).mockResolvedValueOnce({
+        data: { user: { id: 'usr-rec', email: 'recover@wealthnest.local' } },
+        error: null,
+      });
+
+      renderWithProviders(<></>, '/login');
+
+      await waitFor(() => {
+        expect(authCallback).not.toBeNull();
+      });
+
+      authCallback!('PASSWORD_RECOVERY', {
+        user: { id: 'usr-rec', email: 'recover@wealthnest.local' },
+      });
+
+      expect(
+        await screen.findByRole('heading', { name: /Set a New Password/i })
+      ).toBeInTheDocument();
+
+      const newPasswordInput = screen.getByLabelText('New Password');
+      const confirmInput = screen.getByLabelText('Confirm New Password');
+      const submitBtn = screen.getByRole('button', { name: /Set New Password/i });
+
+      // Rejects weak passwords locally before calling updateUser
+      fireEvent.change(newPasswordInput, { target: { value: 'weak' } });
+      fireEvent.change(confirmInput, { target: { value: 'different' } });
+      fireEvent.click(submitBtn);
+
+      expect(await screen.findByText(/Password must be at least 12 characters/i)).toBeInTheDocument();
+      expect(screen.getByText(/Passwords do not match/i)).toBeInTheDocument();
+      expect(supabase.auth.updateUser).not.toHaveBeenCalled();
+
+      // Accepts compliant matching password and persists via supabase.auth.updateUser
+      fireEvent.change(newPasswordInput, { target: { value: 'WealthNest@2026!' } });
+      fireEvent.change(confirmInput, { target: { value: 'WealthNest@2026!' } });
+      fireEvent.click(submitBtn);
+
+      await waitFor(() => {
+        expect(supabase.auth.updateUser).toHaveBeenCalledWith({
+          password: 'WealthNest@2026!',
+        });
+      });
+
+      expect(await screen.findByRole('heading', { name: /Password Updated/i })).toBeInTheDocument();
     });
   });
 });

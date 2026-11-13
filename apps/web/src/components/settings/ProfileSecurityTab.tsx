@@ -2,7 +2,9 @@ import type { FormEvent } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { User, CheckCircle2, Key, Sparkles } from 'lucide-react';
+import { UpdatePasswordForm } from '@/components/auth/UpdatePasswordForm';
+import { useAuth } from '@/lib/supabase/auth-context';
+import { User, CheckCircle2, Key, KeyRound, Sparkles } from 'lucide-react';
 
 interface ProfileSecurityTabProps {
   readonly displayName: string;
@@ -30,6 +32,9 @@ export function ProfileSecurityTab({
   onSaveProfile,
   onSignOut,
 }: ProfileSecurityTabProps) {
+  const { user, isOfflineUser } = useAuth();
+  const canChangePassword = Boolean(user && !isOfflineUser);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-6">
@@ -139,6 +144,28 @@ export function ProfileSecurityTab({
                 Sign Out
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-900 border-slate-800">
+          <CardHeader>
+            <CardTitle className="text-lg text-white flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-indigo-400" />
+              Change Account Password
+            </CardTitle>
+            <CardDescription className="text-slate-400">
+              Update your Supabase login password. Passwords must meet complexity requirements.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {canChangePassword ? (
+              <UpdatePasswordForm submitLabel="Update Password" accent="indigo" />
+            ) : (
+              <p className="text-xs text-slate-400 p-3.5 rounded-lg bg-slate-950 border border-slate-800">
+                Password updates apply to authenticated Supabase server/cloud accounts and are
+                unavailable in Local Vault or Demo mode.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

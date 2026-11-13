@@ -310,7 +310,7 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
     if (user) {
       try {
         await supabase.auth.resetPasswordForEmail(user.email, {
-          redirectTo: `${window.location.origin}/settings`,
+          redirectTo: `${window.location.origin}/reset-password`,
         });
       } catch {
         // Fallback for tests / demo

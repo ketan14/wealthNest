@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 
 export function LoginPage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, isPasswordRecovery } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -86,6 +86,11 @@ export function LoginPage() {
     setServerError(null);
     setConnectionSwitched(true);
   };
+
+  // If in password recovery flow, send user to reset-password page
+  if (!authLoading && isPasswordRecovery) {
+    return <Navigate to="/reset-password" replace />;
+  }
 
   // If already authenticated, redirect to home page
   if (!authLoading && user) {

@@ -63,7 +63,9 @@ interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   isOfflineUser: boolean;
+  isPasswordRecovery: boolean;
   enableOfflineUser: () => void;
+  clearPasswordRecovery: () => void;
   signOut: () => Promise<void>;
 }
 
@@ -72,7 +74,9 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   isLoading: true,
   isOfflineUser: false,
+  isPasswordRecovery: false,
   enableOfflineUser: () => {},
+  clearPasswordRecovery: () => {},
   signOut: async () => {},
 });
 
@@ -83,6 +87,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(!initialOffline);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+
+  const clearPasswordRecovery = useCallback(() => {
+    setIsPasswordRecovery(false);
+  }, []);
 
   useEffect(() => {
     const offlineDefault = isOfflineLocalActive();
@@ -113,7 +122,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth state changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+      } else if (event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+        setIsPasswordRecovery(false);
+      }
+
       if (nextSession?.user) {
         setSession(nextSession);
         setUser(nextSession.user);
@@ -148,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
+    setIsPasswordRecovery(false);
     try {
       if (typeof window !== 'undefined' && !isTauri()) {
         window.localStorage.removeItem(OFFLINE_MODE_STORAGE_KEY);
@@ -178,7 +194,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         isLoading,
         isOfflineUser,
+        isPasswordRecovery,
         enableOfflineUser,
+        clearPasswordRecovery,
         signOut,
       }}
     >
