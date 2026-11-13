@@ -1,18 +1,23 @@
 import { Result, ok, err } from '@wealthnest/shared';
 import { PdfExtractorPort, PdfExtractionResult } from '@wealthnest/application';
-import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure PDF.js worker URL for Vite bundler
-if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
-  try {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-      'pdfjs-dist/build/pdf.worker.min.mjs',
-      import.meta.url
-    ).toString();
-  } catch {
-    // Fallback if URL constructor fails in test runner
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+let pdfjsConfigured = false;
+
+async function getPdfJs() {
+  const pdfjsLib = await import('pdfjs-dist');
+  if (!pdfjsConfigured && typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    try {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+        'pdfjs-dist/build/pdf.worker.min.mjs',
+        import.meta.url
+      ).toString();
+    } catch {
+      // Fallback if URL constructor fails in test runner
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+    }
+    pdfjsConfigured = true;
   }
+  return pdfjsLib;
 }
 
 export class PdfJsTextExtractorAdapter implements PdfExtractorPort {
@@ -21,6 +26,7 @@ export class PdfJsTextExtractorAdapter implements PdfExtractorPort {
     password?: string
   ): Promise<Result<PdfExtractionResult>> {
     try {
+      const pdfjsLib = await getPdfJs();
       // Load document into memory with optional password
       const loadingTask = pdfjsLib.getDocument({
         data: new Uint8Array(pdfBytes),

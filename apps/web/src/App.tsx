@@ -1,28 +1,66 @@
+import { Suspense, lazy } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { HomePage } from '@/pages/HomePage';
-import { PortfolioPage } from '@/pages/PortfolioPage';
-import { RealEstatePage } from '@/pages/RealEstatePage';
-import { LiabilitiesPage } from '@/pages/LiabilitiesPage';
-import { TransactionsPage } from '@/pages/TransactionsPage';
-import { AnalyticsPage } from '@/pages/AnalyticsPage';
-import { GoalsPage } from '@/pages/GoalsPage';
-import { DocumentsPage } from '@/pages/DocumentsPage';
-import { SettingsPage } from '@/pages/SettingsPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage';
-import { AdminUsersPage } from '@/pages/admin/AdminUsersPage';
-import { AdminUserDetailPage } from '@/pages/admin/AdminUserDetailPage';
-import { AdminHouseholdsPage } from '@/pages/admin/AdminHouseholdsPage';
-import { AdminRolesPage } from '@/pages/admin/AdminRolesPage';
-import { AdminAuditLogsPage } from '@/pages/admin/AdminAuditLogsPage';
-import { AdminSettingsPage } from '@/pages/admin/AdminSettingsPage';
-
 import { SignUpPage } from '@/pages/SignUpPage';
 import { LoginPage } from '@/pages/LoginPage';
+
+const PortfolioPage = lazy(() =>
+  import('@/pages/PortfolioPage').then((m) => ({ default: m.PortfolioPage }))
+);
+const RealEstatePage = lazy(() =>
+  import('@/pages/RealEstatePage').then((m) => ({ default: m.RealEstatePage }))
+);
+const LiabilitiesPage = lazy(() =>
+  import('@/pages/LiabilitiesPage').then((m) => ({ default: m.LiabilitiesPage }))
+);
+const TransactionsPage = lazy(() =>
+  import('@/pages/TransactionsPage').then((m) => ({ default: m.TransactionsPage }))
+);
+const AnalyticsPage = lazy(() =>
+  import('@/pages/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage }))
+);
+const GoalsPage = lazy(() => import('@/pages/GoalsPage').then((m) => ({ default: m.GoalsPage })));
+const DocumentsPage = lazy(() =>
+  import('@/pages/DocumentsPage').then((m) => ({ default: m.DocumentsPage }))
+);
+const SettingsPage = lazy(() =>
+  import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage }))
+);
+
+const AdminDashboardPage = lazy(() =>
+  import('@/pages/admin/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage }))
+);
+const AdminUsersPage = lazy(() =>
+  import('@/pages/admin/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage }))
+);
+const AdminUserDetailPage = lazy(() =>
+  import('@/pages/admin/AdminUserDetailPage').then((m) => ({ default: m.AdminUserDetailPage }))
+);
+const AdminHouseholdsPage = lazy(() =>
+  import('@/pages/admin/AdminHouseholdsPage').then((m) => ({ default: m.AdminHouseholdsPage }))
+);
+const AdminRolesPage = lazy(() =>
+  import('@/pages/admin/AdminRolesPage').then((m) => ({ default: m.AdminRolesPage }))
+);
+const AdminAuditLogsPage = lazy(() =>
+  import('@/pages/admin/AdminAuditLogsPage').then((m) => ({ default: m.AdminAuditLogsPage }))
+);
+const AdminSettingsPage = lazy(() =>
+  import('@/pages/admin/AdminSettingsPage').then((m) => ({ default: m.AdminSettingsPage }))
+);
+
+function RouteLoadingFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[40vh] text-sm text-slate-400">
+      Loading view...
+    </div>
+  );
+}
 
 import { AuthProvider } from '@/lib/supabase/auth-context';
 import { RepositoryProvider } from '@/lib/persistence/repository-context';
@@ -52,7 +90,8 @@ export function App() {
               <PreferencesProvider>
                 <FamilyProvider>
                   <BrowserRouter>
-                    <Routes>
+                    <Suspense fallback={<RouteLoadingFallback />}>
+                      <Routes>
                       {/* Dedicated Authentication Routes */}
                       <Route path="/signup" element={<SignUpPage />} />
                       <Route path="/login" element={<LoginPage />} />
@@ -82,6 +121,7 @@ export function App() {
                         <Route path="settings" element={<AdminSettingsPage />} />
                       </Route>
                     </Routes>
+                    </Suspense>
                   </BrowserRouter>
                 </FamilyProvider>
               </PreferencesProvider>
