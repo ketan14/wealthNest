@@ -7,112 +7,28 @@ import {
   ImportCasTransactionDto,
   CasPreviewDto,
 } from '@wealthnest/application';
-import {
-  ImportSummaryResult,
-  detectAndParseBrokerCsv,
-  StatementProvider,
-} from '@wealthnest/domain';
+import { ImportSummaryResult } from '@wealthnest/domain';
 import { PdfJsTextExtractorAdapter } from '@/lib/pdf/pdfjs-extractor.adapter';
 import { useCasImportRepository } from '@/lib/persistence/repository-context';
 import { useAuth } from '@/lib/supabase/auth-context';
-import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import {
-  X,
-  FileSpreadsheet,
-  Upload,
-  Lock,
-  Eye,
-  EyeOff,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  ShieldCheck,
-  ArrowRight,
-  FileText,
-  RotateCcw,
-  Users,
-  Briefcase,
-} from 'lucide-react';
+import { X, FileSpreadsheet } from 'lucide-react';
 import { useFamily } from '@/lib/family/family-context';
+import {
+  SANITIZED_CDSL_FIXTURE_PAGES,
+  SANITIZED_NSDL_FIXTURE_PAGES,
+  SANITIZED_CAMS_KFIN_FIXTURE_PAGES,
+  buildBrokerCsvPreview,
+} from '@/components/portfolio/cas-import-fixtures';
+import { CasUploadStep } from '@/components/portfolio/CasUploadStep';
+import { CasPreviewStep } from '@/components/portfolio/CasPreviewStep';
+import { CasSummaryStep } from '@/components/portfolio/CasSummaryStep';
 
 interface ImportCasModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (importedItems?: ImportCasItemDto[], memberId?: string, accountId?: string) => void;
 }
-
-// Sample sanitized CDSL & NSDL text fixtures for quick testing without personal files
-const SANITIZED_CDSL_FIXTURE_PAGES = [
-  `Central Depository Services (India) Limited
-   Consolidated Account Statement (CDSL e-CAS)
-   Statement as on : 31-Mar-2026
-   BO ID: 1208160000000000
-   Name: QA TEST INVESTOR
-
-   EQUITY SHARES / LISTED SECURITIES:
-   ISIN         Security Name                     Current Balance   Market Price    Market Value
-   INE002A01018 RELIANCE INDUSTRIES LTD. - EQ     80.000            2950.00         236000.00
-   INF209K01164 NIPPON INDIA NIFTY 50 BEES ETF    500.000           280.00          140000.00
-   IN0020180017 SOVEREIGN GOLD BOND 2028-29       30.000            7650.00         229500.00`,
-];
-
-const SANITIZED_NSDL_FIXTURE_PAGES = [
-  `National Securities Depository Limited
-   NSDL Consolidated Account Statement (CAS)
-   Statement Date : 31/03/2026
-   DP ID : IN300000  Client ID : 10000000
-   Investor: QA TEST INVESTOR
-
-   Holdings Statement:
-   ISIN          Security Description              Balance       Rate (Rs.)    Value (Rs.)
-   INE467B01029  TATA CONSULTANCY SERVICES LTD     40.000        4150.00       166000.00
-   INE040A01034  HDFC BANK LIMITED                 50.000        1600.00       80000.00`,
-];
-
-const SANITIZED_CAMS_KFIN_FIXTURE_PAGES = [
-  `This Consolidated Account Summary  is brought  to you as  an  investor
-   friendly initiative by KFIN and CAMS and lists the balances and valuation
-   Closing Unit
-   Balance Scheme Name Folio No.  NAV Date  Registrar Price  Market Value
-   (INR)  (INR)
-   Cost Value
-   (INR) ISIN
-   CAMS 1895586  GD201-Bandhan Large & Mid Cap Fund-Direct
-   Plan-Growth ( Formerly Known as  Bandhan Core
-   Equity Fund-Direct Plan-Growth)  (Non-Demat)
-   2268.2390  09-NOV-2026  167.2240  379304 INF194K01V89  220948.23
-   CAMS 4685175  D782-DSP Mid Cap Fund - Direct Plan - Growth
-   (formerly DSP Small and Mid Cap Fund)
-   (Non-Demat)
-   625.5350  09-NOV-2026  168.6480  105495.23 INF740K01PX1  60708.71
-   KFINTECH 499236287077  RMFMFAGG-NIPPON INDIA MULTI ASSET
-   ALLOCATION FUND - DIRECT GROWTH PLAN (Non
-   Demat)
-   999.950  09-NOV-2026  26.8915  26890.16 INF204KB19V4  10000.00
-   Total  5,11,689.39 2,91,656.94
-   Consolidated Account Summary
-   As on 10-Nov-2026`,
-];
-
-const SANITIZED_ZERODHA_HOLDINGS_CSV = `Instrument,Qty.,Avg. cost,LTP,Cur. val,P&L,Net chg.,Day chg.
-RELIANCE,80,2500.00,2950.00,"2,36,000.00","36,000.00",18.00,1.25
-TCS,40,"3,600.00","4,150.00","1,66,000.00","22,000.00",15.28,-0.45
-GOLDBEES,500,52.50,58.20,29100.00,2850.00,10.86,0.34`;
-
-const SANITIZED_ZERODHA_TRADEBOOK_CSV = `symbol,isin,trade_date,exchange,segment,series,trade_type,quantity,price,trade_id,order_id,order_execution_time
-RELIANCE,INE002A01018,2024-03-15,NSE,EQ,EQ,buy,50,2500.00,123456,987654,2024-03-15 11:20:15
-TCS,INE467B01029,2024-04-10,NSE,EQ,EQ,buy,40,3600.00,123457,987655,2024-04-10 14:15:30
-RELIANCE,INE002A01018,2024-05-20,NSE,EQ,EQ,sell,10,2900.00,123458,987656,2024-05-20 10:05:00`;
-
-const SANITIZED_GROWW_HOLDINGS_CSV = `Company Name,Symbol,Shares,Average Price,Current Value,Market Price
-Reliance Industries Ltd,RELIANCE,30,"2,480.00","88,500.00","2,950.00"
-Tata Consultancy Services Ltd,TCS,20,"3,550.00","83,000.00","4,150.00"
-Parag Parikh Flexi Cap Fund Direct-Growth,PPFAS-FLEXI,1000,55.00,78450.00,78.45`;
-
-const SANITIZED_GROWW_ORDERS_CSV = `Stock Name,Order Type,Date,Quantity,Average Price,Status
-Reliance Industries,BUY,12-Apr-2024,25,2520.00,EXECUTED
-Infosys,BUY,18-Apr-2024,50,1420.00,EXECUTED`;
 
 export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalProps) {
   const { user } = useAuth();
@@ -126,7 +42,6 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
   const [step, setStep] = useState<'upload' | 'preview' | 'summary'>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewData, setPreviewData] = useState<CasPreviewDto | null>(null);
   const [items, setItems] = useState<ImportCasItemDto[]>([]);
@@ -217,80 +132,22 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
   const handleParseBrokerCsvText = (csvContent: string, preferredBroker?: 'ZERODHA' | 'GROWW') => {
     setError(null);
     try {
-      const parsed = detectAndParseBrokerCsv(csvContent, preferredBroker);
-
-      if (parsed.holdings.length === 0 && parsed.trades.length === 0) {
-        setError(
-          parsed.warnings.length > 0
-            ? parsed.warnings.join('; ')
-            : 'Could not extract any holdings or trades from this CSV file. Please verify the format.'
-        );
+      const result = buildBrokerCsvPreview(csvContent, preferredBroker);
+      if ('error' in result) {
+        setError(result.error);
         return;
       }
 
-      const convertedItems: ImportCasItemDto[] = parsed.holdings.map((h) => ({
-        isin: h.isin || '',
-        name: h.name,
-        ticker: h.symbol,
-        assetClassId:
-          h.assetType === 'mutual_fund'
-            ? 'mutual_fund'
-            : h.assetType === 'commodity'
-              ? 'commodity'
-              : 'equity',
-        instrumentType:
-          h.assetType === 'mutual_fund'
-            ? 'mutual_fund_scheme'
-            : h.assetType === 'commodity'
-              ? 'sovereign_gold_bond'
-              : 'equity_share',
-        quantity: h.quantity,
-        unitCostCents: Number(h.unitCost.cents),
-        currentValueCents: Number(h.currentValue?.cents ?? h.unitCost.multiply(h.quantity).cents),
-        costBasisVerified: true,
-        currency: 'INR',
-        selected: true,
-      }));
-
-      const convertedTxs: ImportCasTransactionDto[] = parsed.trades.map((t) => ({
-        isin: t.isin || '',
-        schemeName: t.name,
-        ticker: t.symbol,
-        date: t.tradeDate,
-        description: `${t.rawBroker} ${t.tradeType} ${t.symbol}${t.tradeId ? ` [#${t.tradeId}]` : ''}`,
-        type: t.tradeType.toLowerCase() as 'buy' | 'sell',
-        amountCents: Number(t.totalAmount.cents),
-        units: t.quantity,
-        navPriceCents: Number(t.price.cents),
-        currency: 'INR',
-        selected: true,
-      }));
-
-      const totalReportedValueCents = convertedItems.reduce(
-        (acc, i) => acc + i.currentValueCents,
-        0
-      );
-
-      const preview: CasPreviewDto = {
-        provider: parsed.provider as StatementProvider,
-        statementDate: new Date().toISOString().slice(0, 10),
-        items: convertedItems,
-        equities: convertedItems.filter((i) => i.assetClassId !== 'mutual_fund'),
-        mutualFunds: convertedItems.filter((i) => i.assetClassId === 'mutual_fund'),
-        transactions: convertedTxs,
-        totalReportedValueCents,
-        warnings: parsed.warnings,
-      };
-
+      const { preview } = result;
       setPreviewData(preview);
-      setItems(convertedItems);
-      setTransactions(convertedTxs);
+      setItems([...preview.items]);
+      setTransactions([...(preview.transactions || [])]);
       setStep('preview');
 
-      if (convertedItems.length > 0) {
-        const hasEquities = convertedItems.some((i) => i.assetClassId !== 'mutual_fund');
+      if (preview.items.length > 0) {
+        const hasEquities = preview.items.some((i) => i.assetClassId !== 'mutual_fund');
         setActiveTab(hasEquities ? 'equities' : 'mutual_funds');
-      } else if (convertedTxs.length > 0) {
+      } else if (preview.transactions && preview.transactions.length > 0) {
         setActiveTab('transactions');
       }
     } catch (e: any) {
@@ -506,1022 +363,76 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
 
         {/* Wizard Step 1: Upload & Password */}
         {step === 'upload' && (
-          <div className="space-y-4 pt-4 overflow-y-auto">
-            {error && (
-              <div className="p-3 rounded-lg bg-destructive/15 text-destructive border border-destructive/30 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {/* Import Source Selector */}
-            <div className="flex items-center gap-2 p-1 bg-secondary/50 rounded-xl border border-border/80">
-              <button
-                type="button"
-                onClick={() => {
-                  setImportSource('cas_pdf');
-                  setFile(null);
-                  setError(null);
-                }}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
-                  importSource === 'cas_pdf'
-                    ? 'bg-card text-foreground shadow border border-border'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <FileText className="w-3.5 h-3.5 text-primary" />
-                <span>CAS Statement (PDF)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setImportSource('zerodha_csv');
-                  setFile(null);
-                  setError(null);
-                }}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
-                  importSource === 'zerodha_csv'
-                    ? 'bg-card text-foreground shadow border border-border'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-blue-400" />
-                <span>Zerodha Kite (CSV)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setImportSource('groww_csv');
-                  setFile(null);
-                  setError(null);
-                }}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
-                  importSource === 'groww_csv'
-                    ? 'bg-card text-foreground shadow border border-border'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Groww (CSV)</span>
-              </button>
-            </div>
-
-            {/* Privacy Guarantee Banner */}
-            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-muted-foreground flex items-start gap-2.5">
-              <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-foreground">
-                  Zero-Knowledge Client-Side Extraction
-                </p>
-                <p className="text-[11px] leading-relaxed mt-0.5">
-                  Your files (PDF or CSV) and data are parsed strictly in-memory inside your local
-                  browser environment. They are never sent to third-party tracking services or
-                  logged.
-                </p>
-              </div>
-            </div>
-
-            {/* Drag & Drop File Area */}
-            <div
-              className={`p-6 border-2 border-dashed rounded-xl text-center transition-colors ${
-                file ? 'border-primary bg-primary/5' : 'border-border/80 hover:border-primary/50'
-              }`}
-            >
-              <input
-                type="file"
-                id="cas-file-input"
-                accept={importSource === 'cas_pdf' ? '.pdf' : '.csv,text/csv'}
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    const selectedFile = e.target.files[0];
-                    setFile(selectedFile);
-                    setError(null);
-                    if (selectedFile.name.endsWith('.csv') && importSource === 'cas_pdf') {
-                      setImportSource('zerodha_csv');
-                    }
-                  }
-                }}
-              />
-              <label htmlFor="cas-file-input" className="cursor-pointer block space-y-2">
-                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center mx-auto text-muted-foreground">
-                  {file ? (
-                    <FileText className="w-5 h-5 text-primary" />
-                  ) : (
-                    <Upload className="w-5 h-5" />
-                  )}
-                </div>
-                {file ? (
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{file.name}</p>
-                    <p className="text-xs text-muted-foreground font-mono">
-                      {(file.size / 1024).toFixed(1)} KB — Ready to parse
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {importSource === 'cas_pdf'
-                        ? 'Click to choose or drag-and-drop your CAS PDF'
-                        : importSource === 'zerodha_csv'
-                          ? 'Click to choose or drag-and-drop your Zerodha Holdings or Tradebook CSV'
-                          : 'Click to choose or drag-and-drop your Groww Holdings or Orders CSV'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {importSource === 'cas_pdf'
-                        ? 'Supports NSDL, CDSL, and CAMS / KFintech Consolidated Account Statements (up to 25 MB)'
-                        : importSource === 'zerodha_csv'
-                          ? 'Supports Kite Holdings CSV (holdings.csv) and Console Tradebook CSV (tradebook.csv)'
-                          : 'Supports Groww Holdings CSV (Holdings.csv) and Orders History CSV (Orders.csv)'}
-                    </p>
-                  </div>
-                )}
-              </label>
-            </div>
-
-            {/* Password Input or Plain Text Notice */}
-            {importSource === 'cas_pdf' ? (
-              (() => {
-                const isPasswordError = Boolean(error && error.toLowerCase().includes('password'));
-                const hasLowercase = Boolean(password && password !== password.toUpperCase());
-
-                return (
-                  <div
-                    className={`space-y-2 p-3 rounded-xl border transition-all ${
-                      isPasswordError
-                        ? 'border-amber-500/60 bg-amber-500/10 ring-1 ring-amber-500/30'
-                        : 'border-border/60 bg-secondary/20'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
-                        <Lock
-                          className={`w-3.5 h-3.5 ${
-                            isPasswordError ? 'text-amber-400 animate-pulse' : 'text-primary'
-                          }`}
-                        />
-                        Document Password (if encrypted)
-                      </label>
-                      {hasLowercase && (
-                        <button
-                          type="button"
-                          onClick={() => setPassword((prev) => prev.toUpperCase())}
-                          className="text-[10px] text-primary hover:underline font-semibold tracking-wide"
-                        >
-                          Convert to UPPERCASE
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={(e) => {
-                          setPassword(e.target.value);
-                          if (error) setError(null);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && file && !parseMutation.isPending) {
-                            e.preventDefault();
-                            parseMutation.mutate();
-                          }
-                        }}
-                        placeholder="e.g. ABCDE1234F01011990 (PAN + DOB DDMMYYYY)"
-                        className="w-full h-9 rounded-lg bg-card border border-border px-3 pr-10 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                        autoFocus={isPasswordError}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        title={showPassword ? 'Hide password' : 'Show password'}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Tip: CDSL & NSDL PDFs are typically protected with your{' '}
-                      <span className="font-semibold text-foreground">
-                        10-digit PAN in UPPERCASE
-                      </span>{' '}
-                      +{' '}
-                      <span className="font-semibold text-foreground">
-                        Date of Birth (DDMMYYYY)
-                      </span>
-                      .
-                    </p>
-                  </div>
-                );
-              })()
-            ) : (
-              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold text-blue-200">No Document Password Required</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Broker CSV files exported from Zerodha Kite Console or Groww are unencrypted
-                    plain text. They will be parsed completely client-side in your browser.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Sample Fixtures Quick-Test Buttons */}
-            <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 space-y-2">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                Quick QA Testing (No file needed)
-              </span>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleLoadSampleFixture('CDSL')}
-                  className="text-xs font-mono gap-1.5 h-8"
-                >
-                  Load Sample CDSL CAS (Reliance, Nifty BeES, SGB)
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleLoadSampleFixture('NSDL')}
-                  className="text-xs font-mono gap-1.5 h-8"
-                >
-                  Load Sample NSDL CAS (TCS, HDFC Bank)
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleLoadSampleFixture('CAMS_KFIN')}
-                  className="text-xs font-mono gap-1.5 h-8 border-cyan-500/30 hover:bg-cyan-500/10 text-cyan-300"
-                >
-                  Load Sample CAMS / KFintech CAS (Bandhan, DSP, Nippon MF)
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    handleParseBrokerCsvText(SANITIZED_ZERODHA_HOLDINGS_CSV, 'ZERODHA')
-                  }
-                  className="text-xs font-mono gap-1.5 h-8 border-blue-500/30 hover:bg-blue-500/10 text-blue-300"
-                >
-                  Load Sample Zerodha Holdings CSV (Reliance, TCS, Gold BeES)
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    handleParseBrokerCsvText(SANITIZED_ZERODHA_TRADEBOOK_CSV, 'ZERODHA')
-                  }
-                  className="text-xs font-mono gap-1.5 h-8 border-blue-500/30 hover:bg-blue-500/10 text-blue-300"
-                >
-                  Load Sample Zerodha Tradebook CSV (Buy/Sell Executions)
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleParseBrokerCsvText(SANITIZED_GROWW_HOLDINGS_CSV, 'GROWW')}
-                  className="text-xs font-mono gap-1.5 h-8 border-emerald-500/30 hover:bg-emerald-500/10 text-emerald-300"
-                >
-                  Load Sample Groww Holdings CSV (Equities & PPFAS Mutual Fund)
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleParseBrokerCsvText(SANITIZED_GROWW_ORDERS_CSV, 'GROWW')}
-                  className="text-xs font-mono gap-1.5 h-8 border-emerald-500/30 hover:bg-emerald-500/10 text-emerald-300"
-                >
-                  Load Sample Groww Orders CSV (Orders History)
-                </Button>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-border/80">
-              <Button variant="outline" size="sm" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                disabled={!file || parseMutation.isPending}
-                onClick={() => parseMutation.mutate()}
-                className="gap-2"
-              >
-                {parseMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Parse Statement
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-          </div>
+          <CasUploadStep
+            importSource={importSource}
+            file={file}
+            password={password}
+            error={error}
+            isParsing={parseMutation.isPending}
+            onSelectSource={(source) => {
+              setImportSource(source);
+              setFile(null);
+              setError(null);
+            }}
+            onFileChange={(selectedFile) => {
+              setFile(selectedFile);
+              setError(null);
+              if (selectedFile && selectedFile.name.endsWith('.csv') && importSource === 'cas_pdf') {
+                setImportSource('zerodha_csv');
+              }
+            }}
+            onPasswordChange={setPassword}
+            onClearError={() => setError(null)}
+            onParse={() => parseMutation.mutate()}
+            onLoadSampleFixture={handleLoadSampleFixture}
+            onParseBrokerCsvText={handleParseBrokerCsvText}
+            onClose={handleClose}
+          />
         )}
 
         {/* Wizard Step 2: Verification & Preview Grid */}
         {step === 'preview' && previewData && (
-          <div className="space-y-4 pt-4 flex-1 flex flex-col min-h-0 overflow-hidden">
-            {/* Statement Metadata Summary */}
-            <div className="p-3 rounded-xl bg-secondary/40 border border-border/60 flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Provider:</span>
-                <Badge variant="success" className="font-mono text-xs">
-                  {previewData.provider.replace('_', '/')}{' '}
-                  {previewData.provider === 'ZERODHA' || previewData.provider === 'GROWW'
-                    ? 'Statement'
-                    : 'CAS'}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2 font-mono">
-                <span className="text-muted-foreground">Statement Date:</span>
-                <span className="font-semibold text-foreground">{previewData.statementDate}</span>
-              </div>
-              <div className="flex items-center gap-2 font-mono">
-                <span className="text-muted-foreground">Reported Value:</span>
-                <span className="font-bold text-emerald-400">
-                  ₹
-                  {(previewData.totalReportedValueCents / 100).toLocaleString('en-IN', {
-                    minimumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-            </div>
-
-            {previewData.warnings.length > 0 && (
-              <details className="rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 p-2.5 group">
-                <summary className="flex items-center justify-between cursor-pointer font-semibold text-amber-400 select-none">
-                  <div className="flex items-center gap-1.5">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>Statement Parser Notice ({previewData.warnings.length})</span>
-                  </div>
-                  <span className="text-[10px] text-amber-400/80 group-open:rotate-180 transition-transform">
-                    ▼ Click to view
-                  </span>
-                </summary>
-                <div className="mt-2 space-y-1 max-h-24 overflow-y-auto pl-5 pr-2">
-                  {previewData.warnings.map((w, i) => (
-                    <p key={i} className="text-[11px] text-amber-200/90 leading-relaxed">
-                      • {w}
-                    </p>
-                  ))}
-                  <p className="text-[11px] text-muted-foreground pt-0.5">
-                    Closed folios with 0 balance can be ignored safely. If you hold units in an
-                    unextracted scheme, you can still import the rest of your portfolio now and add
-                    that scheme anytime via &quot;Add Holding&quot;.
-                  </p>
-                </div>
-              </details>
-            )}
-
-            {/* Phase 6A: Legal Entity & Demat Account Assignment */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-secondary/30 border border-border/60">
-              <div>
-                <label
-                  htmlFor="import-member-select"
-                  className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5"
-                >
-                  <Users className="w-3.5 h-3.5 text-blue-400" />
-                  Assign To Legal Entity / Member
-                </label>
-                <select
-                  id="import-member-select"
-                  value={importMemberId}
-                  onChange={(e) => {
-                    setImportMemberId(e.target.value);
-                    const firstAcc = accounts.find((a) => a.memberId === e.target.value);
-                    setImportAccountId(firstAcc?.id || '');
-                  }}
-                  className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                >
-                  {members.map((m) => (
-                    <option key={m.id} value={m.id} className="bg-slate-900 text-foreground">
-                      {m.name} ({m.relationship.toUpperCase()})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="import-account-select"
-                  className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5"
-                >
-                  <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-                  Assign Demat / Broker Account
-                </label>
-                <select
-                  id="import-account-select"
-                  value={importAccountId}
-                  onChange={(e) => setImportAccountId(e.target.value)}
-                  className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                >
-                  <option value="" className="bg-slate-900 text-foreground">
-                    -- Auto / Statement Folios --
-                  </option>
-                  {relevantAccounts.map((a) => (
-                    <option key={a.id} value={a.id} className="bg-slate-900 text-foreground">
-                      {a.brokerName}: {a.accountName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Tab Navigation: Direct Equities, Mutual Funds, Historical Transactions */}
-            <div className="flex items-center gap-2 border-b border-border/80 pb-2">
-              <button
-                type="button"
-                onClick={() => setActiveTab('equities')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
-                  activeTab === 'equities'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-secondary/40 text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <span>Direct Equities & ETFs</span>
-                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full bg-background/30 text-current font-bold">
-                  {equities.length}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('mutual_funds')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
-                  activeTab === 'mutual_funds'
-                    ? 'bg-cyan-600 text-white shadow-sm'
-                    : 'bg-secondary/40 text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <span>Mutual Funds</span>
-                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full bg-background/30 text-current font-bold">
-                  {mutualFunds.length}
-                </span>
-              </button>
-
-              {transactions.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('transactions')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
-                    activeTab === 'transactions'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'bg-secondary/40 text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <span>Historical Transactions</span>
-                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
-                    {transactions.length}
-                  </span>
-                </button>
-              )}
-            </div>
-
-            {/* Tab 1: Direct Equities & ETFs Table */}
-            {activeTab === 'equities' && (
-              <>
-                <div className="flex items-center justify-between text-xs bg-blue-500/5 p-2 rounded-lg border border-blue-500/20">
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">
-                      Found <span className="text-foreground font-semibold">{equities.length}</span>{' '}
-                      stocks & ETFs (
-                      <span className="text-blue-400 font-semibold">{selectedEquities.length}</span>{' '}
-                      selected)
-                    </span>
-                    <span className="text-muted-foreground">•</span>
-                    <span className="font-mono text-foreground font-semibold">
-                      Selected: ₹
-                      {(equitiesSelectedValueCents / 100).toLocaleString('en-IN', {
-                        minimumFractionDigits: 2,
-                      })}
-                    </span>
-                    <span className="text-muted-foreground text-[11px]">
-                      (of ₹
-                      {(equitiesTotalValueCents / 100).toLocaleString('en-IN', {
-                        minimumFractionDigits: 2,
-                      })}
-                      )
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleSelectAllEquities(true)}
-                      className="text-primary hover:underline font-semibold"
-                    >
-                      Select All
-                    </button>
-                    <span className="text-muted-foreground">•</span>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectAllEquities(false)}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      Deselect All
-                    </button>
-                  </div>
-                </div>
-
-                <div className="min-h-[300px] max-h-[460px] flex-1 overflow-y-auto border border-border/80 rounded-xl shadow-inner">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-border bg-secondary/60 text-muted-foreground sticky top-0 backdrop-blur-md z-10">
-                        <th className="py-2.5 px-3 w-10 text-center">Import</th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">
-                          Security / Ticker
-                        </th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">ISIN</th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">
-                          Demat Account
-                        </th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
-                          Shares
-                        </th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
-                          Price
-                        </th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
-                          Reported Value
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/50 font-mono">
-                      {equities.map((item: ImportCasItemDto, idx: number) => (
-                        <tr
-                          key={`${item.isin}-${item.dematAccountId || idx}`}
-                          className={`hover:bg-secondary/30 transition-colors ${
-                            item.selected ? 'bg-secondary/15' : 'opacity-50'
-                          }`}
-                        >
-                          <td className="py-2.5 px-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={item.selected}
-                              onChange={() => handleToggleItem(item)}
-                              className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
-                            />
-                          </td>
-                          <td className="py-2.5 px-3 font-sans">
-                            <div className="font-semibold text-foreground text-xs flex items-center gap-1.5 flex-wrap">
-                              <span>{item.name}</span>
-                              {item.ticker && (
-                                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold">
-                                  {item.ticker}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground">
-                            {item.isin}
-                          </td>
-                          <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground">
-                            {item.dematAccountId || 'Demat Main'}
-                          </td>
-                          <td className="py-2.5 px-3 text-right text-foreground font-semibold">
-                            {item.quantity.toLocaleString('en-IN', { maximumFractionDigits: 4 })}
-                          </td>
-                          <td className="py-2.5 px-3 text-right text-muted-foreground">
-                            {item.unitCostCents
-                              ? `₹${(item.unitCostCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                              : '—'}
-                          </td>
-                          <td className="py-2.5 px-3 text-right font-bold text-foreground">
-                            ₹
-                            {(item.currentValueCents / 100).toLocaleString('en-IN', {
-                              minimumFractionDigits: 2,
-                            })}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-
-            {/* Tab 2: Mutual Funds Table */}
-            {activeTab === 'mutual_funds' && (
-              <>
-                <div className="flex items-center justify-between text-xs bg-cyan-500/5 p-2 rounded-lg border border-cyan-500/20">
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">
-                      Found{' '}
-                      <span className="text-foreground font-semibold">{mutualFunds.length}</span>{' '}
-                      mutual fund folios (
-                      <span className="text-cyan-400 font-semibold">
-                        {selectedMutualFunds.length}
-                      </span>{' '}
-                      selected)
-                    </span>
-                    <span className="text-muted-foreground">•</span>
-                    <span className="font-mono text-foreground font-semibold">
-                      Selected: ₹
-                      {(mfSelectedValueCents / 100).toLocaleString('en-IN', {
-                        minimumFractionDigits: 2,
-                      })}
-                    </span>
-                    <span className="text-muted-foreground text-[11px]">
-                      (of ₹
-                      {(mfTotalValueCents / 100).toLocaleString('en-IN', {
-                        minimumFractionDigits: 2,
-                      })}
-                      )
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleSelectAllMutualFunds(true)}
-                      className="text-primary hover:underline font-semibold"
-                    >
-                      Select All
-                    </button>
-                    <span className="text-muted-foreground">•</span>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectAllMutualFunds(false)}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      Deselect All
-                    </button>
-                  </div>
-                </div>
-
-                <div className="min-h-[300px] max-h-[460px] flex-1 overflow-y-auto border border-border/80 rounded-xl shadow-inner">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-border bg-secondary/60 text-muted-foreground sticky top-0 backdrop-blur-md z-10">
-                        <th className="py-2.5 px-3 w-10 text-center">Import</th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">
-                          Scheme / Fund Name
-                        </th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">
-                          AMC / Plan
-                        </th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">
-                          Folio No.
-                        </th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">ISIN</th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
-                          Units
-                        </th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
-                          NAV
-                        </th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
-                          Reported Value
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/50 font-mono">
-                      {mutualFunds.map((item: ImportCasItemDto, idx: number) => {
-                        const hasMultipleFolios = (mfFolioCountsByIsin.get(item.isin) || 0) > 1;
-
-                        return (
-                          <tr
-                            key={`${item.isin}-${item.folioNumber || idx}`}
-                            className={`hover:bg-secondary/30 transition-colors ${
-                              item.selected ? 'bg-secondary/15' : 'opacity-50'
-                            }`}
-                          >
-                            <td className="py-2.5 px-3 text-center">
-                              <input
-                                type="checkbox"
-                                checked={item.selected}
-                                onChange={() => handleToggleItem(item)}
-                                className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
-                              />
-                            </td>
-                            <td className="py-2.5 px-3 font-sans">
-                              <div className="font-semibold text-foreground text-xs flex items-center gap-1.5 flex-wrap">
-                                <span>{item.name}</span>
-                                {hasMultipleFolios && (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-[9px] bg-amber-500/10 text-amber-400 border-amber-500/30 px-1 py-0"
-                                    title="This scheme is held across multiple distinct folios in your statement."
-                                  >
-                                    Multiple Folios
-                                  </Badge>
-                                )}
-                              </div>
-                            </td>
-                            <td className="py-2.5 px-3 font-sans">
-                              <div className="text-xs text-foreground font-medium">
-                                {item.amcName || 'Mutual Fund'}
-                              </div>
-                              {item.schemePlan && (
-                                <span className="text-[10px] text-muted-foreground">
-                                  {item.schemePlan}
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-2.5 px-3 font-mono text-[11px] text-foreground font-semibold">
-                              {item.folioNumber || 'Direct'}
-                            </td>
-                            <td className="py-2.5 px-3 font-mono text-[10px] text-muted-foreground">
-                              {item.isin}
-                            </td>
-                            <td className="py-2.5 px-3 text-right text-foreground font-semibold">
-                              {item.quantity.toLocaleString('en-IN', { maximumFractionDigits: 4 })}
-                            </td>
-                            <td className="py-2.5 px-3 text-right text-muted-foreground">
-                              {item.unitCostCents
-                                ? `₹${(item.unitCostCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
-                                : '—'}
-                            </td>
-                            <td className="py-2.5 px-3 text-right font-bold text-foreground">
-                              ₹
-                              {(item.currentValueCents / 100).toLocaleString('en-IN', {
-                                minimumFractionDigits: 2,
-                              })}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-
-            {/* Tab 3: Transactions Table */}
-            {activeTab === 'transactions' && (
-              <>
-                <div className="flex items-center justify-between text-xs bg-emerald-500/5 p-2 rounded-lg border border-emerald-500/20">
-                  <span className="text-muted-foreground">
-                    Found{' '}
-                    <span className="text-foreground font-semibold">{transactions.length}</span>{' '}
-                    historical transactions (
-                    <span className="text-emerald-400 font-semibold">
-                      {selectedTransactionsCount}
-                    </span>{' '}
-                    selected)
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleSelectAllTransactions(true)}
-                      className="text-primary hover:underline font-semibold"
-                    >
-                      Select All
-                    </button>
-                    <span className="text-muted-foreground">•</span>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectAllTransactions(false)}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      Deselect All
-                    </button>
-                  </div>
-                </div>
-
-                <div className="min-h-[300px] max-h-[460px] flex-1 overflow-y-auto border border-border/80 rounded-xl shadow-inner">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-border bg-secondary/60 text-muted-foreground sticky top-0 backdrop-blur-md z-10">
-                        <th className="py-2.5 px-3 w-10 text-center">Import</th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Date</th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Type</th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">
-                          Scheme / Fund Name
-                        </th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
-                          Units
-                        </th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
-                          NAV
-                        </th>
-                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
-                          Amount
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/50 font-mono">
-                      {transactions.map((tx, idx) => (
-                        <tr
-                          key={idx}
-                          className={`hover:bg-secondary/30 transition-colors ${
-                            tx.selected ? 'bg-secondary/15' : 'opacity-50'
-                          }`}
-                        >
-                          <td className="py-2.5 px-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={tx.selected}
-                              onChange={() => handleToggleTransaction(idx)}
-                              className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
-                            />
-                          </td>
-                          <td className="py-2.5 px-3 font-sans text-muted-foreground whitespace-nowrap">
-                            {tx.date}
-                          </td>
-                          <td className="py-2.5 px-3 font-sans">
-                            {tx.type === 'sell' ? (
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] bg-rose-500/10 text-rose-400 border-rose-500/30 uppercase font-semibold"
-                              >
-                                Redemption
-                              </Badge>
-                            ) : tx.type === 'dividend' ? (
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] bg-purple-500/10 text-purple-400 border-purple-500/30 uppercase font-semibold"
-                              >
-                                Dividend
-                              </Badge>
-                            ) : (
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30 uppercase font-semibold"
-                              >
-                                Purchase (SIP)
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="py-2.5 px-3 font-sans">
-                            <div className="font-semibold text-foreground text-xs flex items-center gap-1.5 flex-wrap">
-                              <span>{tx.schemeName}</span>
-                              {tx.ticker && (
-                                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20 text-primary font-bold">
-                                  {tx.ticker}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[11px] text-muted-foreground truncate max-w-sm mt-0.5">
-                              {tx.description}
-                            </p>
-                          </td>
-                          <td className="py-2.5 px-3 text-right text-foreground font-semibold">
-                            {tx.type === 'sell' ? '-' : '+'}
-                            {tx.units
-                              ? tx.units.toLocaleString('en-IN', { maximumFractionDigits: 4 })
-                              : '—'}
-                          </td>
-                          <td className="py-2.5 px-3 text-right text-muted-foreground">
-                            {tx.navPriceCents
-                              ? `₹${(tx.navPriceCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
-                              : '—'}
-                          </td>
-                          <td className="py-2.5 px-3 text-right font-bold text-foreground">
-                            ₹
-                            {(tx.amountCents / 100).toLocaleString('en-IN', {
-                              minimumFractionDigits: 2,
-                            })}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-
-            {/* Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-border/80">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setStep('upload')}
-                className="gap-1.5 text-xs"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Back to Upload
-              </Button>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handleClose}>
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  disabled={
-                    (selectedCount === 0 && selectedTransactionsCount === 0) ||
-                    confirmMutation.isPending
-                  }
-                  onClick={() => confirmMutation.mutate()}
-                  className="gap-2"
-                >
-                  {confirmMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  Confirm & Import ({selectedEquities.length} Equities, {selectedMutualFunds.length}{' '}
-                  Mutual Funds
-                  {selectedTransactionsCount > 0 ? `, ${selectedTransactionsCount} txs` : ''})
-                </Button>
-              </div>
-            </div>
-          </div>
+          <CasPreviewStep
+            previewData={previewData}
+            members={members}
+            accounts={accounts}
+            relevantAccounts={relevantAccounts}
+            importMemberId={importMemberId}
+            importAccountId={importAccountId}
+            activeTab={activeTab}
+            equities={equities}
+            selectedEquities={selectedEquities}
+            equitiesSelectedValueCents={equitiesSelectedValueCents}
+            equitiesTotalValueCents={equitiesTotalValueCents}
+            mutualFunds={mutualFunds}
+            selectedMutualFunds={selectedMutualFunds}
+            mfSelectedValueCents={mfSelectedValueCents}
+            mfTotalValueCents={mfTotalValueCents}
+            mfFolioCountsByIsin={mfFolioCountsByIsin}
+            transactions={transactions}
+            selectedCount={selectedCount}
+            selectedTransactionsCount={selectedTransactionsCount}
+            isConfirmPending={confirmMutation.isPending}
+            onMemberChange={(memberId, firstAccountId) => {
+              setImportMemberId(memberId);
+              setImportAccountId(firstAccountId);
+            }}
+            onAccountChange={setImportAccountId}
+            onTabChange={setActiveTab}
+            onToggleItem={handleToggleItem}
+            onSelectAllEquities={handleSelectAllEquities}
+            onSelectAllMutualFunds={handleSelectAllMutualFunds}
+            onToggleTransaction={handleToggleTransaction}
+            onSelectAllTransactions={handleSelectAllTransactions}
+            onBack={() => setStep('upload')}
+            onClose={handleClose}
+            onConfirm={() => confirmMutation.mutate()}
+          />
         )}
 
         {/* Wizard Step 3: Import Summary */}
         {step === 'summary' && importSummary && (
-          <div className="space-y-6 pt-6 text-center">
-            <div
-              className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto ${
-                importSummary.failed > 0 &&
-                importSummary.imported === 0 &&
-                importSummary.updated === 0
-                  ? 'bg-rose-500/15 border border-rose-500/30 text-rose-400'
-                  : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
-              }`}
-            >
-              {importSummary.failed > 0 &&
-              importSummary.imported === 0 &&
-              importSummary.updated === 0 ? (
-                <AlertCircle className="w-8 h-8" />
-              ) : (
-                <CheckCircle2 className="w-8 h-8" />
-              )}
-            </div>
-
-            <div>
-              <h4 className="text-lg font-bold text-foreground">
-                {importSummary.failed > 0 &&
-                importSummary.imported === 0 &&
-                importSummary.updated === 0
-                  ? 'CAS Import Encountered Issues'
-                  : 'CAS Import Completed Successfully!'}
-              </h4>
-              <p className="text-xs text-muted-foreground mt-1">
-                {importSummary.failed > 0 &&
-                importSummary.imported === 0 &&
-                importSummary.updated === 0
-                  ? 'Could not save positions to database. Please review the notice below.'
-                  : 'Your investment positions have been extracted, validated, and synchronized into distinct investment classes.'}
-              </p>
-            </div>
-
-            {importSummary.failed > 0 && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center justify-center gap-2 max-w-md mx-auto">
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-                <span>
-                  {importSummary.failed} position{importSummary.failed > 1 ? 's' : ''} encountered
-                  an issue during database save.
-                </span>
-              </div>
-            )}
-
-            {/* Summary statistics grid */}
-            <div className="grid gap-3 max-w-lg mx-auto grid-cols-2 sm:grid-cols-4">
-              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                <span className="text-2xl font-bold font-mono text-blue-400">
-                  {importSummary.equitiesImported ??
-                    (importSummary.imported > 0 ? importSummary.imported : 0)}
-                </span>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Equities Imported</p>
-              </div>
-
-              <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
-                <span className="text-2xl font-bold font-mono text-cyan-400">
-                  {importSummary.mutualFundsImported ?? 0}
-                </span>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Mutual Funds</p>
-              </div>
-
-              <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                <span className="text-2xl font-bold font-mono text-purple-400">
-                  {importSummary.updated}
-                </span>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Updated</p>
-              </div>
-
-              <div className="p-3 rounded-xl bg-secondary/40 border border-border/50">
-                <span className="text-2xl font-bold font-mono text-muted-foreground">
-                  {importSummary.skipped}
-                </span>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Skipped</p>
-              </div>
-
-              {Boolean(importSummary.transactionsImported) && (
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 col-span-2 sm:col-span-4">
-                  <span className="text-xl font-bold font-mono text-emerald-400">
-                    +{importSummary.transactionsImported}
-                  </span>
-                  <p className="text-[11px] text-emerald-200 mt-0.5">
-                    Historical Transactions Added to Trade Ledger
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="pt-2">
-              <Button onClick={handleClose} className="gap-2">
-                View Updated Portfolio
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
+          <CasSummaryStep importSummary={importSummary} onClose={handleClose} />
         )}
       </div>
     </div>
