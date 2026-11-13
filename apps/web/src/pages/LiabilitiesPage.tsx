@@ -16,6 +16,7 @@ import { AddLiabilityModal } from '@/components/liabilities/AddLiabilityModal';
 import { UpdateBalanceModal } from '@/components/liabilities/UpdateBalanceModal';
 import { RecordEmiPaymentModal } from '@/components/liabilities/RecordEmiPaymentModal';
 import { UpdateValuationModal } from '@/components/liabilities/UpdateValuationModal';
+import { LoanPrepaymentSimulatorCard } from '@/components/liabilities/LoanPrepaymentSimulatorCard';
 import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -887,6 +888,9 @@ export function LiabilitiesPage() {
           </div>
         )}
       </div>
+
+      {/* Prepayment & Compound Amortization Simulator */}
+      <LoanPrepaymentSimulatorCard liabilities={filteredLiabilities} />
 
       {/* Modals */}
       <AddLiabilityModal

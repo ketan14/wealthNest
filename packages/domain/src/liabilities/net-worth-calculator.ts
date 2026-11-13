@@ -1,6 +1,10 @@
 import { CurrencyCode } from '../money/currency.js';
 import { Money } from '../money/money.js';
 import { LoanType, LiabilityStatus } from '../models/liability.js';
+import {
+  LoanPrepaymentEvent,
+  projectAmortizedBalanceAsOf,
+} from '../models/loan-amortization.js';
 
 export interface ResolvedAssetValuation {
   readonly assetId: string;
@@ -43,6 +47,8 @@ export interface LiabilityHistoricalInput {
   readonly emiAmount: Money;
   readonly originalPrincipal: Money;
   readonly startDate?: string;
+  readonly interestRate?: number;
+  readonly prepayments?: readonly LoanPrepaymentEvent[];
   readonly balances: readonly {
     readonly asOfDate: string; // YYYY-MM-DD
     readonly balance: Money;
@@ -314,6 +320,19 @@ export function calculateHistoricalNetWorth(params: HistoricalNetWorthParams): N
       .sort((a, b) => (b.asOfDate > a.asOfDate ? 1 : b.asOfDate < a.asOfDate ? -1 : 0));
 
     if (validBalances.length > 0) {
+      const checkpoint = validBalances[0]!;
+      const resolvedBalance =
+        l.interestRate !== undefined && checkpoint.asOfDate < asOfDate
+          ? projectAmortizedBalanceAsOf({
+              checkpointBalance: checkpoint.balance,
+              checkpointDate: checkpoint.asOfDate,
+              targetDate: asOfDate,
+              annualInterestRate: l.interestRate,
+              monthlyEmi: l.emiAmount,
+              prepayments: l.prepayments,
+            }).outstandingBalance
+          : checkpoint.balance;
+
       resolvedLiabilities.push({
         liabilityId: l.liabilityId,
         name: l.name,
@@ -322,12 +341,24 @@ export function calculateHistoricalNetWorth(params: HistoricalNetWorthParams): N
         status: l.status,
         emiAmount: l.emiAmount,
         originalPrincipal: l.originalPrincipal,
-        outstandingBalance: validBalances[0]!.balance,
-        asOfDate: validBalances[0]!.asOfDate,
+        outstandingBalance: resolvedBalance,
+        asOfDate: l.interestRate !== undefined && checkpoint.asOfDate < asOfDate ? asOfDate : checkpoint.asOfDate,
         linkedAssetId: l.linkedAssetId,
       });
     } else if (l.startDate && l.startDate <= asOfDate) {
-      // Loan had started but has no balance snapshot yet; use original principal as initial balance
+      // Loan had started but has no balance snapshot yet; compound from original principal if rate is provided
+      const resolvedBalance =
+        l.interestRate !== undefined && l.startDate < asOfDate
+          ? projectAmortizedBalanceAsOf({
+              checkpointBalance: l.originalPrincipal,
+              checkpointDate: l.startDate,
+              targetDate: asOfDate,
+              annualInterestRate: l.interestRate,
+              monthlyEmi: l.emiAmount,
+              prepayments: l.prepayments,
+            }).outstandingBalance
+          : l.originalPrincipal;
+
       resolvedLiabilities.push({
         liabilityId: l.liabilityId,
         name: l.name,
@@ -336,8 +367,8 @@ export function calculateHistoricalNetWorth(params: HistoricalNetWorthParams): N
         status: l.status,
         emiAmount: l.emiAmount,
         originalPrincipal: l.originalPrincipal,
-        outstandingBalance: l.originalPrincipal,
-        asOfDate: l.startDate,
+        outstandingBalance: resolvedBalance,
+        asOfDate: l.interestRate !== undefined && l.startDate < asOfDate ? asOfDate : l.startDate,
         linkedAssetId: l.linkedAssetId,
       });
     } else {
