@@ -27,6 +27,7 @@ import {
   NewTransactionFormValues,
 } from '@/components/transactions/RecordTransactionModal';
 import { TransactionCard } from '@/components/transactions/TransactionCard';
+import { RecurringRulesCard } from '@/components/transactions/RecurringRulesCard';
 import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
 import { useIsMobile } from '@/lib/hooks/use-is-mobile';
 import {
@@ -664,6 +665,15 @@ export function TransactionsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Recurring SIP & EMI Rules */}
+      <RecurringRulesCard
+        onPostTransaction={async (values) => {
+          await recordMutation.mutateAsync(values);
+        }}
+        isPosting={recordMutation.isPending}
+        selectedMemberId={selectedMemberId}
+      />
 
       {/* Transactions Audit Log Table */}
       <Card className="border-border/80 bg-card/60 backdrop-blur-sm">

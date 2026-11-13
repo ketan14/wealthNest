@@ -5,6 +5,7 @@ export * from './models/asset.js';
 export * from './models/asset-class.js';
 export * from './models/holding.js';
 export * from './models/transaction.js';
+export * from './transactions/recurring-rules.js';
 export * from './models/liability.js';
 export * from './models/loan-amortization.js';
 export * from './models/asset-valuation.js';
