@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
+import { QueryClientContext } from '@tanstack/react-query';
 import { supabase } from './client';
 import { isTauri } from '../tauri/tauri-runtime';
 
@@ -81,6 +82,10 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useContext(QueryClientContext);
+  const queryClientRef = useRef(queryClient);
+  queryClientRef.current = queryClient;
+
   const initialOffline = isOfflineLocalActive();
   const [user, setUser] = useState<User | null>(() =>
     initialOffline ? DEFAULT_OFFLINE_USER : null
@@ -88,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(!initialOffline);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+  const lastUserIdRef = useRef<string | null>(initialOffline ? LOCAL_VAULT_USER_ID : null);
 
   const clearPasswordRecovery = useCallback(() => {
     setIsPasswordRecovery(false);
@@ -96,17 +102,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const offlineDefault = isOfflineLocalActive();
 
+    const syncUserTransition = (nextUser: User | null) => {
+      const nextUserId = nextUser?.id ?? null;
+      if (lastUserIdRef.current !== null && lastUserIdRef.current !== nextUserId) {
+        queryClientRef.current?.clear();
+      }
+      lastUserIdRef.current = nextUserId;
+    };
+
     // Initial session retrieval
     supabase.auth
       .getSession()
       .then(({ data: { session: activeSession } }) => {
         if (activeSession?.user) {
+          syncUserTransition(activeSession.user);
           setSession(activeSession);
           setUser(activeSession.user);
         } else if (offlineDefault) {
+          syncUserTransition(DEFAULT_OFFLINE_USER);
           setSession(null);
           setUser(DEFAULT_OFFLINE_USER);
         } else {
+          syncUserTransition(null);
           setSession(null);
           setUser(null);
         }
@@ -114,6 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       .catch(() => {
         if (offlineDefault) {
+          syncUserTransition(DEFAULT_OFFLINE_USER);
           setUser(DEFAULT_OFFLINE_USER);
         }
         setIsLoading(false);
@@ -125,17 +143,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (event === 'PASSWORD_RECOVERY') {
         setIsPasswordRecovery(true);
-      } else if (event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+      } else if (event === 'SIGNED_OUT') {
+        setIsPasswordRecovery(false);
+        queryClientRef.current?.clear();
+      } else if (event === 'USER_UPDATED') {
         setIsPasswordRecovery(false);
       }
 
       if (nextSession?.user) {
+        syncUserTransition(nextSession.user);
         setSession(nextSession);
         setUser(nextSession.user);
       } else if (isOfflineLocalActive()) {
+        syncUserTransition(DEFAULT_OFFLINE_USER);
         setSession(null);
         setUser(DEFAULT_OFFLINE_USER);
       } else {
+        syncUserTransition(null);
         setSession(null);
         setUser(null);
       }
@@ -158,6 +182,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     }
+    if (lastUserIdRef.current !== null && lastUserIdRef.current !== LOCAL_VAULT_USER_ID) {
+      queryClientRef.current?.clear();
+    }
+    lastUserIdRef.current = LOCAL_VAULT_USER_ID;
     setSession(null);
     setUser(DEFAULT_OFFLINE_USER);
   }, []);
@@ -176,10 +204,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore network failure when signing out offline
     }
-    if (isTauri()) {
+    queryClientRef.current?.clear();
+    if (isTauri() && isOfflineLocalActive()) {
+      lastUserIdRef.current = LOCAL_VAULT_USER_ID;
       setSession(null);
       setUser(DEFAULT_OFFLINE_USER);
     } else {
+      lastUserIdRef.current = null;
       setSession(null);
       setUser(null);
     }

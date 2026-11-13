@@ -11,6 +11,7 @@ import {
 } from '@wealthnest/domain';
 import { FamilyMemberDto } from '@wealthnest/application';
 import { Button } from '@/components/ui/Button';
+import { validateVaultFileBlobSignature } from '@/lib/validation/import-file';
 
 export interface UploadDocumentFormData {
   file: File;
@@ -78,16 +79,23 @@ export function UploadDocumentModal({
       return;
     }
 
+    const declaredMime = file.type || 'application/pdf';
     const validation = validateDocumentUpload({
       title,
       category,
       fileName: file.name,
       fileSizeBytes: file.size,
-      mimeType: file.type || 'application/pdf',
+      mimeType: declaredMime,
     });
 
     if (!validation.isValid) {
       setError(validation.error || 'Invalid document upload details.');
+      return;
+    }
+
+    const signatureError = await validateVaultFileBlobSignature(file, declaredMime, file.name);
+    if (signatureError) {
+      setError(signatureError);
       return;
     }
 

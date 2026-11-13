@@ -6,6 +6,7 @@ import {
   UploadFamilyDocumentParams,
 } from '@wealthnest/application';
 import { supabase } from './client';
+import { validateVaultFileBlobSignature } from '@/lib/validation/import-file';
 
 const VAULT_BUCKET = 'family-vault';
 
@@ -70,6 +71,15 @@ export class SupabaseDocumentVaultAdapter implements DocumentVaultRepositoryPort
 
   async uploadDocument(params: UploadFamilyDocumentParams): Promise<Result<FamilyDocumentDto>> {
     try {
+      const signatureError = await validateVaultFileBlobSignature(
+        params.fileBlob,
+        params.mimeType,
+        params.fileName
+      );
+      if (signatureError) {
+        return err(new Error(signatureError));
+      }
+
       const docId = crypto.randomUUID();
       const storagePath = buildVaultStoragePath(params.userId, docId, params.fileName);
 

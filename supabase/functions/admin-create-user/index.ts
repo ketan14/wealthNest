@@ -16,6 +16,16 @@ const ALLOWED_ROLES: ReadonlySet<PlatformRole> = new Set([
 ]);
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const DEFAULT_MAX_CREATES_PER_MIN = 10;
+const DEFAULT_MAX_CREATES_PER_15M = 30;
+
+function resolveRateLimit(envName: string, fallback: number, maxCap: number): number {
+  const raw = Number(Deno.env.get(envName) ?? '');
+  if (!Number.isFinite(raw) || raw < 1) {
+    return fallback;
+  }
+  return Math.min(Math.floor(raw), maxCap);
+}
 
 function buildCorsHeaders(req: Request): { headers: Record<string, string>; originAllowed: boolean } {
   const configuredOriginsRaw = Deno.env.get('ALLOWED_ORIGINS') ?? '';
@@ -53,12 +63,14 @@ function buildCorsHeaders(req: Request): { headers: Record<string, string>; orig
 function jsonResponse(
   body: Record<string, unknown>,
   status: number,
-  corsHeaders: Record<string, string>
+  corsHeaders: Record<string, string>,
+  extraHeaders: Record<string, string> = {}
 ): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       ...corsHeaders,
+      ...extraHeaders,
       'Content-Type': 'application/json',
     },
   });
@@ -169,6 +181,55 @@ Deno.serve(async (req: Request): Promise<Response> => {
       { error: 'Forbidden: Only super_admin or support_admin can provision users' },
       403,
       corsHeaders
+    );
+  }
+
+  // 3b. Enforce persistent Postgres-backed sliding-window rate limits per admin caller (AUTH-08)
+  const nowMs = Date.now();
+  const oneMinAgoMs = nowMs - 60 * 1000;
+  const fifteenMinAgoIso = new Date(nowMs - 15 * 60 * 1000).toISOString();
+  const maxPerMin = resolveRateLimit('ADMIN_CREATE_RATE_LIMIT_PER_MIN', DEFAULT_MAX_CREATES_PER_MIN, 100);
+  const maxPer15m = resolveRateLimit('ADMIN_CREATE_RATE_LIMIT_PER_15M', DEFAULT_MAX_CREATES_PER_15M, 500);
+
+  const { data: recentEvents, error: rateLookupError } = await supabaseAdmin
+    .from('admin_audit_logs')
+    .select('created_at, reason_code')
+    .eq('actor_user_id', caller.id)
+    .eq('action', 'ADMIN_USER_CREATED')
+    .gte('created_at', fifteenMinAgoIso)
+    .limit(500);
+
+  if (rateLookupError) {
+    console.error('admin-create-user rate limit lookup failed:', rateLookupError.message);
+    return jsonResponse({ error: 'Rate limit verification unavailable' }, 500, corsHeaders);
+  }
+
+  const countedEvents = (recentEvents ?? []).filter(
+    (entry: { created_at: string; reason_code: string | null }) =>
+      entry.reason_code !== 'RATE_LIMIT_EXCEEDED'
+  );
+  const countInLast15m = countedEvents.length;
+  const countInLastMin = countedEvents.filter(
+    (entry: { created_at: string }) => Date.parse(entry.created_at) >= oneMinAgoMs
+  ).length;
+
+  if (countInLastMin >= maxPerMin || countInLast15m >= maxPer15m) {
+    const retryAfterSec = countInLastMin >= maxPerMin ? '60' : '900';
+    await supabaseAdmin.from('admin_audit_logs').insert({
+      actor_user_id: caller.id,
+      action: 'ADMIN_USER_CREATED',
+      outcome: 'denied',
+      reason_code: 'RATE_LIMIT_EXCEEDED',
+      safe_metadata: {
+        count_1m: countInLastMin,
+        count_15m: countInLast15m,
+      },
+    });
+    return jsonResponse(
+      { error: 'Too many user provisioning requests. Please wait before retrying.' },
+      429,
+      corsHeaders,
+      { 'Retry-After': retryAfterSec }
     );
   }
 

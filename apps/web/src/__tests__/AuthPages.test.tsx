@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from '../lib/supabase/auth-context';
+import { AuthProvider, useAuth } from '../lib/supabase/auth-context';
 import { SignUpPage } from '../pages/SignUpPage';
 import { LoginPage } from '../pages/LoginPage';
 import { ResetPasswordPage } from '../pages/ResetPasswordPage';
@@ -472,6 +472,57 @@ describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
       });
 
       expect(await screen.findByRole('heading', { name: /Password Updated/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('Session Termination & Query Cache Purging (AUTH-04)', () => {
+    it('purges React Query cache and clears user state on signOut()', async () => {
+      (supabase.auth.getSession as any).mockResolvedValueOnce({
+        data: {
+          session: {
+            user: { id: 'usr-cached', email: 'cached@wealthnest.local' },
+          },
+        },
+      });
+      (supabase.auth.signOut as any).mockResolvedValueOnce({ error: null });
+
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false, gcTime: Infinity },
+        },
+      });
+      queryClient.setQueryData(['portfolio', 'usr-cached'], { netWorth: 123456 });
+
+      function SignOutTrigger() {
+        const { user, signOut } = useAuth();
+        return (
+          <div>
+            <span data-testid="session-user">{user?.id ?? 'signed-out'}</span>
+            <button type="button" onClick={() => void signOut()}>
+              Sign Out Now
+            </button>
+          </div>
+        );
+      }
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <SignOutTrigger />
+          </AuthProvider>
+        </QueryClientProvider>
+      );
+
+      expect(await screen.findByTestId('session-user')).toHaveTextContent('usr-cached');
+      expect(queryClient.getQueryData(['portfolio', 'usr-cached'])).toEqual({ netWorth: 123456 });
+
+      fireEvent.click(screen.getByRole('button', { name: /Sign Out Now/i }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('session-user')).toHaveTextContent('signed-out');
+      });
+      expect(queryClient.getQueryData(['portfolio', 'usr-cached'])).toBeUndefined();
+      expect(supabase.auth.signOut).toHaveBeenCalledTimes(1);
     });
   });
 });
