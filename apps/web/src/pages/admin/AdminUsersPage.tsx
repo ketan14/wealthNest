@@ -4,30 +4,23 @@ import {
   Search,
   UserPlus,
   KeyRound,
-  ShieldAlert,
   UserCheck,
   UserX,
   ExternalLink,
   ChevronLeft,
   ChevronRight,
-  AlertCircle,
-  X,
   CheckCircle2,
   Mail,
-  Copy,
-  Check,
-  Eye,
-  EyeOff,
-  Sparkles,
 } from 'lucide-react';
 import { AdminHeader } from '../../components/admin/AdminHeader';
+import { AdminUserStatusModal } from '../../components/admin/AdminUserStatusModal';
+import { AdminUserProvisionModal } from '../../components/admin/AdminUserProvisionModal';
 import { adminAdapter } from '../../lib/supabase/admin.adapter';
 import { useAdmin } from '../../lib/admin/admin-context';
 import {
   AdminUserSummary,
   UserAccessStatus,
   PlatformRole,
-  validateStatusChange,
 } from '@wealthnest/domain';
 
 export function AdminUsersPage() {
@@ -44,26 +37,8 @@ export function AdminUsersPage() {
 
   // Modals state
   const [statusModalUser, setStatusModalUser] = useState<AdminUserSummary | null>(null);
-  const [newStatus, setNewStatus] = useState<UserAccessStatus>('suspended');
-  const [reasonCode, setReasonCode] = useState('SECURITY_INCIDENT');
-  const [reasonDetails, setReasonDetails] = useState('');
-  const [modalError, setModalError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'invite'>('create');
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteName, setInviteName] = useState('');
-  const [userPassword, setUserPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [inviteRole, setInviteRole] = useState<PlatformRole | ''>('');
-  const [createdCredentials, setCreatedCredentials] = useState<{
-    email: string;
-    password: string;
-    displayName: string;
-    role?: string;
-  } | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -95,162 +70,6 @@ export function AdminUsersPage() {
 
   const handleOpenStatusModal = (user: AdminUserSummary) => {
     setStatusModalUser(user);
-    setNewStatus(user.status === 'suspended' ? 'active' : 'suspended');
-    setReasonCode(
-      user.status === 'suspended' ? 'REMEDIAL_ACTION_COMPLETE' : 'SUSPICIOUS_LOGIN_ATTEMPTS'
-    );
-    setReasonDetails('');
-    setModalError(null);
-  };
-
-  const handleApplyStatusChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!statusModalUser || !adminActor) return;
-
-    // Validate using domain invariants
-    const validation = validateStatusChange(
-      adminActor.userId,
-      statusModalUser.id,
-      newStatus,
-      reasonCode
-    );
-
-    if (!validation.allowed) {
-      setModalError(validation.reason || 'Status change disallowed');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setModalError(null);
-    try {
-      await adminAdapter.setUserStatus(
-        statusModalUser.id,
-        newStatus,
-        reasonCode,
-        reasonDetails.trim() || undefined
-      );
-
-      await adminAdapter.recordLog({
-        actorUserId: adminActor.userId,
-        actorName: adminActor.displayName,
-        targetUserId: statusModalUser.id,
-        targetName: statusModalUser.displayName,
-        action: 'USER_STATUS_CHANGE',
-        outcome: 'success',
-        reasonCode,
-        safeMetadata: { newStatus, reasonDetails },
-      });
-
-      showToast(`User ${statusModalUser.displayName} marked as ${newStatus}`);
-      setStatusModalUser(null);
-      fetchUsers();
-    } catch (err: any) {
-      setModalError(err.message || 'Failed to update user status');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleInviteUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteEmail.trim() || !adminActor) return;
-
-    setIsSubmitting(true);
-    try {
-      const displayName = inviteName.trim() || inviteEmail.split('@')[0] || 'Investor';
-      await adminAdapter.inviteUser(inviteEmail.trim(), displayName, inviteRole || undefined);
-
-      await adminAdapter.recordLog({
-        actorUserId: adminActor.userId,
-        actorName: adminActor.displayName,
-        targetName: displayName,
-        action: 'USER_INVITED',
-        outcome: 'success',
-        reasonCode: 'ONBOARDING_INVITATION',
-        safeMetadata: { email: inviteEmail, role: inviteRole },
-      });
-
-      setShowInviteModal(false);
-      setInviteEmail('');
-      setInviteName('');
-      setInviteRole('');
-      showToast(`Invitation sent to ${inviteEmail}`);
-      fetchUsers();
-    } catch (err: any) {
-      setModalError(err.message || 'Failed to invite user');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleGeneratePassword = () => {
-    const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%';
-    let pwd = 'WealthNest@';
-    for (let i = 0; i < 4; i++) {
-      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setUserPassword(pwd);
-  };
-
-  const handleCopyCredentials = () => {
-    if (!createdCredentials) return;
-    const text = [
-      'WealthNest Account Credentials:',
-      `Login URL: ${window.location.origin}/login`,
-      `Email: ${createdCredentials.email}`,
-      `Password: ${createdCredentials.password}`,
-      createdCredentials.role ? `Role: ${createdCredentials.role}` : null,
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 3000);
-  };
-
-  const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteEmail.trim() || !userPassword || !adminActor) return;
-    if (userPassword.length < 6) {
-      setModalError('Password must be at least 6 characters');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setModalError(null);
-    try {
-      const displayName = inviteName.trim() || inviteEmail.split('@')[0] || 'Investor';
-      await adminAdapter.createUserDirectly(
-        inviteEmail.trim(),
-        userPassword,
-        displayName,
-        inviteRole || undefined
-      );
-
-      await adminAdapter.recordLog({
-        actorUserId: adminActor.userId,
-        actorName: adminActor.displayName,
-        targetName: displayName,
-        action: 'USER_CREATED',
-        outcome: 'success',
-        reasonCode: 'DIRECT_ADMIN_PROVISIONING',
-        safeMetadata: { email: inviteEmail.trim(), role: inviteRole },
-      });
-
-      setCreatedCredentials({
-        email: inviteEmail.trim(),
-        password: userPassword,
-        displayName,
-        role: inviteRole || 'Standard Investor',
-      });
-      showToast(`Account created for ${inviteEmail.trim()}`);
-      fetchUsers();
-    } catch (err: any) {
-      setModalError(err.message || 'Failed to create user account');
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   const handlePasswordReset = async (user: AdminUserSummary) => {
@@ -295,9 +114,6 @@ export function AdminUsersPage() {
               <button
                 onClick={() => {
                   setModalMode('create');
-                  setModalError(null);
-                  setCreatedCredentials(null);
-                  setUserPassword('');
                   setShowInviteModal(true);
                 }}
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all"
@@ -308,8 +124,6 @@ export function AdminUsersPage() {
               <button
                 onClick={() => {
                   setModalMode('invite');
-                  setModalError(null);
-                  setCreatedCredentials(null);
                   setShowInviteModal(true);
                 }}
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 text-xs font-medium transition-all"
@@ -562,377 +376,28 @@ export function AdminUsersPage() {
       </div>
 
       {/* Status Change Modal */}
-      {statusModalUser && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
-                  <ShieldAlert className="w-4 h-4" />
-                </div>
-                <h3 className="font-semibold text-white text-base">
-                  Change Account Lifecycle Status
-                </h3>
-              </div>
-              <button
-                onClick={() => setStatusModalUser(null)}
-                className="text-slate-500 hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleApplyStatusChange} className="mt-5 space-y-4">
-              {modalError && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-xs flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-                  <span>{modalError}</span>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  Target Account
-                </label>
-                <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white flex items-center justify-between">
-                  <span className="font-semibold">{statusModalUser.displayName}</span>
-                  <span className="text-slate-400 font-mono text-[11px]">
-                    {statusModalUser.email}
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  New Lifecycle Status
-                </label>
-                <select
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value as UserAccessStatus)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-500"
-                >
-                  <option value="active">Active (Full Access)</option>
-                  <option value="suspended">Suspended (Access Temporarily Blocked)</option>
-                  <option value="deactivated">Deactivated (Permanent Offboarding)</option>
-                </select>
-              </div>
-
-              {(newStatus === 'suspended' || newStatus === 'deactivated') && (
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
-                    Mandatory Reason Code <span className="text-rose-400">*</span>
-                  </label>
-                  <select
-                    value={reasonCode}
-                    onChange={(e) => setReasonCode(e.target.value)}
-                    required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-500"
-                  >
-                    <option value="SUSPICIOUS_LOGIN_ATTEMPTS">
-                      Suspicious Login Attempts / MFA Failures
-                    </option>
-                    <option value="POLICY_VIOLATION">Terms of Service / Policy Violation</option>
-                    <option value="FRAUD_PREVENTION">Fraud Prevention / AML Review</option>
-                    <option value="USER_REQUEST">Voluntary User Request</option>
-                    <option value="PAYMENT_FAILURE">Billing or Subscription Delinquency</option>
-                    <option value="SECURITY_INCIDENT">
-                      Active Security Incident Investigation
-                    </option>
-                    <option value="OTHER">Other Administrative Reason</option>
-                  </select>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  Reason Notes (Optional / Appended to Audit Log)
-                </label>
-                <textarea
-                  value={reasonDetails}
-                  onChange={(e) => setReasonDetails(e.target.value)}
-                  rows={3}
-                  placeholder="Provide supporting context for compliance and audit trail..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setStatusModalUser(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-md disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Updating...' : 'Confirm Status Change'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <AdminUserStatusModal
+        user={statusModalUser}
+        adminActor={adminActor}
+        onClose={() => setStatusModalUser(null)}
+        onSuccess={(message) => {
+          showToast(message);
+          fetchUsers();
+        }}
+      />
 
       {/* User Provisioning Modal (Direct Create or Send Invite) */}
-      {showInviteModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                    modalMode === 'create'
-                      ? 'bg-emerald-500/10 text-emerald-400'
-                      : 'bg-cyan-500/10 text-cyan-400'
-                  }`}
-                >
-                  {modalMode === 'create' ? (
-                    <UserPlus className="w-4 h-4" />
-                  ) : (
-                    <Mail className="w-4 h-4" />
-                  )}
-                </div>
-                <div>
-                  <h3 className="font-semibold text-white text-base">
-                    {modalMode === 'create' ? 'Create Investor Account' : 'Invite New Investor'}
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    {modalMode === 'create'
-                      ? 'Provision account immediately with password credentials'
-                      : 'Dispatch an onboarding invitation link via email'}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowInviteModal(false)}
-                className="text-slate-500 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Success View: Display Created Credentials */}
-            {createdCredentials ? (
-              <div className="mt-5 space-y-4">
-                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400">
-                    <CheckCircle2 className="w-4 h-4 shrink-0" />
-                    <span>Account Provisioned Successfully!</span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 leading-relaxed">
-                    The account is active and ready. Copy these credentials to share with the user:
-                  </p>
-
-                  <div className="mt-3 p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-xs font-mono space-y-1.5 select-all">
-                    <div>
-                      <span className="text-slate-500">Email:</span>{' '}
-                      <span className="text-white font-medium">{createdCredentials.email}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500">Password:</span>{' '}
-                      <span className="text-emerald-400 font-semibold">
-                        {createdCredentials.password}
-                      </span>
-                    </div>
-                    {createdCredentials.role && (
-                      <div>
-                        <span className="text-slate-500">Role:</span>{' '}
-                        <span className="text-cyan-400">{createdCredentials.role}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="pt-2 flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={handleCopyCredentials}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition-colors"
-                  >
-                    {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copied ? 'Copied to Clipboard!' : 'Copy Credentials'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowInviteModal(false);
-                      setCreatedCredentials(null);
-                    }}
-                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors"
-                  >
-                    Done
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Mode Selector Tabs */}
-                <div className="flex items-center gap-2 mt-4 p-1 rounded-xl bg-slate-950 border border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setModalMode('create');
-                      setModalError(null);
-                    }}
-                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-2 ${
-                      modalMode === 'create'
-                        ? 'bg-emerald-600 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <UserPlus className="w-3.5 h-3.5" />
-                    <span>Direct Create (with Password)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setModalMode('invite');
-                      setModalError(null);
-                    }}
-                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-2 ${
-                      modalMode === 'invite'
-                        ? 'bg-cyan-600 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <Mail className="w-3.5 h-3.5" />
-                    <span>Send Invite Link</span>
-                  </button>
-                </div>
-
-                {modalError && (
-                  <div className="mt-3 p-3 rounded-xl bg-destructive/15 border border-destructive/30 text-destructive text-xs flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{modalError}</span>
-                  </div>
-                )}
-
-                <form
-                  onSubmit={modalMode === 'create' ? handleCreateUser : handleInviteUser}
-                  className="mt-4 space-y-3.5"
-                >
-                  <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">
-                      Email Address <span className="text-emerald-400">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      placeholder="e.g. krisha.vaghela@wealthnest.local"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">
-                      Display / Investor Name
-                    </label>
-                    <input
-                      type="text"
-                      value={inviteName}
-                      onChange={(e) => setInviteName(e.target.value)}
-                      placeholder="e.g. Krisha Vaghela"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  {/* Password Field (Only for Direct Create) */}
-                  {modalMode === 'create' && (
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-xs font-medium text-slate-400">
-                          Account Password <span className="text-emerald-400">*</span>
-                        </label>
-                        <button
-                          type="button"
-                          onClick={handleGeneratePassword}
-                          className="text-[11px] text-emerald-400 hover:text-emerald-300 font-medium inline-flex items-center gap-1 transition-colors"
-                        >
-                          <Sparkles className="w-3 h-3" />
-                          <span>Generate Password</span>
-                        </button>
-                      </div>
-                      <div className="relative">
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          required
-                          value={userPassword}
-                          onChange={(e) => setUserPassword(e.target.value)}
-                          placeholder="Min. 6 characters (e.g. WealthNest@2026)"
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 pr-10 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500 font-mono"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
-                        >
-                          {showPassword ? (
-                            <EyeOff className="w-3.5 h-3.5" />
-                          ) : (
-                            <Eye className="w-3.5 h-3.5" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {isSuperAdmin && (
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1">
-                        Initial Platform Role (Optional)
-                      </label>
-                      <select
-                        value={inviteRole}
-                        onChange={(e) => setInviteRole((e.target.value as PlatformRole) || '')}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-emerald-500"
-                      >
-                        <option value="">No Platform Role (Standard Investor)</option>
-                        <option value="support_admin">Support Admin</option>
-                        <option value="auditor">Compliance Auditor</option>
-                        <option value="super_admin">Super Admin</option>
-                      </select>
-                    </div>
-                  )}
-
-                  <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowInviteModal(false)}
-                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className={`px-4 py-2 rounded-xl text-white text-xs font-semibold shadow-md disabled:opacity-50 transition-colors ${
-                        modalMode === 'create'
-                          ? 'bg-emerald-600 hover:bg-emerald-500'
-                          : 'bg-cyan-600 hover:bg-cyan-500'
-                      }`}
-                    >
-                      {isSubmitting
-                        ? modalMode === 'create'
-                          ? 'Creating...'
-                          : 'Inviting...'
-                        : modalMode === 'create'
-                          ? 'Create Account'
-                          : 'Send Invitation'}
-                    </button>
-                  </div>
-                </form>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      <AdminUserProvisionModal
+        isOpen={showInviteModal}
+        initialMode={modalMode}
+        isSuperAdmin={isSuperAdmin}
+        adminActor={adminActor}
+        onClose={() => setShowInviteModal(false)}
+        onSuccess={(message) => {
+          showToast(message);
+          fetchUsers();
+        }}
+      />
     </div>
   );
 }
