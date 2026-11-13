@@ -189,9 +189,9 @@ export function RecordTransactionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl">
+      <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-border/80">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/80 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
               <Plus className="w-4 h-4" />
@@ -212,7 +212,7 @@ export function RecordTransactionModal({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+        <form onSubmit={handleSubmit} className="space-y-4 p-6 overflow-y-auto flex-1">
           {error && (
             <div className="p-3 rounded-lg bg-destructive/15 text-destructive border border-destructive/30 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />

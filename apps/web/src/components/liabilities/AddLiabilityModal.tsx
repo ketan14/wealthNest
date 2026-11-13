@@ -213,9 +213,9 @@ export function AddLiabilityModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-card shadow-2xl p-6 md:p-8">
+      <div className="relative w-full max-w-2xl flex flex-col max-h-[90dvh] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 mb-6 border-b border-border">
+        <div className="flex items-center justify-between px-6 py-4 md:px-8 border-b border-border shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
               <Landmark className="w-5 h-5" />
@@ -237,12 +237,13 @@ export function AddLiabilityModal({
           </button>
         </div>
 
-        {errorMsg && (
-          <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-            <span>{errorMsg}</span>
-          </div>
-        )}
+        <div className="p-6 md:p-8 overflow-y-auto flex-1">
+          {errorMsg && (
+            <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Primary Borrower & Co-Borrowers */}
@@ -477,6 +478,7 @@ export function AddLiabilityModal({
             </Button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

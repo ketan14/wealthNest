@@ -68,6 +68,7 @@ import { AdminProvider } from '@/lib/admin/admin-context';
 import { SupportSessionProvider } from '@/lib/admin/support-session-context';
 import { PreferencesProvider } from '@/lib/preferences/preferences-context';
 import { FamilyProvider } from '@/lib/family/family-context';
+import { ToastProvider } from '@/components/ui/Toast';
 
 // Initialize TanStack Query client with production-ready defaults
 const queryClient = new QueryClient({
@@ -89,7 +90,8 @@ export function App() {
             <SupportSessionProvider>
               <PreferencesProvider>
                 <FamilyProvider>
-                  <BrowserRouter>
+                  <ToastProvider>
+                    <BrowserRouter>
                     <Suspense fallback={<RouteLoadingFallback />}>
                       <Routes>
                         {/* Dedicated Authentication Routes */}
@@ -122,7 +124,8 @@ export function App() {
                         </Route>
                       </Routes>
                     </Suspense>
-                  </BrowserRouter>
+                    </BrowserRouter>
+                  </ToastProvider>
                 </FamilyProvider>
               </PreferencesProvider>
             </SupportSessionProvider>

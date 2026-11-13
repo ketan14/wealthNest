@@ -16,9 +16,15 @@ import {
   HardDrive,
   Wifi,
   Server,
+  Search,
+  ShieldCheck,
 } from 'lucide-react';
 
-export function Header() {
+export interface HeaderProps {
+  onOpenCommandPalette?: () => void;
+}
+
+export function Header({ onOpenCommandPalette }: HeaderProps) {
   const { user, isOfflineUser, signOut } = useAuth();
   const inTauri = isTauri();
   const [config, setConfig] = useState<ServerConfig>(() => connectionManager.getConfig());
@@ -84,19 +90,48 @@ export function Header() {
   };
 
   return (
-    <header className="h-16 border-b border-border bg-card/40 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10">
-      <div className="flex items-center gap-3">
-        <span className="text-sm font-medium text-muted-foreground">Environment:</span>
-        {renderEnvironmentBadge()}
+    <header
+      className="min-h-16 border-b border-border bg-card/40 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between shrink-0 z-10"
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+    >
+      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        {/* Compact Brand on Mobile */}
+        <Link to="/" className="flex md:hidden items-center gap-2 shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 shadow-sm">
+            <ShieldCheck className="w-4 h-4 text-slate-950" />
+          </div>
+          <span className="font-bold text-sm tracking-tight text-foreground">WealthNest</span>
+        </Link>
+
+        <span className="hidden sm:inline text-sm font-medium text-muted-foreground">
+          Environment:
+        </span>
+        <div className="hidden sm:block">{renderEnvironmentBadge()}</div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground bg-accent/40 border border-border/40 px-3 py-1.5 rounded-md font-mono">
+      <div className="flex items-center gap-2 sm:gap-4">
+        {onOpenCommandPalette && (
+          <button
+            type="button"
+            onClick={onOpenCommandPalette}
+            data-testid="header-command-palette-trigger"
+            className="hidden md:flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground bg-accent/40 hover:bg-accent/70 border border-border/50 px-3 py-1.5 rounded-md transition-colors"
+            title="Open Command Palette (Ctrl+K / Cmd+K)"
+          >
+            <Search className="w-3.5 h-3.5 text-primary" />
+            <span>Quick Search</span>
+            <kbd className="ml-1 px-1.5 py-0.5 text-[10px] font-mono rounded bg-background/80 border border-border/60 text-muted-foreground">
+              ⌘K
+            </kbd>
+          </button>
+        )}
+
+        <div className="hidden lg:flex items-center gap-2 text-xs text-muted-foreground bg-accent/40 border border-border/40 px-3 py-1.5 rounded-md font-mono">
           <Terminal className="w-3.5 h-3.5 text-primary" />
           <span>npm workspaces</span>
         </div>
 
-        <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground bg-accent/40 border border-border/40 px-3 py-1.5 rounded-md font-mono">
+        <div className="hidden xl:flex items-center gap-2 text-xs text-muted-foreground bg-accent/40 border border-border/40 px-3 py-1.5 rounded-md font-mono">
           <Globe className="w-3.5 h-3.5 text-primary" />
           <span>wealthnest.local</span>
         </div>

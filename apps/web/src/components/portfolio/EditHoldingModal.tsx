@@ -100,9 +100,9 @@ export function EditHoldingModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-border/80">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/80 shrink-0">
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-semibold text-foreground">
@@ -124,14 +124,13 @@ export function EditHoldingModal({
           </button>
         </div>
 
-        {error && (
-          <div className="mt-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+        <form onSubmit={handleSubmit} className="space-y-4 p-6 overflow-y-auto flex-1">
+          {error && (
+            <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
           {/* Real Estate / Appraisal Asset Special Card */}
           {isAppraisalAsset && (
             <div className="p-3.5 rounded-xl bg-accent/40 border border-border/80 text-xs space-y-2">

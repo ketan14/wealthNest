@@ -76,8 +76,8 @@ export function AdminUserStatusModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden animate-in fade-in zoom-in-95">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
               <ShieldAlert className="w-4 h-4" />
@@ -89,7 +89,7 @@ export function AdminUserStatusModal({
           </button>
         </div>
 
-        <form onSubmit={handleApplyStatusChange} className="mt-5 space-y-4">
+        <form onSubmit={handleApplyStatusChange} className="p-6 space-y-4 overflow-y-auto flex-1">
           {modalError && (
             <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />

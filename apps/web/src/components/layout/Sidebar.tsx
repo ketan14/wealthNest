@@ -39,7 +39,7 @@ export function Sidebar() {
   return (
     <aside
       data-testid="desktop-sidebar"
-      className="hidden md:flex md:w-64 border-r border-border bg-card/60 backdrop-blur-md flex-col justify-between p-4 min-h-screen shrink-0"
+      className="hidden md:flex md:w-64 border-r border-border bg-card/60 backdrop-blur-md flex-col justify-between p-4 h-full overflow-y-auto shrink-0 select-none"
     >
       <div>
         {/* Brand Logo & Title */}

@@ -57,8 +57,8 @@ export function ForgotPasswordModal({ isOpen, initialEmail, onClose }: ForgotPas
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in-95">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden animate-in fade-in zoom-in-95">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-2">
             <KeyRound className="w-5 h-5 text-emerald-400" />
             <h3 className="font-bold text-white text-base">Password Recovery</h3>
@@ -71,6 +71,8 @@ export function ForgotPasswordModal({ isOpen, initialEmail, onClose }: ForgotPas
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        <div className="p-6 overflow-y-auto flex-1">
 
         <p className="text-xs text-slate-400 mb-4 leading-relaxed">
           Enter your registered email address and we will dispatch a password recovery link.
@@ -140,6 +142,7 @@ export function ForgotPasswordModal({ isOpen, initialEmail, onClose }: ForgotPas
             </Button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

@@ -163,9 +163,9 @@ export function AdminUserProvisionModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden animate-in fade-in zoom-in-95">
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5">
             <div
               className={`w-8 h-8 rounded-lg flex items-center justify-center ${
@@ -199,6 +199,7 @@ export function AdminUserProvisionModal({
           </button>
         </div>
 
+        <div className="p-6 overflow-y-auto flex-1">
         {/* Success View: Display Created Credentials */}
         {createdCredentials ? (
           <div className="mt-5 space-y-4">
@@ -413,6 +414,7 @@ export function AdminUserProvisionModal({
             </form>
           </>
         )}
+        </div>
       </div>
     </div>
   );
