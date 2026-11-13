@@ -1,19 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ShieldAlert,
   Lock,
   ArrowLeft,
   Loader2,
-  Sparkles,
   LogOut,
-  UserCheck,
   AlertCircle,
-  CheckCircle2,
 } from 'lucide-react';
 import { useAdmin } from '../../lib/admin/admin-context';
 import { useAuth } from '../../lib/supabase/auth-context';
-import { supabase } from '../../lib/supabase/client';
 import { PlatformRole } from '@wealthnest/domain';
 
 interface AdminGuardProps {
@@ -22,61 +18,9 @@ interface AdminGuardProps {
 }
 
 export function AdminGuard({ children, requiredRole }: AdminGuardProps) {
-  const {
-    isAnyAdmin,
-    isSuperAdmin,
-    loading,
-    currentAdminRole,
-    setSimulatedRole,
-    refreshAdminStatus,
-  } = useAdmin();
+  const { isAnyAdmin, isSuperAdmin, loading, currentAdminRole } = useAdmin();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [isElevating, setIsElevating] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<{
-    text: string;
-    type: 'success' | 'error';
-  } | null>(null);
-
-  const handleSimulateSuperAdmin = () => {
-    setSimulatedRole('super_admin');
-  };
-
-  const handleElevateAccount = async () => {
-    setIsElevating(true);
-    setStatusMessage(null);
-    try {
-      if (user?.id) {
-        // Attempt to call DB seed/grant RPC
-        const { error } = await supabase.rpc('seed_qa_grant_admin', {
-          p_user_id: user.id,
-          p_role: 'super_admin',
-        });
-        if (!error) {
-          await refreshAdminStatus();
-          setStatusMessage({
-            text: 'Granted super_admin role in database!',
-            type: 'success',
-          });
-          return;
-        }
-      }
-      // Fallback: active session simulation
-      setSimulatedRole('super_admin');
-      setStatusMessage({
-        text: 'Simulated Super Admin active for this session.',
-        type: 'success',
-      });
-    } catch {
-      setSimulatedRole('super_admin');
-      setStatusMessage({
-        text: 'Simulated Super Admin active for this session.',
-        type: 'success',
-      });
-    } finally {
-      setIsElevating(false);
-    }
-  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -124,48 +68,7 @@ export function AdminGuard({ children, requiredRole }: AdminGuardProps) {
             </div>
           </div>
 
-          {statusMessage && (
-            <div
-              className={`mb-4 p-3 rounded-xl text-xs flex items-center gap-2 text-left ${
-                statusMessage.type === 'success'
-                  ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300'
-                  : 'bg-rose-500/10 border border-rose-500/30 text-rose-300'
-              }`}
-            >
-              {statusMessage.type === 'success' ? (
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-              ) : (
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-              )}
-              <span>{statusMessage.text}</span>
-            </div>
-          )}
-
-          {/* Quick Unblock / QA Elevation Actions */}
           <div className="space-y-2.5 mb-6">
-            <button
-              type="button"
-              onClick={handleSimulateSuperAdmin}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white text-xs font-semibold shadow-lg shadow-emerald-950/40 transition-all cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4 text-emerald-200" />
-              <span>Simulate Super Admin (QA / Dev)</span>
-            </button>
-
-            {user?.id && (
-              <button
-                type="button"
-                onClick={handleElevateAccount}
-                disabled={isElevating}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-all disabled:opacity-50 cursor-pointer"
-              >
-                <UserCheck className="w-4 h-4 text-cyan-400" />
-                <span>
-                  {isElevating ? 'Granting Entitlement...' : 'Grant Super Admin to Current Account'}
-                </span>
-              </button>
-            )}
-
             {user && (
               <button
                 type="button"
@@ -207,15 +110,6 @@ export function AdminGuard({ children, requiredRole }: AdminGuardProps) {
           </p>
 
           <div className="space-y-3 mb-4">
-            <button
-              type="button"
-              onClick={handleSimulateSuperAdmin}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Elevate to Super Admin</span>
-            </button>
-
             <Link
               to="/admin"
               className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium transition-all shadow-md w-full"

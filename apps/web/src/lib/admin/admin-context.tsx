@@ -32,47 +32,18 @@ const AdminContext = createContext<AdminContextType>({
 
 export function AdminProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [role, setRole] = useState<PlatformRole | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = window.sessionStorage.getItem(SIMULATED_ROLE_STORAGE_KEY);
-        if (stored) return stored as PlatformRole;
-      } catch {
-        // ignore storage errors
-      }
-    }
-    return 'super_admin';
-  });
+  const [role, setRole] = useState<PlatformRole | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchAdminRole = useCallback(async () => {
     setLoading(true);
     try {
-      // Check if session has an active simulated role
-      let sessionSimulatedRole: PlatformRole | null = null;
-      if (typeof window !== 'undefined') {
-        try {
-          const stored = window.sessionStorage.getItem(SIMULATED_ROLE_STORAGE_KEY);
-          if (stored) sessionSimulatedRole = stored as PlatformRole;
-        } catch {
-          // ignore
-        }
-      }
-
-      if (sessionSimulatedRole) {
-        setRole(sessionSimulatedRole);
-        setLoading(false);
-        return;
-      }
-
       if (!user) {
-        // In local/demo mode without active session, Ketan Vaghela is super_admin
-        setRole('super_admin');
-        setLoading(false);
+        setRole(null);
         return;
       }
 
-      // Query database for platform admin role
+      // Query database for authoritative platform admin role
       const { data, error } = await supabase.rpc('get_platform_admin_role', {
         check_user_id: user.id,
       });
@@ -80,20 +51,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       if (!error && data) {
         setRole(data as PlatformRole);
       } else {
-        // Fallback for demo investor & administrative usernames
-        const emailLower = user.email?.toLowerCase() || '';
-        if (
-          emailLower.includes('admin') ||
-          emailLower === 'investor@wealthnest.local' ||
-          !user.email
-        ) {
-          setRole('super_admin');
-        } else {
-          setRole(null);
-        }
+        setRole(null);
       }
     } catch {
-      setRole('super_admin');
+      setRole(null);
     } finally {
       setLoading(false);
     }
@@ -103,27 +64,16 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     fetchAdminRole();
   }, [fetchAdminRole]);
 
-  const setSimulatedRole = useCallback((newRole: PlatformRole | null) => {
-    setRole(newRole);
-    if (typeof window !== 'undefined') {
-      try {
-        if (newRole) {
-          window.sessionStorage.setItem(SIMULATED_ROLE_STORAGE_KEY, newRole);
-        } else {
-          window.sessionStorage.removeItem(SIMULATED_ROLE_STORAGE_KEY);
-        }
-      } catch {
-        // ignore
-      }
-    }
+  const setSimulatedRole = useCallback((_newRole: PlatformRole | null) => {
+    // Client-side role simulation is disabled for security; roles are enforced server-side.
   }, []);
 
   const adminActor = useMemo<AdminActorContext | null>(() => {
-    if (!role) return null;
+    if (!role || !user) return null;
     return {
-      userId: user?.id || '4c4fa116-57d5-4fc8-af89-be56b5069b50',
+      userId: user.id,
       role,
-      displayName: user?.user_metadata?.display_name || 'Ketan Vaghela',
+      displayName: user.user_metadata?.display_name || user.email || 'Admin',
       ipAddress: '127.0.0.1',
     };
   }, [user, role]);

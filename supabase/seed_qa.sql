@@ -17,7 +17,7 @@
 -- ==============================================================================
 
 -- ==============================================================================
--- 1. Helper: Grant Platform Admin Access
+-- 1. Helper: Grant Platform Admin Access (SQL Editor / Service Role Only)
 -- ==============================================================================
 CREATE OR REPLACE FUNCTION public.seed_qa_grant_admin(
   p_user_id uuid DEFAULT NULL,
@@ -26,11 +26,17 @@ CREATE OR REPLACE FUNCTION public.seed_qa_grant_admin(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   v_user_id uuid;
 BEGIN
-  v_user_id := COALESCE(p_user_id, auth.uid(), (SELECT id FROM auth.users ORDER BY created_at DESC LIMIT 1));
+  -- Block calls from unauthenticated or regular PostgREST client sessions
+  IF auth.uid() IS NOT NULL OR current_user IN ('anon', 'authenticated') THEN
+    RAISE EXCEPTION 'seed_qa_grant_admin may only be executed directly by a database administrator (SQL Editor / service_role).';
+  END IF;
+
+  v_user_id := COALESCE(p_user_id, (SELECT id FROM auth.users ORDER BY created_at DESC LIMIT 1));
   IF v_user_id IS NULL THEN
     RAISE EXCEPTION 'Target user_id cannot be null. No user found in auth.users. Please sign up first via the web app (http://localhost:30000/signup) or pass a user UUID: SELECT public.seed_qa_grant_admin(''user-uuid'');';
   END IF;
@@ -48,6 +54,8 @@ BEGIN
   );
 END;
 $$;
+
+REVOKE ALL ON FUNCTION public.seed_qa_grant_admin(uuid, text) FROM PUBLIC, anon, authenticated;
 
 -- ==============================================================================
 -- 2. Primary Seed: Anonymized QA Household Persona & Complete Financial History

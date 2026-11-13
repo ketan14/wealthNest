@@ -59,8 +59,8 @@ export function SignUpPage() {
 
     if (!password) {
       newErrors.password = 'Password is required';
-    } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    } else if (password.length < 12) {
+      newErrors.password = 'Password must be at least 12 characters';
     }
 
     if (!confirmPassword) {

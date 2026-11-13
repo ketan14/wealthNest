@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from '../lib/supabase/auth-context';
 import { AdminProvider } from '../lib/admin/admin-context';
 import { AdminGuard } from '../components/admin/AdminGuard';
 import { AdminDashboardPage } from '../pages/admin/AdminDashboardPage';
@@ -57,9 +58,11 @@ function renderWithProviders(ui: React.ReactElement, initialRoute = '/admin') {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <AdminProvider>
-        <MemoryRouter initialEntries={[initialRoute]}>{ui}</MemoryRouter>
-      </AdminProvider>
+      <AuthProvider>
+        <AdminProvider>
+          <MemoryRouter initialEntries={[initialRoute]}>{ui}</MemoryRouter>
+        </AdminProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
@@ -95,6 +98,24 @@ describe('Phase 7: Complete Admin Portal, User Management & Security Verificatio
       await waitFor(() => {
         expect(screen.getByText('Super Admin Zone')).toBeInTheDocument();
       });
+    });
+
+    it('denies access and hides self-elevation controls when RPC returns no admin role', async () => {
+      const { supabase } = await import('../lib/supabase/client');
+      vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: null } as any);
+
+      renderWithProviders(
+        <AdminGuard>
+          <div data-testid="protected-content">Restricted Administrative Content</div>
+        </AdminGuard>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/Platform Access Restricted/i)).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Simulate Super Admin/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Grant Super Admin/i)).not.toBeInTheDocument();
     });
   });
 

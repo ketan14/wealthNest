@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AdminProvider } from '../lib/admin/admin-context';
+import { AuthProvider } from '../lib/supabase/auth-context';
+import { AdminProvider, useAdmin } from '../lib/admin/admin-context';
 import { SupportSessionProvider, useSupportSession } from '../lib/admin/support-session-context';
 import { PreferencesProvider } from '../lib/preferences/preferences-context';
 import { FamilyProvider } from '../lib/family/family-context';
@@ -56,21 +57,24 @@ function renderWithProviders(ui: React.ReactElement, initialRoute = '/') {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <AdminProvider>
-        <SupportSessionProvider>
-          <PreferencesProvider>
-            <FamilyProvider>
-              <MemoryRouter initialEntries={[initialRoute]}>{ui}</MemoryRouter>
-            </FamilyProvider>
-          </PreferencesProvider>
-        </SupportSessionProvider>
-      </AdminProvider>
+      <AuthProvider>
+        <AdminProvider>
+          <SupportSessionProvider>
+            <PreferencesProvider>
+              <FamilyProvider>
+                <MemoryRouter initialEntries={[initialRoute]}>{ui}</MemoryRouter>
+              </FamilyProvider>
+            </PreferencesProvider>
+          </SupportSessionProvider>
+        </AdminProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
 
 // Helper test harness component for testing SupportSessionContext programmatically
 function SupportSessionTestHarness() {
+  const { isAnyAdmin } = useAdmin();
   const {
     isSupportModeActive,
     activeSession,
@@ -83,6 +87,7 @@ function SupportSessionTestHarness() {
   return (
     <div>
       <SupportModeBanner />
+      <div data-testid="admin-ready">{isAnyAdmin ? 'READY' : 'LOADING'}</div>
       <div data-testid="support-active">{isSupportModeActive ? 'YES' : 'NO'}</div>
       <div data-testid="session-id">{activeSession?.id || 'NONE'}</div>
       <div data-testid="target-name">{targetUser?.displayName || 'NONE'}</div>
@@ -119,6 +124,10 @@ describe('Phase 8: Secure Admin View-as-User / Support Impersonation Mode', () =
       expect(screen.getByTestId('support-active').textContent).toBe('NO');
       expect(screen.queryByRole('banner')).toBeNull();
 
+      await waitFor(() => {
+        expect(screen.getByTestId('admin-ready').textContent).toBe('READY');
+      });
+
       fireEvent.click(screen.getByTestId('start-shamalbhai-btn'));
 
       await waitFor(() => {
@@ -135,6 +144,10 @@ describe('Phase 8: Secure Admin View-as-User / Support Impersonation Mode', () =
 
     it('terminates active support session on exit button click', async () => {
       renderWithProviders(<SupportSessionTestHarness />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('admin-ready').textContent).toBe('READY');
+      });
 
       fireEvent.click(screen.getByTestId('start-shamalbhai-btn'));
 
@@ -223,10 +236,12 @@ describe('Phase 8: Secure Admin View-as-User / Support Impersonation Mode', () =
     it('disables Add Holding and Import CAS buttons during active support mode', async () => {
       // First mount test harness to activate support mode
       const TestContainer = () => {
+        const { isAnyAdmin } = useAdmin();
         const { startSupportSession } = useSupportSession();
         return (
           <div>
             <SupportModeBanner />
+            <div data-testid="admin-ready">{isAnyAdmin ? 'READY' : 'LOADING'}</div>
             <button
               data-testid="activate-support"
               onClick={() =>
@@ -252,7 +267,10 @@ describe('Phase 8: Secure Admin View-as-User / Support Impersonation Mode', () =
       expect(importBtn).not.toBeDisabled();
       expect(addHoldingBtn).not.toBeDisabled();
 
-      // Activate support mode
+      // Activate support mode after admin status loads
+      await waitFor(() => {
+        expect(screen.getByTestId('admin-ready').textContent).toBe('READY');
+      });
       fireEvent.click(screen.getByTestId('activate-support'));
 
       await waitFor(() => {

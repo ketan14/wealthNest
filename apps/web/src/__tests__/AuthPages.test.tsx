@@ -149,7 +149,7 @@ describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
       fireEvent.click(screen.getByRole('button', { name: /Create Account/i }));
 
       expect(await screen.findByText(/Please enter a valid email address/i)).toBeInTheDocument();
-      expect(screen.getByText(/Password must be at least 6 characters/i)).toBeInTheDocument();
+      expect(screen.getByText(/Password must be at least 12 characters/i)).toBeInTheDocument();
       expect(screen.getByText(/Passwords do not match/i)).toBeInTheDocument();
 
       expect(supabase.auth.signUp).not.toHaveBeenCalled();
