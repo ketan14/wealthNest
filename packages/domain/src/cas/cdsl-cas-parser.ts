@@ -2,7 +2,6 @@ import { ICasStatementParser } from './cas-parser.interface.js';
 import {
   ParsedCasStatement,
   ParsedCasHolding,
-  ParsedCasTransaction,
   StatementProvider,
 } from './cas-types.js';
 import { Money } from '../money/money.js';
@@ -13,6 +12,17 @@ import {
   isValidIsin,
   extractMutualFundSchemeDetails,
 } from './isin.js';
+import {
+  extractDematAccountId,
+  isBoilerplateHeader,
+  extractDematNumericRow,
+  extractGenericNumericRow,
+  extractStatementDate,
+} from './cdsl-cas-helpers.js';
+import {
+  extractMutualFundNumbers,
+  parseRtaMutualFundSection,
+} from './cdsl-rta-mf-parser.js';
 
 export class CdslCasParser implements ICasStatementParser {
   readonly provider: StatementProvider = 'CDSL';
@@ -33,8 +43,8 @@ export class CdslCasParser implements ICasStatementParser {
 
   parse(pages: readonly string[]): ParsedCasStatement {
     const fullText = pages.join('\n');
-    const statementDate = this.extractStatementDate(fullText);
-    const dematAccountId = this.extractDematAccountId(fullText);
+    const statementDate = extractStatementDate(fullText);
+    const dematAccountId = extractDematAccountId(fullText);
     const rawWarnings: string[] = [];
     const holdings: ParsedCasHolding[] = [];
 
@@ -118,7 +128,7 @@ export class CdslCasParser implements ICasStatementParser {
 
         // 1. Demat depository dash balance row (e.g. "16.000 -- -- -- 16.000 2900.2500 46,404.00")
         if (text.includes('--') || text.includes('- -')) {
-          const d = this.extractDematNumericRow(text);
+          const d = extractDematNumericRow(text);
           if (d && (d.quantity > 0 || d.marketValue > 0)) {
             dematRes = d;
             break;
@@ -131,7 +141,7 @@ export class CdslCasParser implements ICasStatementParser {
           !isEtf &&
           (/\b(?:ARN|DIRECT)\b/i.test(text) || (isin.startsWith('INF') && !text.includes('ETF')))
         ) {
-          const m = this.extractMutualFundNumbers(text);
+          const m = extractMutualFundNumbers(text);
           if (m && (m.units > 0 || m.valuation > 0)) {
             mfRes = m;
             break;
@@ -139,7 +149,7 @@ export class CdslCasParser implements ICasStatementParser {
         }
 
         // 3. Fallback generic Demat row
-        const d = this.extractDematNumericRow(text);
+        const d = extractDematNumericRow(text);
         if (d && (d.quantity > 0 || d.marketValue > 0)) {
           dematRes = d;
           break;
@@ -172,7 +182,7 @@ export class CdslCasParser implements ICasStatementParser {
             if (
               lines[j]!.includes('--') ||
               lines[j]!.includes('- -') ||
-              this.extractDematNumericRow(lines[j]!)
+              extractDematNumericRow(lines[j]!)
             ) {
               break;
             }
@@ -198,7 +208,7 @@ export class CdslCasParser implements ICasStatementParser {
         if (!candName || candName.length < 3) {
           for (let b = 1; b <= 2 && i - b >= 0; b++) {
             const prev = lines[i - b]!;
-            if (prev.match(isinRegex) || this.isBoilerplateHeader(prev)) break;
+            if (prev.match(isinRegex) || isBoilerplateHeader(prev)) break;
             const cleaned = cleanSecurityName(prev);
             if (cleaned && cleaned.length >= 3) {
               candName = cleaned;
@@ -223,8 +233,8 @@ export class CdslCasParser implements ICasStatementParser {
         for (let b = 1; b <= 8 && i - b >= 0 && i - b > prevOccurIndex; b++) {
           const prevL = lines[i - b]!;
           if (
-            this.extractMutualFundNumbers(prevL) ||
-            this.isBoilerplateHeader(prevL) ||
+            extractMutualFundNumbers(prevL) ||
+            isBoilerplateHeader(prevL) ||
             prevL.includes('Grand Total') ||
             prevL.includes('Page ')
           ) {
@@ -258,7 +268,7 @@ export class CdslCasParser implements ICasStatementParser {
         // Fallback generic 2/3 column line parser
         for (let offset = 0; offset <= 2 && i + offset < lines.length; offset++) {
           const cand = lines[i + offset]!;
-          const extracted = this.extractGenericNumericRow(cand.replace(isin, ''));
+          const extracted = extractGenericNumericRow(cand.replace(isin, ''));
           if (extracted && (extracted.quantity > 0 || extracted.marketValue > 0)) {
             quantity = extracted.quantity;
             price = extracted.price;
@@ -348,7 +358,7 @@ export class CdslCasParser implements ICasStatementParser {
     }
 
     // 2. Process RTA Mutual Fund Section (Transactions and Closing Balances)
-    const rtaResult = this.parseRtaMutualFundSection(pages, statementDate);
+    const rtaResult = parseRtaMutualFundSection(pages, statementDate);
     for (const rtaH of rtaResult.holdings) {
       const key = `${rtaH.isin}::${rtaH.folioNumber || rtaH.folioOrDemat || 'default'}`;
       if (dedupedMap.has(key)) {
@@ -391,427 +401,5 @@ export class CdslCasParser implements ICasStatementParser {
       totalReportedValue: totalValue,
       warnings: finalWarnings,
     };
-  }
-
-  /**
-   * Extracts historical transactions and closing balance holdings from
-   * "MUTUAL FUND UNITS HELD WITH MF/RTA" statement section.
-   */
-  private parseRtaMutualFundSection(
-    pages: readonly string[],
-    statementDate: string
-  ): {
-    holdings: ParsedCasHolding[];
-    transactions: ParsedCasTransaction[];
-  } {
-    const transactions: ParsedCasTransaction[] = [];
-    const holdings: ParsedCasHolding[] = [];
-
-    for (let p = 0; p < pages.length; p++) {
-      const pageText = pages[p]!;
-      if (
-        !pageText.includes('MUTUAL FUND UNITS HELD WITH MF/RTA') &&
-        !pageText.includes('Closing Balance')
-      ) {
-        continue;
-      }
-
-      const lines = pageText
-        .split('\n')
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0);
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i]!;
-        const isinMatch = line.match(/\b(INF[A-Z0-9]{9})\b/);
-        if (!isinMatch) continue;
-
-        const hasUcc = line.includes('UCC :');
-        const hasTxHeader =
-          (i + 1 < lines.length && lines[i + 1]!.includes('Transaction Description')) ||
-          (i + 2 < lines.length && lines[i + 2]!.includes('Transaction Description'));
-        if (!hasUcc && !hasTxHeader) continue;
-
-        const isin = isinMatch[1]!;
-
-        // Extract Scheme Name backward
-        const schemeParts: string[] = [];
-        for (let b = 1; b <= 5 && i - b >= 0; b++) {
-          const prevL = lines[i - b]!;
-          if (
-            prevL.includes('Central Depository') ||
-            prevL.includes('MUTUAL FUND UNITS') ||
-            prevL.includes('STATEMENT OF TRANSACTIONS') ||
-            prevL.includes('Closing Balance') ||
-            prevL.includes('ISIN') ||
-            prevL.includes('Grand Total') ||
-            prevL.includes('Page ') ||
-            prevL.includes('Account Details') ||
-            prevL.includes('CDSL')
-          ) {
-            break;
-          }
-          if (/[\u0900-\u097F]/.test(prevL)) continue;
-          if (prevL.endsWith('Mutual Fund')) {
-            if (schemeParts.length > 0) break;
-            continue;
-          }
-          schemeParts.unshift(prevL);
-        }
-
-        let rawScheme = schemeParts.join(' ').trim();
-        rawScheme = rawScheme.replace(/^\(\s*[₹`]\s*\)\s*/, '');
-        const schemeName = cleanSecurityName(rawScheme) || `Mutual Fund ${isin}`;
-        const ticker = inferTickerFromSecurity(isin, schemeName);
-
-        let closingUnits: number | null = null;
-        let latestNav: number | null = null;
-
-        for (let f = 1; f <= 35 && i + f < lines.length; f++) {
-          const fLine = lines[i + f]!;
-          if (
-            fLine.match(/\b(INF[A-Z0-9]{9})\b/) ||
-            fLine.includes('MUTUAL FUND UNITS HELD AS ON')
-          ) {
-            break;
-          }
-
-          const closingMatch = fLine.match(/Closing\s+Balance\s+([\d,]+(?:\.\d+)?)/i);
-          if (closingMatch) {
-            closingUnits = parseFloat(closingMatch[1]!.replace(/,/g, ''));
-          }
-
-          const dateMatch = fLine.match(/^(\d{2}-\d{2}-\d{4})/);
-          if (dateMatch) {
-            const dateStr = dateMatch[1]!;
-            const [d, m, y] = dateStr.split('-');
-            const isoDate = `${y}-${m}-${d}`;
-
-            const descParts: string[] = [];
-            let numRow: { amount: number; nav: number; price: number; units: number } | null = null;
-
-            for (let k = 1; k <= 8 && i + f + k < lines.length; k++) {
-              const nextL = lines[i + f + k]!;
-              if (
-                nextL.match(/^(\d{2}-\d{2}-\d{4})/) ||
-                nextL.includes('Closing Balance') ||
-                nextL.includes('ISIN')
-              ) {
-                break;
-              }
-
-              const numMatch = nextL.match(
-                /^(-?[\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)\s+(-?[\d,]+(?:\.\d+)?)/
-              );
-              if (numMatch) {
-                const amount = parseFloat(numMatch[1]!.replace(/,/g, ''));
-                const nav = parseFloat(numMatch[2]!.replace(/,/g, ''));
-                const price = parseFloat(numMatch[3]!.replace(/,/g, ''));
-                const units = parseFloat(numMatch[4]!.replace(/,/g, ''));
-                numRow = { amount, nav, price, units };
-                latestNav = nav;
-                break;
-              } else if (!nextL.startsWith('STT') && !/[\u0900-\u097F]/.test(nextL)) {
-                descParts.push(nextL);
-              }
-            }
-
-            if (numRow) {
-              const desc = descParts
-                .join(' ')
-                .replace(/^[*]\s*/, '')
-                .trim();
-              const isRedemption =
-                numRow.amount < 0 || numRow.units < 0 || /redemption/i.test(desc);
-              const isDividend = /dividend|idcw/i.test(desc);
-              const type: 'buy' | 'sell' | 'dividend' | 'fee' = isRedemption
-                ? 'sell'
-                : isDividend
-                  ? 'dividend'
-                  : 'buy';
-
-              transactions.push({
-                isin,
-                schemeName,
-                ticker,
-                date: isoDate,
-                description: desc || (isRedemption ? 'Redemption' : 'Purchase'),
-                type,
-                amount: Money.fromDecimal(Math.abs(numRow.amount), 'INR'),
-                units: Math.abs(numRow.units),
-                navOrPrice: Money.fromDecimal(numRow.nav, 'INR'),
-              });
-            }
-          }
-        }
-
-        let folio: string | undefined = undefined;
-        for (let b = 1; b <= 6 && i - b >= 0; b++) {
-          const fMatch = lines[i - b]!.match(
-            /\b(?:Folio\s*(?:No\.?)?|Folio)\s*[:\s]+([0-9A-Z/_-]+)\b/i
-          );
-          if (fMatch) {
-            folio = fMatch[1];
-            break;
-          }
-        }
-
-        if (closingUnits !== null && closingUnits > 0) {
-          const mfDetails = extractMutualFundSchemeDetails(schemeName);
-          holdings.push({
-            isin,
-            name: schemeName,
-            ticker,
-            folioOrDemat: folio,
-            folioNumber: folio,
-            amcName: mfDetails.amcName,
-            schemePlan:
-              mfDetails.plan !== 'Unknown'
-                ? `${mfDetails.plan} Plan${mfDetails.option !== 'Unknown' ? ` - ${mfDetails.option}` : ''}`
-                : undefined,
-            quantity: closingUnits,
-            costBasisVerified: false,
-            reportedNavOrPrice: latestNav ? Money.fromDecimal(latestNav, 'INR') : undefined,
-            reportedMarketValue: latestNav
-              ? Money.fromDecimal(closingUnits * latestNav, 'INR')
-              : Money.zero('INR'),
-            assetClassId: 'mutual_fund',
-            assetType: 'mutual_fund',
-            instrumentType: 'mutual_fund_scheme',
-            statementDate,
-            currency: 'INR',
-          });
-        }
-      }
-    }
-
-    return { holdings, transactions };
-  }
-
-  /**
-   * Extracts Demat BO ID / Client ID if present on statement
-   */
-  private extractDematAccountId(fullText: string): string | undefined {
-    const match = fullText.match(
-      /\b(?:BO\s*ID|BOID|Client\s*ID|Demat\s*Account\s*No)[^\d:]*[:\s]+([0-9]{8,16})\b/i
-    );
-    return match ? match[1] : undefined;
-  }
-
-  /**
-   * Identifies CDSL Table Headers, Page numbering, and statement meta lines
-   */
-  private isBoilerplateHeader(text: string): boolean {
-    const upper = text.toUpperCase();
-    return (
-      upper.includes('PAGE ') ||
-      upper.includes('STATEMENT AS ON') ||
-      upper.includes('CONSOLIDATED ACCOUNT STATEMENT') ||
-      upper.includes('CENTRAL DEPOSITORY SERVICES') ||
-      upper.includes('BO ID') ||
-      upper.includes('EQUITY SHARES / LISTED SECURITIES') ||
-      upper.includes('MUTUAL FUND UNITS HELD') ||
-      upper.includes('CURRENT BALANCE') ||
-      upper.includes('MARKET VALUE') ||
-      upper.includes('UNREALISED')
-    );
-  }
-
-  /**
-   * Extracts Mutual Fund numbers from Page 12 lines:
-   * Pattern: [Folio] [ARN/DIRECT] [Units] [NAV] [Invested] [Valuation] ...
-   * Uses mathematical invariant: units * nav ≈ valuation
-   */
-  private extractMutualFundNumbers(text: string): {
-    units: number;
-    nav: number;
-    invested: number;
-    valuation: number;
-    folio?: string;
-  } | null {
-    const clean = text.trim();
-    if (!clean) return null;
-
-    // Optional folio detection
-    let folio: string | undefined = undefined;
-    const folioMatch = clean.match(
-      /\b([A-Za-z0-9/_-]+(?:\/[A-Za-z0-9_-]+)*)\s+(?:ARN[- ]\S+|DIRECT)\b/i
-    );
-    if (folioMatch) {
-      folio = folioMatch[1];
-    }
-
-    // Match all numeric tokens on this line
-    const rawTokens = clean.match(/[\d,]+(?:\.\d+)?/g);
-    if (!rawTokens || rawTokens.length < 3) return null;
-
-    const numbers = rawTokens
-      .map((t) => parseFloat(t.replace(/,/g, '')))
-      .filter((n) => !isNaN(n) && n > 0);
-
-    // Look for 4 consecutive numbers (units, nav, invested, valuation)
-    for (let idx = 0; idx <= numbers.length - 4; idx++) {
-      const units = numbers[idx]!;
-      const nav = numbers[idx + 1]!;
-      const invested = numbers[idx + 2]!;
-      const valuation = numbers[idx + 3]!;
-
-      // Validate invariant: units * nav ≈ valuation (within 5% tolerance)
-      const expectedVal = units * nav;
-      const diffPct = Math.abs(expectedVal - valuation) / valuation;
-
-      if (diffPct < 0.05) {
-        return { units, nav, invested, valuation, folio };
-      }
-    }
-
-    // Look for 3 numbers (units, nav, valuation) where invested was omitted
-    for (let idx = 0; idx <= numbers.length - 3; idx++) {
-      const units = numbers[idx]!;
-      const nav = numbers[idx + 1]!;
-      const valuation = numbers[idx + 2]!;
-
-      const expectedVal = units * nav;
-      const diffPct = Math.abs(expectedVal - valuation) / valuation;
-
-      if (diffPct < 0.05) {
-        return { units, nav, invested: valuation, valuation, folio };
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Extracts Demat equity balance line:
-   * Pattern: [Quantity] ... [-- -- --] ... [Quantity] [Price] [Market Value]
-   * Mathematical invariant: quantity * price ≈ marketValue
-   */
-  private extractDematNumericRow(text: string): {
-    quantity: number;
-    price: number;
-    marketValue: number;
-  } | null {
-    const clean = text.trim();
-    if (!clean) return null;
-
-    const rawTokens = clean.match(/[\d,]+(?:\.\d+)?/g);
-    if (!rawTokens || rawTokens.length < 2) return null;
-
-    const numbers = rawTokens
-      .map((t) => parseFloat(t.replace(/,/g, '')))
-      .filter((n) => !isNaN(n) && n > 0);
-
-    if (numbers.length < 2) return null;
-
-    // In CDSL Demat lines, the last two numbers are Market Price and Market Value:
-    // e.g. "17.000 -- -- -- 17.000 7765.4500 1,32,012.65"
-    const marketValue = numbers[numbers.length - 1]!;
-    const price = numbers[numbers.length - 2]!;
-
-    // Find quantity: either a preceding number matching marketValue / price, or marketValue / price
-    const expectedQty = price > 0 ? marketValue / price : 0;
-    let quantity = 0;
-
-    for (let k = 0; k < numbers.length - 2; k++) {
-      const candQty = numbers[k]!;
-      if (Math.abs(candQty - expectedQty) < 0.05 || Math.abs(candQty * price - marketValue) < 2) {
-        quantity = candQty;
-        break;
-      }
-    }
-
-    // In Demat statements, if quantity was not among preceding tokens, require depository dashes
-    if (quantity === 0 && (clean.includes('--') || clean.includes('- -'))) {
-      quantity =
-        Math.abs(expectedQty - Math.round(expectedQty)) < 0.01
-          ? Math.round(expectedQty)
-          : Math.round(expectedQty * 1000) / 1000;
-    }
-
-    if (quantity > 0 && marketValue > 0) {
-      return { quantity, price, marketValue };
-    }
-
-    return null;
-  }
-
-  /**
-   * Fallback for standard 3-column / 2-column or keyword rows
-   */
-  private extractGenericNumericRow(text: string): {
-    quantity: number;
-    price: number;
-    marketValue: number;
-    securityName?: string;
-  } | null {
-    const cleanText = text.trim();
-    if (!cleanText) return null;
-
-    // Trailing 3 columns: [Security Name, Quantity/Balance, Market Price/NAV, Market Value]
-    const threeColMatch = cleanText.match(
-      /^(.*?)\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)$/
-    );
-    if (threeColMatch && /[a-zA-Z]/.test(threeColMatch[1]!)) {
-      return {
-        securityName: threeColMatch[1]?.trim(),
-        quantity: parseFloat(threeColMatch[2]!.replace(/,/g, '')),
-        price: parseFloat(threeColMatch[3]!.replace(/,/g, '')),
-        marketValue: parseFloat(threeColMatch[4]!.replace(/,/g, '')),
-      };
-    }
-
-    // Trailing 2 columns: [Security Name, Quantity/Balance, Market Value]
-    const twoColMatch = cleanText.match(/^(.*?)\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)$/);
-    if (twoColMatch && /[a-zA-Z]/.test(twoColMatch[1]!)) {
-      const q = parseFloat(twoColMatch[2]!.replace(/,/g, ''));
-      const v = parseFloat(twoColMatch[3]!.replace(/,/g, ''));
-      return {
-        securityName: twoColMatch[1]?.trim(),
-        quantity: q,
-        price: q > 0 ? v / q : 0,
-        marketValue: v,
-      };
-    }
-
-    return null;
-  }
-
-  private extractStatementDate(text: string): string {
-    const match =
-      text.match(
-        /(?:Statement\s+as\s+on\s*:?|Statement\s+Date\s*:?|As\s+on\s*:?)\s*(\d{1,2})[-/ ]([A-Za-z]{3}|\d{1,2})[-/ ](\d{4})/i
-      ) || text.match(/(\d{1,2})[-/ ]([A-Za-z]{3}|\d{1,2})[-/ ](\d{4})/);
-
-    if (match) {
-      const day = match[1]!.padStart(2, '0');
-      const monthRaw = match[2]!;
-      const year = match[3]!;
-      let month = '01';
-
-      if (isNaN(Number(monthRaw))) {
-        const monthNames: Record<string, string> = {
-          JAN: '01',
-          FEB: '02',
-          MAR: '03',
-          APR: '04',
-          MAY: '05',
-          JUN: '06',
-          JUL: '07',
-          AUG: '08',
-          SEP: '09',
-          OCT: '10',
-          NOV: '11',
-          DEC: '12',
-        };
-        month = monthNames[monthRaw.toUpperCase().slice(0, 3)] || '01';
-      } else {
-        month = monthRaw.padStart(2, '0');
-      }
-
-      return `${year}-${month}-${day}`;
-    }
-
-    return new Date().toISOString().split('T')[0]!;
   }
 }
