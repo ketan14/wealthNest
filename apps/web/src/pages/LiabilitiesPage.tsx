@@ -252,7 +252,7 @@ export function LiabilitiesPage() {
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/10 border border-rose-500/20 text-rose-400 mb-2">
             <Landmark className="w-3.5 h-3.5" />
-            Phase 5: Loans & Liabilities Engine
+            Loans & Liabilities Engine
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Loans & Liabilities</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -290,7 +290,10 @@ export function LiabilitiesPage() {
       </div>
 
       {/* Phase 6A: Family Entity Switcher Bar */}
-      <FamilyFilterBar onOpenManageModal={() => setIsManageFamilyOpen(true)} />
+      <FamilyFilterBar
+        showAccountSelector={false}
+        onOpenManageModal={() => setIsManageFamilyOpen(true)}
+      />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

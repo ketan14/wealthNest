@@ -15,8 +15,7 @@ describe('WealthNest App Shell', () => {
     const portfolioLinks = screen.getAllByText(/Portfolio/i);
     expect(portfolioLinks.length).toBeGreaterThan(0);
 
-    // Validate local domain badge
-    const domainBadges = screen.getAllByText(/wealthnest.local/i);
-    expect(domainBadges.length).toBeGreaterThan(0);
+    // Validate privacy toggle in header
+    expect(screen.getByTestId('header-privacy-toggle')).toBeInTheDocument();
   });
 });

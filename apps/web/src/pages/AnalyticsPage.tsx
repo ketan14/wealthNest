@@ -25,7 +25,7 @@ import { CasReconciliationCard } from '@/components/analytics/CasReconciliationC
 import { AnalyticsTrajectoryChartCard } from '@/components/analytics/AnalyticsTrajectoryChartCard';
 import { BenchmarkAndRebalanceSection } from '@/components/analytics/BenchmarkAndRebalanceSection';
 import { TaxHarvestingIntelligenceCard } from '@/components/analytics/TaxHarvestingIntelligenceCard';
-import { Sparkles, AlertTriangle, Database, Users } from 'lucide-react';
+import { AlertTriangle, Users } from 'lucide-react';
 import { useFamily } from '@/lib/family/family-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
@@ -321,18 +321,14 @@ export function AnalyticsPage() {
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" />
-              Phase 4: Wealth & Performance Analytics
-            </span>
-            <Badge variant="outline" className="text-[11px] font-mono border-border/80">
+          <div className="flex flex-wrap items-center gap-2 mb-1.5">
+            <Badge variant="outline" className="text-[11px] font-mono border-border/80 whitespace-nowrap">
               India First (₹ INR)
             </Badge>
             {selectedMemberId !== 'all' && activeMember ? (
               <Badge
                 variant="secondary"
-                className="text-[11px] font-medium flex items-center gap-1 border"
+                className="text-[11px] font-medium flex items-center gap-1 border whitespace-nowrap"
                 style={{
                   backgroundColor: `${activeMember.colorHex}22`,
                   borderColor: `${activeMember.colorHex}55`,
@@ -345,19 +341,10 @@ export function AnalyticsPage() {
             ) : (
               <Badge
                 variant="secondary"
-                className="text-[11px] bg-blue-500/10 text-blue-400 border-blue-500/20"
+                className="text-[11px] bg-blue-500/10 text-blue-400 border-blue-500/20 whitespace-nowrap"
               >
                 <Users className="w-3 h-3 mr-1 inline" />
                 Combined Family Portfolio ({members.length} Entities)
-              </Badge>
-            )}
-            {userId && (
-              <Badge
-                variant="secondary"
-                className="text-[11px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-              >
-                <Database className="w-3 h-3 mr-1 inline" />
-                Live PostgreSQL Data
               </Badge>
             )}
           </div>

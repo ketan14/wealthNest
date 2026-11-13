@@ -25,6 +25,7 @@ import { useRepositories } from '@/lib/persistence/repository-context';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { useFamily } from '@/lib/family/family-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
+import { usePrivacy } from '@/lib/preferences/privacy-context';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { HomeAllocationAndAttention } from '@/components/home/HomeAllocationAndAttention';
 import {
@@ -47,6 +48,7 @@ export function HomePage() {
   const { holdingRepo, liabilityRepo, transactionRepo, documentVaultRepo } = useRepositories();
   const { selectedMemberId, privacyRules } = useFamily();
   const { currencySymbol, preferences } = usePreferences();
+  const { maskAmount } = usePrivacy();
   const locale = preferences.numberFormat || 'en-IN';
 
   // 1. Fetch Holdings for Portfolio & Asset Allocation
@@ -241,20 +243,25 @@ export function HomePage() {
               <Wallet className="w-4 h-4 text-emerald-400" />
             </div>
             <CardTitle
-              className={`text-2xl sm:text-3xl font-bold font-mono tracking-tight pt-1 ${
+              className={`text-2xl sm:text-3xl font-bold font-mono tabular-nums tracking-tight pt-1 ${
                 isSolvent ? 'text-emerald-400' : 'text-rose-400'
               }`}
             >
-              {isSolvent ? currencySymbol : `-${currencySymbol}`}
-              {Math.abs(netWorth).toLocaleString(locale, { maximumFractionDigits: 0 })}
+              {maskAmount(
+                `${isSolvent ? currencySymbol : `-${currencySymbol}`}${Math.abs(netWorth).toLocaleString(locale, { maximumFractionDigits: 0 })}`
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <p className="text-xs text-muted-foreground">
-              Assets {currencySymbol}
-              {totalAssets.toLocaleString(locale, { maximumFractionDigits: 0 })} - Debt{' '}
-              {currencySymbol}
-              {totalLiabilities.toLocaleString(locale, { maximumFractionDigits: 0 })}
+            <p className="text-xs text-muted-foreground tabular-nums">
+              Assets{' '}
+              {maskAmount(
+                `${currencySymbol}${totalAssets.toLocaleString(locale, { maximumFractionDigits: 0 })}`
+              )}{' '}
+              - Debt{' '}
+              {maskAmount(
+                `${currencySymbol}${totalLiabilities.toLocaleString(locale, { maximumFractionDigits: 0 })}`
+              )}
             </p>
           </CardContent>
           <div className="absolute -right-6 -bottom-6 w-20 h-20 rounded-full bg-emerald-500/10 blur-xl pointer-events-none" />
@@ -267,9 +274,10 @@ export function HomePage() {
               <span>Liquid Reserves</span>
               <ShieldCheck className="w-4 h-4 text-blue-400" />
             </div>
-            <CardTitle className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-foreground pt-1">
-              {currencySymbol}
-              {liquidAssets.toLocaleString(locale, { maximumFractionDigits: 0 })}
+            <CardTitle className="text-2xl sm:text-3xl font-bold font-mono tabular-nums tracking-tight text-foreground pt-1">
+              {maskAmount(
+                `${currencySymbol}${liquidAssets.toLocaleString(locale, { maximumFractionDigits: 0 })}`
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0 flex items-center justify-between">
@@ -297,9 +305,10 @@ export function HomePage() {
               <span>Monthly EMI Outflow</span>
               <Landmark className="w-4 h-4 text-amber-400" />
             </div>
-            <CardTitle className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-foreground pt-1">
-              {currencySymbol}
-              {totalMonthlyEmi.toLocaleString(locale, { maximumFractionDigits: 0 })}
+            <CardTitle className="text-2xl sm:text-3xl font-bold font-mono tabular-nums tracking-tight text-foreground pt-1">
+              {maskAmount(
+                `${currencySymbol}${totalMonthlyEmi.toLocaleString(locale, { maximumFractionDigits: 0 })}`
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0 flex items-center justify-between">
@@ -333,20 +342,26 @@ export function HomePage() {
               )}
             </div>
             <CardTitle
-              className={`text-2xl sm:text-3xl font-bold font-mono tracking-tight pt-1 ${
+              className={`text-2xl sm:text-3xl font-bold font-mono tabular-nums tracking-tight pt-1 ${
                 netMonthlySavings >= 0 ? 'text-emerald-400' : 'text-rose-400'
               }`}
             >
-              {netMonthlySavings >= 0 ? `+${currencySymbol}` : `-${currencySymbol}`}
-              {Math.abs(netMonthlySavings).toLocaleString(locale, { maximumFractionDigits: 0 })}
+              {maskAmount(
+                `${netMonthlySavings >= 0 ? `+${currencySymbol}` : `-${currencySymbol}`}${Math.abs(netMonthlySavings).toLocaleString(locale, { maximumFractionDigits: 0 })}`
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0 flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
-              +{currencySymbol}
-              {monthlyInflow.toLocaleString(locale, { maximumFractionDigits: 0 })} in / -
-              {currencySymbol}
-              {monthlyOutflow.toLocaleString(locale, { maximumFractionDigits: 0 })} out
+            <p className="text-xs text-muted-foreground tabular-nums">
+              +
+              {maskAmount(
+                `${currencySymbol}${monthlyInflow.toLocaleString(locale, { maximumFractionDigits: 0 })}`
+              )}{' '}
+              in / -
+              {maskAmount(
+                `${currencySymbol}${monthlyOutflow.toLocaleString(locale, { maximumFractionDigits: 0 })}`
+              )}{' '}
+              out
             </p>
           </CardContent>
           <div className="absolute -right-6 -bottom-6 w-20 h-20 rounded-full bg-emerald-500/10 blur-xl pointer-events-none" />

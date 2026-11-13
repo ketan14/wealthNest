@@ -101,11 +101,14 @@ export function Sidebar() {
         </nav>
       </div>
 
-      {/* Monorepo Architecture Badge */}
+      {/* Vault Security Badge */}
       <div className="p-3 rounded-lg bg-accent/50 border border-border/60 text-xs text-muted-foreground">
-        <p className="font-medium text-foreground mb-1">Clean Architecture</p>
+        <div className="flex items-center gap-1.5 font-medium text-foreground mb-1">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Private Vault</span>
+        </div>
         <p className="text-[11px] leading-relaxed">
-          4 active layers: Web, Application, Pure Domain, and Shared utilities.
+          Client-side encrypted storage with exact paise ledger precision.
         </p>
       </div>
     </aside>

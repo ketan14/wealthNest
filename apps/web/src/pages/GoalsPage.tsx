@@ -29,7 +29,7 @@ import { useSupportSession } from '@/lib/admin/support-session-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
-import { Sparkles, Plus, Database } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 export function GoalsPage() {
   const { user } = useAuth();
@@ -87,8 +87,9 @@ export function GoalsPage() {
           ? dbHoldings.filter((h) => h.memberId === selectedMemberId)
           : dbHoldings;
 
+      const liquidClasses = new Set(['cash', 'cash_and_bank', 'liquid_funds', 'mutual_fund']);
       liquidCashCents = targetHoldings
-        .filter((h) => h.assetClassId === 'cash')
+        .filter((h) => liquidClasses.has(h.assetClassId))
         .reduce((sum, h) => sum + BigInt(Math.round(h.currentValueCents)), 0n);
     }
 
@@ -189,26 +190,14 @@ export function GoalsPage() {
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" />
-              Phase 5: Financial Goals & Milestones
-            </span>
-            <Badge variant="outline" className="text-[11px] font-mono border-border/80">
+          <div className="flex flex-wrap items-center gap-2 mb-1.5">
+            <Badge variant="outline" className="text-[11px] font-mono border-border/80 whitespace-nowrap">
               India First (₹ INR)
             </Badge>
-            {userId ? (
+            {!userId && (
               <Badge
                 variant="secondary"
-                className="text-[11px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-              >
-                <Database className="w-3 h-3 mr-1 inline" />
-                Live PostgreSQL Data
-              </Badge>
-            ) : (
-              <Badge
-                variant="secondary"
-                className="text-[11px] bg-blue-500/10 text-blue-400 border-blue-500/20"
+                className="text-[11px] bg-blue-500/10 text-blue-400 border-blue-500/20 whitespace-nowrap"
               >
                 Demo Mode
               </Badge>
@@ -239,7 +228,10 @@ export function GoalsPage() {
       </div>
 
       {/* Phase 6A: Family Entity Switcher Bar */}
-      <FamilyFilterBar onOpenManageModal={() => setIsManageFamilyOpen(true)} />
+      <FamilyFilterBar
+        showAccountSelector={false}
+        onOpenManageModal={() => setIsManageFamilyOpen(true)}
+      />
 
       <GoalsKpiSection
         summary={summary}

@@ -3,12 +3,12 @@ import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/lib/supabase/auth-context';
+import { usePrivacy } from '@/lib/preferences/privacy-context';
 import { isTauri } from '@/lib/tauri/tauri-runtime';
 import { connectionManager } from '@/lib/services/connection-manager';
 import { ServerConfig } from '@/lib/config/server-config';
 import {
   Globe,
-  Terminal,
   User,
   LogIn,
   UserPlus,
@@ -18,6 +18,8 @@ import {
   Server,
   Search,
   ShieldCheck,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 export interface HeaderProps {
@@ -26,6 +28,7 @@ export interface HeaderProps {
 
 export function Header({ onOpenCommandPalette }: HeaderProps) {
   const { user, isOfflineUser, signOut } = useAuth();
+  const { hideBalances, toggleHideBalances } = usePrivacy();
   const inTauri = isTauri();
   const [config, setConfig] = useState<ServerConfig>(() => connectionManager.getConfig());
 
@@ -126,15 +129,21 @@ export function Header({ onOpenCommandPalette }: HeaderProps) {
           </button>
         )}
 
-        <div className="hidden lg:flex items-center gap-2 text-xs text-muted-foreground bg-accent/40 border border-border/40 px-3 py-1.5 rounded-md font-mono">
-          <Terminal className="w-3.5 h-3.5 text-primary" />
-          <span>npm workspaces</span>
-        </div>
-
-        <div className="hidden xl:flex items-center gap-2 text-xs text-muted-foreground bg-accent/40 border border-border/40 px-3 py-1.5 rounded-md font-mono">
-          <Globe className="w-3.5 h-3.5 text-primary" />
-          <span>wealthnest.local</span>
-        </div>
+        <button
+          type="button"
+          onClick={toggleHideBalances}
+          data-testid="header-privacy-toggle"
+          aria-label={hideBalances ? 'Show balances' : 'Hide balances'}
+          title={hideBalances ? 'Show balances' : 'Hide balances (Privacy Mode)'}
+          className="flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground bg-accent/40 hover:bg-accent/70 border border-border/50 transition-colors"
+        >
+          {hideBalances ? (
+            <EyeOff className="w-3.5 h-3.5 text-amber-400" />
+          ) : (
+            <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+          )}
+          <span className="hidden lg:inline">{hideBalances ? 'Hidden' : 'Privacy'}</span>
+        </button>
 
         {/* User Authentication state */}
         {user ? (

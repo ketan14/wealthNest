@@ -130,16 +130,25 @@ export function CashflowSummarySection({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="w-full h-3 rounded-full overflow-hidden flex bg-secondary/60 p-0.5 border border-border/50">
-            <div
-              title={`Inflows: ${inflowRatio.toFixed(1)}%`}
-              style={{ width: `${inflowRatio}%` }}
-              className="h-full bg-emerald-500 rounded-l-full transition-all duration-300"
-            />
-            <div
-              title={`Outflows: ${outflowRatio.toFixed(1)}%`}
-              style={{ width: `${outflowRatio}%` }}
-              className="h-full bg-rose-500 rounded-r-full transition-all duration-300"
-            />
+            {summary.inflowCount === 0 && summary.outflowCount === 0 ? (
+              <div
+                title="No inflows or outflows recorded yet"
+                className="w-full h-full bg-muted/50 rounded-full"
+              />
+            ) : (
+              <>
+                <div
+                  title={`Inflows: ${inflowRatio.toFixed(1)}%`}
+                  style={{ width: `${inflowRatio}%` }}
+                  className="h-full bg-emerald-500 rounded-l-full transition-all duration-300"
+                />
+                <div
+                  title={`Outflows: ${outflowRatio.toFixed(1)}%`}
+                  style={{ width: `${outflowRatio}%` }}
+                  className="h-full bg-rose-500 rounded-r-full transition-all duration-300"
+                />
+              </>
+            )}
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2.5 pt-1">

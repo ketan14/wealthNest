@@ -78,6 +78,7 @@ import { RepositoryProvider } from '@/lib/persistence/repository-context';
 import { AdminProvider } from '@/lib/admin/admin-context';
 import { SupportSessionProvider } from '@/lib/admin/support-session-context';
 import { PreferencesProvider } from '@/lib/preferences/preferences-context';
+import { PrivacyProvider } from '@/lib/preferences/privacy-context';
 import { FamilyProvider } from '@/lib/family/family-context';
 import { ToastProvider } from '@/components/ui/Toast';
 
@@ -100,8 +101,9 @@ export function App() {
           <AdminProvider>
             <SupportSessionProvider>
               <PreferencesProvider>
-                <FamilyProvider>
-                  <ToastProvider>
+                <PrivacyProvider>
+                  <FamilyProvider>
+                    <ToastProvider>
                     <BrowserRouter>
                     <Suspense fallback={<RouteLoadingFallback />}>
                       <Routes>
@@ -138,6 +140,7 @@ export function App() {
                     </BrowserRouter>
                   </ToastProvider>
                 </FamilyProvider>
+                </PrivacyProvider>
               </PreferencesProvider>
             </SupportSessionProvider>
           </AdminProvider>

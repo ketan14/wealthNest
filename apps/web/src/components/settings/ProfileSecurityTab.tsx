@@ -79,7 +79,7 @@ export function ProfileSecurityTab({
                 <Button
                   type="submit"
                   disabled={isSavingName || !nameInput.trim()}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm"
+                  className="text-sm"
                 >
                   {isSavingName ? 'Saving...' : 'Save Profile Changes'}
                 </Button>

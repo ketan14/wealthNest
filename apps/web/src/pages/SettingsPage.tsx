@@ -295,7 +295,7 @@ export function SettingsPage() {
           onClick={() => setActiveTab('profile')}
           className={`flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
             activeTab === 'profile'
-              ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
+              ? 'border-primary text-primary bg-primary/5'
               : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
           }`}
         >
@@ -307,7 +307,7 @@ export function SettingsPage() {
           onClick={() => setActiveTab('family')}
           className={`flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
             activeTab === 'family'
-              ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
+              ? 'border-primary text-primary bg-primary/5'
               : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
           }`}
         >
@@ -320,7 +320,7 @@ export function SettingsPage() {
           data-testid="tab-connection"
           className={`flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
             activeTab === 'connection'
-              ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
+              ? 'border-primary text-primary bg-primary/5'
               : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
           }`}
         >
@@ -332,7 +332,7 @@ export function SettingsPage() {
           onClick={() => setActiveTab('localization')}
           className={`flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
             activeTab === 'localization'
-              ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
+              ? 'border-primary text-primary bg-primary/5'
               : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
           }`}
         >
@@ -344,7 +344,7 @@ export function SettingsPage() {
           onClick={() => setActiveTab('data')}
           className={`flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
             activeTab === 'data'
-              ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
+              ? 'border-primary text-primary bg-primary/5'
               : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
           }`}
         >
@@ -356,7 +356,7 @@ export function SettingsPage() {
           onClick={() => setActiveTab('system')}
           className={`flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
             activeTab === 'system'
-              ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
+              ? 'border-primary text-primary bg-primary/5'
               : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
           }`}
         >

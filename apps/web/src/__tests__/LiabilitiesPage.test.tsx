@@ -32,7 +32,7 @@ describe('LiabilitiesPage Component (Sprint 4)', () => {
 
     // Header & Badges
     expect(screen.getByText('Loans & Liabilities')).toBeInTheDocument();
-    expect(screen.getByText(/Phase 5: Loans & Liabilities Engine/i)).toBeInTheDocument();
+    expect(screen.getByText(/Loans & Liabilities Engine/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Add Loan \/ Liability/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Sync/i })).toBeInTheDocument();
 

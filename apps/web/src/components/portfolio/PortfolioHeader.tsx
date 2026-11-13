@@ -57,7 +57,7 @@ export function PortfolioHeader({
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap xl:flex-nowrap shrink-0">
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
               Portfolio & Asset Allocation
             </h2>
@@ -99,7 +99,7 @@ export function PortfolioHeader({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap xl:flex-nowrap shrink-0">
           {/* Live Auto-Polling Toggle Button */}
           <Button
             variant={isPolling ? 'default' : 'outline'}
