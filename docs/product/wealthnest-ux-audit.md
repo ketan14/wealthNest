@@ -265,18 +265,18 @@ WealthNest Navigation Structure
 
 ## 13. Prioritized Improvement Backlog
 
-| ID | Area | Issue Description | Recommended Action | Priority | Complexity | Dependencies |
-|---|---|---|---|---|---|---|
-| **SEC-01** | Security / Auth | RLS policies restrict all data to `user_id = auth.uid()` preventing family sharing. | Introduce `household_members` join in RLS policies with `can_view` and `can_edit` role checks. | **P0** | High | Migration & Auth |
-| **FIN-01** | Financial Integrity | Assets can be double-allocated to multiple goals past 100%. | Add validation invariant in `goal-calculator.ts` enforcing total allocated percentage $\le 100\%$. | **P0** | Medium | Domain models |
-| **FIN-02** | Financial Integrity | EMI payments do not automatically bifurcate principal vs interest. | Implement amortization ledger entries when recording loan repayments. | **P0** | Medium | Liabilities & Txns |
-| **UX-01** | Dashboard UX | Home screen displays internal developer diagnostics and database ports. | Redesign Home dashboard into an executive family summary (Net Worth, Runway, EMIs, Goals). | **P1** | Medium | Web UI |
-| **UX-02** | Mobile UX | Missing global Quick Add button and bottom sheets on mobile. | Add center-docked Quick Add button in `BottomNavigationBar.tsx` and mobile bottom sheet wrappers. | **P1** | Medium | Mobile Shell |
-| **UX-03** | Information Arch | `PortfolioPage.tsx` is an oversized monolith (>2,190 LOC). | Refactor into modular sub-routes: `/portfolio/assets`, `/portfolio/investments`, `/portfolio/accounts`. | **P1** | High | Web Pages |
-| **UX-04** | Real Estate | Real estate is merged into general equity holdings without property metrics. | Dedicated Real Estate view with LTV, Net Property Equity, and Rental Yield tracking. | **P1** | Medium | Portfolio & Loans |
-| **PERF-01** | Performance | Heavy bundle size due to inlining PDF.js and charting libraries in single chunks. | Dynamic import for `pdfjs-dist` and CAS parsers; route-level code splitting. | **P2** | Low | Vite Config |
-| **A11Y-01** | Accessibility | SVG charts lack keyboard focusability and accessible tabular data fallbacks. | Wrap charts in accessible SVG containers with ARIA labels and screen-reader data summaries. | **P2** | Low | UI Components |
-| **DESK-01** | Desktop UX | Lacks power-user keyboard navigation and search dialog (`Ctrl+K`). | Introduce global command palette for quick navigation, search, and data entry. | **P3** | Medium | UI Shell |
+| ID | Area | Issue Description | Recommended Action | Priority | Complexity | Dependencies | Status |
+|---|---|---|---|---|---|---|---|
+| **SEC-01** | Security / Auth | RLS policies restrict all data to `user_id = auth.uid()` preventing family sharing. | Introduce `household_members` join in RLS policies with `can_view` and `can_edit` role checks. | **P0** | High | Migration & Auth | ✅ Complete |
+| **FIN-01** | Financial Integrity | Assets can be double-allocated to multiple goals past 100%. | Add validation invariant in `goal-calculator.ts` enforcing total allocated percentage $\le 100\%$. | **P0** | Medium | Domain models | ✅ Complete |
+| **FIN-02** | Financial Integrity | EMI payments do not automatically bifurcate principal vs interest. | Implement amortization ledger entries when recording loan repayments. | **P0** | Medium | Liabilities & Txns | ✅ Complete |
+| **UX-01** | Dashboard UX | Home screen displays internal developer diagnostics and database ports. | Redesign Home dashboard into an executive family summary (Net Worth, Runway, EMIs, Goals). | **P1** | Medium | Web UI | ✅ Complete |
+| **UX-02** | Mobile UX | Missing global Quick Add button and bottom sheets on mobile. | Add center-docked Quick Add button in `BottomNavigationBar.tsx` and mobile bottom sheet wrappers. | **P1** | Medium | Mobile Shell | ✅ Complete |
+| **UX-03** | Information Arch | `PortfolioPage.tsx` is an oversized monolith (>2,190 LOC). | Refactor into modular sub-routes: `/portfolio/assets`, `/portfolio/investments`, `/portfolio/accounts`. | **P1** | High | Web Pages | ✅ Complete |
+| **UX-04** | Real Estate | Real estate is merged into general equity holdings without property metrics. | Dedicated Real Estate view with LTV, Net Property Equity, and Rental Yield tracking. | **P1** | Medium | Portfolio & Loans | ✅ Complete |
+| **PERF-01** | Performance | Heavy bundle size due to inlining PDF.js and charting libraries in single chunks. | Dynamic import for `pdfjs-dist` and CAS parsers; route-level code splitting. | **P2** | Low | Vite Config | ✅ Complete |
+| **A11Y-01** | Accessibility | SVG charts lack keyboard focusability and accessible tabular data fallbacks. | Wrap charts in accessible SVG containers with ARIA labels and screen-reader data summaries. | **P2** | Low | UI Components | ✅ Complete |
+| **DESK-01** | Desktop UX | Lacks power-user keyboard navigation and search dialog (`Ctrl+K`). | Introduce global command palette for quick navigation, search, and data entry. | **P3** | Medium | UI Shell | ✅ Complete |
 
 ---
 
