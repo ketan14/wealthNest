@@ -1,11 +1,26 @@
+import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { BottomNavigationBar } from './BottomNavigationBar';
 import { DesktopTitlebar } from './DesktopTitlebar';
 import { SupportModeBanner } from '../admin/SupportModeBanner';
+import { CommandPaletteModal } from './CommandPaletteModal';
 
 export function AppShell() {
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen bg-background overflow-x-hidden max-w-full w-full">
       <DesktopTitlebar />
@@ -25,6 +40,12 @@ export function AppShell() {
 
       {/* Persistent Bottom Navigation Bar on Mobile Viewports */}
       <BottomNavigationBar />
+
+      {/* Desktop Global Command Palette (Ctrl+K / Cmd+K) */}
+      <CommandPaletteModal
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AnalyticsPage from '../pages/AnalyticsPage';
@@ -33,5 +33,12 @@ describe('Phase 9.2: Responsive SVG Chart Layout', () => {
     expect(projectionSvg.getAttribute('class')).not.toContain('min-w-[600px]');
     expect(projectionSvg.getAttribute('class')).toContain('w-full');
     expect(projectionSvg.getAttribute('class')).toContain('max-w-full');
+    expect(projectionSvg.getAttribute('role')).toBe('img');
+    expect(projectionSvg.getAttribute('aria-label')).toContain('trajectory chart');
+
+    // Toggle accessible data table fallback
+    const toggleBtn = screen.getByRole('button', { name: /View Data Table/i });
+    fireEvent.click(toggleBtn);
+    expect(screen.getByRole('button', { name: /View Chart/i })).toBeInTheDocument();
   });
 });

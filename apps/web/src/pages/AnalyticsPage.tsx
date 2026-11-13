@@ -20,6 +20,7 @@ import {
 } from '@wealthnest/domain';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { AccessibleChartContainer } from '@/components/ui/AccessibleChartContainer';
 import {
   TrendingUp,
   Sparkles,
@@ -696,13 +697,28 @@ export function AnalyticsPage() {
         </CardHeader>
 
         <CardContent>
-          <div className="w-full overflow-x-auto">
-            <svg
-              data-testid="analytics-trajectory-svg"
-              viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-              className="w-full max-w-full h-auto select-none"
-            >
-              <defs>
+          <AccessibleChartContainer
+            title="Portfolio Growth Trajectory"
+            description="Portfolio valuation vs cumulative cost basis and Nifty 50 TRI benchmark"
+            headers={['Date', 'Portfolio Value', 'Cost Basis', 'Benchmark (Nifty 50 TRI)']}
+            rows={points.map((p) => ({
+              label: p.date,
+              values: [p.val.format('en-IN'), p.inv.format('en-IN'), p.bench.format('en-IN')],
+            }))}
+          >
+            <div className="w-full overflow-x-auto">
+              <svg
+                data-testid="analytics-trajectory-svg"
+                role="img"
+                aria-label="Portfolio valuation vs cost basis trajectory chart"
+                viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                className="w-full max-w-full h-auto select-none"
+              >
+                <title>Portfolio Growth Trajectory</title>
+                <desc>
+                  Line chart comparing WealthNest portfolio valuation against cumulative cost basis.
+                </desc>
+                <defs>
                 <linearGradient id="valGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#10b981" stopOpacity="0.35" />
                   <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
@@ -754,7 +770,22 @@ export function AnalyticsPage() {
 
               {/* Data points */}
               {points.map((p, idx) => (
-                <g key={idx} onMouseEnter={() => setHoveredIndex(idx)} className="cursor-pointer">
+                <g
+                  key={idx}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`${p.date}: Valuation ${p.val.format('en-IN')}, Cost Basis ${p.inv.format('en-IN')}`}
+                  onMouseEnter={() => setHoveredIndex(idx)}
+                  onFocus={() => setHoveredIndex(idx)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowRight') {
+                      setHoveredIndex(Math.min(points.length - 1, idx + 1));
+                    } else if (e.key === 'ArrowLeft') {
+                      setHoveredIndex(Math.max(0, idx - 1));
+                    }
+                  }}
+                  className="cursor-pointer focus:outline-none"
+                >
                   {/* Invisible hit area */}
                   <circle cx={p.x} cy={p.yVal} r="14" fill="transparent" />
                   {/* Visible point */}
@@ -772,6 +803,7 @@ export function AnalyticsPage() {
               ))}
             </svg>
           </div>
+          </AccessibleChartContainer>
 
           {/* Chart Legend */}
           <div className="flex flex-wrap items-center justify-center gap-6 mt-4 text-xs font-medium text-muted-foreground border-t border-border/60 pt-3">
