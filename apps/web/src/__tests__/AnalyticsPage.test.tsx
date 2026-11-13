@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AnalyticsPage } from '../pages/AnalyticsPage';
 import { AuthProvider } from '../lib/supabase/auth-context';
+import { FamilyProvider } from '../lib/family/family-context';
+import { PreferencesProvider } from '../lib/preferences/preferences-context';
 
 describe('AnalyticsPage Component (Phase 4 & Budget 2024 Tax Engine)', () => {
   it('renders performance KPI cards, trajectory chart, benchmarks, rebalancing drift, and Budget 2024 tax intelligence', async () => {
@@ -16,9 +18,13 @@ describe('AnalyticsPage Component (Phase 4 & Budget 2024 Tax Engine)', () => {
     render(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <MemoryRouter>
-            <AnalyticsPage />
-          </MemoryRouter>
+          <PreferencesProvider>
+            <FamilyProvider>
+              <MemoryRouter>
+                <AnalyticsPage />
+              </MemoryRouter>
+            </FamilyProvider>
+          </PreferencesProvider>
         </AuthProvider>
       </QueryClientProvider>
     );
@@ -59,5 +65,11 @@ describe('AnalyticsPage Component (Phase 4 & Budget 2024 Tax Engine)', () => {
     expect(screen.getByText(/Taxable LTCG/i)).toBeInTheDocument();
     expect(screen.getByText(/Taxable STCG/i)).toBeInTheDocument();
     expect(screen.getByText('Loss Harvesting Savings')).toBeInTheDocument();
+
+    // Section 112A Multi-Entity Tax Harvesting Simulator
+    expect(
+      screen.getByText(/Section 112A Multi-Entity Tax Harvesting Simulator/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Total Family Tax Shield/i)).toBeInTheDocument();
   });
 });
