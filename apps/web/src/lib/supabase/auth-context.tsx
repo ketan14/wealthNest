@@ -23,6 +23,12 @@ export const DEFAULT_OFFLINE_USER: User = {
 const isTestEnv = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
 
 export function isOfflineLocalActive(): boolean {
+  // Offline local-vault mode is restricted to the Tauri desktop/mobile runtime (or tests).
+  // Web browser sessions must authenticate against Supabase Auth.
+  if (!isTauri() && !isTestEnv) {
+    return false;
+  }
+
   try {
     if (typeof window !== 'undefined') {
       const stored = window.localStorage.getItem(OFFLINE_MODE_STORAGE_KEY);
@@ -127,6 +133,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const enableOfflineUser = useCallback(() => {
+    if (!isTauri() && !isTestEnv) {
+      return;
+    }
     try {
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(OFFLINE_MODE_STORAGE_KEY, 'true');

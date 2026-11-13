@@ -39,13 +39,18 @@ export function LoginPage() {
 
   const handleSwitchToRemote = async () => {
     const remoteUrl =
-      (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) ||
-      'https://jdgucgsvvxcpxbeubqpi.supabase.co';
+      typeof import.meta !== 'undefined' ? import.meta.env?.VITE_SUPABASE_URL : undefined;
     const remoteKey =
-      (typeof import.meta !== 'undefined' &&
-        (import.meta.env?.VITE_SUPABASE_ANON_KEY ||
-          import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY)) ||
-      'sb_publishable_N2AiCMr6xGgiL4SVt5ykOg_RcFUtEw5';
+      typeof import.meta !== 'undefined'
+        ? import.meta.env?.VITE_SUPABASE_ANON_KEY || import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY
+        : undefined;
+
+    if (!remoteUrl || !remoteKey) {
+      setServerError(
+        'Remote Supabase endpoint is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (or configure a custom endpoint in Settings).'
+      );
+      return;
+    }
 
     await connectionManager.switchServer({
       mode: 'remote',

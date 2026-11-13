@@ -8,6 +8,7 @@ import {
 } from '@wealthnest/domain';
 import { SupportSessionPort } from '@wealthnest/application';
 import { supabase } from './client';
+import { isOfflineLocalActive } from './auth-context';
 import { DEMO_ADMIN_USERS } from './admin.adapter';
 
 // In-memory store for demo / offline sessions
@@ -46,7 +47,13 @@ export class SupabaseSupportSessionAdapter implements SupportSessionPort {
         return session;
       }
     } catch (err) {
-      console.warn('Falling back to local support session simulation:', err);
+      const isTestOrOffline =
+        isOfflineLocalActive() ||
+        (typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test');
+      if (!isTestOrOffline) {
+        throw err;
+      }
+      console.warn('Falling back to local support session simulation (test/offline mode):', err);
     }
 
     // Demo / fallback session creation

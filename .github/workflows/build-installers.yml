@@ -26,9 +26,9 @@ permissions:
 
 env:
   VITE_APP_ENV: ${{ inputs.target_env || 'qa' }}
-  VITE_SUPABASE_URL: ${{ (inputs.target_env == 'offline') && '' || vars.VITE_SUPABASE_URL || 'https://jdgucgsvvxcpxbeubqpi.supabase.co' }}
-  VITE_SUPABASE_ANON_KEY: ${{ (inputs.target_env == 'offline') && '' || vars.VITE_SUPABASE_ANON_KEY || 'sb_publishable_N2AiCMr6xGgiL4SVt5ykOg_RcFUtEw5' }}
-  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ (inputs.target_env == 'offline') && '' || vars.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_N2AiCMr6xGgiL4SVt5ykOg_RcFUtEw5' }}
+  VITE_SUPABASE_URL: ${{ (inputs.target_env == 'offline') && '' || vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL || '' }}
+  VITE_SUPABASE_ANON_KEY: ${{ (inputs.target_env == 'offline') && '' || vars.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY || '' }}
+  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ (inputs.target_env == 'offline') && '' || vars.VITE_SUPABASE_PUBLISHABLE_KEY || secrets.VITE_SUPABASE_PUBLISHABLE_KEY || '' }}
 
 jobs:
   # ============================================================================

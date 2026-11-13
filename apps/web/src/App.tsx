@@ -1,6 +1,6 @@
 import { Suspense, lazy } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { HomePage } from '@/pages/HomePage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
@@ -73,7 +73,7 @@ function RouteLoadingFallback() {
   );
 }
 
-import { AuthProvider } from '@/lib/supabase/auth-context';
+import { AuthProvider, useAuth } from '@/lib/supabase/auth-context';
 import { RepositoryProvider } from '@/lib/persistence/repository-context';
 import { AdminProvider } from '@/lib/admin/admin-context';
 import { SupportSessionProvider } from '@/lib/admin/support-session-context';
@@ -81,6 +81,20 @@ import { PreferencesProvider } from '@/lib/preferences/preferences-context';
 import { PrivacyProvider } from '@/lib/preferences/privacy-context';
 import { FamilyProvider } from '@/lib/family/family-context';
 import { ToastProvider } from '@/components/ui/Toast';
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <RouteLoadingFallback />;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
 
 // Initialize TanStack Query client with production-ready defaults
 const queryClient = new QueryClient({
@@ -111,8 +125,15 @@ export function App() {
                         <Route path="/signup" element={<SignUpPage />} />
                         <Route path="/login" element={<LoginPage />} />
 
-                        {/* Investor App Shell */}
-                        <Route path="/" element={<AppShell />}>
+                        {/* Investor App Shell (Authenticated / Tauri Local Vault) */}
+                        <Route
+                          path="/"
+                          element={
+                            <ProtectedRoute>
+                              <AppShell />
+                            </ProtectedRoute>
+                          }
+                        >
                           <Route index element={<HomePage />} />
                           <Route path="portfolio" element={<PortfolioPage />} />
                           <Route path="real-estate" element={<RealEstatePage />} />

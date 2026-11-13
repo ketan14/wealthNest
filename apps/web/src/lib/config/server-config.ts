@@ -95,19 +95,18 @@ export function buildSupabaseUrl(config: ServerConfig): string {
     if (DEFAULT_SUPABASE_URL && isValidHttpUrl(DEFAULT_SUPABASE_URL)) {
       return DEFAULT_SUPABASE_URL.trim().replace(/\/+$/, '');
     }
-    return 'https://jdgucgsvvxcpxbeubqpi.supabase.co';
+    return `http://${DEFAULT_LOCAL_HOST}:${DEFAULT_SUPABASE_PORT}`;
   }
 
   if (config.mode === 'lan') {
     const isTest = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
 
     // If running on HTTPS (production/cloud edge) where HTTP LAN is blocked by browser Mixed Content policy,
-    // route directly to remote QA endpoint
+    // route directly to configured remote endpoint if available
     if (!isTest && typeof window !== 'undefined' && window.location.protocol === 'https:') {
       if (DEFAULT_SUPABASE_URL && isValidHttpUrl(DEFAULT_SUPABASE_URL)) {
         return DEFAULT_SUPABASE_URL.trim().replace(/\/+$/, '');
       }
-      return 'https://jdgucgsvvxcpxbeubqpi.supabase.co';
     }
 
     // If accessed via localhost / 127.0.0.1 and host is the default template IP (192.168.1.105),
@@ -163,15 +162,16 @@ export function loadServerConfig(): ServerConfig {
       let customUrl =
         typeof parsed.customSupabaseUrl === 'string' ? parsed.customSupabaseUrl : undefined;
 
-      // On HTTPS production, upgrade legacy or stale http:// LAN config to remote QA
+      // On HTTPS production, upgrade legacy or stale http:// LAN config to remote when configured
       if (
         !isTest &&
         typeof window !== 'undefined' &&
         window.location.protocol === 'https:' &&
-        mode === 'lan'
+        mode === 'lan' &&
+        (customUrl || DEFAULT_SUPABASE_URL)
       ) {
         mode = 'remote';
-        customUrl = customUrl || DEFAULT_SUPABASE_URL || 'https://jdgucgsvvxcpxbeubqpi.supabase.co';
+        customUrl = customUrl || DEFAULT_SUPABASE_URL;
       }
 
       return {
