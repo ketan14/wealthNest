@@ -42,3 +42,4 @@ export * from './admin/cross-user-isolation.js';
 export * from './portfolio/precision-rules.js';
 export * from './alerts/emergency-runway.js';
 export * from './tax/section-112a-harvesting.js';
+export * from './vault/document-vault.js';

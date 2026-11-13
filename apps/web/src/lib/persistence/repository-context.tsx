@@ -8,6 +8,7 @@ import {
   AssetClassRepositoryPort,
   BackupPort,
   CasImportRepositoryPort,
+  DocumentVaultRepositoryPort,
   SqliteDatabase,
   SqliteHoldingAdapter,
   SqliteTransactionAdapter,
@@ -17,6 +18,7 @@ import {
   SqliteAssetClassAdapter,
   SqliteBackupAdapter,
   SqliteCasImportAdapter,
+  SqliteDocumentVaultAdapter,
 } from '@wealthnest/application';
 
 import { SupabaseHoldingAdapter } from '../supabase/holding.adapter';
@@ -27,6 +29,7 @@ import { SupabaseFamilyAdapter } from '../supabase/family.adapter';
 import { SupabaseAssetClassAdapter } from '../supabase/asset-class.adapter';
 import { SupabaseBackupAdapter } from '../supabase/backup.adapter';
 import { SupabaseCasImportAdapter } from '../supabase/cas-import.adapter';
+import { SupabaseDocumentVaultAdapter } from '../supabase/document-vault.adapter';
 import { isTauri } from '../tauri/tauri-runtime';
 import { TauriSqliteAdapter } from '../tauri/tauri-sqlite-adapter';
 import { isOfflineLocalActive } from '../supabase/auth-context';
@@ -42,6 +45,7 @@ export interface RepositoryBundle {
   readonly assetClassRepo: AssetClassRepositoryPort;
   readonly backupRepo: BackupPort;
   readonly casImportRepo: CasImportRepositoryPort;
+  readonly documentVaultRepo: DocumentVaultRepositoryPort;
   readonly mode: 'supabase' | 'sqlite';
 }
 
@@ -54,6 +58,7 @@ export const defaultSupabaseBundle: RepositoryBundle = {
   assetClassRepo: new SupabaseAssetClassAdapter(),
   backupRepo: new SupabaseBackupAdapter(),
   casImportRepo: new SupabaseCasImportAdapter(),
+  documentVaultRepo: new SupabaseDocumentVaultAdapter(),
   mode: 'supabase',
 };
 
@@ -80,6 +85,7 @@ export function createSqliteRepositoryBundle(db?: SqliteDatabase): RepositoryBun
     goalRepo
   );
   const casImportRepo = new SqliteCasImportAdapter(sqliteDb);
+  const documentVaultRepo = new SqliteDocumentVaultAdapter(sqliteDb);
 
   return {
     holdingRepo,
@@ -90,6 +96,7 @@ export function createSqliteRepositoryBundle(db?: SqliteDatabase): RepositoryBun
     assetClassRepo,
     backupRepo,
     casImportRepo,
+    documentVaultRepo,
     mode: 'sqlite',
   };
 }
@@ -162,4 +169,8 @@ export function useBackupRepository(): BackupPort {
 
 export function useCasImportRepository(): CasImportRepositoryPort {
   return useRepositories().casImportRepo;
+}
+
+export function useDocumentVaultRepository(): DocumentVaultRepositoryPort {
+  return useRepositories().documentVaultRepo;
 }

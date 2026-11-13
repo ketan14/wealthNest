@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   ShieldAlert,
   Landmark,
+  FolderLock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAdmin } from '@/lib/admin/admin-context';
@@ -26,6 +27,7 @@ const navItems: NavItem[] = [
   { title: 'Transactions', href: '/transactions', icon: ArrowLeftRight },
   { title: 'Analytics', href: '/analytics', icon: TrendingUp },
   { title: 'Goals & Targets', href: '/goals', icon: Target },
+  { title: 'Documents Vault', href: '/documents', icon: FolderLock },
   { title: 'Settings', href: '/settings', icon: Settings },
 ];
 

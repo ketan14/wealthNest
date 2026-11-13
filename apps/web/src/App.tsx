@@ -7,6 +7,7 @@ import { LiabilitiesPage } from '@/pages/LiabilitiesPage';
 import { TransactionsPage } from '@/pages/TransactionsPage';
 import { AnalyticsPage } from '@/pages/AnalyticsPage';
 import { GoalsPage } from '@/pages/GoalsPage';
+import { DocumentsPage } from '@/pages/DocumentsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
@@ -63,6 +64,7 @@ export function App() {
                         <Route path="transactions" element={<TransactionsPage />} />
                         <Route path="analytics" element={<AnalyticsPage />} />
                         <Route path="goals" element={<GoalsPage />} />
+                        <Route path="documents" element={<DocumentsPage />} />
                         <Route path="settings" element={<SettingsPage />} />
                         <Route path="*" element={<NotFoundPage />} />
                       </Route>

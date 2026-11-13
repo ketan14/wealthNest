@@ -205,6 +205,38 @@ CREATE TABLE IF NOT EXISTS goal_holdings (
   UNIQUE(goal_id, holding_id)
 );
 
+-- 14. Family Document Vault (Metadata + Local Data URL for Offline Vault)
+CREATE TABLE IF NOT EXISTS family_documents (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  member_id TEXT,
+  title TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (
+    category IN (
+      'identity_pan',
+      'property_deed',
+      'cas_statement',
+      'insurance_policy',
+      'huf_deed',
+      'tax_itr',
+      'loan_agreement',
+      'other'
+    )
+  ),
+  file_name TEXT NOT NULL,
+  file_size_bytes INTEGER NOT NULL CHECK (file_size_bytes > 0),
+  mime_type TEXT NOT NULL,
+  storage_path TEXT NOT NULL,
+  document_date TEXT,
+  expiry_date TEXT,
+  notes TEXT,
+  is_encrypted INTEGER NOT NULL DEFAULT 0,
+  local_data_url TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id, member_id) REFERENCES family_members(user_id, id) ON DELETE SET NULL
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_holdings_user ON holdings(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions(user_id, transaction_date);
@@ -212,6 +244,7 @@ CREATE INDEX IF NOT EXISTS idx_liabilities_user ON liabilities(user_id);
 CREATE INDEX IF NOT EXISTS idx_asset_valuations_user_date ON asset_valuations(user_id, as_of_date);
 CREATE INDEX IF NOT EXISTS idx_liability_balances_user_date ON liability_balances(user_id, as_of_date);
 CREATE INDEX IF NOT EXISTS idx_financial_goals_user ON financial_goals(user_id);
+CREATE INDEX IF NOT EXISTS idx_family_documents_user ON family_documents(user_id, category);
 `;
 
 export const DEFAULT_ASSET_CLASSES = [

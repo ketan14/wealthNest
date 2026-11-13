@@ -11,6 +11,8 @@ export * from './ports/goal-repository.port.js';
 export * from './ports/backup.port.js';
 export * from './ports/market-data.port.js';
 export * from './ports/family-repository.port.js';
+export * from './ports/document-vault-repository.port.js';
+export * from './use-cases/manage-document-vault.js';
 export * from './use-cases/get-system-status.js';
 export * from './use-cases/list-asset-classes.js';
 export * from './use-cases/get-portfolio-summary.js';
