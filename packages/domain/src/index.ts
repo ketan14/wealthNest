@@ -23,6 +23,7 @@ export * from './analytics/cagr.js';
 export * from './analytics/portfolio-analytics.js';
 export * from './goals/goal-types.js';
 export * from './goals/goal-calculator.js';
+export * from './goals/goal-projection.js';
 export * from './tax/capital-gains.js';
 export * from './market/amfi-nav.js';
 export * from './market/nse-bse-cmp.js';

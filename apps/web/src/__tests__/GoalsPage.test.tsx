@@ -40,7 +40,7 @@ describe('GoalsPage Component (Phase 5)', () => {
     // Active milestones section
     expect(screen.getByText('Active Financial Milestones')).toBeInTheDocument();
     expect(screen.getByText('Emergency Reserve Fund (6 Months)')).toBeInTheDocument();
-    expect(screen.getByText(/Ketan & Parul Retirement/i)).toBeInTheDocument();
-    expect(screen.getByText(/Krisha Higher Education/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Ketan & Parul Retirement/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Krisha Higher Education/i).length).toBeGreaterThanOrEqual(1);
   });
 });

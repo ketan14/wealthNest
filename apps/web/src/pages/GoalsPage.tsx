@@ -21,6 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { AddGoalModal } from '@/components/goals/AddGoalModal';
+import { GoalProjectionCard } from '@/components/goals/GoalProjectionCard';
 import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
 import { useFamily } from '@/lib/family/family-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
@@ -761,6 +762,9 @@ export function GoalsPage() {
           })}
         </div>
       </div>
+
+      {/* Goal Milestone Projection Curve & Step-Up SIP Simulator */}
+      <GoalProjectionCard goals={filteredGoalsList} />
 
       {/* Add Goal Modal */}
       <AddGoalModal
