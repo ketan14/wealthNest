@@ -154,6 +154,31 @@ describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
 
       expect(supabase.auth.signUp).not.toHaveBeenCalled();
     });
+
+    it('rejects a 12-character password missing complexity classes', async () => {
+      renderWithProviders(<></>, '/signup');
+
+      fireEvent.change(screen.getByLabelText(/Full Name/i), { target: { value: 'Ketan Vaghela' } });
+      fireEvent.change(screen.getByLabelText(/Email Address/i), {
+        target: { value: 'investor@wealthnest.local' },
+      });
+      fireEvent.change(screen.getByLabelText(/^Password$/i), {
+        target: { value: 'alllowercasepassword' },
+      });
+      fireEvent.change(screen.getByLabelText(/^Confirm Password$/i), {
+        target: { value: 'alllowercasepassword' },
+      });
+      fireEvent.click(screen.getByRole('checkbox', { name: /Terms of Service/i }));
+
+      fireEvent.click(screen.getByRole('button', { name: /Create Account/i }));
+
+      expect(
+        await screen.findByText(
+          /Password must include uppercase, lowercase, a number, and a special character/i
+        )
+      ).toBeInTheDocument();
+      expect(supabase.auth.signUp).not.toHaveBeenCalled();
+    });
   });
 
   describe('SignUpPage Submission & Supabase Integration', () => {

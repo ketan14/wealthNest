@@ -10,8 +10,7 @@ import {
   AdminAuditLogEntry,
 } from '@wealthnest/domain';
 import { AdminRepositoryPort, AdminAuditLogPort } from '@wealthnest/application';
-import { createClient } from '@supabase/supabase-js';
-import { connectionManager } from '../services/connection-manager';
+import { isOfflineLocalActive } from './auth-context';
 import { supabase } from './client';
 import { DEMO_ADMIN_USERS, DEMO_HOUSEHOLDS, demoAuditLogsStore } from './admin-demo-data';
 
@@ -238,47 +237,35 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
     const trimmedName = displayName.trim() || trimmedEmail.split('@')[0] || 'Investor';
 
     try {
-      const url = connectionManager.getSupabaseUrl();
-      const anonKey = connectionManager.getConfig().supabaseAnonKey;
-
-      // Isolated auth client ensures admin session is NOT overwritten in localStorage
-      const isolatedClient = createClient(url, anonKey, {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
+      const { data, error } = await supabase.functions.invoke('admin-create-user', {
+        body: {
+          email: trimmedEmail,
+          password,
+          displayName: trimmedName,
+          initialRole,
         },
       });
 
-      const { data, error } = await isolatedClient.auth.signUp({
-        email: trimmedEmail,
-        password,
-        options: {
-          data: {
-            full_name: trimmedName,
-            display_name: trimmedName,
-          },
-        },
-      });
-
-      if (error) throw error;
-
-      const createdUser = data.user;
-      const userId = createdUser?.id || `usr-${Date.now()}`;
-
-      // If an administrative role was specified, grant it via existing RPC
-      if (createdUser?.id && initialRole) {
+      if (error) {
+        let errorMessage = error.message || 'Failed to provision user account';
         try {
-          await this.managePlatformRole(createdUser.id, initialRole, 'grant');
-        } catch (roleErr) {
-          console.warn('Initial platform role assignment deferred:', roleErr);
+          const contextBody = await (error as { context?: { json?: () => Promise<{ error?: string }> } }).context?.json?.();
+          if (contextBody?.error && typeof contextBody.error === 'string') {
+            errorMessage = contextBody.error;
+          }
+        } catch {
+          // Ignore non-JSON error responses
         }
+        throw new Error(errorMessage);
       }
+
+      const userId = data?.userId || `usr-${Date.now()}`;
+      const createdEmail = data?.email || trimmedEmail;
 
       // Prepend to local memory cache for immediate UI feedback
       const newUser: AdminUserSummary = {
         id: userId,
-        email: trimmedEmail,
+        email: createdEmail,
         displayName: trimmedName,
         status: 'active',
         platformRole: initialRole,
@@ -287,25 +274,32 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
       };
       DEMO_ADMIN_USERS.unshift(newUser);
 
-      return { userId, email: trimmedEmail };
+      return { userId, email: createdEmail };
     } catch (err: any) {
-      // In offline / fallback test environments
-      const fallbackId = `usr-${Date.now()}`;
-      const newUser: AdminUserSummary = {
-        id: fallbackId,
-        email: trimmedEmail,
-        displayName: trimmedName,
-        status: 'active',
-        platformRole: initialRole,
-        createdAt: new Date().toISOString(),
-        householdCount: 0,
-      };
-      DEMO_ADMIN_USERS.unshift(newUser);
+      const isOfflineOrTestFallback =
+        isOfflineLocalActive() ||
+        import.meta.env?.MODE === 'test';
+      const isNetworkError =
+        !err?.message ||
+        err.message.includes('fetch') ||
+        err.message.includes('FunctionsFetchError');
 
-      if (err?.message && !err.message.includes('fetch')) {
-        throw err;
+      if (isOfflineOrTestFallback && isNetworkError) {
+        const fallbackId = `usr-${Date.now()}`;
+        const newUser: AdminUserSummary = {
+          id: fallbackId,
+          email: trimmedEmail,
+          displayName: trimmedName,
+          status: 'active',
+          platformRole: initialRole,
+          createdAt: new Date().toISOString(),
+          householdCount: 0,
+        };
+        DEMO_ADMIN_USERS.unshift(newUser);
+        return { userId: fallbackId, email: trimmedEmail };
       }
-      return { userId: fallbackId, email: trimmedEmail };
+
+      throw err;
     }
   }
 

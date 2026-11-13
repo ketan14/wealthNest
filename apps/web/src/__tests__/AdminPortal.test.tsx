@@ -12,6 +12,7 @@ import { AdminHouseholdsPage } from '../pages/admin/AdminHouseholdsPage';
 import { AdminRolesPage } from '../pages/admin/AdminRolesPage';
 import { AdminAuditLogsPage } from '../pages/admin/AdminAuditLogsPage';
 import { AdminSettingsPage } from '../pages/admin/AdminSettingsPage';
+import { adminAdapter } from '../lib/supabase/admin.adapter';
 
 // Mock Supabase client to avoid network calls in test environment
 vi.mock('../lib/supabase/client', () => ({
@@ -46,6 +47,12 @@ vi.mock('../lib/supabase/client', () => ({
         }),
       }),
     }),
+    functions: {
+      invoke: vi.fn().mockResolvedValue({
+        data: { userId: 'usr-edge-123', email: 'edgeuser@wealthnest.test' },
+        error: null,
+      }),
+    },
   },
 }));
 
@@ -313,6 +320,57 @@ describe('Phase 7: Complete Admin Portal, User Management & Security Verificatio
       expect(screen.getByText(/Integer Paise \(BigInt\)/i)).toBeInTheDocument();
       expect(screen.getByText(/0% Floating Point Drift/i)).toBeInTheDocument();
       expect(screen.getByText(/en-IN \(India-First\)/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('SupabaseAdminAdapter Provisioning (KEY-03 / BE-02)', () => {
+    it('provisions users via the admin-create-user Edge Function rather than browser signUp', async () => {
+      const { supabase } = await import('../lib/supabase/client');
+      const invokeSpy = vi.mocked(supabase.functions.invoke);
+
+      const result = await adminAdapter.createUserDirectly(
+        'edgeuser@wealthnest.test',
+        'StrongPass@2026!',
+        'Edge User',
+        'auditor'
+      );
+
+      expect(invokeSpy).toHaveBeenCalledWith('admin-create-user', {
+        body: {
+          email: 'edgeuser@wealthnest.test',
+          password: 'StrongPass@2026!',
+          displayName: 'Edge User',
+          initialRole: 'auditor',
+        },
+      });
+      expect(result).toEqual({
+        userId: 'usr-edge-123',
+        email: 'edgeuser@wealthnest.test',
+      });
+    });
+
+    it('surfaces server-side authorization or validation errors from the Edge Function', async () => {
+      const { supabase } = await import('../lib/supabase/client');
+      vi.mocked(supabase.functions.invoke).mockResolvedValueOnce({
+        data: null,
+        error: {
+          message: 'Edge Function returned a non-2xx status code',
+          context: {
+            json: async () => ({
+              error: 'Forbidden: Only super_admin can assign a platform role on creation',
+            }),
+          },
+        } as any,
+      });
+
+      await expect(
+        adminAdapter.createUserDirectly(
+          'denied@wealthnest.test',
+          'StrongPass@2026!',
+          'Denied User',
+          'super_admin'
+        )
+      ).rejects.toThrow('Forbidden: Only super_admin can assign a platform role on creation');
     });
   });
 });

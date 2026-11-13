@@ -2,78 +2,73 @@
 
 **Derived From:** [wealthnest-security-audit.md](file:///home/ketan/projects/Krisha/wealthNest/docs/security/wealthnest-security-audit.md)  
 **Target:** `/home/ketan/projects/Krisha/wealthNest`  
-**Status:** Open — Pre-Production Blockers Identified
+**Status:** Repo Fixes Implemented — Pending `supabase db push`, `supabase test db`, & Live Cloud Checks
 
 ---
 
 ## P0 — Critical Blockers (Must Fix Before Any Staging/Production Exposure)
 
-- [ ] **P0-1: Remove Frontend Admin Authorization Bypass & Simulation Backdoors**
+- [x] **P0-1: Remove Frontend Admin Authorization Bypass & Simulation Backdoors** *(Verified in repo)*
   - **Files:** `apps/web/src/lib/admin/admin-context.tsx`, `apps/web/src/components/admin/AdminGuard.tsx`
   - **Action:**
     - Initialize `role` to `null` (never `'super_admin'`).
     - Remove `sessionStorage` (`wealthnest_simulated_admin_role`) trust in production builds.
     - Remove email heuristics (`email.includes('admin')`, `'investor@wealthnest.local'`), `!user`, and `catch` fallbacks that grant `'super_admin'`.
     - Remove the `seed_qa_grant_admin` self-elevation button from `AdminGuard.tsx`.
-  - **Verify:** Unauthenticated or non-admin users receive `null` role on RPC failure or missing DB record and are denied `/admin/*` access.
+  - **Verify:** Verified via `AdminPortal.test.tsx`.
 
-- [ ] **P0-2: Remove / Lock Down `seed_qa_grant_admin` in `supabase/seed_qa.sql`**
-  - **File:** `supabase/seed_qa.sql:22-50`
+- [x] **P0-2: Remove / Lock Down `seed_qa_grant_admin` in `supabase/seed_qa.sql`** *(Migration `000017` created; apply via `supabase db push`)*
+  - **File:** `supabase/seed_qa.sql:22-50`, `supabase/migrations/20260101000017_security_hardening_rls_and_grants.sql`
   - **Action:**
     - Verify via Supabase SQL Editor that `public.seed_qa_grant_admin` does **not** exist in production (`DROP FUNCTION IF EXISTS public.seed_qa_grant_admin(uuid, text);`).
     - Restrict `seed_qa.sql` functions to `SET search_path = public` and revoke `EXECUTE` from `anon` and `authenticated` (`REVOKE ALL ON FUNCTION ... FROM PUBLIC, anon, authenticated;`).
-  - **Verify:** Calling `supabase.rpc('seed_qa_grant_admin', ...)` as `anon` or `authenticated` fails with permission denied.
+  - **Verify:** Covered in `supabase/tests/02_admin_rbac_and_audit_immutability.sql`.
+
+- [x] **P0-3: Fix SQL `NULL !=` / `NULL NOT IN` Privilege Escalation Bypasses in Admin RPCs** *(Migration `000018` created; apply via `supabase db push`)*
+  - **Files:** `supabase/migrations/20260101000009_admin_portal_and_access_control.sql:401,474`, `20260101000010_admin_support_sessions.sql:129`, `20260101000018_fix_admin_rpc_null_role_checks.sql`
+  - **Action:** Explicitly check `v_caller_id IS NULL OR v_caller_role IS NULL OR ...` / `IS DISTINCT FROM 'super_admin'` in `admin_set_user_status`, `admin_manage_role`, and `admin_start_support_session`.
+  - **Verify:** Covered in `supabase/tests/02_admin_rbac_and_audit_immutability.sql`.
 
 ---
 
 ## P1 — High-Severity Security Fixes (Required Before Production Launch)
 
-- [ ] **P1-1: Remove `auth.uid() IS NULL` from `admin_audit_logs` INSERT Policy**
-  - **File:** `supabase/migrations/20260101000009_admin_portal_and_access_control.sql:202-204`
-  - **Action:** Create a new migration replacing `"Platform admins can insert audit logs"` with `WITH CHECK (public.is_platform_admin(auth.uid()))` (or route all audit writes strictly through `SECURITY DEFINER` RPCs and revoke direct `INSERT` from `anon`/`authenticated`).
-  - **Verify:** `anon` `INSERT` into `public.admin_audit_logs` is rejected by RLS.
+- [x] **P1-1: Remove `auth.uid() IS NULL` from `admin_audit_logs` INSERT Policy** *(Migration `000017` created; apply via `supabase db push`)*
+  - **File:** `supabase/migrations/20260101000017_security_hardening_rls_and_grants.sql`
+  - **Verify:** Covered in `supabase/tests/01_rls_and_household_isolation.sql`.
 
-- [ ] **P1-2: Revoke `ALL` Grants from `anon` in Public Schema**
-  - **File:** `supabase/migrations/20260101000011_grant_public_table_privileges.sql`
-  - **Action:** Add a corrective migration that revokes `ALL` on tables, sequences, and routines in `public` from `anon` and `PUBLIC`, granting only explicit minimal `SELECT` / `EXECUTE` where unauthenticated access is genuinely required.
-  - **Verify:** Inspect `information_schema.role_table_grants` and `role_routine_grants` for `grantee = 'anon'`.
+- [x] **P1-2: Revoke `ALL` Grants from `anon` in Public Schema** *(Migration `000017` created; apply via `supabase db push`)*
+  - **File:** `supabase/migrations/20260101000017_security_hardening_rls_and_grants.sql` (retains minimal `SELECT` on `public.asset_classes` for `keep-qa-alive.yml`)
+  - **Verify:** Covered in `supabase/tests/01_rls_and_household_isolation.sql`.
 
-- [ ] **P1-3: Add Auth Route Guard on Investor Routes (`App.tsx`)**
-  - **Files:** `apps/web/src/App.tsx:115-126`, `apps/web/src/lib/supabase/auth-context.tsx`
-  - **Action:** Wrap `<AppShell />` in a `<ProtectedRoute>` that redirects unauthenticated web users to `/login`, and restrict `enableOfflineUser()` strictly to explicit Tauri desktop/offline mode (never auto-bypassable on web production).
-  - **Verify:** Navigating to `/` or `/portfolio` without a session in a web build redirects to `/login`.
+- [x] **P1-3: Add Auth Route Guard on Investor Routes (`App.tsx`)** *(Verified in repo)*
+  - **Files:** `apps/web/src/App.tsx`, `apps/web/src/lib/supabase/auth-context.tsx`
+  - **Verify:** Verified via `App.test.tsx`.
 
-- [ ] **P1-4: Enforce Strong Password Policy & Email Confirmations**
-  - **Files:** `apps/web/src/pages/SignUpPage.tsx:62`, `supabase/config.toml`
-  - **Action:** Increase client-side minimum password length (e.g., `>= 12` characters with complexity feedback) and enable `enable_confirmations = true` in `supabase/config.toml` and Supabase Cloud Auth settings.
-  - **Verify:** Signup rejects weak passwords and requires email confirmation before issuing an active session.
+- [~] **P1-4: Enforce Strong Password Policy & Email Confirmations** *(Repo updated; Supabase Cloud Dashboard check pending)*
+  - **Files:** `apps/web/src/pages/SignUpPage.tsx:62`, `supabase/config.toml:37`
+  - **Verify:** Client-side 12-char min verified via `AuthPages.test.tsx`. Still verify Supabase Cloud Auth settings.
 
-- [ ] **P1-5: Add HTTP Security Headers & TLS / CSP Policies**
-  - **Files:** `infra/docker/nginx-prod.conf`, `src-tauri/tauri.conf.json:26`, Cloudflare `_headers` (new)
-  - **Action:**
-    - Configure TLS termination (or reverse-proxy HTTPS + `Strict-Transport-Security`) and add `Content-Security-Policy`, `Referrer-Policy: strict-origin-when-cross-origin`, and `Permissions-Policy` to Nginx and Cloudflare Pages/Workers.
-    - Replace `"csp": null` in `src-tauri/tauri.conf.json` with an explicit restrictive Tauri CSP.
-  - **Verify:** `curl -I` against deployed web origin and Tauri build inspection confirm all security headers are enforced.
+- [~] **P1-5: Add HTTP Security Headers & TLS / CSP Policies** *(Nginx headers & Tauri CSP added; Cloudflare edge headers pending)*
+  - **Files:** `infra/docker/nginx-prod.conf`, `src-tauri/tauri.conf.json:26`
+  - **Action:** Verify upstream TLS termination + Cloudflare Pages/Workers `_headers`.
 
 ---
 
 ## P2 — Medium-Severity Hardening
 
-- [ ] **P2-1: Add `SET search_path = public` to `handle_new_user()`**
-  - **Files:** `supabase/migrations/20260101000001_core_schema.sql:143-155`, `20260101000013_profiles_insert_policy_and_inr_default.sql:13-25`
-  - **Action:** Add a migration with `ALTER FUNCTION public.handle_new_user() SET search_path = public;`.
+- [x] **P2-1: Add `SET search_path = public` to `handle_new_user()`** *(Migration `000017` created; covered in `supabase/tests/01_*`)*
+  - **File:** `supabase/migrations/20260101000017_security_hardening_rls_and_grants.sql`
 
-- [ ] **P2-2: Remove Silent Local Demo Fallback in `SupabaseSupportSessionAdapter`**
-  - **File:** `apps/web/src/lib/supabase/support-session.adapter.ts:48-75`
-  - **Action:** Propagate RPC errors in production instead of synthesizing a fake `activeDemoSessions` entry.
+- [x] **P2-2: Remove Silent Local Demo Fallback in `SupabaseSupportSessionAdapter`** *(Verified in repo)*
+  - **File:** `apps/web/src/lib/supabase/support-session.adapter.ts:49-57`
 
-- [ ] **P2-3: Remove Hardcoded QA Supabase URL & Publishable Key Fallbacks**
-  - **Files:** `apps/web/src/pages/LoginPage.tsx:43-48`, `.github/workflows/build-installers.yml`
-  - **Action:** Require `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` / `VITE_SUPABASE_ANON_KEY` from environment/CI secrets instead of hardcoding a live QA project URL in source.
+- [x] **P2-3: Remove Hardcoded QA Supabase URL & Publishable Key Fallbacks** *(Verified in repo)*
+  - **Files:** `apps/web/src/pages/LoginPage.tsx:40-53`, `apps/web/src/lib/config/server-config.ts`, `.github/workflows/build-installers.yml`
 
-- [ ] **P2-4: Add Automated Database RLS / pgTAP Regression Tests**
-  - **Directory:** `supabase/tests/`
-  - **Action:** Write pgTAP tests verifying cross-household isolation, `'viewer'` write denial, `admin_audit_logs` immutability, `anon` rejection, and `admin_*` RPC authorization.
+- [~] **P2-4: Add Automated Database RLS / pgTAP Regression Tests** *(Test files created; live execution via `supabase test db` pending Docker/Postgres)*
+  - **Files:** `supabase/tests/01_rls_and_household_isolation.sql`, `supabase/tests/02_admin_rbac_and_audit_immutability.sql`
+  - **Action:** Run `supabase start && supabase test db` locally/in CI to verify all 31 assertions pass against live Postgres.
 
 - [ ] **P2-5: Move Admin User Provisioning to a Server-Side Edge Function**
   - **File:** `apps/web/src/lib/supabase/admin.adapter.ts:231-262`

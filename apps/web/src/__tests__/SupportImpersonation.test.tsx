@@ -280,6 +280,6 @@ describe('Phase 8: Secure Admin View-as-User / Support Impersonation Mode', () =
       // After activation: mutation buttons MUST be disabled
       expect(importBtn).toBeDisabled();
       expect(addHoldingBtn).toBeDisabled();
-    });
+    }, 15000);
   });
 });

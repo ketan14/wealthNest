@@ -61,6 +61,14 @@ export function SignUpPage() {
       newErrors.password = 'Password is required';
     } else if (password.length < 12) {
       newErrors.password = 'Password must be at least 12 characters';
+    } else if (
+      !/[A-Z]/.test(password) ||
+      !/[a-z]/.test(password) ||
+      !/[0-9]/.test(password) ||
+      !/[^A-Za-z0-9]/.test(password)
+    ) {
+      newErrors.password =
+        'Password must include uppercase, lowercase, a number, and a special character';
     }
 
     if (!confirmPassword) {
@@ -298,7 +306,7 @@ export function SignUpPage() {
                           });
                         }
                       }}
-                      placeholder="At least 6 characters"
+                      placeholder="Min 12 chars (A-Z, a-z, 0-9, symbol)"
                       className={`w-full h-10 pl-9 pr-10 rounded-lg bg-slate-950/60 border text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition-all ${
                         errors.password
                           ? 'border-rose-500/80 focus:ring-rose-500/30'

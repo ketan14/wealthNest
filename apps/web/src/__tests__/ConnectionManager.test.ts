@@ -114,4 +114,35 @@ describe('Phase 10: ConnectionManager & Endpoint Switching', () => {
     expect(connectionManager.getConfig().host).toBe('192.168.1.105');
     expect(connectionManager.getSupabaseUrl()).toBe('http://192.168.1.105:54321');
   });
+
+  it('reuses cached SupabaseClient for unchanged endpoint+key and blocks http:// downgrade on https: origin', async () => {
+    await connectionManager.resetToDefaults();
+    const firstClient = connectionManager.getClient();
+    await connectionManager.switchServer({
+      mode: 'lan',
+      host: '192.168.1.105',
+      supabasePort: 54321,
+    });
+    expect(connectionManager.getClient()).toBe(firstClient);
+
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...originalLocation, protocol: 'https:' },
+    });
+
+    try {
+      const downgradeRes = await connectionManager.switchServer({
+        mode: 'local',
+        supabasePort: 54321,
+      });
+      expect(downgradeRes.success).toBe(false);
+      expect(downgradeRes.message).toContain('Cannot downgrade to an unencrypted http:// endpoint');
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      });
+    }
+  });
 });

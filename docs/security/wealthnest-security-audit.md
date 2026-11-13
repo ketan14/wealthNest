@@ -24,8 +24,8 @@ Following remediation of **Quick Fixes #1–#8**, all **Critical** and **High** 
 | Status | Count |
 | --- | ---: |
 | **PASS** | 31 |
-| **PARTIAL** | 11 |
-| **FAIL** | 1 |
+| **PARTIAL** | 12 |
+| **FAIL** | 0 |
 | **REQUIRES MANUAL VERIFICATION** | 6 |
 | **Total Checks Performed** | **49** |
 
@@ -100,7 +100,7 @@ Browser / Tauri WebView (React 18 SPA)
 | Check ID | Control | Status | Evidence & Finding |
 | --- | --- | --- | --- |
 | DB-01 | RLS Enabled on Financial & Admin Tables | **PASS** | RLS is enabled across core tables (`20260101000001`), `family_members`, `portfolio_accounts` (`20260101000007:71-72`), `platform_admin_roles`, `user_access_status`, `admin_audit_logs`, `households`, `household_members` (`20260101000009`), `admin_support_sessions` (`20260101000010`), and `family_documents` (`20260101000016`). |
-| DB-02 | Least-Privilege Schema Grants | **PASS** | Migration `20260101000017_security_hardening_rls_and_grants.sql` revokes `ALL` on all tables, sequences, and routines in `public` from `anon` (and updates default privileges). Apply via `supabase db push` (live state tracked in `DB-07`). |
+| DB-02 | Least-Privilege Schema Grants | **PASS** | Migration `20260101000017_security_hardening_rls_and_grants.sql` revokes `ALL` on all tables, sequences, and routines in `public` from `anon`, restoring only `SELECT` on `public.asset_classes` (needed by `keep-qa-alive.yml`). Apply via `supabase db push` (live state tracked in `DB-07`). |
 | DB-03 | `admin_audit_logs` INSERT Policy | **PASS** | Migration `20260101000017` replaces `"Platform admins can insert audit logs"` to enforce `WITH CHECK (public.is_platform_admin(auth.uid()))`, removing `OR auth.uid() IS NULL`. |
 | DB-04 | Audit Log Immutability | **PASS** | `prevent_audit_log_modification()` trigger (`20260101000009:98-111`) raises an exception on `BEFORE UPDATE OR DELETE ON public.admin_audit_logs`. |
 | DB-05 | `SECURITY DEFINER` `search_path` Hardening | **PASS** | Migration `20260101000017` sets `ALTER FUNCTION public.handle_new_user() SET search_path = public;` and drops `seed_qa_grant_admin`. `seed_qa.sql` also hardens `seed_qa_grant_admin` with `SET search_path = public`, caller guards, and `REVOKE ALL`. |
@@ -160,7 +160,7 @@ Browser / Tauri WebView (React 18 SPA)
 | Check ID | Control | Status | Evidence & Finding |
 | --- | --- | --- | --- |
 | ADM-01 | Frontend Admin Route Guard (`AdminProvider` & `AdminGuard`) | **PASS** | `admin-context.tsx` initializes `role` to `null`, ignores `sessionStorage`, removes all `'super_admin'` fallbacks, and derives role strictly from `get_platform_admin_role` RPC. `AdminGuard.tsx` removed all simulation/self-elevation buttons. Verified by `AdminPortal.test.tsx`. |
-| ADM-02 | Backend Admin RPC Authorization (`20260101000009`) | **PASS** | `admin_get_users`, `admin_get_user_detail`, and admin mutation RPCs verify `public.is_platform_admin(auth.uid())` inside `SECURITY DEFINER` functions with `SET search_path = public`. |
+| ADM-02 | Backend Admin RPC Authorization (`20260101000009` & `20260101000018`) | **PASS** | `admin_get_users`, `admin_get_user_detail`, and admin mutation RPCs verify `public.is_platform_admin(auth.uid())` / `get_platform_admin_role(auth.uid())` inside `SECURITY DEFINER` functions with `SET search_path = public`. Migration `20260101000018_fix_admin_rpc_null_role_checks.sql` fixes three SQL NULL-logic bypasses (`!=` / `NOT IN` when `get_platform_admin_role()` returned `NULL`) in `admin_set_user_status`, `admin_manage_role`, and `admin_start_support_session`. |
 | ADM-03 | Support Impersonation Session Controls (`20260101000010`) | **PASS** | `admin_start_support_session`, `admin_end_support_session`, and `validate_support_session` verify caller `auth.uid()`, `admin_user_id` ownership, `is_active`, 15-minute `expires_at` TTL, and write to `admin_audit_logs`. |
 | ADM-04 | Client-Side Support Session Demo Fallback | **PASS** | `support-session.adapter.ts:49-57` propagates RPC errors in production/staging and restricts the local simulated fallback strictly to `isOfflineLocalActive()` or `MODE === 'test'`. |
 
@@ -211,7 +211,7 @@ Browser / Tauri WebView (React 18 SPA)
 | Check ID | Control | Status | Evidence & Finding |
 | --- | --- | --- | --- |
 | TST-01 | Monorepo Unit Test Suite | **PASS** | Re-verified after Quick Fixes #1–#8: `@wealthnest/domain` (**30 files, 171 tests**), `@wealthnest/application` (**24 files, 99 tests**), `@wealthnest/shared` (**1 file, 2 tests**), `@wealthnest/web` (**34 files, 142 tests**) — **89 files, 414 tests passed** (including `AdminPortal.test.tsx`, `SupportImpersonation.test.tsx`, `AuthPages.test.tsx`, `App.test.tsx`, `backup-security-sqlite.test.ts`, `sqlite-isolation.test.ts`, `admin-invariants.test.ts`). |
-| TST-02 | Database pgTAP / Live RLS Integration Tests | **FAIL** | `supabase/tests/` contains only `.gitkeep`; there are no automated pgTAP or live Postgres RLS regression tests. |
+| TST-02 | Database pgTAP / Live RLS Integration Tests | **PARTIAL** | Added pgTAP suites in `supabase/tests/01_rls_and_household_isolation.sql` (17 tests covering RLS enabled, `anon` restrictions, household `viewer` vs `primary_owner`, outsider isolation, `handle_new_user` `search_path`, and private storage bucket) and `02_admin_rbac_and_audit_immutability.sql` (14 tests covering `seed_qa_grant_admin` removal, NULL-role RPC bypass blocks, support session validation, and audit log immutability). Execution against Postgres (`supabase test db`) could not run in this Docker-free sandbox (`connect ECONNREFUSED 127.0.0.1:54322`) and **REQUIRES MANUAL VERIFICATION**. |
 | TST-03 | Live E2E / DAST Penetration Verification | **REQUIRES MANUAL VERIFICATION** | No live browser E2E against a running Supabase instance was executed in the offline sandbox. |
 
 ---
@@ -230,7 +230,8 @@ Browser / Tauri WebView (React 18 SPA)
 | **MEDIUM** | DB-05a | **RESOLVED** | Added `ALTER FUNCTION public.handle_new_user() SET search_path = public;` | `20260101000017_security_hardening_rls_and_grants.sql` |
 | **MEDIUM** | ADM-04 | **RESOLVED** | Propagates RPC errors in production/staging; local demo fallback restricted to offline/test | `apps/web/src/lib/supabase/support-session.adapter.ts:49-57` |
 | **MEDIUM** | KEY-02 | **RESOLVED** | Removed hardcoded QA Supabase URL & publishable key fallbacks | `apps/web/src/pages/LoginPage.tsx`, `server-config.ts`, `build-installers.yml` |
-| **MEDIUM** | TST-02 | **OPEN (FAIL)** | No pgTAP / automated database RLS test suite | `supabase/tests/` |
+| **MEDIUM** | TST-02 | **MITIGATED (PARTIAL)** | Added 31 pgTAP assertions across 2 SQL test files (`supabase/tests/01_*` & `02_*`); live execution (`supabase test db`) pending Docker/Supabase | `supabase/tests/01_rls_and_household_isolation.sql`, `02_admin_rbac_and_audit_immutability.sql` |
+| **CRITICAL** | ADM-02 / NULL-RPC | **RESOLVED** | Fixed SQL three-valued `NULL !=` / `NULL NOT IN` role bypasses in `admin_set_user_status`, `admin_manage_role`, and `admin_start_support_session` | `20260101000018_fix_admin_rpc_null_role_checks.sql` |
 | **LOW** | AUTH-06 | **OPEN (PARTIAL)** | Multiple `GoTrueClient` instances warning during dynamic server switching | `apps/web/src/lib/services/connection-manager.ts` |
 
 ---
@@ -238,7 +239,7 @@ Browser / Tauri WebView (React 18 SPA)
 ## 18. Checks Requiring Manual Verification (Outside Repo / Offline Sandbox)
 
 1. `npm audit --omit=dev --json` against `registry.npmjs.org` (PKG-01).
-2. `npx supabase status` and live `pg_policies` / `pg_proc` inspection on staging and production Supabase projects (DB-07, HH-03).
+2. Start local Supabase (`supabase start`) and run `supabase test db` to execute the 31 pgTAP assertions in `supabase/tests/` (TST-02), and push migrations `000017` & `000018` (`supabase db push`) + inspect live `pg_policies` / `pg_proc` on staging and production Supabase projects (DB-07, HH-03).
 3. Supabase Dashboard Auth settings: `enable_confirmations`, password strength rules, JWT expiry, refresh token rotation/reuse detection, and rate limiting (AUTH-02, AUTH-05, AUTH-08).
 4. Verification that `supabase/seed_qa.sql` has **not** been executed on any production or staging database (DB-05b).
 5. Cloudflare Workers/Pages HTTP security headers (`_headers` or Transform Rules) (DEP-04).

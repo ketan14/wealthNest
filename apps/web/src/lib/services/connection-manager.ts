@@ -32,6 +32,7 @@ export class ConnectionManager {
   private static instance: ConnectionManager;
   private currentConfig: ServerConfig;
   private clientInstance: SupabaseClient | null = null;
+  private clientCache = new Map<string, SupabaseClient>();
   private currentStatus: ConnectionStatus = 'disconnected';
   private configListeners = new Set<ConfigChangeListener>();
   private statusListeners = new Set<StatusChangeListener>();
@@ -69,14 +70,37 @@ export class ConnectionManager {
     return this.clientInstance;
   }
 
+  private buildStorageKey(url: string, anonKey: string): string {
+    let hostToken: string;
+    try {
+      hostToken = new URL(url).host.replace(/[^a-zA-Z0-9_-]/g, '_');
+    } catch {
+      hostToken = url.replace(/[^a-zA-Z0-9_-]/g, '_');
+    }
+    let keyHash = 0;
+    for (let i = 0; i < anonKey.length; i += 1) {
+      keyHash = ((keyHash << 5) - keyHash + anonKey.charCodeAt(i)) | 0;
+    }
+    return `wn-${hostToken}-${(keyHash >>> 0).toString(36)}-auth-token`;
+  }
+
   private createClientInstance(config: ServerConfig): SupabaseClient {
     const url = buildSupabaseUrl(config);
-    return createClient(url, config.supabaseAnonKey, {
+    const cacheKey = `${url}::${config.supabaseAnonKey}`;
+    const cached = this.clientCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const client = createClient(url, config.supabaseAnonKey, {
       auth: {
+        storageKey: this.buildStorageKey(url, config.supabaseAnonKey),
         persistSession: true,
         autoRefreshToken: true,
       },
     });
+    this.clientCache.set(cacheKey, client);
+    return client;
   }
 
   /**
@@ -216,13 +240,27 @@ export class ConnectionManager {
 
     const previousUrl = buildSupabaseUrl(this.currentConfig);
     const nextUrl = buildSupabaseUrl(updated);
-    const isProjectChanging = previousUrl !== nextUrl;
+    const isHttpsOrigin =
+      typeof window !== 'undefined' && window.location?.protocol === 'https:';
+
+    if (isHttpsOrigin && nextUrl.startsWith('http://')) {
+      return {
+        success: false,
+        status: 'error',
+        url: nextUrl,
+        message: 'Cannot downgrade to an unencrypted http:// endpoint from an HTTPS origin.',
+      };
+    }
+
+    const isProjectChanging =
+      previousUrl !== nextUrl || this.currentConfig.supabaseAnonKey !== updated.supabaseAnonKey;
 
     this.setStatus('connecting');
 
-    // If changing projects, sign out of previous project instance to avoid stale cross-project tokens
+    // If changing projects, stop background auto-refresh and sign out of previous instance
     if (isProjectChanging && this.clientInstance) {
       try {
+        this.clientInstance.auth.stopAutoRefresh?.();
         await this.clientInstance.auth.signOut();
       } catch {
         // ignore signout errors on unreachable old server
