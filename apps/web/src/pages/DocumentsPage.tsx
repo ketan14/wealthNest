@@ -4,12 +4,9 @@ import {
   FolderLock,
   Upload,
   Search,
-  Download,
-  Trash2,
   FileText,
   ShieldCheck,
   AlertTriangle,
-  Calendar,
   HardDrive,
 } from 'lucide-react';
 import {
@@ -25,7 +22,6 @@ import { useFamily } from '@/lib/family/family-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
 import { useDocumentVaultRepository } from '@/lib/persistence/repository-context';
 import { Card, CardContent } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
@@ -34,110 +30,8 @@ import {
   UploadDocumentModal,
   UploadDocumentFormData,
 } from '@/components/vault/UploadDocumentModal';
-
-const DEMO_DOCUMENTS: FamilyDocumentDto[] = [
-  {
-    id: 'demo-doc-1',
-    userId: 'demo-user',
-    memberId: 'mem-self',
-    title: 'Ketan Vaghela — PAN Card',
-    category: 'identity_pan',
-    fileName: 'ketan_pan_card.pdf',
-    fileSizeBytes: 248_400,
-    mimeType: 'application/pdf',
-    storagePath: 'demo-user/demo-doc-1/ketan_pan_card.pdf',
-    documentDate: '2016-04-12',
-    notes: 'Original e-PAN verified with Income Tax portal.',
-    isEncrypted: false,
-    createdAt: '2026-01-10T10:00:00Z',
-    updatedAt: '2026-01-10T10:00:00Z',
-  },
-  {
-    id: 'demo-doc-2',
-    userId: 'demo-user',
-    memberId: 'mem-huf',
-    title: 'Shamalbhai Vaghela HUF — Formation Deed & PAN',
-    category: 'huf_deed',
-    fileName: 'shamalbhai_huf_deed.pdf',
-    fileSizeBytes: 1_420_000,
-    mimeType: 'application/pdf',
-    storagePath: 'demo-user/demo-doc-2/shamalbhai_huf_deed.pdf',
-    documentDate: '2019-07-01',
-    notes: 'Used for Section 112A LTCG tax shield & HUF demat KYC.',
-    isEncrypted: false,
-    createdAt: '2026-01-15T11:30:00Z',
-    updatedAt: '2026-01-15T11:30:00Z',
-  },
-  {
-    id: 'demo-doc-3',
-    userId: 'demo-user',
-    memberId: 'mem-spouse',
-    title: 'Parul & Ketan — Family Floater Health Insurance',
-    category: 'insurance_policy',
-    fileName: 'hdfc_ergo_optima_secure_2026.pdf',
-    fileSizeBytes: 890_500,
-    mimeType: 'application/pdf',
-    storagePath: 'demo-user/demo-doc-3/hdfc_ergo_optima_secure_2026.pdf',
-    documentDate: '2025-12-01',
-    expiryDate: new Date(Date.now() + 18 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-    notes: '₹15L base + ₹15L restore cover. Renewal due soon.',
-    isEncrypted: false,
-    createdAt: '2026-02-01T09:15:00Z',
-    updatedAt: '2026-02-01T09:15:00Z',
-  },
-  {
-    id: 'demo-doc-4',
-    userId: 'demo-user',
-    memberId: 'mem-self',
-    title: 'CDSL & CAMS Consolidated Account Statement (CAS)',
-    category: 'cas_statement',
-    fileName: 'vaghela_household_cas_fy26.pdf',
-    fileSizeBytes: 3_250_000,
-    mimeType: 'application/pdf',
-    storagePath: 'demo-user/demo-doc-4/vaghela_household_cas_fy26.pdf',
-    documentDate: '2026-03-31',
-    notes: 'Covers Equity, Mutual Funds, and SGB holdings.',
-    isEncrypted: false,
-    createdAt: '2026-04-02T14:20:00Z',
-    updatedAt: '2026-04-02T14:20:00Z',
-  },
-  {
-    id: 'demo-doc-5',
-    userId: 'demo-user',
-    memberId: 'mem-mother',
-    title: 'Ramilaben Vaghela — SGB Tranche Certificates',
-    category: 'property_deed',
-    fileName: 'ramilaben_sgb_certificates.pdf',
-    fileSizeBytes: 640_000,
-    mimeType: 'application/pdf',
-    storagePath: 'demo-user/demo-doc-5/ramilaben_sgb_certificates.pdf',
-    documentDate: '2023-09-20',
-    notes: 'RBI Sovereign Gold Bond 2023-24 Series II holding certificate.',
-    isEncrypted: false,
-    createdAt: '2026-02-12T16:45:00Z',
-    updatedAt: '2026-02-12T16:45:00Z',
-  },
-  {
-    id: 'demo-doc-6',
-    userId: 'demo-user',
-    memberId: 'mem-child',
-    title: 'Krisha Vaghela — Birth Certificate & Aadhaar',
-    category: 'identity_pan',
-    fileName: 'krisha_identity_docs.pdf',
-    fileSizeBytes: 512_000,
-    mimeType: 'application/pdf',
-    storagePath: 'demo-user/demo-doc-6/krisha_identity_docs.pdf',
-    documentDate: '2020-05-14',
-    notes: 'Needed for Sukanya Samriddhi & Minor Mutual Fund folio.',
-    isEncrypted: false,
-    createdAt: '2026-02-20T08:10:00Z',
-    updatedAt: '2026-02-20T08:10:00Z',
-  },
-];
-
-function getCategoryLabel(category: DocumentCategory): string {
-  return DOCUMENT_CATEGORIES.find((c) => c.id === category)?.label || category;
-}
+import { DEMO_DOCUMENTS } from '@/components/vault/documents-demo-data';
+import { DocumentVaultList } from '@/components/vault/DocumentVaultList';
 
 export function DocumentsPage() {
   const { user } = useAuth();
@@ -478,117 +372,17 @@ export function DocumentsPage() {
       </div>
 
       {/* Document List */}
-      {isLoading ? (
-        <Card>
-          <CardContent className="p-8 text-center text-sm text-slate-400">
-            Loading Family Document Vault...
-          </CardContent>
-        </Card>
-      ) : filteredDocs.length === 0 ? (
-        <Card>
-          <CardContent className="p-10 text-center space-y-3">
-            <FolderLock className="w-10 h-10 text-slate-600 mx-auto" />
-            <div className="text-base font-medium text-slate-200">No documents found</div>
-            <p className="text-sm text-slate-400 max-w-md mx-auto">
-              Upload PAN cards, HUF deeds, CAS statements, or insurance policies to keep your
-              family records organized and protected.
-            </p>
-            <Button
-              onClick={() => setIsUploadModalOpen(true)}
-              disabled={isSupportModeActive}
-              className="mt-2"
-            >
-              Upload First Document
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredDocs.map((doc) => {
-            const memberName = doc.memberId ? memberNameMap.get(doc.memberId) : undefined;
-            const expiryMs = doc.expiryDate ? new Date(doc.expiryDate).getTime() : null;
-            const isExpired = expiryMs !== null && !Number.isNaN(expiryMs) && expiryMs < nowMs;
-            const isExpiringSoon =
-              expiryMs !== null &&
-              !Number.isNaN(expiryMs) &&
-              expiryMs >= nowMs &&
-              expiryMs - nowMs <= thirtyDaysMs;
-
-            return (
-              <Card key={doc.id} className="hover:border-slate-700 transition-colors">
-                <CardContent className="p-5 flex flex-col justify-between gap-4 h-full">
-                  <div className="space-y-2.5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <div className="p-2.5 rounded-xl bg-slate-800 text-emerald-400 shrink-0">
-                          <FileText className="w-5 h-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <h3 className="text-sm font-semibold text-white truncate">{doc.title}</h3>
-                          <p className="text-xs text-slate-400 truncate mt-0.5">
-                            {doc.fileName} · {formatFileSize(doc.fileSizeBytes)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge variant="default">{getCategoryLabel(doc.category)}</Badge>
-                      {memberName && <Badge variant="secondary">{memberName}</Badge>}
-                      {!memberName && <Badge variant="default">Household</Badge>}
-                      {isExpired && <Badge variant="destructive">Expired</Badge>}
-                      {isExpiringSoon && <Badge variant="outline">Renewal Soon</Badge>}
-                    </div>
-
-                    {doc.notes && (
-                      <p className="text-xs text-slate-400 line-clamp-2">{doc.notes}</p>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-800/80 text-xs text-slate-500">
-                    <div className="flex items-center gap-3">
-                      {doc.documentDate && (
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5" />
-                          {doc.documentDate}
-                        </span>
-                      )}
-                      {doc.expiryDate && (
-                        <span className={isExpired ? 'text-rose-400' : isExpiringSoon ? 'text-amber-400' : ''}>
-                          Exp: {doc.expiryDate}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleDownload(doc)}
-                        aria-label={`Download ${doc.title}`}
-                        className="h-8 px-2.5 text-xs"
-                      >
-                        <Download className="w-3.5 h-3.5 mr-1" />
-                        Open
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={isSupportModeActive}
-                        onClick={() => setDocPendingDelete(doc)}
-                        aria-label={`Delete ${doc.title}`}
-                        className="h-8 px-2 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+      <DocumentVaultList
+        isLoading={isLoading}
+        filteredDocs={filteredDocs}
+        memberNameMap={memberNameMap}
+        nowMs={nowMs}
+        thirtyDaysMs={thirtyDaysMs}
+        isSupportModeActive={isSupportModeActive}
+        onOpenUploadModal={() => setIsUploadModalOpen(true)}
+        onDownload={handleDownload}
+        onRequestDelete={setDocPendingDelete}
+      />
 
       {/* Modals */}
       <UploadDocumentModal
