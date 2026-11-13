@@ -226,7 +226,7 @@
 | **P0 (Critical)** | **TASK-13** | **Enable Holding Valuation & Quantity Updates Across All Asset Classes** | `packages/application/src/use-cases/update-holding-values.ts`<br>`apps/web/src/components/portfolio/EditHoldingModal.tsx`<br>`apps/web/src/components/portfolio/HoldingCard.tsx`<br>`apps/web/src/pages/PortfolioPage.tsx` | ✅ Complete |
 | **P1 (High)** | **TASK-14** | **Prevent Non-UUID Demo ID Queries in `LiabilitiesPage.tsx`** | `apps/web/src/pages/LiabilitiesPage.tsx` | ✅ Complete |
 | **P2 (Medium)** | **TASK-15** | **Automated Installers Workflow Execution (Windows .exe + Android .apk)** | `.github/workflows/build-installers.yml` | ✅ Complete (`v0.1.0-qa`) |
-| **P2 (Medium)** | **TASK-16** | **Execute Phase 11 QA Cloud Deployment & Database Seed** | `docs/deployment/qa-environment-hosting.md`<br>`supabase/seed_qa.sql` | 🔄 Ready / In Progress |
+| **P2 (Medium)** | **TASK-16** | **Execute Phase 11 QA Cloud Deployment & Database Seed** | `docs/deployment/qa-environment-hosting.md`<br>`supabase/seed_qa.sql` | ✅ Complete |
 
 ### Detailed Pending Checklist
 * [x] **[P0] TASK-10: Single Active Visual Currency Presentation (Step 1 & Step 2)**
@@ -251,8 +251,9 @@
     - `WealthNest_0.1.0_x64_en-US.msi` (Windows MSI Installer)
     - `wealthnest.exe` (Standalone Windows Executable)
     - `wealthnest-offline-signed.apk` (Signed Installable Android Package)
-* [ ] **[P2] TASK-16: Cloud QA Deployment Run & Seed Execution**
-  - Run `supabase/seed_qa.sql` against remote QA Supabase project.
+* [x] **[P2] TASK-16: Cloud QA Deployment Run & Seed Execution**
+  - Pushed pending migration `20260101000016_family_document_vault.sql` to the linked remote QA Supabase project via `npx supabase db push`.
+  - Executed `supabase/seed_qa.sql` against the remote QA database via `npx supabase db query --linked -f supabase/seed_qa.sql`, granting `super_admin` and seeding 5 family members, 6 holdings, 15 transactions, 1 liability, and 2 goals for `user@wealthnest.local` (`ca6f6948-898f-4ad7-ae18-cf6e06d9489e`).
 
 ---
 
