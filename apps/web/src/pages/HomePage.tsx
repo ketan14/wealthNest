@@ -11,6 +11,9 @@ import {
   CashflowSummary,
   calculatePortfolioSummary,
   HoldingValuationItem,
+  evaluateEmergencyRunway,
+  generateHouseholdAttentionAlerts,
+  FinancialAlert,
 } from '@wealthnest/domain';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -29,12 +32,14 @@ import {
   Target,
   ArrowRight,
   Plus,
-  Clock,
   PieChart,
   ArrowUpRight,
   Calendar,
   Sparkles,
   Percent,
+  AlertTriangle,
+  AlertCircle,
+  Info,
 } from 'lucide-react';
 
 export function HomePage() {
@@ -116,9 +121,33 @@ export function HomePage() {
   const monthlyOutflow = cashflowSummary?.totalOutflows.toDecimal() ?? 0;
   const netMonthlySavings = monthlyInflow - monthlyOutflow;
 
-  // Emergency runway estimate (Liquid / Monthly Outflow)
-  const monthlyBurn = monthlyOutflow > 0 ? monthlyOutflow : totalMonthlyEmi > 0 ? totalMonthlyEmi * 1.5 : 100000;
-  const runwayMonths = monthlyBurn > 0 ? (liquidAssets / monthlyBurn).toFixed(1) : '6+';
+  // Emergency runway evaluation using pure domain engine
+  const monthlyBurnMoney = Money.fromCents(
+    BigInt(
+      Math.round(
+        (monthlyOutflow > 0
+          ? monthlyOutflow
+          : totalMonthlyEmi > 0
+            ? totalMonthlyEmi * 1.5
+            : 100000) * 100
+      )
+    ),
+    'INR'
+  );
+  const liquidCorpusMoney = Money.fromCents(liquidValuationCents, 'INR');
+
+  const emergencyRunwayAssessment = evaluateEmergencyRunway({
+    liquidCorpus: liquidCorpusMoney,
+    monthlyExpenses: monthlyBurnMoney,
+    targetMonths: 6,
+  });
+
+  const householdAlerts = generateHouseholdAttentionAlerts({
+    emergencyRunway: emergencyRunwayAssessment,
+    totalMonthlyEmi: netWorthSummary?.totalMonthlyEmi ?? Money.zero('INR'),
+    hasStaleValuations: false,
+    section112aEligible: true,
+  });
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -190,8 +219,17 @@ export function HomePage() {
           </CardHeader>
           <CardContent className="pt-0 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">Cash, Bank & Mutual Funds</p>
-            <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-300 border-blue-500/30">
-              ~{runwayMonths} mos runway
+            <Badge
+              variant="outline"
+              className={`text-[10px] ${
+                emergencyRunwayAssessment.status === 'adequate'
+                  ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                  : emergencyRunwayAssessment.status === 'warning'
+                    ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                    : 'bg-rose-500/10 text-rose-300 border-rose-500/30 font-bold'
+              }`}
+            >
+              ~{emergencyRunwayAssessment.runwayMonths.toFixed(1)} mos runway
             </Badge>
           </CardContent>
           <div className="absolute -right-6 -bottom-6 w-20 h-20 rounded-full bg-blue-500/10 blur-xl pointer-events-none" />
@@ -333,48 +371,72 @@ export function HomePage() {
         {/* Right (1 col): Actionable Family Attention Items */}
         <Card className="border-border/80 bg-card/60 backdrop-blur-sm flex flex-col">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-400" />
-              <CardTitle className="text-base font-semibold">Action & Attention</CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-amber-400" />
+                <CardTitle className="text-base font-semibold">Action & Attention</CardTitle>
+              </div>
+              {emergencyRunwayAssessment.alert && (
+                <Badge
+                  variant={
+                    emergencyRunwayAssessment.alert.severity === 'critical'
+                      ? 'destructive'
+                      : 'secondary'
+                  }
+                  className="text-[10px]"
+                >
+                  {emergencyRunwayAssessment.alert.severity.toUpperCase()}
+                </Badge>
+              )}
             </div>
             <CardDescription>
-              Upcoming commitments, valuations, and tax considerations
+              Upcoming commitments, valuations, and emergency runway signals
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 flex-1 flex flex-col justify-between">
             <div className="space-y-2.5">
-              {/* Item 1: Upcoming EMI */}
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
-                <Calendar className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <div className="text-xs space-y-0.5">
-                  <p className="font-semibold text-foreground">Upcoming EMI Obligations</p>
-                  <p className="text-muted-foreground">
-                    Estimated {currencySymbol}{totalMonthlyEmi.toLocaleString(locale, { maximumFractionDigits: 0 })} monthly debt service due across active loans.
-                  </p>
-                </div>
-              </div>
-
-              {/* Item 2: Section 112A HUF Exemption */}
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-3">
-                <Percent className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div className="text-xs space-y-0.5">
-                  <p className="font-semibold text-foreground">HUF Section 112A Tax Shield</p>
-                  <p className="text-muted-foreground">
-                    ₹1,25,000 annual LTCG tax-free exemption active for Shamalbhai Vaghela HUF.
-                  </p>
-                </div>
-              </div>
-
-              {/* Item 3: Valuation Freshness */}
-              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-start gap-3">
-                <Clock className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                <div className="text-xs space-y-0.5">
-                  <p className="font-semibold text-foreground">Appraisal & Valuation Check</p>
-                  <p className="text-muted-foreground">
-                    Physical real estate and jewelry appraisals are current for Q4.
-                  </p>
-                </div>
-              </div>
+              {householdAlerts.map((alert: FinancialAlert) => {
+                const isCrit = alert.severity === 'critical';
+                const isWarn = alert.severity === 'warning';
+                return (
+                  <div
+                    key={alert.id}
+                    className={`p-3 rounded-xl border flex items-start gap-3 transition-colors ${
+                      isCrit
+                        ? 'bg-rose-500/10 border-rose-500/25 text-rose-300'
+                        : isWarn
+                          ? 'bg-amber-500/10 border-amber-500/25 text-amber-300'
+                          : 'bg-secondary/40 border-border/60 text-foreground'
+                    }`}
+                  >
+                    {isCrit ? (
+                      <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                    ) : isWarn ? (
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    ) : alert.type === 'emi_obligation' ? (
+                      <Calendar className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    ) : alert.type === 'tax_harvesting_opportunity' ? (
+                      <Percent className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    ) : (
+                      <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                    )}
+                    <div className="text-xs space-y-0.5 flex-1">
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold text-foreground">{alert.title}</p>
+                        {alert.actionHref && (
+                          <Link
+                            to={alert.actionHref}
+                            className="text-[11px] text-primary hover:underline font-medium ml-2 shrink-0"
+                          >
+                            {alert.actionLabel || 'Details'} →
+                          </Link>
+                        )}
+                      </div>
+                      <p className="text-muted-foreground leading-relaxed">{alert.message}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             <div className="pt-3">
