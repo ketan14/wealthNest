@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Users, UserPlus, Shield, Copy, Check, Mail, Key, UserCheck, Trash2 } from 'lucide-react';
+import { UserPlus, Shield, Copy, Check, Mail, Trash2 } from 'lucide-react';
 import { useAuth } from '@/lib/supabase/auth-context';
 
 interface HouseholdMember {
@@ -56,9 +56,9 @@ export function HouseholdSharingCard() {
     const newMember: HouseholdMember = {
       id: `mem-user-${Date.now()}`,
       email: inviteEmail.trim(),
-      name: inviteEmail.split('@')[0],
+      name: inviteEmail.split('@')[0] || 'Member',
       role: inviteRole,
-      joinedAt: new Date().toISOString().split('T')[0],
+      joinedAt: new Date().toISOString().split('T')[0] || '',
       isSelf: false,
     };
 

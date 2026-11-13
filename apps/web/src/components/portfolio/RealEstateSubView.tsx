@@ -1,12 +1,11 @@
-import React, { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Building2, Landmark, TrendingUp, Plus, Edit2, ShieldCheck, Percent, ExternalLink } from 'lucide-react';
+import { Building2, Landmark, Plus, Edit2, ShieldCheck, Percent } from 'lucide-react';
 import { HoldingDetailDto, LiabilityDto } from '@wealthnest/application';
-import { Money, calculatePropertyEquity } from '@wealthnest/domain';
+import { Money } from '@wealthnest/domain';
 import { usePreferences } from '@/lib/preferences/preferences-context';
-import { Link } from 'react-router-dom';
 
 interface RealEstateSubViewProps {
   holdings: HoldingDetailDto[];
@@ -21,7 +20,6 @@ export function RealEstateSubView({
   liabilities,
   onAddProperty,
   onEditValuation,
-  onAddLoan,
 }: RealEstateSubViewProps) {
   const { currencySymbol, preferences } = usePreferences();
   const locale = preferences.numberFormat || 'en-IN';

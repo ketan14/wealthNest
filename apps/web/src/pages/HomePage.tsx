@@ -1,14 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
-  ListAssetClassesUseCase,
   GetNetWorthSummaryUseCase,
   GetCashflowSummaryUseCase,
   HoldingDetailDto,
 } from '@wealthnest/application';
 import {
   Money,
-  AssetClassDefinition,
   NetWorthSummary,
   CashflowSummary,
   calculatePortfolioSummary,
@@ -31,41 +29,38 @@ import {
   Target,
   ArrowRight,
   Plus,
-  AlertCircle,
   Clock,
   PieChart,
   ArrowUpRight,
-  ArrowDownLeft,
   Calendar,
   Sparkles,
-  Layers,
   Percent,
 } from 'lucide-react';
 
 export function HomePage() {
   const { user } = useAuth();
   const userId = user?.id || 'demo-user';
-  const { holdingRepo, liabilityRepo, transactionRepo, assetClassRepo } = useRepositories();
-  const { members, selectedMemberId } = useFamily();
+  const { holdingRepo, liabilityRepo, transactionRepo } = useRepositories();
+  const { selectedMemberId } = useFamily();
   const { currencySymbol, preferences } = usePreferences();
   const locale = preferences.numberFormat || 'en-IN';
 
   // 1. Fetch Holdings for Portfolio & Asset Allocation
-  const { data: holdings = [], isLoading: isLoadingHoldings } = useQuery<HoldingDetailDto[]>({
+  const { data: holdings = [] } = useQuery<HoldingDetailDto[]>({
     queryKey: ['holdings', userId, selectedMemberId],
     queryFn: async () => {
-      const result = await holdingRepo.findHoldings(userId);
+      const result = await holdingRepo.listDetailsByUser(userId);
       if (!result.success) return [];
       let list = result.value;
       if (selectedMemberId !== 'all') {
-        list = list.filter((h) => h.memberId === selectedMemberId);
+        list = list.filter((h: HoldingDetailDto) => h.memberId === selectedMemberId);
       }
       return list;
     },
   });
 
   // 2. Fetch Net Worth Summary (Assets vs Liabilities)
-  const { data: netWorthSummary, isLoading: isLoadingNetWorth } = useQuery<NetWorthSummary | null>({
+  const { data: netWorthSummary } = useQuery<NetWorthSummary | null>({
     queryKey: ['net-worth-summary', userId],
     queryFn: async () => {
       const useCase = new GetNetWorthSummaryUseCase(holdingRepo, liabilityRepo);
@@ -80,9 +75,9 @@ export function HomePage() {
     queryKey: ['cashflow-summary', userId],
     queryFn: async () => {
       const useCase = new GetCashflowSummaryUseCase(transactionRepo);
-      const result = await useCase.execute({ userId });
+      const result = await useCase.execute(userId);
       if (!result.success) return null;
-      return result.value;
+      return result.value.summary;
     },
   });
 
@@ -117,8 +112,8 @@ export function HomePage() {
   const totalMonthlyEmi = netWorthSummary?.totalMonthlyEmi.toDecimal() ?? 0;
 
   // Monthly Cashflow figures
-  const monthlyInflow = cashflowSummary?.totalInflow.toDecimal() ?? 0;
-  const monthlyOutflow = cashflowSummary?.totalOutflow.toDecimal() ?? 0;
+  const monthlyInflow = cashflowSummary?.totalInflows.toDecimal() ?? 0;
+  const monthlyOutflow = cashflowSummary?.totalOutflows.toDecimal() ?? 0;
   const netMonthlySavings = monthlyInflow - monthlyOutflow;
 
   // Emergency runway estimate (Liquid / Monthly Outflow)

@@ -1,4 +1,3 @@
-import { CurrencyCode } from '../money/currency.js';
 import { Money } from '../money/money.js';
 
 export interface EmiBifurcationResult {

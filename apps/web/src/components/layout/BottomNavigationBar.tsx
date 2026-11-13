@@ -13,13 +13,6 @@ import { cn } from '@/lib/utils';
 import { useAdmin } from '@/lib/admin/admin-context';
 import { GlobalQuickAddModal } from './GlobalQuickAddModal';
 
-interface BottomNavItem {
-  title: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  testId: string;
-}
-
 export function BottomNavigationBar() {
   const { isAnyAdmin } = useAdmin();
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);

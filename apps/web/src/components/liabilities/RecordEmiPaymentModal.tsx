@@ -5,7 +5,7 @@ import { usePreferences } from '@/lib/preferences/preferences-context';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Money, bifurcateLoanPayment } from '@wealthnest/domain';
-import { X, Landmark, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
+import { X, Landmark, AlertCircle, Sparkles } from 'lucide-react';
 
 interface RecordEmiPaymentModalProps {
   isOpen: boolean;
@@ -76,7 +76,9 @@ export function RecordEmiPaymentModal({
         balanceCents: newBalanceCents,
         asOfDate: paymentDate,
         source: 'emi_bifurcation',
-        notes: `EMI Payment (Principal: ${currencySymbol}${calculation.principalPart.toDecimal().toLocaleString(locale)}, Interest: ${currencySymbol}${calculation.interestPart.toDecimal().toLocaleString(locale)})`,
+        notes: notes.trim()
+          ? `${notes.trim()} | EMI Bifurcation (Principal: ${currencySymbol}${calculation.principalPart.toDecimal().toLocaleString(locale)}, Interest: ${currencySymbol}${calculation.interestPart.toDecimal().toLocaleString(locale)})`
+          : `EMI Payment (Principal: ${currencySymbol}${calculation.principalPart.toDecimal().toLocaleString(locale)}, Interest: ${currencySymbol}${calculation.interestPart.toDecimal().toLocaleString(locale)})`,
       });
 
       if (!balanceRes.success) {

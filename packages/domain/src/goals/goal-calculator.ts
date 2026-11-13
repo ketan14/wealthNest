@@ -6,7 +6,6 @@ import {
   GoalHealthStatus,
   GoalsSummary,
   EmergencyFundRunway,
-  GoalHoldingLink,
 } from './goal-types.js';
 
 export interface HoldingAllocationValidationResult {

@@ -14,7 +14,8 @@ import {
   HoldingDetailDto,
 } from '@wealthnest/application';
 import { useAuth } from '@/lib/supabase/auth-context';
-import { useHoldingRepository } from '@/lib/persistence/repository-context';
+import { useHoldingRepository, useLiabilityRepository } from '@/lib/persistence/repository-context';
+import { LiabilityDto } from '@wealthnest/application';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -273,6 +274,20 @@ export function PortfolioPage() {
   const [localDemoHoldings, setLocalDemoHoldings] = useState<HoldingDetailDto[]>(DEMO_HOLDINGS);
 
   const holdingAdapter = useHoldingRepository();
+  const liabilityAdapter = useLiabilityRepository();
+
+  // Query authenticated liabilities
+  const { data: dbLiabilities } = useQuery<readonly LiabilityDto[]>({
+    queryKey: ['user-liabilities', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const res = await liabilityAdapter.listLiabilitiesByUser(user.id);
+      return res.success ? res.value : [];
+    },
+    enabled: !!user,
+  });
+
+  const liabilities = (dbLiabilities ? [...dbLiabilities] : []) as LiabilityDto[];
 
   // Query authenticated holdings from Supabase via Clean Architecture Use Case
   const {
