@@ -5,6 +5,7 @@ import {
   GetCashflowSummaryUseCase,
   ManageDocumentVaultUseCase,
   HoldingDetailDto,
+  LiabilityDto,
 } from '@wealthnest/application';
 import {
   Money,
@@ -13,7 +14,7 @@ import {
   calculatePortfolioSummary,
   HoldingValuationItem,
   evaluateEmergencyRunway,
-  generateHouseholdAttentionAlerts,
+  evaluateAutomatedHouseholdAlerts,
   FinancialAlert,
   summarizeDocumentVault,
 } from '@wealthnest/domain';
@@ -102,6 +103,24 @@ export function HomePage() {
     },
   });
 
+  // 5. Fetch Liabilities (for floating-rate reset & review alerts)
+  const { data: liabilities = [] } = useQuery<readonly LiabilityDto[]>({
+    queryKey: ['liabilities', userId, selectedMemberId],
+    queryFn: async () => {
+      const result = await liabilityRepo.listLiabilitiesByUser(userId);
+      if (!result.success) return [];
+      let list = result.value;
+      if (selectedMemberId !== 'all') {
+        list = list.filter(
+          (l: LiabilityDto) =>
+            l.memberId === selectedMemberId ||
+            l.coBorrowerMemberIds?.includes(selectedMemberId)
+        );
+      }
+      return list;
+    },
+  });
+
   const propertyEquities = netWorthSummary?.propertyEquities ?? [];
   const totalRealEstateEquity = propertyEquities.reduce(
     (sum, pe) => sum + pe.equity.toDecimal(),
@@ -164,12 +183,25 @@ export function HomePage() {
     targetMonths: 6,
   });
 
-  const householdAlerts = generateHouseholdAttentionAlerts({
+  const householdAlerts = evaluateAutomatedHouseholdAlerts({
     emergencyRunway: emergencyRunwayAssessment,
     totalMonthlyEmi: netWorthSummary?.totalMonthlyEmi ?? Money.zero('INR'),
-    hasStaleValuations: false,
+    holdings: holdings.map((h) => ({
+      id: h.holdingId,
+      name: h.name,
+      assetClassId: h.assetClassId,
+      updatedAt: h.updatedAt,
+    })),
+    liabilities,
+    vaultSummary,
     section112aEligible: true,
   });
+
+  const topAlertSeverity = householdAlerts.some((a) => a.severity === 'critical')
+    ? 'critical'
+    : householdAlerts.some((a) => a.severity === 'warning')
+      ? 'warning'
+      : null;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -398,16 +430,12 @@ export function HomePage() {
                 <Sparkles className="w-5 h-5 text-amber-400" />
                 <CardTitle className="text-base font-semibold">Action & Attention</CardTitle>
               </div>
-              {emergencyRunwayAssessment.alert && (
+              {topAlertSeverity && (
                 <Badge
-                  variant={
-                    emergencyRunwayAssessment.alert.severity === 'critical'
-                      ? 'destructive'
-                      : 'secondary'
-                  }
+                  variant={topAlertSeverity === 'critical' ? 'destructive' : 'secondary'}
                   className="text-[10px]"
                 >
-                  {emergencyRunwayAssessment.alert.severity.toUpperCase()}
+                  {topAlertSeverity.toUpperCase()}
                 </Badge>
               )}
             </div>
@@ -437,6 +465,10 @@ export function HomePage() {
                       <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                     ) : alert.type === 'emi_obligation' ? (
                       <Calendar className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    ) : alert.type === 'loan_rate_reset' ? (
+                      <Landmark className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    ) : alert.type === 'document_expiring' || alert.type === 'document_expired' ? (
+                      <FolderLock className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
                     ) : alert.type === 'tax_harvesting_opportunity' ? (
                       <Percent className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                     ) : (

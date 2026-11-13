@@ -35,6 +35,8 @@ describe('HomePage Executive Overview', () => {
     expect(screen.getByText('Document Vault')).toBeInTheDocument();
     expect(screen.getByText('Equity, LTV & Yield')).toBeInTheDocument();
     expect(screen.getByText('PAN, HUF & Policies')).toBeInTheDocument();
+    expect(screen.getByText('Action & Attention')).toBeInTheDocument();
+    expect(screen.getByText('HUF Section 112A Tax Shield')).toBeInTheDocument();
   });
 });
 

@@ -8,7 +8,10 @@ export type AlertType =
   | 'emergency_runway_warning'
   | 'emi_obligation'
   | 'valuation_stale'
-  | 'tax_harvesting_opportunity';
+  | 'tax_harvesting_opportunity'
+  | 'document_expiring'
+  | 'document_expired'
+  | 'loan_rate_reset';
 
 export interface FinancialAlert {
   readonly id: string;

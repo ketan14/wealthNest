@@ -42,6 +42,7 @@ export * from './admin/support-session-invariants.js';
 export * from './admin/cross-user-isolation.js';
 export * from './portfolio/precision-rules.js';
 export * from './alerts/emergency-runway.js';
+export * from './alerts/household-alert-triggers.js';
 export * from './tax/section-112a-harvesting.js';
 export * from './vault/document-vault.js';
 export * from './real-estate/real-estate-metrics.js';
