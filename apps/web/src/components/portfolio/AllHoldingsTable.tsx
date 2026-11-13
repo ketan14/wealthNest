@@ -196,9 +196,7 @@ export function AllHoldingsTable({
                     <>
                       <span
                         className={
-                          isGain
-                            ? 'text-emerald-400 font-semibold'
-                            : 'text-rose-400 font-semibold'
+                          isGain ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'
                         }
                       >
                         {isGain ? '+' : '-'}
@@ -237,4 +235,3 @@ export function AllHoldingsTable({
     </div>
   );
 }
-

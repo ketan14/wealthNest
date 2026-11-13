@@ -6,13 +6,7 @@ import { AssetId } from './asset.js';
 export type TransactionId = Brand<string, 'TransactionId'>;
 
 export type TransactionType =
-  | 'buy'
-  | 'sell'
-  | 'deposit'
-  | 'withdrawal'
-  | 'dividend'
-  | 'fee'
-  | 'transfer';
+  'buy' | 'sell' | 'deposit' | 'withdrawal' | 'dividend' | 'fee' | 'transfer';
 
 export interface TransactionEntity {
   readonly id: TransactionId;

@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldAlert, AlertCircle, X } from 'lucide-react';
-import {
-  AdminUserSummary,
-  UserAccessStatus,
-  validateStatusChange,
-} from '@wealthnest/domain';
+import { AdminUserSummary, UserAccessStatus, validateStatusChange } from '@wealthnest/domain';
 import { adminAdapter } from '../../lib/supabase/admin.adapter';
 
 interface AdminUserStatusModalProps {
@@ -86,9 +82,7 @@ export function AdminUserStatusModal({
             <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
               <ShieldAlert className="w-4 h-4" />
             </div>
-            <h3 className="font-semibold text-white text-base">
-              Change Account Lifecycle Status
-            </h3>
+            <h3 className="font-semibold text-white text-base">Change Account Lifecycle Status</h3>
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-white">
             <X className="w-4 h-4" />
@@ -184,4 +178,3 @@ export function AdminUserStatusModal({
     </div>
   );
 }
-

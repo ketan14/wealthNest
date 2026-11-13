@@ -98,4 +98,3 @@ export function SystemDiagnosticsTab({ systemStatus }: SystemDiagnosticsTabProps
     </div>
   );
 }
-

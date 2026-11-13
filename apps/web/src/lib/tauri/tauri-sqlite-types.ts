@@ -44,4 +44,3 @@ export function createEmptyState(): RelationalDatabaseState {
     goal_holdings: [],
   };
 }
-

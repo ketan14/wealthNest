@@ -52,11 +52,7 @@ export function DocumentVaultList({
             Upload PAN cards, HUF deeds, CAS statements, or insurance policies to keep your family
             records organized and protected.
           </p>
-          <Button
-            onClick={onOpenUploadModal}
-            disabled={isSupportModeActive}
-            className="mt-2"
-          >
+          <Button onClick={onOpenUploadModal} disabled={isSupportModeActive} className="mt-2">
             Upload First Document
           </Button>
         </CardContent>
@@ -102,9 +98,7 @@ export function DocumentVaultList({
                   {isExpiringSoon && <Badge variant="outline">Renewal Soon</Badge>}
                 </div>
 
-                {doc.notes && (
-                  <p className="text-xs text-slate-400 line-clamp-2">{doc.notes}</p>
-                )}
+                {doc.notes && <p className="text-xs text-slate-400 line-clamp-2">{doc.notes}</p>}
               </div>
 
               <div className="flex items-center justify-between pt-3 border-t border-slate-800/80 text-xs text-slate-500">
@@ -156,4 +150,3 @@ export function DocumentVaultList({
     </div>
   );
 }
-

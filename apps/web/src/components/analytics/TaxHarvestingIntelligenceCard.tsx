@@ -64,9 +64,7 @@ export function TaxHarvestingIntelligenceCard({
           </div>
 
           <div className="p-3.5 rounded-xl bg-accent/30 border border-border/60 space-y-1">
-            <span className="text-xs text-muted-foreground">
-              Taxable LTCG (&gt;1 Year @ 12.5%)
-            </span>
+            <span className="text-xs text-muted-foreground">Taxable LTCG (&gt;1 Year @ 12.5%)</span>
             <div className="text-lg font-bold font-mono text-foreground">
               {taxSummary.taxableLtcg.formatIndianCompact()}
             </div>
@@ -153,20 +151,27 @@ export function TaxHarvestingIntelligenceCard({
                 Section 112A Multi-Entity Tax Harvesting Simulator (Budget 2024)
               </h4>
             </div>
-            <Badge variant="outline" className="text-[10px] bg-indigo-500/15 text-indigo-300 border-indigo-500/30">
+            <Badge
+              variant="outline"
+              className="text-[10px] bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
+            >
               Total Family Tax Shield: {harvestingPlan.totalEstimatedTaxSaved.formatIndianCompact()}
             </Badge>
           </div>
 
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Every distinct legal PAN entity (including Hindu Undivided Family - HUF) receives an independent annual ₹1,25,000 LTCG exemption. Selling and repurchasing unrealized gains within this limit locks in a higher cost basis tax-free, saving 12.5% in future taxes.
+            Every distinct legal PAN entity (including Hindu Undivided Family - HUF) receives an
+            independent annual ₹1,25,000 LTCG exemption. Selling and repurchasing unrealized gains
+            within this limit locks in a higher cost basis tax-free, saving 12.5% in future taxes.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
             {harvestingPlan.entityBreakdowns.map((entity) => {
               const headroomPct =
                 entity.annualExemptionLimit.cents > 0n
-                  ? Number((entity.optimalHarvestAmount.cents * 100n) / entity.annualExemptionLimit.cents)
+                  ? Number(
+                      (entity.optimalHarvestAmount.cents * 100n) / entity.annualExemptionLimit.cents
+                    )
                   : 0;
 
               return (
@@ -177,7 +182,9 @@ export function TaxHarvestingIntelligenceCard({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <Users className="w-3.5 h-3.5 text-primary" />
-                      <span className="font-semibold text-xs text-foreground">{entity.memberName}</span>
+                      <span className="font-semibold text-xs text-foreground">
+                        {entity.memberName}
+                      </span>
                       {entity.isHuf && (
                         <span
                           data-testid="huf-tax-shield-badge"
@@ -228,10 +235,13 @@ export function TaxHarvestingIntelligenceCard({
                           <div>
                             <span className="font-semibold text-foreground">{pos.assetName}</span>
                             {pos.ticker && (
-                              <span className="text-[9px] font-mono text-primary ml-1">({pos.ticker})</span>
+                              <span className="text-[9px] font-mono text-primary ml-1">
+                                ({pos.ticker})
+                              </span>
                             )}
                             <span className="text-muted-foreground text-[10px] block">
-                              Sell ~{pos.recommendedUnitsToHarvest.toFixed(1)} units • {pos.holdingDays}d held
+                              Sell ~{pos.recommendedUnitsToHarvest.toFixed(1)} units •{' '}
+                              {pos.holdingDays}d held
                             </span>
                           </div>
                           <div className="text-right font-mono">
@@ -255,4 +265,3 @@ export function TaxHarvestingIntelligenceCard({
     </Card>
   );
 }
-

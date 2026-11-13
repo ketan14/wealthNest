@@ -25,12 +25,7 @@ import { CasReconciliationCard } from '@/components/analytics/CasReconciliationC
 import { AnalyticsTrajectoryChartCard } from '@/components/analytics/AnalyticsTrajectoryChartCard';
 import { BenchmarkAndRebalanceSection } from '@/components/analytics/BenchmarkAndRebalanceSection';
 import { TaxHarvestingIntelligenceCard } from '@/components/analytics/TaxHarvestingIntelligenceCard';
-import {
-  Sparkles,
-  AlertTriangle,
-  Database,
-  Users,
-} from 'lucide-react';
+import { Sparkles, AlertTriangle, Database, Users } from 'lucide-react';
 import { useFamily } from '@/lib/family/family-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';

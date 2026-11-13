@@ -67,4 +67,3 @@ describe('DocumentsPage (VAULT-DOC-01)', () => {
     expect(screen.getByText('Upload to Family Vault')).toBeInTheDocument();
   });
 });
-

@@ -212,10 +212,7 @@ export function BottomNavigationBar() {
       </nav>
 
       {/* Global Quick Add Action Sheet / Modal */}
-      <GlobalQuickAddModal
-        isOpen={isQuickAddOpen}
-        onClose={() => setIsQuickAddOpen(false)}
-      />
+      <GlobalQuickAddModal isOpen={isQuickAddOpen} onClose={() => setIsQuickAddOpen(false)} />
     </>
   );
 }

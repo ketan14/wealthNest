@@ -43,7 +43,8 @@ export function LoginPage() {
       'https://jdgucgsvvxcpxbeubqpi.supabase.co';
     const remoteKey =
       (typeof import.meta !== 'undefined' &&
-        (import.meta.env?.VITE_SUPABASE_ANON_KEY || import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY)) ||
+        (import.meta.env?.VITE_SUPABASE_ANON_KEY ||
+          import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY)) ||
       'sb_publishable_N2AiCMr6xGgiL4SVt5ykOg_RcFUtEw5';
 
     await connectionManager.switchServer({

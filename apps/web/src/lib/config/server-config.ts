@@ -164,7 +164,12 @@ export function loadServerConfig(): ServerConfig {
         typeof parsed.customSupabaseUrl === 'string' ? parsed.customSupabaseUrl : undefined;
 
       // On HTTPS production, upgrade legacy or stale http:// LAN config to remote QA
-      if (!isTest && typeof window !== 'undefined' && window.location.protocol === 'https:' && mode === 'lan') {
+      if (
+        !isTest &&
+        typeof window !== 'undefined' &&
+        window.location.protocol === 'https:' &&
+        mode === 'lan'
+      ) {
         mode = 'remote';
         customUrl = customUrl || DEFAULT_SUPABASE_URL || 'https://jdgucgsvvxcpxbeubqpi.supabase.co';
       }

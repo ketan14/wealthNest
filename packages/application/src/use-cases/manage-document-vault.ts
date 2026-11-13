@@ -58,4 +58,3 @@ export class ManageDocumentVaultUseCase {
     return this.vaultRepo.deleteDocument(documentId, storagePath, userId);
   }
 }
-

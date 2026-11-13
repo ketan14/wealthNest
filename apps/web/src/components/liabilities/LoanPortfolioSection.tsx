@@ -223,13 +223,15 @@ export function LoanPortfolioSection({
 
                       {/* Original Principal */}
                       <td className="py-3.5 px-4 text-right font-mono text-muted-foreground">
-                        {currencySymbol}{origPrincipal.toLocaleString(locale, { maximumFractionDigits: 0 })}
+                        {currencySymbol}
+                        {origPrincipal.toLocaleString(locale, { maximumFractionDigits: 0 })}
                       </td>
 
                       {/* Current Outstanding */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="font-mono font-bold text-foreground">
-                          {currencySymbol}{currentBal.toLocaleString(locale, { maximumFractionDigits: 0 })}
+                          {currencySymbol}
+                          {currentBal.toLocaleString(locale, { maximumFractionDigits: 0 })}
                         </div>
                         {l.lastBalanceDate && (
                           <span className="text-[10px] text-muted-foreground font-sans">
@@ -250,7 +252,8 @@ export function LoanPortfolioSection({
                       <td className="py-3.5 px-4 text-right font-mono">
                         {emi > 0 ? (
                           <span className="font-medium text-foreground">
-                            {currencySymbol}{emi.toLocaleString(locale, { maximumFractionDigits: 0 })}
+                            {currencySymbol}
+                            {emi.toLocaleString(locale, { maximumFractionDigits: 0 })}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">—</span>
@@ -325,4 +328,3 @@ export function LoanPortfolioSection({
     </div>
   );
 }
-

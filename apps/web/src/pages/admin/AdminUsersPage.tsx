@@ -17,11 +17,7 @@ import { AdminUserStatusModal } from '../../components/admin/AdminUserStatusModa
 import { AdminUserProvisionModal } from '../../components/admin/AdminUserProvisionModal';
 import { adminAdapter } from '../../lib/supabase/admin.adapter';
 import { useAdmin } from '../../lib/admin/admin-context';
-import {
-  AdminUserSummary,
-  UserAccessStatus,
-  PlatformRole,
-} from '@wealthnest/domain';
+import { AdminUserSummary, UserAccessStatus, PlatformRole } from '@wealthnest/domain';
 
 export function AdminUsersPage() {
   const { adminActor, isSuperAdmin, isSupportAdmin } = useAdmin();

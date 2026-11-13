@@ -40,7 +40,10 @@ export function validateCrossUserOwnership(
     return err(new CrossUserIsolationViolationError('Acting userId is missing or invalid'));
   }
 
-  const allowedUserIds = new Set<string>([actingUserId, ...(authorizedHouseholdMemberUserIds || [])]);
+  const allowedUserIds = new Set<string>([
+    actingUserId,
+    ...(authorizedHouseholdMemberUserIds || []),
+  ]);
 
   for (const ref of references) {
     if (!allowedUserIds.has(ref.ownerUserId)) {
@@ -64,7 +67,10 @@ export function validateAssetLiabilityLinkIsolation(
   liabilityOwnerUserId: string,
   authorizedHouseholdMemberUserIds?: readonly string[]
 ): Result<void> {
-  const allowedUserIds = new Set<string>([actingUserId, ...(authorizedHouseholdMemberUserIds || [])]);
+  const allowedUserIds = new Set<string>([
+    actingUserId,
+    ...(authorizedHouseholdMemberUserIds || []),
+  ]);
 
   if (!allowedUserIds.has(assetOwnerUserId)) {
     return err(
@@ -92,7 +98,10 @@ export function validateAccountMemberIsolation(
   memberOwnerUserId: string,
   authorizedHouseholdMemberUserIds?: readonly string[]
 ): Result<void> {
-  const allowedUserIds = new Set<string>([actingUserId, ...(authorizedHouseholdMemberUserIds || [])]);
+  const allowedUserIds = new Set<string>([
+    actingUserId,
+    ...(authorizedHouseholdMemberUserIds || []),
+  ]);
 
   if (!allowedUserIds.has(accountOwnerUserId)) {
     return err(

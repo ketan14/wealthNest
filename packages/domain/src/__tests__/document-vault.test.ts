@@ -50,11 +50,7 @@ describe('Family Document Vault Domain Logic (VAULT-DOC-01)', () => {
   });
 
   it('builds canonical RLS-safe storage paths and sanitizes traversal characters', () => {
-    const path = buildVaultStoragePath(
-      'user-123',
-      'doc-456',
-      '../../Ketan PAN Card (2025).pdf'
-    );
+    const path = buildVaultStoragePath('user-123', 'doc-456', '../../Ketan PAN Card (2025).pdf');
     expect(path).toBe('user-123/doc-456/.._.._Ketan_PAN_Card__2025_.pdf');
     expect(path.startsWith('user-123/doc-456/')).toBe(true);
   });
@@ -116,4 +112,3 @@ describe('Family Document Vault Domain Logic (VAULT-DOC-01)', () => {
     expect(formatFileSize(1024 * 1024)).toBe('1.00 MB');
   });
 });
-

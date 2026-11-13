@@ -1,5 +1,12 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { UserPreferences, DEFAULT_USER_PREFERENCES, Money, UserId, CURRENCIES, CurrencyCode } from '@wealthnest/domain';
+import {
+  UserPreferences,
+  DEFAULT_USER_PREFERENCES,
+  Money,
+  UserId,
+  CURRENCIES,
+  CurrencyCode,
+} from '@wealthnest/domain';
 import { useAuth } from '../supabase/auth-context';
 import { userAdapter } from '../supabase/user.adapter';
 

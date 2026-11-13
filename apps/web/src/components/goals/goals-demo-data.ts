@@ -102,4 +102,3 @@ export const DEMO_GOALS: GoalDetailDto[] = [
     linkedHoldings: [],
   },
 ];
-

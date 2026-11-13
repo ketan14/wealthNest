@@ -162,4 +162,3 @@ describe('household-alert-triggers', () => {
     ]);
   });
 });
-

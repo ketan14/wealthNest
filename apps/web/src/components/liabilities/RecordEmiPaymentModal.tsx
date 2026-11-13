@@ -191,38 +191,63 @@ export function RecordEmiPaymentModal({
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1 text-xs font-mono">
                 <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20">
-                  <span className="text-[10px] text-rose-300 block font-sans">Interest Expense</span>
+                  <span className="text-[10px] text-rose-300 block font-sans">
+                    Interest Expense
+                  </span>
                   <span className="text-sm font-bold text-rose-400">
-                    {currencySymbol}{calculation.interestPart.toDecimal().toLocaleString(locale, { maximumFractionDigits: 2 })}
+                    {currencySymbol}
+                    {calculation.interestPart
+                      .toDecimal()
+                      .toLocaleString(locale, { maximumFractionDigits: 2 })}
                   </span>
                 </div>
 
                 <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                  <span className="text-[10px] text-emerald-300 block font-sans">Principal Paid</span>
+                  <span className="text-[10px] text-emerald-300 block font-sans">
+                    Principal Paid
+                  </span>
                   <span className="text-sm font-bold text-emerald-400">
-                    {currencySymbol}{calculation.principalPart.toDecimal().toLocaleString(locale, { maximumFractionDigits: 2 })}
+                    {currencySymbol}
+                    {calculation.principalPart
+                      .toDecimal()
+                      .toLocaleString(locale, { maximumFractionDigits: 2 })}
                   </span>
                 </div>
 
                 <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20 col-span-2 sm:col-span-1">
                   <span className="text-[10px] text-blue-300 block font-sans">New Balance</span>
                   <span className="text-sm font-bold text-foreground">
-                    {currencySymbol}{calculation.remainingBalance.toDecimal().toLocaleString(locale, { maximumFractionDigits: 0 })}
+                    {currencySymbol}
+                    {calculation.remainingBalance
+                      .toDecimal()
+                      .toLocaleString(locale, { maximumFractionDigits: 0 })}
                   </span>
                 </div>
               </div>
 
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Interest is charged against income as an expense; principal reduction reduces debt balance directly.
+                Interest is charged against income as an expense; principal reduction reduces debt
+                balance directly.
               </p>
             </div>
           )}
 
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
-            <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={isSubmitting}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={isSubmitting} className="min-w-[130px] bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold">
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isSubmitting}
+              className="min-w-[130px] bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold"
+            >
               {isSubmitting ? 'Recording...' : 'Record Payment'}
             </Button>
           </div>
@@ -231,4 +256,3 @@ export function RecordEmiPaymentModal({
     </div>
   );
 }
-

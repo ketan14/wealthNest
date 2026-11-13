@@ -8,11 +8,7 @@ interface PropertyEquitySectionProps {
   readonly propertyEquities: readonly PropertyEquityDetail[];
   readonly currencySymbol: string;
   readonly locale: string;
-  readonly onUpdateAppraisal: (asset: {
-    id: string;
-    name: string;
-    valuationCents: bigint;
-  }) => void;
+  readonly onUpdateAppraisal: (asset: { id: string; name: string; valuationCents: bigint }) => void;
 }
 
 export function PropertyEquitySection({
@@ -106,7 +102,11 @@ export function PropertyEquitySection({
                     <span className="text-muted-foreground">Loan-To-Value (LTV):</span>
                     <span
                       className={`font-semibold ${
-                        ltv > 80 ? 'text-rose-400' : ltv > 60 ? 'text-amber-400' : 'text-emerald-400'
+                        ltv > 80
+                          ? 'text-rose-400'
+                          : ltv > 60
+                            ? 'text-amber-400'
+                            : 'text-emerald-400'
                       }`}
                     >
                       {ltv.toFixed(1)}% LTV
@@ -176,4 +176,3 @@ export function PropertyEquitySection({
     </div>
   );
 }
-

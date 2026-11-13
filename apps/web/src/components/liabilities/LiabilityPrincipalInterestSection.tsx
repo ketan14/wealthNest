@@ -38,7 +38,8 @@ export function LiabilityPrincipalInterestSection({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-            Original Sanctioned Principal ({currencySymbol}) <span className="text-destructive">*</span>
+            Original Sanctioned Principal ({currencySymbol}){' '}
+            <span className="text-destructive">*</span>
           </label>
           <input
             type="number"
@@ -125,4 +126,3 @@ export function LiabilityPrincipalInterestSection({
     </>
   );
 }
-

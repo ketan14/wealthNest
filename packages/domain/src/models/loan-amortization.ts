@@ -11,7 +11,7 @@ export interface EmiBifurcationResult {
 /**
  * Calculates the exact split of an EMI into its interest and principal components.
  * Guarantees zero floating-point drift using integer paise.
- * 
+ *
  * Formula:
  * Monthly Interest = Current Outstanding Balance * (Annual Rate / 12 / 100)
  * Principal Component = Total EMI - Monthly Interest
@@ -86,7 +86,9 @@ export interface AmortizedBalanceAsOfResult {
   readonly totalPrepaid: Money;
 }
 
-function parseIsoYearMonthDay(isoDate: string): { year: number; month: number; day: number } | null {
+function parseIsoYearMonthDay(
+  isoDate: string
+): { year: number; month: number; day: number } | null {
   const parts = isoDate.slice(0, 10).split('-').map(Number);
   if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return null;
   return { year: parts[0]!, month: parts[1]!, day: parts[2]! };
@@ -133,7 +135,8 @@ export function projectAmortizedBalanceAsOf(
 
   const months = countElapsedWholeMonths(params.checkpointDate, params.targetDate);
   const validPrepayments = (params.prepayments ?? []).filter(
-    (p) => p.asOfDate > params.checkpointDate && p.asOfDate <= params.targetDate && p.amount.cents > 0n
+    (p) =>
+      p.asOfDate > params.checkpointDate && p.asOfDate <= params.targetDate && p.amount.cents > 0n
   );
 
   let balance = params.checkpointBalance;
@@ -301,11 +304,7 @@ export function simulateLoanPrepayment(
       ? baseline.totalInterest.cents - accelerated.totalInterest.cents
       : 0n;
 
-  const maxYear = Math.max(
-    Math.ceil(baseline.months / 12),
-    Math.ceil(accelerated.months / 12),
-    1
-  );
+  const maxYear = Math.max(Math.ceil(baseline.months / 12), Math.ceil(accelerated.months / 12), 1);
   const yearlySchedule: PrepaymentYearPoint[] = [];
   for (let yr = 0; yr <= maxYear; yr++) {
     yearlySchedule.push({

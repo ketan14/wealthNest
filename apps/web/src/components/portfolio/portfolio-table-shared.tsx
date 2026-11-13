@@ -129,4 +129,3 @@ export function HoldingActionButtons({
     </div>
   );
 }
-

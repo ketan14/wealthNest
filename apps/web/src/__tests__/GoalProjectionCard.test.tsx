@@ -37,4 +37,3 @@ describe('GoalProjectionCard (Milestone Projection & Step-Up SIP)', () => {
     expect(screen.getByText(/Step-Up SIP \(\+15%\/yr\)/i)).toBeInTheDocument();
   });
 });
-

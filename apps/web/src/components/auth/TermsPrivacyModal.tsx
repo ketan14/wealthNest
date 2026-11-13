@@ -68,4 +68,3 @@ export function TermsPrivacyModal({ isOpen, onClose }: TermsPrivacyModalProps) {
     </div>
   );
 }
-

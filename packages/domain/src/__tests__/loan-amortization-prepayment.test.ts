@@ -75,4 +75,3 @@ describe('Compound Point-in-Time Loan Amortization & Prepayment Engine', () => {
     expect(summary.netWorth.cents).toBeGreaterThan(530000000n);
   });
 });
-

@@ -74,7 +74,7 @@ export interface HarvestPlanOptions {
  * Calculates the Section 112A Capital Gains Tax Harvesting Plan.
  * Under Budget 2024, every distinct PAN entity (including Hindu Undivided Family - HUF)
  * receives an independent annual ₹1,25,000 exemption on listed equity LTCG.
- * 
+ *
  * Harvesting Strategy:
  * Selling and instantly repurchasing up to ₹1,25,000 of LTCG resets the cost basis tax-free,
  * saving 12.5% (up to ₹15,625 per PAN entity) in future capital gains tax.
@@ -155,7 +155,7 @@ export function calculateSection112aHarvestingPlan(
 
         // Calculate gain per unit
         const gainPerUnit = h.quantity > 0 ? Number(gainLossCents) / h.quantity : 0;
-        
+
         // Compute recommended units to harvest to max out remaining entity headroom
         positions.push({
           holdingId: h.holdingId,
@@ -177,7 +177,10 @@ export function calculateSection112aHarvestingPlan(
           ),
           recommendedUnitsToHarvest:
             gainPerUnit > 0
-              ? Math.min(h.quantity, Math.round((Number(EXEMPTION_CENTS) / gainPerUnit) * 100) / 100)
+              ? Math.min(
+                  h.quantity,
+                  Math.round((Number(EXEMPTION_CENTS) / gainPerUnit) * 100) / 100
+                )
               : 0,
           harvestedGainsAmount: Money.fromCents(
             gainLossCents > EXEMPTION_CENTS ? EXEMPTION_CENTS : gainLossCents,
@@ -232,4 +235,3 @@ export function calculateSection112aHarvestingPlan(
     entityBreakdowns,
   };
 }
-

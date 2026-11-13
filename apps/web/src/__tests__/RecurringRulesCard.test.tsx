@@ -38,4 +38,3 @@ describe('RecurringRulesCard', () => {
     expect(screen.getByText('HDFC Midcap Opportunities SIP')).toBeInTheDocument();
   });
 });
-

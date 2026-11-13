@@ -107,9 +107,7 @@ export function computeRealEstatePropertyMetrics(
   const totalAppreciationPaise = input.currentValuePaise - input.purchasePricePaise;
   const appreciationPct =
     input.purchasePricePaise > 0n
-      ? roundTwoDecimals(
-          (Number(totalAppreciationPaise) / Number(input.purchasePricePaise)) * 100
-        )
+      ? roundTwoDecimals((Number(totalAppreciationPaise) / Number(input.purchasePricePaise)) * 100)
       : 0;
 
   let appreciationCagrPct: number | null = null;
@@ -186,9 +184,7 @@ export function summarizeRealEstatePortfolio(
 
   const averageNetYieldPct =
     totalPropertyValuePaise > 0n
-      ? roundTwoDecimals(
-          (Number(totalNetAnnualRentPaise) / Number(totalPropertyValuePaise)) * 100
-        )
+      ? roundTwoDecimals((Number(totalNetAnnualRentPaise) / Number(totalPropertyValuePaise)) * 100)
       : 0;
 
   return {
@@ -206,4 +202,3 @@ export function summarizeRealEstatePortfolio(
     properties,
   };
 }
-

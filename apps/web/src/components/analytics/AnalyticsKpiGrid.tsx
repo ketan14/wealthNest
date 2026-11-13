@@ -32,10 +32,7 @@ export function AnalyticsKpiGrid({
             <span className="text-3xl font-extrabold tracking-tight text-emerald-400 font-mono">
               {analytics.xirr !== null && analytics.xirr >= 0 ? `+${xirrDisplay}` : xirrDisplay}
             </span>
-            <Badge
-              variant="outline"
-              className="text-[10px] text-emerald-400 border-emerald-500/30"
-            >
+            <Badge variant="outline" className="text-[10px] text-emerald-400 border-emerald-500/30">
               Annualized
             </Badge>
           </div>
@@ -82,9 +79,7 @@ export function AnalyticsKpiGrid({
         <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl pointer-events-none" />
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-semibold uppercase tracking-wider">
-              Benchmark Alpha
-            </span>
+            <span className="text-xs font-semibold uppercase tracking-wider">Benchmark Alpha</span>
             <Scale className="w-4 h-4 text-purple-400" />
           </div>
         </CardHeader>
@@ -150,4 +145,3 @@ export function AnalyticsKpiGrid({
     </div>
   );
 }
-

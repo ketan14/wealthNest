@@ -98,7 +98,8 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [privacyRules, setPrivacyRules] = useState<Record<string, AccountVisibilityScope>>(() => {
     try {
-      const raw = typeof window !== 'undefined' ? window.localStorage.getItem(PRIVACY_STORAGE_KEY) : null;
+      const raw =
+        typeof window !== 'undefined' ? window.localStorage.getItem(PRIVACY_STORAGE_KEY) : null;
       return raw ? (JSON.parse(raw) as Record<string, AccountVisibilityScope>) : {};
     } catch {
       return {};

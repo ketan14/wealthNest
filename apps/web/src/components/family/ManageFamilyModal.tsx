@@ -21,12 +21,7 @@ const COLOR_PRESETS = [
 ];
 
 export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
-  const {
-    members,
-    accounts,
-    createMember,
-    deleteMember,
-  } = useFamily();
+  const { members, accounts, createMember, deleteMember } = useFamily();
 
   const [activeTab, setActiveTab] = useState<'members' | 'accounts'>('members');
   const [isAddingMember, setIsAddingMember] = useState(false);

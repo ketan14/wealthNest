@@ -88,16 +88,12 @@ export function ManageFamilyAccountsTab() {
                     <span>•</span>
                     <span>
                       Belongs to:{' '}
-                      <strong className="text-slate-300">
-                        {parentMember?.name || 'Self'}
-                      </strong>
+                      <strong className="text-slate-300">{parentMember?.name || 'Self'}</strong>
                     </span>
                     {acc.accountNumberMasked && (
                       <>
                         <span>•</span>
-                        <span className="font-mono text-slate-400">
-                          {acc.accountNumberMasked}
-                        </span>
+                        <span className="font-mono text-slate-400">{acc.accountNumberMasked}</span>
                       </>
                     )}
                   </div>
@@ -230,9 +226,7 @@ export function ManageFamilyAccountsTab() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">
-                Account Type
-              </label>
+              <label className="block text-xs font-medium text-slate-400 mb-1">Account Type</label>
               <select
                 value={newAccType}
                 onChange={(e) =>
@@ -273,11 +267,7 @@ export function ManageFamilyAccountsTab() {
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              size="sm"
-              className="text-xs bg-blue-600 hover:bg-blue-500"
-            >
+            <Button type="submit" size="sm" className="text-xs bg-blue-600 hover:bg-blue-500">
               Save Account
             </Button>
           </div>
@@ -297,4 +287,3 @@ export function ManageFamilyAccountsTab() {
     </div>
   );
 }
-

@@ -37,4 +37,3 @@ describe('Domain: Goal Milestone Projection Curves & Step-Up SIP', () => {
     expect(result.finalStepUpCorpusPaise).toBe(result.finalFlatCorpusPaise);
   });
 });
-

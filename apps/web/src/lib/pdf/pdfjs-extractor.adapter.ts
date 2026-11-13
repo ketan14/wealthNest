@@ -5,7 +5,11 @@ let pdfjsConfigured = false;
 
 async function getPdfJs() {
   const pdfjsLib = await import('pdfjs-dist');
-  if (!pdfjsConfigured && typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+  if (
+    !pdfjsConfigured &&
+    typeof window !== 'undefined' &&
+    !pdfjsLib.GlobalWorkerOptions.workerSrc
+  ) {
     try {
       pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
         'pdfjs-dist/build/pdf.worker.min.mjs',

@@ -26,4 +26,3 @@ describe('CommandPaletteModal (DESK-01)', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
-

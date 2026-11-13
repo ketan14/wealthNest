@@ -218,4 +218,3 @@ export function EquitiesHoldingsTable({
     </div>
   );
 }
-

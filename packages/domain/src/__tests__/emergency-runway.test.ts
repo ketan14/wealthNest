@@ -88,4 +88,3 @@ describe('Emergency Runway & Alert Engine (FIN-ALERT-01)', () => {
     expect(alerts[3]!.type).toBe('tax_harvesting_opportunity');
   });
 });
-

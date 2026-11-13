@@ -16,11 +16,7 @@ import { executePortfolioWrite } from './tauri-sqlite-write-portfolio';
 import { executePlanningWrite } from './tauri-sqlite-write-planning';
 import { executeRelationalRead } from './tauri-sqlite-read';
 
-export {
-  type TauriRawDatabaseConnection,
-  LOCAL_SQLITE_STORAGE_KEY,
-  DEFAULT_LOCAL_USER_ID,
-};
+export { type TauriRawDatabaseConnection, LOCAL_SQLITE_STORAGE_KEY, DEFAULT_LOCAL_USER_ID };
 
 /**
  * Concrete Tauri 2 & Offline Local SQLite Database Adapter.

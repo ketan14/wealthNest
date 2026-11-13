@@ -289,7 +289,9 @@ export function AddGoalModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
-                <span>Target Corpus ({currencySymbol} {currencyCode})</span>
+                <span>
+                  Target Corpus ({currencySymbol} {currencyCode})
+                </span>
                 {targetCents > 0 && (
                   <Badge
                     variant="outline"

@@ -42,9 +42,7 @@ export function AuthBrandingPanel() {
               <TrendingUp className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-white">
-                Understand your total net worth.
-              </h2>
+              <h2 className="text-sm font-semibold text-white">Understand your total net worth.</h2>
               <p className="text-xs text-slate-400 mt-0.5">
                 Automated calculations across cash balances, demat holdings, physical gold, and
                 liabilities.
@@ -87,11 +85,8 @@ export function AuthBrandingPanel() {
       {/* Security & Precision footer note */}
       <div className="relative z-10 pt-4 border-t border-slate-800/60 flex items-center gap-3 text-xs text-slate-400">
         <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-        <span>
-          PostgreSQL Row Level Security &bull; Zero floating-point drift (integer paise)
-        </span>
+        <span>PostgreSQL Row Level Security &bull; Zero floating-point drift (integer paise)</span>
       </div>
     </div>
   );
 }
-

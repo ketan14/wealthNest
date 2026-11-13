@@ -47,9 +47,9 @@ export function TransactionsPage() {
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'inflow' | 'outflow' | 'trades' | 'transfers'>(
-    'all'
-  );
+  const [categoryFilter, setCategoryFilter] = useState<
+    'all' | 'inflow' | 'outflow' | 'trades' | 'transfers'
+  >('all');
 
   // Local state for interactive demo mode when not logged in
   const [localDemoTransactions, setLocalDemoTransactions] =

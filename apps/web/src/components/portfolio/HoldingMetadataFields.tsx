@@ -118,9 +118,7 @@ export function HoldingMetadataFields({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1">
-              AMC Name
-            </label>
+            <label className="text-xs font-medium text-muted-foreground block mb-1">AMC Name</label>
             <input
               type="text"
               value={amcName}
@@ -160,9 +158,7 @@ export function HoldingMetadataFields({
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1">
-              ISIN
-            </label>
+            <label className="text-xs font-medium text-muted-foreground block mb-1">ISIN</label>
             <input
               type="text"
               value={isin}
@@ -210,9 +206,7 @@ export function HoldingMetadataFields({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1">
-              ISIN
-            </label>
+            <label className="text-xs font-medium text-muted-foreground block mb-1">ISIN</label>
             <input
               type="text"
               value={isin}
@@ -270,4 +264,3 @@ export function HoldingMetadataFields({
     </div>
   );
 }
-

@@ -107,8 +107,7 @@ export function HomePage() {
       if (selectedMemberId !== 'all') {
         list = list.filter(
           (l: LiabilityDto) =>
-            l.memberId === selectedMemberId ||
-            l.coBorrowerMemberIds?.includes(selectedMemberId)
+            l.memberId === selectedMemberId || l.coBorrowerMemberIds?.includes(selectedMemberId)
         );
       }
       return list;
@@ -144,7 +143,8 @@ export function HomePage() {
   const liquidAssets = Money.fromCents(liquidValuationCents, 'INR').toDecimal();
 
   // Metrics derived safely
-  const totalAssets = netWorthSummary?.totalAssets.toDecimal() ?? portfolioSummary.totalValue.toDecimal();
+  const totalAssets =
+    netWorthSummary?.totalAssets.toDecimal() ?? portfolioSummary.totalValue.toDecimal();
   const totalLiabilities = netWorthSummary?.totalLiabilities.toDecimal() ?? 0;
   const netWorth = totalAssets - totalLiabilities;
   const isSolvent = netWorth >= 0;
@@ -218,7 +218,10 @@ export function HomePage() {
             </Button>
           </Link>
           <Link to="/portfolio?action=new">
-            <Button size="sm" className="gap-1.5 text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold">
+            <Button
+              size="sm"
+              className="gap-1.5 text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold"
+            >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               Add Asset
             </Button>
@@ -248,7 +251,10 @@ export function HomePage() {
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-xs text-muted-foreground">
-              Assets {currencySymbol}{totalAssets.toLocaleString(locale, { maximumFractionDigits: 0 })} - Debt {currencySymbol}{totalLiabilities.toLocaleString(locale, { maximumFractionDigits: 0 })}
+              Assets {currencySymbol}
+              {totalAssets.toLocaleString(locale, { maximumFractionDigits: 0 })} - Debt{' '}
+              {currencySymbol}
+              {totalLiabilities.toLocaleString(locale, { maximumFractionDigits: 0 })}
             </p>
           </CardContent>
           <div className="absolute -right-6 -bottom-6 w-20 h-20 rounded-full bg-emerald-500/10 blur-xl pointer-events-none" />
@@ -262,7 +268,8 @@ export function HomePage() {
               <ShieldCheck className="w-4 h-4 text-blue-400" />
             </div>
             <CardTitle className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-foreground pt-1">
-              {currencySymbol}{liquidAssets.toLocaleString(locale, { maximumFractionDigits: 0 })}
+              {currencySymbol}
+              {liquidAssets.toLocaleString(locale, { maximumFractionDigits: 0 })}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0 flex items-center justify-between">
@@ -291,7 +298,8 @@ export function HomePage() {
               <Landmark className="w-4 h-4 text-amber-400" />
             </div>
             <CardTitle className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-foreground pt-1">
-              {currencySymbol}{totalMonthlyEmi.toLocaleString(locale, { maximumFractionDigits: 0 })}
+              {currencySymbol}
+              {totalMonthlyEmi.toLocaleString(locale, { maximumFractionDigits: 0 })}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0 flex items-center justify-between">
@@ -302,7 +310,9 @@ export function HomePage() {
               Manage debt obligations →
             </Link>
             <Badge
-              variant={debtToAssets <= 30 ? 'success' : debtToAssets <= 50 ? 'secondary' : 'destructive'}
+              variant={
+                debtToAssets <= 30 ? 'success' : debtToAssets <= 50 ? 'secondary' : 'destructive'
+              }
               className="text-[10px]"
             >
               {debtToAssets.toFixed(1)}% Leverage
@@ -333,7 +343,10 @@ export function HomePage() {
           </CardHeader>
           <CardContent className="pt-0 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              +{currencySymbol}{monthlyInflow.toLocaleString(locale, { maximumFractionDigits: 0 })} in / -{currencySymbol}{monthlyOutflow.toLocaleString(locale, { maximumFractionDigits: 0 })} out
+              +{currencySymbol}
+              {monthlyInflow.toLocaleString(locale, { maximumFractionDigits: 0 })} in / -
+              {currencySymbol}
+              {monthlyOutflow.toLocaleString(locale, { maximumFractionDigits: 0 })} out
             </p>
           </CardContent>
           <div className="absolute -right-6 -bottom-6 w-20 h-20 rounded-full bg-emerald-500/10 blur-xl pointer-events-none" />
@@ -393,7 +406,9 @@ export function HomePage() {
               <div>
                 <p className="text-sm font-semibold text-foreground">Liabilities</p>
                 <p className="text-xs text-muted-foreground">
-                  {currencySymbol}{totalLiabilities.toLocaleString(locale, { maximumFractionDigits: 0 })} outstanding
+                  {currencySymbol}
+                  {totalLiabilities.toLocaleString(locale, { maximumFractionDigits: 0 })}{' '}
+                  outstanding
                 </p>
               </div>
             </div>

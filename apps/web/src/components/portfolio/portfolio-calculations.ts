@@ -8,11 +8,7 @@ import {
 import { HoldingDetailDto } from '@wealthnest/application';
 import { ASSET_CLASS_META_MAP } from './portfolio-demo-data';
 import { NewHoldingFormValues } from './AddHoldingModal';
-import {
-  EquitiesSubtotals,
-  GroupedHoldingBucket,
-  MfSubtotals,
-} from './portfolio-table-shared';
+import { EquitiesSubtotals, GroupedHoldingBucket, MfSubtotals } from './portfolio-table-shared';
 
 /**
  * Computes the domain PortfolioSummary from active holdings using Money value objects.

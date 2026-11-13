@@ -19,15 +19,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
 import { ServerModeSelector } from '@/components/settings/ServerModeSelector';
-import {
-  Wifi,
-  Radio,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  RotateCcw,
-  Info,
-} from 'lucide-react';
+import { Wifi, Radio, CheckCircle2, AlertCircle, Loader2, RotateCcw, Info } from 'lucide-react';
 
 export function ServerConnectionSettings() {
   const { user } = useAuth();

@@ -64,4 +64,3 @@ describe('Member-Level Household Privacy Controls', () => {
     expect(summary.privateAccountIds).toEqual(['acc-groww-parul']);
   });
 });
-

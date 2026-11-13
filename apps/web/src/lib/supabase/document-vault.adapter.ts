@@ -167,4 +167,3 @@ export class SupabaseDocumentVaultAdapter implements DocumentVaultRepositoryPort
     }
   }
 }
-

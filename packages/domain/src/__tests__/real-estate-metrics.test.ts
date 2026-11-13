@@ -83,4 +83,3 @@ describe('Domain: Real Estate Equity, LTV & Rental Yield (UX-04)', () => {
     expect(summary.averageGrossYieldPct).toBe(5.6);
   });
 });
-

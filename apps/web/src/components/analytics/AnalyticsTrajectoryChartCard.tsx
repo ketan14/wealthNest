@@ -279,4 +279,3 @@ export function AnalyticsTrajectoryChartCard({ trajectory }: AnalyticsTrajectory
     </Card>
   );
 }
-

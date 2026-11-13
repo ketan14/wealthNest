@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { calculateSection112aHarvestingPlan, RawHarvestInputHolding } from '../tax/section-112a-harvesting.js';
+import {
+  calculateSection112aHarvestingPlan,
+  RawHarvestInputHolding,
+} from '../tax/section-112a-harvesting.js';
 
 describe('Section 112A Capital Gains Tax Harvesting Tool (TAX-112A-01)', () => {
   it('calculates optimal tax-free harvesting capacity across multi-entity PANs (Ketan & Shamalbhai HUF)', () => {

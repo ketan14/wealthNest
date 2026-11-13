@@ -262,4 +262,3 @@ export function inferTickerFromSecurity(isin: string = '', securityName: string 
 
   return 'ASSET';
 }
-

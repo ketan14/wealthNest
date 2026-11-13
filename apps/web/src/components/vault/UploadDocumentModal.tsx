@@ -49,7 +49,9 @@ export function UploadDocumentModal({
 
   useEffect(() => {
     if (isOpen) {
-      setMemberId(defaultMemberId && defaultMemberId.toLowerCase() !== 'all' ? defaultMemberId : '');
+      setMemberId(
+        defaultMemberId && defaultMemberId.toLowerCase() !== 'all' ? defaultMemberId : ''
+      );
       setError(null);
     }
   }, [isOpen, defaultMemberId]);
@@ -207,7 +209,10 @@ export function UploadDocumentModal({
           {/* Category & Family Member */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label htmlFor="doc-category" className="block text-xs font-medium text-slate-300 mb-1.5">
+              <label
+                htmlFor="doc-category"
+                className="block text-xs font-medium text-slate-300 mb-1.5"
+              >
                 Category *
               </label>
               <select
@@ -225,7 +230,10 @@ export function UploadDocumentModal({
             </div>
 
             <div>
-              <label htmlFor="doc-member" className="block text-xs font-medium text-slate-300 mb-1.5">
+              <label
+                htmlFor="doc-member"
+                className="block text-xs font-medium text-slate-300 mb-1.5"
+              >
                 Family Member
               </label>
               <select
@@ -259,7 +267,10 @@ export function UploadDocumentModal({
               />
             </div>
             <div>
-              <label htmlFor="doc-expiry" className="block text-xs font-medium text-slate-300 mb-1.5">
+              <label
+                htmlFor="doc-expiry"
+                className="block text-xs font-medium text-slate-300 mb-1.5"
+              >
                 Expiry / Renewal Date
               </label>
               <input

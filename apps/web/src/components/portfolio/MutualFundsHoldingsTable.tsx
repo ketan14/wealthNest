@@ -39,9 +39,7 @@ export function MutualFundsHoldingsTable({
       <table className="w-full text-left text-xs border-collapse">
         <thead>
           <tr className="border-y border-border/80 bg-cyan-500/5 text-muted-foreground">
-            <th className="py-3 px-4 font-semibold uppercase tracking-wider">
-              Scheme / Fund Name
-            </th>
+            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Scheme / Fund Name</th>
             <th className="py-3 px-4 font-semibold uppercase tracking-wider">AMC</th>
             <th className="py-3 px-4 font-semibold uppercase tracking-wider">Folio No.</th>
             <th className="py-3 px-4 font-semibold uppercase tracking-wider">Plan</th>
@@ -228,4 +226,3 @@ export function MutualFundsHoldingsTable({
     </div>
   );
 }
-

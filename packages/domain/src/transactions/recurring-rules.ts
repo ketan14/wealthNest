@@ -83,7 +83,11 @@ export function evaluateRecurringRuleStatus(
   };
 }
 
-function normalizeToMonthlyCents(amount: Money, frequency: RecurringFrequency, targetCurrency: CurrencyCode): bigint {
+function normalizeToMonthlyCents(
+  amount: Money,
+  frequency: RecurringFrequency,
+  targetCurrency: CurrencyCode
+): bigint {
   const inTarget = amount.currency === targetCurrency ? amount : amount.convertTo(targetCurrency);
   if (frequency === 'monthly') return inTarget.cents;
   if (frequency === 'quarterly') return inTarget.cents / 3n;
@@ -136,4 +140,3 @@ export function advanceRecurringRuleAfterPost(
     nextDueDate: computeNextDueDate(rule.nextDueDate, rule.frequency, rule.dayOfMonth),
   };
 }
-

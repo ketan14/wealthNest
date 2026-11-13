@@ -69,10 +69,7 @@ export function LoanPrepaymentSimulatorCard({ liabilities }: LoanPrepaymentSimul
 
   const tableRows = simulation.yearlySchedule.map((p) => ({
     label: `Year ${p.year}`,
-    values: [
-      p.baselineBalance.formatIndianCompact(),
-      p.acceleratedBalance.formatIndianCompact(),
-    ],
+    values: [p.baselineBalance.formatIndianCompact(), p.acceleratedBalance.formatIndianCompact()],
   }));
 
   return (
@@ -88,14 +85,20 @@ export function LoanPrepaymentSimulatorCard({ liabilities }: LoanPrepaymentSimul
               Compare baseline EMI schedule against extra monthly or lump-sum principal prepayments
             </CardDescription>
           </div>
-          <Badge variant="outline" className="text-[11px] border-emerald-500/30 text-emerald-400 self-start sm:self-auto">
+          <Badge
+            variant="outline"
+            className="text-[11px] border-emerald-500/30 text-emerald-400 self-start sm:self-auto"
+          >
             {activeLoan.interestRate.toFixed(2)}% p.a. ({activeLoan.interestType})
           </Badge>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
           <div>
-            <label htmlFor="prepay-loan-select" className="text-[11px] text-muted-foreground block mb-1">
+            <label
+              htmlFor="prepay-loan-select"
+              className="text-[11px] text-muted-foreground block mb-1"
+            >
               Active Loan
             </label>
             <select
@@ -113,7 +116,9 @@ export function LoanPrepaymentSimulatorCard({ liabilities }: LoanPrepaymentSimul
           </div>
 
           <div>
-            <span className="text-[11px] text-muted-foreground block mb-1">Extra Monthly Prepay</span>
+            <span className="text-[11px] text-muted-foreground block mb-1">
+              Extra Monthly Prepay
+            </span>
             <div className="flex flex-wrap gap-1.5">
               {EXTRA_MONTHLY_OPTIONS.map((amt) => (
                 <button
@@ -210,12 +215,7 @@ export function LoanPrepaymentSimulatorCard({ liabilities }: LoanPrepaymentSimul
               strokeDasharray="4 4"
               points={baselinePoints}
             />
-            <polyline
-              fill="none"
-              stroke="#10b981"
-              strokeWidth="2.5"
-              points={acceleratedPoints}
-            />
+            <polyline fill="none" stroke="#10b981" strokeWidth="2.5" points={acceleratedPoints} />
           </svg>
         </AccessibleChartContainer>
       </CardContent>

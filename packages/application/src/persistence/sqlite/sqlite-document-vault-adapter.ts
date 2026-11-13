@@ -84,7 +84,11 @@ export class SqliteDocumentVaultAdapter implements DocumentVaultRepositoryPort {
       const now = new Date().toISOString();
 
       let dataUrl: string | null = null;
-      if (typeof Blob !== 'undefined' && params.fileBlob instanceof Blob && typeof FileReader !== 'undefined') {
+      if (
+        typeof Blob !== 'undefined' &&
+        params.fileBlob instanceof Blob &&
+        typeof FileReader !== 'undefined'
+      ) {
         dataUrl = await new Promise<string | null>((resolve) => {
           const reader = new FileReader();
           reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null);

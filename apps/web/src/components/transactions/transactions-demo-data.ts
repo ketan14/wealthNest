@@ -128,4 +128,3 @@ export const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
     createdAt: '2026-04-20T16:45:00Z',
   },
 ];
-

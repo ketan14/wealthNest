@@ -147,10 +147,7 @@ export function parseRtaMutualFundSection(
 
       for (let f = 1; f <= 35 && i + f < lines.length; f++) {
         const fLine = lines[i + f]!;
-        if (
-          fLine.match(/\b(INF[A-Z0-9]{9})\b/) ||
-          fLine.includes('MUTUAL FUND UNITS HELD AS ON')
-        ) {
+        if (fLine.match(/\b(INF[A-Z0-9]{9})\b/) || fLine.includes('MUTUAL FUND UNITS HELD AS ON')) {
           break;
         }
 
@@ -199,8 +196,7 @@ export function parseRtaMutualFundSection(
               .join(' ')
               .replace(/^[*]\s*/, '')
               .trim();
-            const isRedemption =
-              numRow.amount < 0 || numRow.units < 0 || /redemption/i.test(desc);
+            const isRedemption = numRow.amount < 0 || numRow.units < 0 || /redemption/i.test(desc);
             const isDividend = /dividend|idcw/i.test(desc);
             const type: 'buy' | 'sell' | 'dividend' | 'fee' = isRedemption
               ? 'sell'
@@ -265,4 +261,3 @@ export function parseRtaMutualFundSection(
 
   return { holdings, transactions };
 }
-

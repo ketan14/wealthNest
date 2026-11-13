@@ -42,11 +42,7 @@ interface GoalsGridSectionProps {
  * Renders the Active Financial Milestones grid with funded progress bars,
  * inflation-adjusted targets, and committed vs. required monthly SIP comparisons.
  */
-export function GoalsGridSection({
-  summary,
-  members,
-  onDeleteGoal,
-}: GoalsGridSectionProps) {
+export function GoalsGridSection({ summary, members, onDeleteGoal }: GoalsGridSectionProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -155,9 +151,7 @@ export function GoalsGridSection({
                   <div className="flex items-center justify-between text-xs font-mono">
                     <span className="text-muted-foreground">
                       Accumulated:{' '}
-                      <b className="text-foreground">
-                        {currentCorpusMoney.formatIndianCompact()}
-                      </b>
+                      <b className="text-foreground">{currentCorpusMoney.formatIndianCompact()}</b>
                     </span>
                     <span className="text-muted-foreground">
                       Target: <b className="text-foreground">{targetMoney.formatIndianCompact()}</b>
@@ -231,4 +225,3 @@ export function GoalsGridSection({
     </div>
   );
 }
-

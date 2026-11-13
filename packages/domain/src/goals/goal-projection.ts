@@ -32,9 +32,7 @@ export interface GoalProjectionCurveResult {
  * Simulates year-by-year goal compounding with both a flat monthly SIP and an
  * annual step-up SIP (e.g. +10%/yr) against an inflation-adjusted target corpus.
  */
-export function projectGoalMilestoneCurve(
-  input: GoalProjectionInput
-): GoalProjectionCurveResult {
+export function projectGoalMilestoneCurve(input: GoalProjectionInput): GoalProjectionCurveResult {
   const totalYears = Math.max(1, Math.min(50, Math.round(input.yearsRemaining)));
   const baseYear = input.startYear ?? new Date().getFullYear();
   const monthlyRate = input.expectedReturnPct > 0 ? input.expectedReturnPct / (12 * 100) : 0;
@@ -91,4 +89,3 @@ export function projectGoalMilestoneCurve(
     isStepUpOnTrack: last.stepUpSipCorpusPaise >= last.inflationAdjustedTargetPaise,
   };
 }
-

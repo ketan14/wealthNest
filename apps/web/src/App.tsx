@@ -92,35 +92,35 @@ export function App() {
                   <BrowserRouter>
                     <Suspense fallback={<RouteLoadingFallback />}>
                       <Routes>
-                      {/* Dedicated Authentication Routes */}
-                      <Route path="/signup" element={<SignUpPage />} />
-                      <Route path="/login" element={<LoginPage />} />
+                        {/* Dedicated Authentication Routes */}
+                        <Route path="/signup" element={<SignUpPage />} />
+                        <Route path="/login" element={<LoginPage />} />
 
-                      {/* Investor App Shell */}
-                      <Route path="/" element={<AppShell />}>
-                        <Route index element={<HomePage />} />
-                        <Route path="portfolio" element={<PortfolioPage />} />
-                        <Route path="real-estate" element={<RealEstatePage />} />
-                        <Route path="liabilities" element={<LiabilitiesPage />} />
-                        <Route path="transactions" element={<TransactionsPage />} />
-                        <Route path="analytics" element={<AnalyticsPage />} />
-                        <Route path="goals" element={<GoalsPage />} />
-                        <Route path="documents" element={<DocumentsPage />} />
-                        <Route path="settings" element={<SettingsPage />} />
-                        <Route path="*" element={<NotFoundPage />} />
-                      </Route>
+                        {/* Investor App Shell */}
+                        <Route path="/" element={<AppShell />}>
+                          <Route index element={<HomePage />} />
+                          <Route path="portfolio" element={<PortfolioPage />} />
+                          <Route path="real-estate" element={<RealEstatePage />} />
+                          <Route path="liabilities" element={<LiabilitiesPage />} />
+                          <Route path="transactions" element={<TransactionsPage />} />
+                          <Route path="analytics" element={<AnalyticsPage />} />
+                          <Route path="goals" element={<GoalsPage />} />
+                          <Route path="documents" element={<DocumentsPage />} />
+                          <Route path="settings" element={<SettingsPage />} />
+                          <Route path="*" element={<NotFoundPage />} />
+                        </Route>
 
-                      {/* Dedicated Platform Admin Portal */}
-                      <Route path="/admin" element={<AdminLayout />}>
-                        <Route index element={<AdminDashboardPage />} />
-                        <Route path="users" element={<AdminUsersPage />} />
-                        <Route path="users/:userId" element={<AdminUserDetailPage />} />
-                        <Route path="households" element={<AdminHouseholdsPage />} />
-                        <Route path="roles" element={<AdminRolesPage />} />
-                        <Route path="audit-logs" element={<AdminAuditLogsPage />} />
-                        <Route path="settings" element={<AdminSettingsPage />} />
-                      </Route>
-                    </Routes>
+                        {/* Dedicated Platform Admin Portal */}
+                        <Route path="/admin" element={<AdminLayout />}>
+                          <Route index element={<AdminDashboardPage />} />
+                          <Route path="users" element={<AdminUsersPage />} />
+                          <Route path="users/:userId" element={<AdminUserDetailPage />} />
+                          <Route path="households" element={<AdminHouseholdsPage />} />
+                          <Route path="roles" element={<AdminRolesPage />} />
+                          <Route path="audit-logs" element={<AdminAuditLogsPage />} />
+                          <Route path="settings" element={<AdminSettingsPage />} />
+                        </Route>
+                      </Routes>
                     </Suspense>
                   </BrowserRouter>
                 </FamilyProvider>

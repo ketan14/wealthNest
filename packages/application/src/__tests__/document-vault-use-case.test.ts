@@ -96,14 +96,21 @@ describe('Application: ManageDocumentVaultUseCase (VAULT-DOC-01)', () => {
     const repo = createMockRepo();
     const useCase = new ManageDocumentVaultUseCase(repo);
 
-    const urlRes = await useCase.getDownloadUrl('doc-1', 'user-ketan/doc-1/huf-deed.pdf', 'user-ketan');
+    const urlRes = await useCase.getDownloadUrl(
+      'doc-1',
+      'user-ketan/doc-1/huf-deed.pdf',
+      'user-ketan'
+    );
     expect(urlRes.success).toBe(true);
     if (urlRes.success) {
       expect(urlRes.value).toBe('https://signed.example.com/doc-1');
     }
 
-    const delRes = await useCase.deleteDocument('doc-1', 'user-ketan/doc-1/huf-deed.pdf', 'user-ketan');
+    const delRes = await useCase.deleteDocument(
+      'doc-1',
+      'user-ketan/doc-1/huf-deed.pdf',
+      'user-ketan'
+    );
     expect(delRes.success).toBe(true);
   });
 });
-

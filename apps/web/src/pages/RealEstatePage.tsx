@@ -1,12 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Building2,
-  Landmark,
-  IndianRupee,
-  FileText,
-  ShieldCheck,
-} from 'lucide-react';
+import { Building2, Landmark, IndianRupee, FileText, ShieldCheck } from 'lucide-react';
 import {
   Money,
   PropertyType,
@@ -211,10 +205,7 @@ export function RealEstatePage() {
         (acc, l) => acc + l.currentBalanceCents,
         0n
       );
-      const linkedMonthlyEmiPaise = linkedLoans.reduce(
-        (acc, l) => acc + l.emiAmountCents,
-        0n
-      );
+      const linkedMonthlyEmiPaise = linkedLoans.reduce((acc, l) => acc + l.emiAmountCents, 0n);
       const purchasePricePaise = BigInt(
         Math.round((Number(h.quantity) || 1) * (Number(h.unitCostCents) || 0))
       );
@@ -420,10 +411,7 @@ export function RealEstatePage() {
         onSave={handleSaveOverride}
       />
 
-      <ManageFamilyModal
-        isOpen={isManageFamilyOpen}
-        onClose={() => setIsManageFamilyOpen(false)}
-      />
+      <ManageFamilyModal isOpen={isManageFamilyOpen} onClose={() => setIsManageFamilyOpen(false)} />
     </div>
   );
 }

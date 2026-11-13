@@ -83,10 +83,7 @@ export function RecurringRulesCard({
     return rules.filter((r) => !r.memberId || r.memberId === selectedMemberId);
   }, [rules, selectedMemberId]);
 
-  const summary = useMemo(
-    () => summarizeRecurringCommitments(scopedRules, 'INR'),
-    [scopedRules]
-  );
+  const summary = useMemo(() => summarizeRecurringCommitments(scopedRules, 'INR'), [scopedRules]);
 
   const handlePostRule = async (rule: RecurringTransactionRule) => {
     const todayIso = new Date().toISOString().slice(0, 10);
@@ -120,8 +117,7 @@ export function RecurringRulesCard({
       .toISOString()
       .slice(0, 10);
 
-    const txType =
-      category === 'sip' ? 'buy' : category === 'salary' ? 'deposit' : 'withdrawal';
+    const txType = category === 'sip' ? 'buy' : category === 'salary' ? 'deposit' : 'withdrawal';
 
     const newRule: RecurringTransactionRule = {
       id: `rule-${Date.now()}`,
@@ -269,7 +265,9 @@ export function RecurringRulesCard({
                       </p>
                     </div>
                     <Badge
-                      variant={status.isOverdue ? 'destructive' : status.isDue ? 'secondary' : 'outline'}
+                      variant={
+                        status.isOverdue ? 'destructive' : status.isDue ? 'secondary' : 'outline'
+                      }
                       className="text-[10px] uppercase"
                     >
                       {status.isOverdue ? 'Overdue' : status.isDue ? 'Due Today' : rule.category}
@@ -310,4 +308,3 @@ export function RecurringRulesCard({
     </Card>
   );
 }
-

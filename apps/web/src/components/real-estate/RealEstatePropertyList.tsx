@@ -1,11 +1,5 @@
 import { Link } from 'react-router-dom';
-import {
-  Building2,
-  MapPin,
-  AlertTriangle,
-  SlidersHorizontal,
-  TrendingUp,
-} from 'lucide-react';
+import { Building2, MapPin, AlertTriangle, SlidersHorizontal, TrendingUp } from 'lucide-react';
 import {
   PropertyType,
   RealEstatePropertyInput,
@@ -200,4 +194,3 @@ export function RealEstatePropertyList({
     </div>
   );
 }
-

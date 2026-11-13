@@ -112,8 +112,11 @@ export function DocumentsPage() {
         return false;
       }
       if (q) {
-        const memberName = doc.memberId ? (memberNameMap.get(doc.memberId) || '').toLowerCase() : '';
-        const haystack = `${doc.title} ${doc.fileName} ${doc.notes || ''} ${memberName}`.toLowerCase();
+        const memberName = doc.memberId
+          ? (memberNameMap.get(doc.memberId) || '').toLowerCase()
+          : '';
+        const haystack =
+          `${doc.title} ${doc.fileName} ${doc.notes || ''} ${memberName}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;
@@ -281,7 +284,9 @@ export function DocumentsPage() {
             </div>
             <div className="text-2xl font-bold text-white">{summary.totalDocuments}</div>
             <p className="text-xs text-slate-500 mt-1">
-              {selectedMemberId.toLowerCase() === 'all' ? 'Across all household members' : 'For selected member'}
+              {selectedMemberId.toLowerCase() === 'all'
+                ? 'Across all household members'
+                : 'For selected member'}
             </p>
           </CardContent>
         </Card>
@@ -393,10 +398,7 @@ export function DocumentsPage() {
         defaultMemberId={selectedMemberId}
       />
 
-      <ManageFamilyModal
-        isOpen={isManageFamilyOpen}
-        onClose={() => setIsManageFamilyOpen(false)}
-      />
+      <ManageFamilyModal isOpen={isManageFamilyOpen} onClose={() => setIsManageFamilyOpen(false)} />
 
       <ConfirmActionModal
         isOpen={Boolean(docPendingDelete)}

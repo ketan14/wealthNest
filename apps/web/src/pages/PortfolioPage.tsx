@@ -236,10 +236,7 @@ export function PortfolioPage() {
     () => computeEquitiesSubtotals(equitiesHoldings),
     [equitiesHoldings]
   );
-  const mfSubtotals = useMemo(
-    () => computeMfSubtotals(mutualFundHoldings),
-    [mutualFundHoldings]
-  );
+  const mfSubtotals = useMemo(() => computeMfSubtotals(mutualFundHoldings), [mutualFundHoldings]);
 
   // Mutation: Add Holding
   const addHoldingMutation = useMutation({

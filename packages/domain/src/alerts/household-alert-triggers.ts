@@ -66,7 +66,10 @@ const SEVERITY_RANK: Record<AlertSeverity, number> = {
   info: 2,
 };
 
-function computeWholeDaysBetween(earlierIso: string | undefined, referenceDate: Date): number | null {
+function computeWholeDaysBetween(
+  earlierIso: string | undefined,
+  referenceDate: Date
+): number | null {
   if (!earlierIso) return null;
   const parsed = new Date(earlierIso);
   if (Number.isNaN(parsed.getTime())) return null;
@@ -221,4 +224,3 @@ export function evaluateAutomatedHouseholdAlerts(
     (a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]
   );
 }
-

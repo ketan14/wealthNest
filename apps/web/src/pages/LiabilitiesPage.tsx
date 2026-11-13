@@ -59,7 +59,8 @@ export function LiabilitiesPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'closed'>('active');
 
   // Local state for demo liabilities when logged out or when previewing sample loans
-  const [localDemoLiabilities, setLocalDemoLiabilities] = useState<LiabilityDto[]>(DEMO_LIABILITIES);
+  const [localDemoLiabilities, setLocalDemoLiabilities] =
+    useState<LiabilityDto[]>(DEMO_LIABILITIES);
 
   const { liabilityRepo, holdingRepo } = useRepositories();
 
@@ -176,7 +177,8 @@ export function LiabilitiesPage() {
         updatedAt: item.startDate,
       }));
     }
-    const base: readonly LiabilityDto[] = liabilities.length > 0 ? liabilities : localDemoLiabilities;
+    const base: readonly LiabilityDto[] =
+      liabilities.length > 0 ? liabilities : localDemoLiabilities;
     if (!selectedMemberId || selectedMemberId === 'all') return base;
     return base.filter(
       (l) =>
@@ -300,7 +302,8 @@ export function LiabilitiesPage() {
               <TrendingDown className="w-4 h-4 text-rose-400" />
             </div>
             <CardTitle className="text-2xl font-bold font-mono tracking-tight text-foreground pt-1">
-              {currencySymbol}{totalOutstanding.toLocaleString(locale, { maximumFractionDigits: 0 })}
+              {currencySymbol}
+              {totalOutstanding.toLocaleString(locale, { maximumFractionDigits: 0 })}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
@@ -319,13 +322,15 @@ export function LiabilitiesPage() {
               <Calendar className="w-4 h-4 text-amber-400" />
             </div>
             <CardTitle className="text-2xl font-bold font-mono tracking-tight text-foreground pt-1">
-              {currencySymbol}{totalMonthlyEmi.toLocaleString(locale, { maximumFractionDigits: 0 })}
+              {currencySymbol}
+              {totalMonthlyEmi.toLocaleString(locale, { maximumFractionDigits: 0 })}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-xs text-muted-foreground">
-              {currencySymbol}{(totalMonthlyEmi * 12).toLocaleString(locale, { maximumFractionDigits: 0 })}/year
-              in debt service
+              {currencySymbol}
+              {(totalMonthlyEmi * 12).toLocaleString(locale, { maximumFractionDigits: 0 })}/year in
+              debt service
             </p>
           </CardContent>
         </Card>

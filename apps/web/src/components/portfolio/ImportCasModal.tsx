@@ -377,7 +377,11 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
             onFileChange={(selectedFile) => {
               setFile(selectedFile);
               setError(null);
-              if (selectedFile && selectedFile.name.endsWith('.csv') && importSource === 'cas_pdf') {
+              if (
+                selectedFile &&
+                selectedFile.name.endsWith('.csv') &&
+                importSource === 'cas_pdf'
+              ) {
                 setImportSource('zerodha_csv');
               }
             }}

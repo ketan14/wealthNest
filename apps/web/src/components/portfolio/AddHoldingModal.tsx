@@ -337,7 +337,11 @@ export function AddHoldingModal({
 
             <div>
               <label className="text-xs font-medium text-muted-foreground block mb-1">
-                {isMutualFund ? `Purchase NAV (${currencySymbol})` : isEquity ? `Buy Price (${currencySymbol})` : `Unit Cost (${currencySymbol})`}{' '}
+                {isMutualFund
+                  ? `Purchase NAV (${currencySymbol})`
+                  : isEquity
+                    ? `Buy Price (${currencySymbol})`
+                    : `Unit Cost (${currencySymbol})`}{' '}
                 <span className="text-destructive">*</span>
               </label>
               <input

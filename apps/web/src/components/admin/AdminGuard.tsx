@@ -161,9 +161,7 @@ export function AdminGuard({ children, requiredRole }: AdminGuardProps) {
               >
                 <UserCheck className="w-4 h-4 text-cyan-400" />
                 <span>
-                  {isElevating
-                    ? 'Granting Entitlement...'
-                    : 'Grant Super Admin to Current Account'}
+                  {isElevating ? 'Granting Entitlement...' : 'Grant Super Admin to Current Account'}
                 </span>
               </button>
             )}

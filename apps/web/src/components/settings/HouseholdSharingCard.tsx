@@ -82,12 +82,16 @@ export function HouseholdSharingCard() {
               Multi-User Household Collaboration (RLS)
             </CardTitle>
           </div>
-          <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-[10px]">
+          <Badge
+            variant="outline"
+            className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-[10px]"
+          >
             Household RLS Active
           </Badge>
         </div>
         <CardDescription>
-          Invite spouses or adult family members to securely co-manage household holdings with their own logins.
+          Invite spouses or adult family members to securely co-manage household holdings with their
+          own logins.
         </CardDescription>
       </CardHeader>
 
@@ -124,7 +128,11 @@ export function HouseholdSharingCard() {
                     variant={member.role === 'primary_owner' ? 'success' : 'secondary'}
                     className="text-[10px] capitalize"
                   >
-                    {member.role === 'primary_owner' ? 'Primary Owner' : member.role === 'member' ? 'Co-Manager' : 'Viewer'}
+                    {member.role === 'primary_owner'
+                      ? 'Primary Owner'
+                      : member.role === 'member'
+                        ? 'Co-Manager'
+                        : 'Viewer'}
                   </Badge>
 
                   {!member.isSelf && (
@@ -145,7 +153,10 @@ export function HouseholdSharingCard() {
         </div>
 
         {/* Invite Household Member Form */}
-        <form onSubmit={handleSendInvite} className="p-4 rounded-xl bg-secondary/30 border border-border/60 space-y-3">
+        <form
+          onSubmit={handleSendInvite}
+          className="p-4 rounded-xl bg-secondary/30 border border-border/60 space-y-3"
+        >
           <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
             <UserPlus className="w-4 h-4 text-primary" />
             <span>Invite Family Member to Household</span>
@@ -229,4 +240,3 @@ export function HouseholdSharingCard() {
     </Card>
   );
 }
-

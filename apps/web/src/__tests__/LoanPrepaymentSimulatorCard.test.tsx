@@ -37,4 +37,3 @@ describe('LoanPrepaymentSimulatorCard', () => {
     expect(updatedMonthsText).not.toBe(initialMonthsText);
   });
 });
-

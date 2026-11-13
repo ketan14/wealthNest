@@ -24,13 +24,7 @@ interface QuickActionItem {
   action: () => void;
 }
 
-export function GlobalQuickAddModal({
-  isOpen,
-  onClose,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-}) {
+export function GlobalQuickAddModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const navigate = useNavigate();
 
   if (!isOpen) return null;
@@ -199,4 +193,3 @@ export function GlobalQuickAddModal({
     </div>
   );
 }
-

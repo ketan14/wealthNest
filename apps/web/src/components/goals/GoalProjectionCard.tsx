@@ -78,7 +78,10 @@ export function GoalProjectionCard({ goals }: GoalProjectionCardProps) {
   });
 
   const buildPath = (pickY: (c: (typeof coords)[number]) => number) =>
-    coords.reduce((acc, c, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${c.x.toFixed(1)} ${pickY(c).toFixed(1)}`, '');
+    coords.reduce(
+      (acc, c, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${c.x.toFixed(1)} ${pickY(c).toFixed(1)}`,
+      ''
+    );
 
   const stepUpPath = buildPath((c) => c.yStepUp);
   const flatPath = buildPath((c) => c.yFlat);

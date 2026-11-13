@@ -106,7 +106,8 @@ export function CashflowSummarySection({
             </div>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-xs font-bold font-mono px-2 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">
-                {summary.transferCount} Transfers ({summary.totalTransfersAmount.formatIndianCompact()})
+                {summary.transferCount} Transfers (
+                {summary.totalTransfersAmount.formatIndianCompact()})
               </span>
               <span className="text-[11px] text-muted-foreground">Zero P&L</span>
             </div>
@@ -143,15 +144,38 @@ export function CashflowSummarySection({
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2.5 pt-1">
             {[
-              { label: 'Deposits', val: summary.breakdownByType.deposit, color: 'text-emerald-400' },
+              {
+                label: 'Deposits',
+                val: summary.breakdownByType.deposit,
+                color: 'text-emerald-400',
+              },
               { label: 'Asset Buys', val: summary.breakdownByType.buy, color: 'text-rose-400' },
-              { label: 'Dividends', val: summary.breakdownByType.dividend, color: 'text-emerald-400' },
-              { label: 'Asset Sells', val: summary.breakdownByType.sell, color: 'text-emerald-400' },
-              { label: 'Withdrawals', val: summary.breakdownByType.withdrawal, color: 'text-rose-400' },
+              {
+                label: 'Dividends',
+                val: summary.breakdownByType.dividend,
+                color: 'text-emerald-400',
+              },
+              {
+                label: 'Asset Sells',
+                val: summary.breakdownByType.sell,
+                color: 'text-emerald-400',
+              },
+              {
+                label: 'Withdrawals',
+                val: summary.breakdownByType.withdrawal,
+                color: 'text-rose-400',
+              },
               { label: 'Fees & STT', val: summary.breakdownByType.fee, color: 'text-amber-400' },
-              { label: 'Transfers', val: summary.breakdownByType.transfer, color: 'text-purple-400' },
+              {
+                label: 'Transfers',
+                val: summary.breakdownByType.transfer,
+                color: 'text-purple-400',
+              },
             ].map((item) => (
-              <div key={item.label} className="p-2.5 rounded-lg bg-secondary/30 border border-border/50">
+              <div
+                key={item.label}
+                className="p-2.5 rounded-lg bg-secondary/30 border border-border/50"
+              >
                 <span className="text-[10px] text-muted-foreground block uppercase font-semibold">
                   {item.label}
                 </span>
@@ -166,4 +190,3 @@ export function CashflowSummarySection({
     </>
   );
 }
-

@@ -33,11 +33,7 @@ interface FamilyDematsTabProps {
  * Renders the Family & Demats tab in Settings: multi-PAN distribution, household sharing,
  * registered family entities, connected demat/folio accounts, and Section 112A advisory.
  */
-export function FamilyDematsTab({
-  members,
-  accounts,
-  onOpenManageFamily,
-}: FamilyDematsTabProps) {
+export function FamilyDematsTab({ members, accounts, onOpenManageFamily }: FamilyDematsTabProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-xl bg-gradient-to-r from-slate-900 via-indigo-950/30 to-slate-900 border border-slate-800">
@@ -252,9 +248,7 @@ export function FamilyDematsTab({
       <div className="p-4 rounded-xl bg-purple-950/20 border border-purple-500/30 flex items-start gap-3">
         <Shield className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
         <div className="text-xs text-slate-300 leading-relaxed">
-          <span className="font-semibold text-purple-300">
-            Indian Section 112A Tax Advantage:
-          </span>{' '}
+          <span className="font-semibold text-purple-300">Indian Section 112A Tax Advantage:</span>{' '}
           By allocating long-term capital assets across distinct PAN entities (e.g., Self, Spouse,
           HUF), your household unlocks multiple independent ₹1,25,000 annual LTCG exemption limits
           under Finance Act (No. 2) 2024. Tax savings are automatically calculated and reflected in
@@ -264,4 +258,3 @@ export function FamilyDematsTab({
     </div>
   );
 }
-

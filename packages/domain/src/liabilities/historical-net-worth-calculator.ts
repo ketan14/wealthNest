@@ -105,7 +105,10 @@ export function calculateHistoricalNetWorth(params: HistoricalNetWorthParams): N
         emiAmount: l.emiAmount,
         originalPrincipal: l.originalPrincipal,
         outstandingBalance: resolvedBalance,
-        asOfDate: l.interestRate !== undefined && checkpoint.asOfDate < asOfDate ? asOfDate : checkpoint.asOfDate,
+        asOfDate:
+          l.interestRate !== undefined && checkpoint.asOfDate < asOfDate
+            ? asOfDate
+            : checkpoint.asOfDate,
         linkedAssetId: l.linkedAssetId,
       });
     } else if (l.startDate && l.startDate <= asOfDate) {
@@ -239,4 +242,3 @@ export function calculateHistoricalNetWorth(params: HistoricalNetWorthParams): N
     missingLiabilityBalances,
   };
 }
-

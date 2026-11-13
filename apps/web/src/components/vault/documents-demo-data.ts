@@ -104,4 +104,3 @@ export const DEMO_DOCUMENTS: FamilyDocumentDto[] = [
 export function getDocumentCategoryLabel(category: DocumentCategory): string {
   return DOCUMENT_CATEGORIES.find((c) => c.id === category)?.label || category;
 }
-

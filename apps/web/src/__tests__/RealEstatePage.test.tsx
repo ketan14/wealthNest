@@ -59,4 +59,3 @@ describe('RealEstatePage (UX-04)', () => {
     expect(screen.getByText('Property Rental & Cost Details')).toBeInTheDocument();
   });
 });
-

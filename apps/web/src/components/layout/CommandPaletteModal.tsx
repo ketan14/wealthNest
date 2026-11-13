@@ -260,4 +260,3 @@ export function CommandPaletteModal({ isOpen, onClose }: CommandPaletteModalProp
 
   return createPortal(modalContent, document.body);
 }
-

@@ -133,20 +133,23 @@ export function UpdateBalanceModal({
             <div className="flex justify-between">
               <span>Original Sanctioned:</span>
               <span className="font-mono font-medium text-foreground">
-                {currencySymbol}{(Number(liability.originalPrincipalCents) / 100).toLocaleString(locale)}
+                {currencySymbol}
+                {(Number(liability.originalPrincipalCents) / 100).toLocaleString(locale)}
               </span>
             </div>
             <div className="flex justify-between">
               <span>Last Recorded Balance:</span>
               <span className="font-mono font-medium text-primary">
-                {currencySymbol}{(Number(liability.currentBalanceCents) / 100).toLocaleString(locale)}
+                {currencySymbol}
+                {(Number(liability.currentBalanceCents) / 100).toLocaleString(locale)}
               </span>
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-              New Outstanding Principal Balance ({currencySymbol}) <span className="text-destructive">*</span>
+              New Outstanding Principal Balance ({currencySymbol}){' '}
+              <span className="text-destructive">*</span>
             </label>
             <input
               type="number"
@@ -221,7 +224,8 @@ export function UpdateBalanceModal({
                   >
                     <div>
                       <span className="font-semibold text-foreground">
-                        {currencySymbol}{(Number(b.balanceCents) / 100).toLocaleString(locale)}
+                        {currencySymbol}
+                        {(Number(b.balanceCents) / 100).toLocaleString(locale)}
                       </span>
                       {b.notes && (
                         <span className="text-[11px] text-muted-foreground ml-2">({b.notes})</span>

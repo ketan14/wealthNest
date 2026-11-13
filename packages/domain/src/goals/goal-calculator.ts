@@ -63,9 +63,10 @@ export function validateHoldingAllocation(
 /**
  * Validates all holding allocations across an entire list of goals.
  */
-export function validateAllGoalAllocations(
-  goals: readonly GoalDefinition[]
-): { readonly isValid: boolean; readonly errors: readonly string[] } {
+export function validateAllGoalAllocations(goals: readonly GoalDefinition[]): {
+  readonly isValid: boolean;
+  readonly errors: readonly string[];
+} {
   const allocationMap = new Map<string, number>();
   const errors: string[] = [];
 

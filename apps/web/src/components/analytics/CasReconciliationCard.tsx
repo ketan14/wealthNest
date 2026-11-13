@@ -84,8 +84,7 @@ export function CasReconciliationCard({ holdings }: CasReconciliationCardProps) 
       quantity: c.quantity,
       unitCost: c.unitCost || Money.zero('INR'),
       assetType: (c.assetType === 'mutual_fund' ? 'mutual_fund' : 'equity') as
-        | 'equity'
-        | 'mutual_fund',
+        'equity' | 'mutual_fund',
       rawBroker: 'ZERODHA' as const,
     }));
   }, [brokerHoldings, brokerTrades, casHoldings]);
@@ -110,8 +109,7 @@ export function CasReconciliationCard({ holdings }: CasReconciliationCardProps) 
 
     if (parsed.holdings.length === 0 && parsed.trades.length === 0) {
       setParseWarning(
-        parsed.warnings[0] ||
-          'Could not detect Zerodha or Groww holdings/tradebook columns in CSV.'
+        parsed.warnings[0] || 'Could not detect Zerodha or Groww holdings/tradebook columns in CSV.'
       );
       return;
     }
@@ -236,4 +234,3 @@ export function CasReconciliationCard({ holdings }: CasReconciliationCardProps) 
     </Card>
   );
 }
-

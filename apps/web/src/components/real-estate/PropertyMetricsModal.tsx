@@ -111,7 +111,10 @@ export function PropertyMetricsModal({
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label htmlFor="prop-type" className="block text-xs font-medium text-slate-300 mb-1.5">
+              <label
+                htmlFor="prop-type"
+                className="block text-xs font-medium text-slate-300 mb-1.5"
+              >
                 Property Type
               </label>
               <select
@@ -128,7 +131,10 @@ export function PropertyMetricsModal({
             </div>
 
             <div>
-              <label htmlFor="prop-location" className="block text-xs font-medium text-slate-300 mb-1.5">
+              <label
+                htmlFor="prop-location"
+                className="block text-xs font-medium text-slate-300 mb-1.5"
+              >
                 Location / City
               </label>
               <input
@@ -144,7 +150,10 @@ export function PropertyMetricsModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label htmlFor="prop-purchase-date" className="block text-xs font-medium text-slate-300 mb-1.5">
+              <label
+                htmlFor="prop-purchase-date"
+                className="block text-xs font-medium text-slate-300 mb-1.5"
+              >
                 Purchase Date
               </label>
               <input
@@ -157,7 +166,10 @@ export function PropertyMetricsModal({
             </div>
 
             <div>
-              <label htmlFor="prop-purchase-price" className="block text-xs font-medium text-slate-300 mb-1.5">
+              <label
+                htmlFor="prop-purchase-price"
+                className="block text-xs font-medium text-slate-300 mb-1.5"
+              >
                 Purchase Price (₹)
               </label>
               <input
@@ -174,7 +186,10 @@ export function PropertyMetricsModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label htmlFor="prop-monthly-rent" className="block text-xs font-medium text-slate-300 mb-1.5">
+              <label
+                htmlFor="prop-monthly-rent"
+                className="block text-xs font-medium text-slate-300 mb-1.5"
+              >
                 Monthly Rent (₹)
               </label>
               <input
@@ -189,7 +204,10 @@ export function PropertyMetricsModal({
             </div>
 
             <div>
-              <label htmlFor="prop-maint" className="block text-xs font-medium text-slate-300 mb-1.5">
+              <label
+                htmlFor="prop-maint"
+                className="block text-xs font-medium text-slate-300 mb-1.5"
+              >
                 Annual Maint. (₹)
               </label>
               <input
@@ -232,4 +250,3 @@ export function PropertyMetricsModal({
 
   return createPortal(modalContent, document.body);
 }
-

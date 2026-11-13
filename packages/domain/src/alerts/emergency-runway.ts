@@ -61,8 +61,7 @@ export function evaluateEmergencyRunway(
 
   let runwayMonths = 0;
   if (params.monthlyExpenses.cents > 0n) {
-    runwayMonths =
-      Number((params.liquidCorpus.cents * 100n) / params.monthlyExpenses.cents) / 100;
+    runwayMonths = Number((params.liquidCorpus.cents * 100n) / params.monthlyExpenses.cents) / 100;
   } else if (params.liquidCorpus.cents > 0n) {
     runwayMonths = 99; // Indefinite runway if zero expenses
   }
@@ -150,9 +149,10 @@ export function generateHouseholdAttentionAlerts(
 
   // 3. Stale physical asset appraisals (>180 days)
   if (input.hasStaleValuations) {
-    const assetsDesc = input.staleAssetNames && input.staleAssetNames.length > 0
-      ? ` (${input.staleAssetNames.slice(0, 2).join(', ')})`
-      : '';
+    const assetsDesc =
+      input.staleAssetNames && input.staleAssetNames.length > 0
+        ? ` (${input.staleAssetNames.slice(0, 2).join(', ')})`
+        : '';
     alerts.push({
       id: 'alert-stale-valuations',
       type: 'valuation_stale',
@@ -171,7 +171,8 @@ export function generateHouseholdAttentionAlerts(
       type: 'tax_harvesting_opportunity',
       severity: 'info',
       title: 'HUF Section 112A Tax Shield',
-      message: '₹1,25,000 annual LTCG exemption active for Shamalbhai Vaghela HUF. Consider tax-loss or gain harvesting.',
+      message:
+        '₹1,25,000 annual LTCG exemption active for Shamalbhai Vaghela HUF. Consider tax-loss or gain harvesting.',
       actionLabel: 'Inspect Analytics',
       actionHref: '/analytics',
     });
@@ -179,4 +180,3 @@ export function generateHouseholdAttentionAlerts(
 
   return alerts;
 }
-

@@ -41,7 +41,6 @@ export class SqliteAssetClassAdapter implements AssetClassRepositoryPort {
   }
 }
 
-
 export class SqliteHoldingAdapter implements HoldingRepositoryPort {
   constructor(private readonly db: SqliteDatabase) {}
 
@@ -221,7 +220,6 @@ export class SqliteHoldingAdapter implements HoldingRepositoryPort {
     }
   }
 }
-
 
 export class SqliteTransactionAdapter implements TransactionRepositoryPort {
   constructor(private readonly db: SqliteDatabase) {}

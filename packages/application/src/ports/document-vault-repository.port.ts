@@ -28,4 +28,3 @@ export interface DocumentVaultRepositoryPort {
   ): Promise<Result<string>>;
   deleteDocument(documentId: string, storagePath: string, userId: string): Promise<Result<void>>;
 }
-

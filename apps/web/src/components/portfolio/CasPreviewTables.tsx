@@ -47,8 +47,7 @@ export function CasPreviewTables({
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground">
               Found <span className="text-foreground font-semibold">{equities.length}</span> stocks
-              & ETFs (
-              <span className="text-blue-400 font-semibold">{selectedEquities.length}</span>{' '}
+              & ETFs (<span className="text-blue-400 font-semibold">{selectedEquities.length}</span>{' '}
               selected)
             </span>
             <span className="text-muted-foreground">•</span>
@@ -94,7 +93,9 @@ export function CasPreviewTables({
                   Security / Ticker
                 </th>
                 <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">ISIN</th>
-                <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Demat Account</th>
+                <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">
+                  Demat Account
+                </th>
                 <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">
                   Shares
                 </th>
@@ -404,9 +405,7 @@ export function CasPreviewTables({
                 </td>
                 <td className="py-2.5 px-3 text-right text-foreground font-semibold">
                   {tx.type === 'sell' ? '-' : '+'}
-                  {tx.units
-                    ? tx.units.toLocaleString('en-IN', { maximumFractionDigits: 4 })
-                    : '—'}
+                  {tx.units ? tx.units.toLocaleString('en-IN', { maximumFractionDigits: 4 }) : '—'}
                 </td>
                 <td className="py-2.5 px-3 text-right text-muted-foreground">
                   {tx.navPriceCents
@@ -427,4 +426,3 @@ export function CasPreviewTables({
     </>
   );
 }
-

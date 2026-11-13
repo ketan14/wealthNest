@@ -11,4 +11,3 @@ export function toValidUuidOrNull(val: string | null | undefined): string | null
   }
   return null;
 }
-

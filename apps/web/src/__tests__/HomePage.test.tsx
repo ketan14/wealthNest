@@ -39,4 +39,3 @@ describe('HomePage Executive Overview', () => {
     expect(screen.getByText('HUF Section 112A Tax Shield')).toBeInTheDocument();
   });
 });
-

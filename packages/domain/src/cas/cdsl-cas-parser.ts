@@ -1,9 +1,5 @@
 import { ICasStatementParser } from './cas-parser.interface.js';
-import {
-  ParsedCasStatement,
-  ParsedCasHolding,
-  StatementProvider,
-} from './cas-types.js';
+import { ParsedCasStatement, ParsedCasHolding, StatementProvider } from './cas-types.js';
 import { Money } from '../money/money.js';
 import {
   cleanSecurityName,
@@ -19,10 +15,7 @@ import {
   extractGenericNumericRow,
   extractStatementDate,
 } from './cdsl-cas-helpers.js';
-import {
-  extractMutualFundNumbers,
-  parseRtaMutualFundSection,
-} from './cdsl-rta-mf-parser.js';
+import { extractMutualFundNumbers, parseRtaMutualFundSection } from './cdsl-rta-mf-parser.js';
 
 export class CdslCasParser implements ICasStatementParser {
   readonly provider: StatementProvider = 'CDSL';

@@ -91,9 +91,7 @@ export function LocalizationTaxTab({
                       : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
                   }`}
                 >
-                  <div className="font-semibold text-white text-sm mb-1">
-                    Indian System (en-IN)
-                  </div>
+                  <div className="font-semibold text-white text-sm mb-1">Indian System (en-IN)</div>
                   <div className="text-xs text-slate-400 mb-2">
                     Lakhs & Crores grouping (2,2,3 grouping)
                   </div>
@@ -264,4 +262,3 @@ export function LocalizationTaxTab({
     </div>
   );
 }
-

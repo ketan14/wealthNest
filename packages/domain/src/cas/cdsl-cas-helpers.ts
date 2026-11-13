@@ -159,4 +159,3 @@ export function extractStatementDate(text: string): string {
 
   return new Date().toISOString().split('T')[0]!;
 }
-

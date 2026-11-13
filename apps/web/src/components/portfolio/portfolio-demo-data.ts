@@ -182,4 +182,3 @@ export const ASSET_CLASS_META_MAP: Record<string, { name: string; color: string 
   cash: { name: 'Cash & Liquid Savings', color: '#10b981' },
   crypto: { name: 'Digital Assets & Crypto', color: '#ec4899' },
 };
-

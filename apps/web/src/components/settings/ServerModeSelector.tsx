@@ -64,4 +64,3 @@ export function ServerModeSelector({ mode, onModeChange }: ServerModeSelectorPro
     </div>
   );
 }
-

@@ -86,4 +86,3 @@ describe('Recurring Transaction Rules Engine', () => {
     expect(updated.nextDueDate).toBe('2026-12-05');
   });
 });
-

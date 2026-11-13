@@ -9,11 +9,7 @@ interface ForgotPasswordModalProps {
   onClose: () => void;
 }
 
-export function ForgotPasswordModal({
-  isOpen,
-  initialEmail,
-  onClose,
-}: ForgotPasswordModalProps) {
+export function ForgotPasswordModal({ isOpen, initialEmail, onClose }: ForgotPasswordModalProps) {
   const [forgotEmail, setForgotEmail] = useState(initialEmail);
   const [forgotSubmitting, setForgotSubmitting] = useState(false);
   const [forgotMessage, setForgotMessage] = useState<{
@@ -148,4 +144,3 @@ export function ForgotPasswordModal({
     </div>
   );
 }
-
