@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   GetNetWorthSummaryUseCase,
   GetCashflowSummaryUseCase,
+  ManageDocumentVaultUseCase,
   HoldingDetailDto,
 } from '@wealthnest/application';
 import {
@@ -14,6 +15,7 @@ import {
   evaluateEmergencyRunway,
   generateHouseholdAttentionAlerts,
   FinancialAlert,
+  summarizeDocumentVault,
 } from '@wealthnest/domain';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -40,12 +42,14 @@ import {
   AlertTriangle,
   AlertCircle,
   Info,
+  Building2,
+  FolderLock,
 } from 'lucide-react';
 
 export function HomePage() {
   const { user } = useAuth();
   const userId = user?.id || 'demo-user';
-  const { holdingRepo, liabilityRepo, transactionRepo } = useRepositories();
+  const { holdingRepo, liabilityRepo, transactionRepo, documentVaultRepo } = useRepositories();
   const { selectedMemberId } = useFamily();
   const { currencySymbol, preferences } = usePreferences();
   const locale = preferences.numberFormat || 'en-IN';
@@ -85,6 +89,24 @@ export function HomePage() {
       return result.value.summary;
     },
   });
+
+  // 4. Fetch Document Vault Summary (for renewal & record counts)
+  const { data: vaultSummary } = useQuery({
+    queryKey: ['vault-summary', userId],
+    queryFn: async () => {
+      if (!user) return null;
+      const useCase = new ManageDocumentVaultUseCase(documentVaultRepo);
+      const result = await useCase.listDocuments(user.id);
+      if (!result.success) return null;
+      return summarizeDocumentVault(result.value);
+    },
+  });
+
+  const propertyEquities = netWorthSummary?.propertyEquities ?? [];
+  const totalRealEstateEquity = propertyEquities.reduce(
+    (sum, pe) => sum + pe.equity.toDecimal(),
+    0
+  );
 
   // Pure domain portfolio summary
   const valuationItems: HoldingValuationItem[] = holdings.map((h) => ({
@@ -452,7 +474,7 @@ export function HomePage() {
       </div>
 
       {/* Quick Access Navigation Row for Modules */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <Link to="/portfolio" className="group">
           <Card className="p-4 border-border/70 hover:border-primary/50 transition-all bg-card/40 hover:bg-card/70 group-hover:shadow-md">
             <div className="flex items-center gap-3">
@@ -462,6 +484,24 @@ export function HomePage() {
               <div>
                 <p className="text-sm font-semibold text-foreground">Portfolio</p>
                 <p className="text-xs text-muted-foreground">{holdings.length} assets recorded</p>
+              </div>
+            </div>
+          </Card>
+        </Link>
+
+        <Link to="/real-estate" className="group">
+          <Card className="p-4 border-border/70 hover:border-amber-500/50 transition-all bg-card/40 hover:bg-card/70 group-hover:shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-amber-500/15 text-amber-400 group-hover:scale-105 transition-transform">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Real Estate</p>
+                <p className="text-xs text-muted-foreground">
+                  {propertyEquities.length > 0
+                    ? `${currencySymbol}${totalRealEstateEquity.toLocaleString(locale, { maximumFractionDigits: 0 })} equity`
+                    : 'Equity, LTV & Yield'}
+                </p>
               </div>
             </div>
           </Card>
@@ -506,6 +546,28 @@ export function HomePage() {
               <div>
                 <p className="text-sm font-semibold text-foreground">Transactions</p>
                 <p className="text-xs text-muted-foreground">Cashflow & Trade Ledger</p>
+              </div>
+            </div>
+          </Card>
+        </Link>
+
+        <Link to="/documents" className="group">
+          <Card className="p-4 border-border/70 hover:border-cyan-500/50 transition-all bg-card/40 hover:bg-card/70 group-hover:shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-cyan-500/15 text-cyan-400 group-hover:scale-105 transition-transform">
+                <FolderLock className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Document Vault</p>
+                <p className="text-xs text-muted-foreground">
+                  {vaultSummary
+                    ? `${vaultSummary.totalDocuments} docs${
+                        vaultSummary.expiringSoonCount + vaultSummary.expiredCount > 0
+                          ? ` · ${vaultSummary.expiringSoonCount + vaultSummary.expiredCount} renewal`
+                          : ''
+                      }`
+                    : 'PAN, HUF & Policies'}
+                </p>
               </div>
             </div>
           </Card>
