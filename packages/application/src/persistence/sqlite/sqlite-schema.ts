@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   asset_id TEXT,
-  type TEXT NOT NULL CHECK (type IN ('buy', 'sell', 'deposit', 'withdrawal', 'dividend', 'fee')),
+  type TEXT NOT NULL CHECK (type IN ('buy', 'sell', 'deposit', 'withdrawal', 'dividend', 'fee', 'transfer')),
   quantity REAL,
   amount_paise INTEGER NOT NULL,
   currency TEXT NOT NULL DEFAULT 'INR',
@@ -98,10 +98,12 @@ CREATE TABLE IF NOT EXISTS transactions (
   notes TEXT,
   member_id TEXT,
   account_id TEXT,
+  destination_account_id TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (user_id, asset_id) REFERENCES assets(user_id, id) ON DELETE SET NULL,
   FOREIGN KEY (user_id, member_id) REFERENCES family_members(user_id, id) ON DELETE SET NULL,
-  FOREIGN KEY (user_id, account_id) REFERENCES portfolio_accounts(user_id, id) ON DELETE SET NULL
+  FOREIGN KEY (user_id, account_id) REFERENCES portfolio_accounts(user_id, id) ON DELETE SET NULL,
+  FOREIGN KEY (user_id, destination_account_id) REFERENCES portfolio_accounts(user_id, id) ON DELETE SET NULL
 );
 
 -- 8. Liabilities (Debts and Mortgages)

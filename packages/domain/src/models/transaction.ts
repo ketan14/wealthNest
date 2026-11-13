@@ -5,7 +5,14 @@ import { AssetId } from './asset.js';
 
 export type TransactionId = Brand<string, 'TransactionId'>;
 
-export type TransactionType = 'buy' | 'sell' | 'deposit' | 'withdrawal' | 'dividend' | 'fee';
+export type TransactionType =
+  | 'buy'
+  | 'sell'
+  | 'deposit'
+  | 'withdrawal'
+  | 'dividend'
+  | 'fee'
+  | 'transfer';
 
 export interface TransactionEntity {
   readonly id: TransactionId;
@@ -17,5 +24,6 @@ export interface TransactionEntity {
   readonly date: ISODateString;
   readonly notes?: string;
   readonly memberId?: string;
-  readonly accountId?: string;
+  readonly accountId?: string; // Source account (or primary account)
+  readonly destinationAccountId?: string; // Target account for transfers
 }

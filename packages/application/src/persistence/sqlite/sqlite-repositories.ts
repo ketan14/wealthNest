@@ -513,6 +513,7 @@ export class SqliteTransactionAdapter implements TransactionRepositoryPort {
           notes?: string;
           memberId?: string;
           accountId?: string;
+          destinationAccountId?: string;
           createdAt: string;
         }>(
           `SELECT 
@@ -529,6 +530,7 @@ export class SqliteTransactionAdapter implements TransactionRepositoryPort {
              t.notes,
              t.member_id as memberId,
              t.account_id as accountId,
+             t.destination_account_id as destinationAccountId,
              t.created_at as createdAt
            FROM transactions t
            LEFT JOIN assets a ON t.user_id = a.user_id AND t.asset_id = a.id
@@ -551,6 +553,7 @@ export class SqliteTransactionAdapter implements TransactionRepositoryPort {
         notes: r.notes || undefined,
         memberId: r.memberId || undefined,
         accountId: r.accountId || undefined,
+        destinationAccountId: r.destinationAccountId || undefined,
         createdAt: r.createdAt,
       }));
 
@@ -567,8 +570,8 @@ export class SqliteTransactionAdapter implements TransactionRepositoryPort {
 
       this.db
         .prepare(
-          `INSERT INTO transactions (id, user_id, asset_id, type, quantity, amount_paise, currency, transaction_date, notes, member_id, account_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+          `INSERT INTO transactions (id, user_id, asset_id, type, quantity, amount_paise, currency, transaction_date, notes, member_id, account_id, destination_account_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
         )
         .run(
           id,
@@ -581,7 +584,8 @@ export class SqliteTransactionAdapter implements TransactionRepositoryPort {
           txnDate,
           params.notes ?? null,
           params.memberId ?? null,
-          params.accountId ?? null
+          params.accountId ?? null,
+          params.destinationAccountId ?? null
         );
 
       const listRes = await this.listByUser(params.userId);

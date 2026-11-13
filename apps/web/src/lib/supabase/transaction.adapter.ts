@@ -20,6 +20,7 @@ interface JoinedTransactionRow {
   notes: string | null;
   member_id: string | null;
   account_id: string | null;
+  destination_account_id: string | null;
   created_at: string;
   assets: {
     id: string;
@@ -46,6 +47,7 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
           notes,
           member_id,
           account_id,
+          destination_account_id,
           created_at,
           assets (
             id,
@@ -76,6 +78,7 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
         notes: row.notes ?? undefined,
         memberId: row.member_id ?? undefined,
         accountId: row.account_id ?? undefined,
+        destinationAccountId: row.destination_account_id ?? undefined,
         createdAt: row.created_at,
       }));
 
@@ -102,6 +105,7 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
           notes: params.notes || null,
           member_id: toValidUuidOrNull(params.memberId),
           account_id: toValidUuidOrNull(params.accountId),
+          destination_account_id: toValidUuidOrNull(params.destinationAccountId),
         })
         .select('id, created_at, transaction_date')
         .single();
@@ -141,6 +145,7 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
         notes: params.notes,
         memberId: params.memberId,
         accountId: params.accountId,
+        destinationAccountId: params.destinationAccountId,
         createdAt: data.created_at,
       };
 

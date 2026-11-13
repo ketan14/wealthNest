@@ -26,6 +26,7 @@ export interface NewTransactionFormValues {
   notes?: string;
   memberId?: string;
   accountId?: string;
+  destinationAccountId?: string;
 }
 
 interface RecordTransactionModalProps {
@@ -78,6 +79,12 @@ const TRANSACTION_TYPES: Array<{
     category: 'outflow',
     description: 'Brokerage, STT, GST, AMC fee',
   },
+  {
+    id: 'transfer',
+    label: 'Account Transfer (Zero P&L)',
+    category: 'inflow',
+    description: 'Movement between own bank & demat folios',
+  },
 ];
 
 export function RecordTransactionModal({
@@ -109,6 +116,7 @@ export function RecordTransactionModal({
   const [txAccountId, setTxAccountId] = useState<string>(() => {
     return selectedAccountId !== 'all' ? selectedAccountId : '';
   });
+  const [txDestAccountId, setTxDestAccountId] = useState<string>('');
 
   useEffect(() => {
     if (selectedMemberId !== 'all') {
@@ -162,6 +170,7 @@ export function RecordTransactionModal({
         notes: notes.trim() || undefined,
         memberId: txMemberId || undefined,
         accountId: txAccountId || undefined,
+        destinationAccountId: type === 'transfer' ? txDestAccountId || undefined : undefined,
       });
 
       // Reset form
@@ -279,7 +288,7 @@ export function RecordTransactionModal({
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
                 <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-                Demat / Broker Account
+                {type === 'transfer' ? 'Source Account (From)' : 'Demat / Broker Account'}
               </label>
               <select
                 value={txAccountId}
@@ -297,6 +306,36 @@ export function RecordTransactionModal({
               </select>
             </div>
           </div>
+
+          {/* Transfer Destination Account Selector */}
+          {type === 'transfer' && (
+            <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/25 space-y-2">
+              <label className="text-xs font-semibold text-purple-300 flex items-center gap-1.5">
+                <Briefcase className="w-3.5 h-3.5" />
+                Destination Account (To) <span className="text-destructive">*</span>
+              </label>
+              <select
+                value={txDestAccountId}
+                onChange={(e) => setTxDestAccountId(e.target.value)}
+                required
+                className="w-full h-8 rounded-lg bg-secondary/80 border border-purple-500/30 px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-purple-400 cursor-pointer"
+              >
+                <option value="" className="bg-slate-900 text-foreground">
+                  -- Select Target Destination Account --
+                </option>
+                {accounts
+                  .filter((a) => a.id !== txAccountId)
+                  .map((a) => (
+                    <option key={a.id} value={a.id} className="bg-slate-900 text-foreground">
+                      {a.brokerName}: {a.accountName}
+                    </option>
+                  ))}
+              </select>
+              <p className="text-[11px] text-purple-300/80">
+                Transfers between your family accounts carry ₹0 net P&L impact.
+              </p>
+            </div>
+          )}
 
           {/* Asset Selection (for Buy/Sell/Dividend) */}
           {(type === 'buy' || type === 'sell' || type === 'dividend') && (

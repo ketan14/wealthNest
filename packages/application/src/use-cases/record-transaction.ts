@@ -14,6 +14,7 @@ const VALID_TRANSACTION_TYPES = [
   'withdrawal',
   'dividend',
   'fee',
+  'transfer',
 ] as const;
 
 export class RecordTransactionUseCase {

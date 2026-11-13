@@ -5,6 +5,7 @@ import {
   CashflowTransactionItem,
   isInflow,
   isOutflow,
+  isTransfer,
 } from '../cashflow/cashflow-summary.js';
 
 describe('Cashflow Domain Calculation Engine', () => {
@@ -20,6 +21,10 @@ describe('Cashflow Domain Calculation Engine', () => {
     expect(isOutflow('withdrawal')).toBe(true);
     expect(isOutflow('fee')).toBe(true);
     expect(isOutflow('deposit')).toBe(false);
+
+    expect(isTransfer('transfer')).toBe(true);
+    expect(isInflow('transfer')).toBe(false);
+    expect(isOutflow('transfer')).toBe(false);
   });
 
   it('returns zero values for empty transactions list', () => {
@@ -106,5 +111,51 @@ describe('Cashflow Domain Calculation Engine', () => {
     // Net difference is 50,000 deficit
     expect(summary.netCashflow.toDecimal()).toBe(50000);
     expect(summary.isNetPositive).toBe(false);
+  });
+
+  it('guarantees Zero P&L on internal inter-account transfers', () => {
+    // ₹1,00,000 transfer from Savings Bank to Zerodha Trading Account
+    // Inflows should NOT count transfer as income. Outflows should NOT count transfer as expense.
+    const items: CashflowTransactionItem[] = [
+      {
+        id: 'tx-salary',
+        type: 'deposit',
+        amount: Money.fromDecimal(200000, 'INR'), // Real external income: ₹2 Lakhs
+        date: '2026-05-01T10:00:00Z',
+      },
+      {
+        id: 'tx-transfer',
+        type: 'transfer',
+        amount: Money.fromDecimal(100000, 'INR'), // Inter-account transfer: ₹1 Lakh
+        date: '2026-05-02T10:00:00Z',
+        accountId: 'acc-bank-savings',
+        destinationAccountId: 'acc-zerodha-demat',
+      },
+      {
+        id: 'tx-rent',
+        type: 'withdrawal',
+        amount: Money.fromDecimal(40000, 'INR'), // Real external expense: ₹40,000
+        date: '2026-05-03T10:00:00Z',
+      },
+    ];
+
+    const summary = calculateCashflowSummary(items, 'INR');
+
+    // Total Inflow = ₹2,00,000 (transfer excluded from income)
+    expect(summary.totalInflows.toDecimal()).toBe(200000);
+    expect(summary.inflowCount).toBe(1);
+
+    // Total Outflow = ₹40,000 (transfer excluded from expenses)
+    expect(summary.totalOutflows.toDecimal()).toBe(40000);
+    expect(summary.outflowCount).toBe(1);
+
+    // Net Cashflow = ₹2,00,000 - ₹40,000 = ₹1,60,000 (strictly preserved)
+    expect(summary.netCashflow.toDecimal()).toBe(160000);
+    expect(summary.isNetPositive).toBe(true);
+
+    // Transfer metrics
+    expect(summary.transferCount).toBe(1);
+    expect(summary.totalTransfersAmount.toDecimal()).toBe(100000);
+    expect(summary.totalCount).toBe(3);
   });
 });

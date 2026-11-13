@@ -9,6 +9,7 @@ import {
   TransactionType,
   isInflow,
   isOutflow,
+  isTransfer,
 } from '@wealthnest/domain';
 import {
   GetCashflowSummaryUseCase,
@@ -187,7 +188,7 @@ export function TransactionsPage() {
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'inflow' | 'outflow' | 'trades'>(
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'inflow' | 'outflow' | 'trades' | 'transfers'>(
     'all'
   );
 
@@ -286,6 +287,7 @@ export function TransactionsPage() {
       if (categoryFilter === 'inflow' && !isInflow(tx.type)) return false;
       if (categoryFilter === 'outflow' && !isOutflow(tx.type)) return false;
       if (categoryFilter === 'trades' && tx.type !== 'buy' && tx.type !== 'sell') return false;
+      if (categoryFilter === 'transfers' && !isTransfer(tx.type)) return false;
 
       // Text search filter
       if (!searchQuery.trim()) return true;
@@ -318,6 +320,7 @@ export function TransactionsPage() {
           notes: values.notes,
           memberId: values.memberId,
           accountId: values.accountId,
+          destinationAccountId: values.destinationAccountId,
         });
 
         if (!res.success) throw res.error;
@@ -338,6 +341,7 @@ export function TransactionsPage() {
           notes: values.notes,
           memberId: values.memberId,
           accountId: values.accountId,
+          destinationAccountId: values.destinationAccountId,
           createdAt: new Date().toISOString(),
         };
         setLocalDemoTransactions((prev) => [newDemoItem, ...prev]);
@@ -548,11 +552,11 @@ export function TransactionsPage() {
           </CardContent>
         </Card>
 
-        {/* Card 4: Audit Volume */}
+        {/* Card 4: Audit Volume & Transfers */}
         <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Audit Volume
+              Audit Volume & Transfers
             </CardTitle>
             <Receipt className="h-4 w-4 text-primary" />
           </CardHeader>
@@ -560,9 +564,12 @@ export function TransactionsPage() {
             <div className="text-2xl font-bold font-mono text-foreground">
               {summary.totalCount} Records
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1 font-mono">
-              Signed & timestamped audit log
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs font-bold font-mono px-2 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                {summary.transferCount} Transfers ({summary.totalTransfersAmount.formatIndianCompact()})
+              </span>
+              <span className="text-[11px] text-muted-foreground">Zero P&L</span>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -597,7 +604,7 @@ export function TransactionsPage() {
           </div>
 
           {/* Breakdown cards by type */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 pt-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2.5 pt-1">
             <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/50">
               <span className="text-[10px] text-muted-foreground block uppercase font-semibold">
                 Deposits
@@ -646,6 +653,14 @@ export function TransactionsPage() {
                 {summary.breakdownByType.fee.formatIndianCompact()}
               </p>
             </div>
+            <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/50">
+              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">
+                Transfers
+              </span>
+              <p className="text-xs font-bold font-mono text-purple-400 mt-0.5">
+                {summary.breakdownByType.transfer.formatIndianCompact()}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -664,7 +679,7 @@ export function TransactionsPage() {
             {/* Filter Pills and Search */}
             <div className="flex flex-wrap items-center gap-2.5">
               <div className="flex items-center rounded-lg bg-secondary/50 p-1 border border-border text-xs">
-                {(['all', 'inflow', 'outflow', 'trades'] as const).map((cat) => (
+                {(['all', 'inflow', 'outflow', 'trades', 'transfers'] as const).map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setCategoryFilter(cat)}
@@ -815,6 +830,11 @@ export function TransactionsPage() {
                             text: 'text-amber-400',
                             label: 'Charges',
                           },
+                          transfer: {
+                            bg: 'bg-purple-500/15 border-purple-500/30',
+                            text: 'text-purple-400',
+                            label: 'Transfer',
+                          },
                         };
 
                         const badge = typeBadgeStyles[tx.type] || {
@@ -837,6 +857,8 @@ export function TransactionsPage() {
                               >
                                 {isTxInflow ? (
                                   <ArrowDownLeft className="w-3 h-3" />
+                                ) : isTransfer(tx.type) ? (
+                                  <Scale className="w-3 h-3" />
                                 ) : (
                                   <ArrowUpRight className="w-3 h-3" />
                                 )}
@@ -865,6 +887,7 @@ export function TransactionsPage() {
                                   (m) => m.id === (tx.memberId || 'mem-self')
                                 );
                                 const acc = accounts.find((a) => a.id === tx.accountId);
+                                const destAcc = accounts.find((a) => a.id === tx.destinationAccountId);
                                 return (
                                   <div className="flex items-center gap-1.5 mt-1 font-sans">
                                     {mem && (
@@ -889,6 +912,11 @@ export function TransactionsPage() {
                                         {acc.brokerName}
                                       </span>
                                     )}
+                                    {destAcc && (
+                                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-400 font-mono border border-purple-500/20">
+                                        → {destAcc.brokerName}
+                                      </span>
+                                    )}
                                   </div>
                                 );
                               })()}
@@ -903,8 +931,16 @@ export function TransactionsPage() {
 
                             {/* Amount */}
                             <td className="py-3.5 px-4 text-right font-bold whitespace-nowrap">
-                              <span className={isTxInflow ? 'text-emerald-400' : 'text-rose-400'}>
-                                {isTxInflow ? '+' : '-'}
+                              <span
+                                className={
+                                  isTransfer(tx.type)
+                                    ? 'text-purple-400'
+                                    : isTxInflow
+                                      ? 'text-emerald-400'
+                                      : 'text-rose-400'
+                                }
+                              >
+                                {isTransfer(tx.type) ? '⇄ ' : isTxInflow ? '+' : '-'}
                                 {formattedAmount}
                               </span>
                             </td>

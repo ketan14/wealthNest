@@ -43,6 +43,11 @@ const typeBadgeStyles: Record<TransactionType, { bg: string; text: string; label
     text: 'text-amber-400',
     label: 'Fee',
   },
+  transfer: {
+    bg: 'bg-purple-500/15 border-purple-500/30',
+    text: 'text-purple-400',
+    label: 'Transfer',
+  },
 };
 
 export function TransactionCard({
