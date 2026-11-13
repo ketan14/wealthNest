@@ -19,3 +19,4 @@ ALTER TABLE public.transactions
 
 CREATE INDEX IF NOT EXISTS idx_transactions_dest_account 
   ON public.transactions (destination_account_id);
+
