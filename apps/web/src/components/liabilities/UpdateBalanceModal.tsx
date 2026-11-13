@@ -154,6 +154,7 @@ export function UpdateBalanceModal({
             </label>
             <input
               type="number"
+              inputMode="decimal"
               step="any"
               required
               value={balanceStr}

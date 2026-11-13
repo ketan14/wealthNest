@@ -165,6 +165,7 @@ export function EditHoldingModal({
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="any"
                 required
                 min="0.000001"
@@ -181,6 +182,7 @@ export function EditHoldingModal({
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="any"
                 required
                 min="0"
@@ -201,6 +203,7 @@ export function EditHoldingModal({
             </label>
             <input
               type="number"
+              inputMode="decimal"
               step="any"
               required
               min="0"

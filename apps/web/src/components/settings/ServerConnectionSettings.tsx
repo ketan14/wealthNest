@@ -30,6 +30,7 @@ export function ServerConnectionSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
   const [showSwitchWarningModal, setShowSwitchWarningModal] = useState(false);
+  const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
   const [pendingSaveConfig, setPendingSaveConfig] = useState<ServerConfig | null>(null);
 
   // Advanced toggles
@@ -109,20 +110,19 @@ export function ServerConnectionSettings() {
     }
   };
 
-  const handleResetToDefaults = async () => {
-    if (
-      window.confirm(
-        'Reset server connection settings back to default LAN settings (192.168.1.105:30000 / 54321)?'
-      )
-    ) {
-      await connectionManager.resetToDefaults();
-      setConfig(connectionManager.getConfig());
-      setTestResult(null);
-      setSaveSuccessMsg(
-        'Server configuration reset to default LAN settings (http://192.168.1.105:30000).'
-      );
-      setTimeout(() => setSaveSuccessMsg(null), 4000);
-    }
+  const handleResetToDefaults = () => {
+    setShowResetConfirmModal(true);
+  };
+
+  const confirmResetToDefaults = async () => {
+    setShowResetConfirmModal(false);
+    await connectionManager.resetToDefaults();
+    setConfig(connectionManager.getConfig());
+    setTestResult(null);
+    setSaveSuccessMsg(
+      'Server configuration reset to default LAN settings (http://192.168.1.105:30000).'
+    );
+    setTimeout(() => setSaveSuccessMsg(null), 4000);
   };
 
   return (
@@ -217,6 +217,7 @@ export function ServerConnectionSettings() {
                   <input
                     id="supabase-port-input"
                     type="number"
+                    inputMode="numeric"
                     value={config.supabasePort}
                     onChange={(e) =>
                       setConfig((prev) => ({ ...prev, supabasePort: Number(e.target.value) }))
@@ -241,6 +242,7 @@ export function ServerConnectionSettings() {
                   <input
                     id="frontend-port-input"
                     type="number"
+                    inputMode="numeric"
                     value={config.frontendPort}
                     onChange={(e) =>
                       setConfig((prev) => ({ ...prev, frontendPort: Number(e.target.value) }))
@@ -450,6 +452,17 @@ export function ServerConnectionSettings() {
           setShowSwitchWarningModal(false);
           setPendingSaveConfig(null);
         }}
+      />
+
+      <ConfirmActionModal
+        isOpen={showResetConfirmModal}
+        title="Reset Server Settings?"
+        message="Reset server connection settings back to default LAN settings (192.168.1.105:30000 / 54321)?"
+        confirmLabel="Reset to Defaults"
+        cancelLabel="Cancel"
+        variant="warning"
+        onConfirm={confirmResetToDefaults}
+        onCancel={() => setShowResetConfirmModal(false)}
       />
     </div>
   );

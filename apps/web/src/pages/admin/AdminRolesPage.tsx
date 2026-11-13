@@ -95,7 +95,7 @@ export function AdminRolesPage() {
     const validation = validateRoleRevocation(user.platformRole, superAdminCount);
 
     if (!validation.allowed) {
-      alert(validation.reason);
+      showToast(validation.reason || 'Role revocation is not allowed');
       return;
     }
 

@@ -8,6 +8,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { SignUpPage } from '@/pages/SignUpPage';
 import { LoginPage } from '@/pages/LoginPage';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 const PortfolioPage = lazy(() =>
   import('@/pages/PortfolioPage').then((m) => ({ default: m.PortfolioPage }))
@@ -56,8 +57,18 @@ const AdminSettingsPage = lazy(() =>
 
 function RouteLoadingFallback() {
   return (
-    <div className="flex items-center justify-center min-h-[40vh] text-sm text-slate-400">
-      Loading view...
+    <div className="space-y-6 p-2 sm:p-4" aria-label="Loading view">
+      <div className="space-y-2">
+        <Skeleton className="h-7 w-48" />
+        <Skeleton className="h-4 w-72 max-w-full" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Skeleton className="h-28 rounded-2xl" />
+        <Skeleton className="h-28 rounded-2xl" />
+        <Skeleton className="h-28 rounded-2xl hidden sm:block" />
+        <Skeleton className="h-28 rounded-2xl hidden lg:block" />
+      </div>
+      <Skeleton className="h-64 rounded-2xl" />
     </div>
   );
 }

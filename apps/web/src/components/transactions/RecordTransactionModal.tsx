@@ -401,6 +401,7 @@ export function RecordTransactionModal({
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="any"
                 required
                 value={amount}
@@ -416,6 +417,7 @@ export function RecordTransactionModal({
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="any"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}

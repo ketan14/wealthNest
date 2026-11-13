@@ -139,6 +139,7 @@ export function RecordEmiPaymentModal({
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="any"
                 required
                 value={paymentAmountStr}
@@ -153,6 +154,7 @@ export function RecordEmiPaymentModal({
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="any"
                 value={extraPrepaymentStr}
                 onChange={(e) => setExtraPrepaymentStr(e.target.value)}

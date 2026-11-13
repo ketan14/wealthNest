@@ -326,6 +326,7 @@ export function AddHoldingModal({
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="any"
                 required
                 value={quantity}
@@ -346,6 +347,7 @@ export function AddHoldingModal({
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="any"
                 required
                 value={unitCost}
@@ -361,6 +363,7 @@ export function AddHoldingModal({
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="any"
                 value={currentValue}
                 onChange={(e) => setCurrentValue(e.target.value)}

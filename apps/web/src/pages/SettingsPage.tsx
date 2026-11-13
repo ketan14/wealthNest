@@ -23,10 +23,12 @@ import { DataPortabilityTab } from '@/components/settings/DataPortabilityTab';
 import { SystemDiagnosticsTab } from '@/components/settings/SystemDiagnosticsTab';
 import { saveTextFile, openTextFile } from '@/lib/tauri/tauri-file-dialog';
 import { isTauri } from '@/lib/tauri/tauri-runtime';
+import { useToast } from '@/components/ui/Toast';
 
 type SettingsTab = 'profile' | 'family' | 'connection' | 'localization' | 'data' | 'system';
 
 export function SettingsPage() {
+  const { showToast } = useToast();
   const {
     preferences,
     displayName,
@@ -137,7 +139,7 @@ export function SettingsPage() {
           setTimeout(() => setExportSuccessMessage(null), 4000);
         }
       } else {
-        alert(res.error.message);
+        showToast(res.error.message, 'error');
       }
     } finally {
       setIsExporting(false);

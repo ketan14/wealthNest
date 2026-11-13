@@ -120,6 +120,7 @@ export function UpdateValuationModal({
             </label>
             <input
               type="number"
+              inputMode="decimal"
               step="any"
               required
               value={valuationStr}
