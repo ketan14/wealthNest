@@ -17,6 +17,7 @@ import {
   evaluateAutomatedHouseholdAlerts,
   FinancialAlert,
   summarizeDocumentVault,
+  filterRecordsByPrivacy,
 } from '@wealthnest/domain';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -51,13 +52,13 @@ export function HomePage() {
   const { user } = useAuth();
   const userId = user?.id || 'demo-user';
   const { holdingRepo, liabilityRepo, transactionRepo, documentVaultRepo } = useRepositories();
-  const { selectedMemberId } = useFamily();
+  const { selectedMemberId, privacyRules } = useFamily();
   const { currencySymbol, preferences } = usePreferences();
   const locale = preferences.numberFormat || 'en-IN';
 
   // 1. Fetch Holdings for Portfolio & Asset Allocation
   const { data: holdings = [] } = useQuery<HoldingDetailDto[]>({
-    queryKey: ['holdings', userId, selectedMemberId],
+    queryKey: ['holdings', userId, selectedMemberId, privacyRules],
     queryFn: async () => {
       const result = await holdingRepo.listDetailsByUser(userId);
       if (!result.success) return [];
@@ -65,7 +66,7 @@ export function HomePage() {
       if (selectedMemberId !== 'all') {
         list = list.filter((h: HoldingDetailDto) => h.memberId === selectedMemberId);
       }
-      return list;
+      return filterRecordsByPrivacy(list, selectedMemberId, privacyRules);
     },
   });
 

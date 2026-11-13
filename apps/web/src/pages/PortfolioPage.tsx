@@ -6,6 +6,7 @@ import {
   calculatePortfolioSummary,
   PortfolioSummary,
   HoldingValuationItem,
+  filterRecordsByPrivacy,
 } from '@wealthnest/domain';
 import {
   GetPortfolioSummaryUseCase,
@@ -57,7 +58,7 @@ import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 export function PortfolioPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { selectedMemberId, selectedAccountId, members, accounts } = useFamily();
+  const { selectedMemberId, selectedAccountId, members, accounts, privacyRules } = useFamily();
   const { isSupportModeActive, supportData } = useSupportSession();
   const { currencySymbol, preferences } = usePreferences();
   const locale = preferences.numberFormat || 'en-IN';
@@ -157,9 +158,9 @@ export function PortfolioPage() {
     return localDemoHoldings;
   }, [isSupportModeActive, supportData, user, dbPortfolioData, localDemoHoldings]);
 
-  // Active holdings filtered by Family Member / Legal Entity & Demat Account
+  // Active holdings filtered by Family Member / Legal Entity, Demat Account & Privacy Rules
   const activeHoldings: HoldingDetailDto[] = useMemo(() => {
-    return allHoldings.filter((h) => {
+    const memberAccountFiltered = allHoldings.filter((h) => {
       if (selectedMemberId !== 'all') {
         const belongs =
           h.memberId === selectedMemberId || (!h.memberId && selectedMemberId === 'mem-self');
@@ -170,7 +171,8 @@ export function PortfolioPage() {
       }
       return true;
     });
-  }, [allHoldings, selectedMemberId, selectedAccountId]);
+    return filterRecordsByPrivacy(memberAccountFiltered, selectedMemberId, privacyRules);
+  }, [allHoldings, selectedMemberId, selectedAccountId, privacyRules]);
 
   // Real-time market quote synchronization and live stock polling
   const handleQuotesUpdated = useCallback((quoteList: readonly MarketQuoteDto[]) => {

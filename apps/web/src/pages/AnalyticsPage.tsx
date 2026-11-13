@@ -17,6 +17,7 @@ import {
   calculateSection112aHarvestingPlan,
   Section112aHarvestingPlan,
   RawHarvestInputHolding,
+  filterRecordsByPrivacy,
 } from '@wealthnest/domain';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -178,7 +179,7 @@ const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
 export function AnalyticsPage() {
   const { user } = useAuth();
   const userId = user?.id || '';
-  const { selectedMemberId, selectedAccountId, members, activeMember } = useFamily();
+  const { selectedMemberId, selectedAccountId, members, activeMember, privacyRules } = useFamily();
   const { currencySymbol, preferences } = usePreferences();
   const locale = preferences.numberFormat || 'en-IN';
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
@@ -199,9 +200,9 @@ export function AnalyticsPage() {
     enabled: true,
   });
 
-  // Filter holdings based on selected family member and demat account
+  // Filter holdings based on selected family member, demat account & privacy rules
   const holdings = useMemo(() => {
-    return rawHoldings.filter((h) => {
+    const memberAccountFiltered = rawHoldings.filter((h) => {
       if (selectedMemberId !== 'all') {
         const belongs =
           h.memberId === selectedMemberId || (!h.memberId && selectedMemberId === 'mem-self');
@@ -212,7 +213,8 @@ export function AnalyticsPage() {
       }
       return true;
     });
-  }, [rawHoldings, selectedMemberId, selectedAccountId]);
+    return filterRecordsByPrivacy(memberAccountFiltered, selectedMemberId, privacyRules);
+  }, [rawHoldings, selectedMemberId, selectedAccountId, privacyRules]);
 
   // 2. Query transactions
   const { data: rawTransactions = [] } = useQuery<TransactionDetailDto[]>({
@@ -226,9 +228,9 @@ export function AnalyticsPage() {
     enabled: true,
   });
 
-  // Filter transactions based on selected family member and demat account
+  // Filter transactions based on selected family member, demat account & privacy rules
   const transactions = useMemo(() => {
-    return rawTransactions.filter((t) => {
+    const memberAccountFiltered = rawTransactions.filter((t) => {
       if (selectedMemberId !== 'all') {
         const belongs =
           t.memberId === selectedMemberId || (!t.memberId && selectedMemberId === 'mem-self');
@@ -239,7 +241,8 @@ export function AnalyticsPage() {
       }
       return true;
     });
-  }, [rawTransactions, selectedMemberId, selectedAccountId]);
+    return filterRecordsByPrivacy(memberAccountFiltered, selectedMemberId, privacyRules);
+  }, [rawTransactions, selectedMemberId, selectedAccountId, privacyRules]);
 
   // 3. Compute pure domain analytics
   const analytics: PortfolioAnalyticsSummary = useMemo(() => {

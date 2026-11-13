@@ -10,6 +10,7 @@ import {
   isInflow,
   isOutflow,
   isTransfer,
+  filterRecordsByPrivacy,
 } from '@wealthnest/domain';
 import {
   GetCashflowSummaryUseCase,
@@ -184,7 +185,7 @@ const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
 export function TransactionsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { selectedMemberId, selectedAccountId, members, accounts } = useFamily();
+  const { selectedMemberId, selectedAccountId, members, accounts, privacyRules } = useFamily();
   const { isSupportModeActive } = useSupportSession();
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -249,9 +250,9 @@ export function TransactionsPage() {
     return localDemoTransactions;
   }, [user, dbCashflowData, localDemoTransactions]);
 
-  // Active transactions filtered by Family Member / Entity & Demat Account
+  // Active transactions filtered by Family Member / Entity, Demat Account & Privacy Rules
   const activeTransactions: TransactionDetailDto[] = useMemo(() => {
-    return allTransactions.filter((tx) => {
+    const memberAccountFiltered = allTransactions.filter((tx) => {
       if (selectedMemberId !== 'all') {
         const belongs =
           tx.memberId === selectedMemberId || (!tx.memberId && selectedMemberId === 'mem-self');
@@ -262,7 +263,8 @@ export function TransactionsPage() {
       }
       return true;
     });
-  }, [allTransactions, selectedMemberId, selectedAccountId]);
+    return filterRecordsByPrivacy(memberAccountFiltered, selectedMemberId, privacyRules);
+  }, [allTransactions, selectedMemberId, selectedAccountId, privacyRules]);
 
   // Pure Domain Summary calculation with Money value objects
   const summary: CashflowSummary = useMemo(() => {
