@@ -21,6 +21,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { AccessibleChartContainer } from '@/components/ui/AccessibleChartContainer';
+import { CasReconciliationCard } from '@/components/analytics/CasReconciliationCard';
 import {
   TrendingUp,
   Sparkles,
@@ -1226,6 +1227,9 @@ export function AnalyticsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* CAS <-> Broker Tradebook Auto-Reconciliation */}
+      <CasReconciliationCard holdings={holdings} />
 
       {/* Concentration Risk Alert & Guidance */}
       {analytics.concentration.warning && (
