@@ -14,6 +14,7 @@ import {
 import { NetWorthSummary, Money, PropertyEquityDetail } from '@wealthnest/domain';
 import { AddLiabilityModal } from '@/components/liabilities/AddLiabilityModal';
 import { UpdateBalanceModal } from '@/components/liabilities/UpdateBalanceModal';
+import { RecordEmiPaymentModal } from '@/components/liabilities/RecordEmiPaymentModal';
 import { UpdateValuationModal } from '@/components/liabilities/UpdateValuationModal';
 import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -113,6 +114,7 @@ export function LiabilitiesPage() {
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [editingLiability, setEditingLiability] = useState<LiabilityDto | null>(null);
   const [balanceModalLiability, setBalanceModalLiability] = useState<LiabilityDto | null>(null);
+  const [emiModalLiability, setEmiModalLiability] = useState<LiabilityDto | null>(null);
   const [liabilityToDelete, setLiabilityToDelete] = useState<LiabilityDto | null>(null);
 
   // Valuation modal state
@@ -834,6 +836,16 @@ export function LiabilitiesPage() {
                         <td className="py-3.5 px-4">
                           <div className="flex items-center justify-center gap-1">
                             <Button
+                              variant="default"
+                              size="sm"
+                              className="h-7 text-[11px] gap-1 px-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium"
+                              onClick={() => setEmiModalLiability(l)}
+                              title="Record monthly EMI and interest split"
+                            >
+                              <Landmark className="w-3 h-3" />
+                              Pay EMI
+                            </Button>
+                            <Button
                               variant="secondary"
                               size="sm"
                               className="h-7 text-[11px] gap-1 px-2.5"
@@ -841,7 +853,7 @@ export function LiabilitiesPage() {
                               title="Record a new outstanding balance"
                             >
                               <History className="w-3 h-3 text-primary" />
-                              Update Bal
+                              Bal
                             </Button>
                             <Button
                               variant="ghost"
@@ -894,6 +906,18 @@ export function LiabilitiesPage() {
         isOpen={Boolean(balanceModalLiability)}
         onClose={() => setBalanceModalLiability(null)}
         liability={balanceModalLiability}
+        userId={userId}
+        onSuccess={() => {
+          refetchLiabilities();
+          refetchSummary();
+        }}
+      />
+
+      {/* Record EMI Payment with Automatic Interest & Principal Split */}
+      <RecordEmiPaymentModal
+        isOpen={Boolean(emiModalLiability)}
+        onClose={() => setEmiModalLiability(null)}
+        liability={emiModalLiability}
         userId={userId}
         onSuccess={() => {
           refetchLiabilities();

@@ -1,462 +1,460 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import {
-  GetSystemStatusUseCase,
-  SystemStatusDto,
   ListAssetClassesUseCase,
   GetNetWorthSummaryUseCase,
+  GetCashflowSummaryUseCase,
+  HoldingDetailDto,
 } from '@wealthnest/application';
-import { Money, AssetClassDefinition, NetWorthSummary } from '@wealthnest/domain';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import {
+  Money,
+  AssetClassDefinition,
+  NetWorthSummary,
+  CashflowSummary,
+  calculatePortfolioSummary,
+  HoldingValuationItem,
+} from '@wealthnest/domain';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { AuthCard } from '@/components/auth/AuthCard';
 import { useRepositories } from '@/lib/persistence/repository-context';
 import { useAuth } from '@/lib/supabase/auth-context';
+import { useFamily } from '@/lib/family/family-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
+import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import {
-  CheckCircle2,
-  Layers,
-  Cpu,
-  Box,
-  Sparkles,
-  ArrowRight,
-  Database,
-  ExternalLink,
-  Landmark,
   Wallet,
   TrendingDown,
+  TrendingUp,
+  Landmark,
+  ShieldCheck,
+  Target,
+  ArrowRight,
+  Plus,
+  AlertCircle,
+  Clock,
+  PieChart,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Calendar,
+  Sparkles,
+  Layers,
   Percent,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 export function HomePage() {
   const { user } = useAuth();
-  const userId = user?.id || '';
-  const { assetClassRepo, holdingRepo, liabilityRepo } = useRepositories();
+  const userId = user?.id || 'demo-user';
+  const { holdingRepo, liabilityRepo, transactionRepo, assetClassRepo } = useRepositories();
+  const { members, selectedMemberId } = useFamily();
   const { currencySymbol, preferences } = usePreferences();
   const locale = preferences.numberFormat || 'en-IN';
 
-  // Query 1: System status use case
-  const { data: systemStatus, isLoading } = useQuery<SystemStatusDto>({
-    queryKey: ['system-status'],
-    queryFn: () => {
-      const useCase = new GetSystemStatusUseCase();
-      const result = useCase.execute();
-      if (!result.success) throw result.error;
-      return result.value;
+  // 1. Fetch Holdings for Portfolio & Asset Allocation
+  const { data: holdings = [], isLoading: isLoadingHoldings } = useQuery<HoldingDetailDto[]>({
+    queryKey: ['holdings', userId, selectedMemberId],
+    queryFn: async () => {
+      const result = await holdingRepo.findHoldings(userId);
+      if (!result.success) return [];
+      let list = result.value;
+      if (selectedMemberId !== 'all') {
+        list = list.filter((h) => h.memberId === selectedMemberId);
+      }
+      return list;
     },
   });
 
-  // Query 2: Asset classes via Supabase adapter
-  const { data: assetClasses, isLoading: isLoadingAssetClasses } = useQuery<AssetClassDefinition[]>(
-    {
-      queryKey: ['asset-classes'],
-      queryFn: async () => {
-        const useCase = new ListAssetClassesUseCase(assetClassRepo);
-        const result = await useCase.execute();
-        if (!result.success) return [];
-        return result.value;
-      },
-      retry: 0,
-    }
-  );
-
-  // Query 3: Net Worth Summary (Assets minus Liabilities)
-  const { data: netWorthSummary } = useQuery<NetWorthSummary | null>({
+  // 2. Fetch Net Worth Summary (Assets vs Liabilities)
+  const { data: netWorthSummary, isLoading: isLoadingNetWorth } = useQuery<NetWorthSummary | null>({
     queryKey: ['net-worth-summary', userId],
     queryFn: async () => {
-      if (!userId) return null;
       const useCase = new GetNetWorthSummaryUseCase(holdingRepo, liabilityRepo);
       const result = await useCase.execute({ userId });
       if (!result.success) return null;
       return result.value;
     },
-    enabled: Boolean(userId),
   });
 
-  const totalAssets = netWorthSummary?.totalAssets.toDecimal() ?? 0;
+  // 3. Fetch Cashflow Summary (Inflows & Outflows)
+  const { data: cashflowSummary } = useQuery<CashflowSummary | null>({
+    queryKey: ['cashflow-summary', userId],
+    queryFn: async () => {
+      const useCase = new GetCashflowSummaryUseCase(transactionRepo);
+      const result = await useCase.execute({ userId });
+      if (!result.success) return null;
+      return result.value;
+    },
+  });
+
+  // Pure domain portfolio summary
+  const valuationItems: HoldingValuationItem[] = holdings.map((h) => ({
+    holdingId: h.holdingId,
+    assetClassId: h.assetClassId,
+    assetClassName: h.assetClassName || 'Asset',
+    colorHex: h.assetClassColor || '#3b82f6',
+    quantity: h.quantity,
+    costBasis: Money.fromCents(BigInt(Math.round(h.quantity * (h.unitCostCents || 0))), 'INR'),
+    currentValue: Money.fromCents(BigInt(h.currentValueCents || 0), 'INR'),
+  }));
+
+  const portfolioSummary = calculatePortfolioSummary(valuationItems, 'INR');
+
+  // Liquid assets estimation (Cash, Deposits, Mutual Funds)
+  const liquidAssetClasses = new Set(['cash_and_bank', 'liquid_funds', 'mutual_fund']);
+  const liquidHoldings = holdings.filter((h) => liquidAssetClasses.has(h.assetClassId));
+  const liquidValuationCents = liquidHoldings.reduce(
+    (sum, h) => sum + BigInt(h.currentValueCents || 0),
+    0n
+  );
+  const liquidAssets = Money.fromCents(liquidValuationCents, 'INR').toDecimal();
+
+  // Metrics derived safely
+  const totalAssets = netWorthSummary?.totalAssets.toDecimal() ?? portfolioSummary.totalValue.toDecimal();
   const totalLiabilities = netWorthSummary?.totalLiabilities.toDecimal() ?? 0;
-  const netWorth = netWorthSummary?.netWorth.toDecimal() ?? 0;
-  const isSolvent = netWorthSummary?.isSolvent ?? true;
-  const debtToAssets = (netWorthSummary?.debtToAssetsRatio ?? 0) * 100;
+  const netWorth = totalAssets - totalLiabilities;
+  const isSolvent = netWorth >= 0;
+  const debtToAssets = totalAssets > 0 ? (totalLiabilities / totalAssets) * 100 : 0;
   const totalMonthlyEmi = netWorthSummary?.totalMonthlyEmi.toDecimal() ?? 0;
 
-  // Pure domain test calculation to verify domain package export boundary
-  const demoMoneyA = Money.fromDecimal(150000.5, 'INR');
-  const demoMoneyB = Money.fromDecimal(49999.5, 'INR');
-  const totalDemo = demoMoneyA.add(demoMoneyB);
+  // Monthly Cashflow figures
+  const monthlyInflow = cashflowSummary?.totalInflow.toDecimal() ?? 0;
+  const monthlyOutflow = cashflowSummary?.totalOutflow.toDecimal() ?? 0;
+  const netMonthlySavings = monthlyInflow - monthlyOutflow;
+
+  // Emergency runway estimate (Liquid / Monthly Outflow)
+  const monthlyBurn = monthlyOutflow > 0 ? monthlyOutflow : totalMonthlyEmi > 0 ? totalMonthlyEmi * 1.5 : 100000;
+  const runwayMonths = monthlyBurn > 0 ? (liquidAssets / monthlyBurn).toFixed(1) : '6+';
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-slate-900/80 via-slate-900/40 to-emerald-950/20 p-8 shadow-xl">
-        <div className="relative z-10 max-w-3xl space-y-4">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-            <Sparkles className="w-3.5 h-3.5" />
-            Phase 5: Loans & Liabilities Integration
-          </div>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-            WealthNest Financial Health
-          </h2>
-          <p className="text-base text-muted-foreground leading-relaxed">
-            Personal wealth operating system integrating verified assets, CAS imports, mortgages,
-            and loan obligations into unified net worth and cash flow analytics.
+      {/* Family Entity Filter Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
+            <ShieldCheck className="w-7 h-7 text-emerald-400" />
+            Family Wealth Overview
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Combined position, liquidity reserves, and financial commitments
           </p>
-
-          <div className="flex flex-wrap gap-3 pt-2">
-            {!user && (
-              <Link to="/signup">
-                <Button className="gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs">
-                  Get Started
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
-            )}
-            <Link to="/portfolio">
-              <Button variant={!user ? 'outline' : 'default'} className="gap-2 text-xs">
-                Portfolio Module
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-            <Link to="/liabilities">
-              <Button variant="secondary" className="gap-2 text-xs">
-                <Landmark className="w-4 h-4 text-primary" />
-                Loans & Liabilities
-              </Button>
-            </Link>
-            <a
-              href="http://localhost:54323"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-block"
-            >
-              <Button variant="outline" className="gap-2 font-mono text-xs">
-                <Database className="w-4 h-4 text-emerald-400" />
-                Supabase Studio
-                <ExternalLink className="w-3 h-3 text-muted-foreground" />
-              </Button>
-            </a>
-          </div>
         </div>
-
-        {/* Decorative background glow */}
-        <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+        <div className="flex items-center gap-2">
+          <Link to="/transactions?action=new">
+            <Button size="sm" variant="outline" className="gap-1.5 text-xs">
+              <Plus className="w-3.5 h-3.5 text-primary" />
+              Add Transaction
+            </Button>
+          </Link>
+          <Link to="/portfolio?action=new">
+            <Button size="sm" className="gap-1.5 text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold">
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              Add Asset
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      {/* Integrated Net Worth Dashboard Cards */}
+      <FamilyFilterBar />
+
+      {/* Top 4 Executive Financial Health KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Net Worth */}
-        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
+        {/* 1. Total Net Worth */}
+        <Card className="border-border/80 bg-card/60 backdrop-blur-sm relative overflow-hidden">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between text-muted-foreground text-xs uppercase font-semibold">
-              <span>Total Net Worth</span>
+              <span>Family Net Worth</span>
               <Wallet className="w-4 h-4 text-emerald-400" />
             </div>
             <CardTitle
-              className={`text-2xl font-bold font-mono tracking-tight pt-1 ${
+              className={`text-2xl sm:text-3xl font-bold font-mono tracking-tight pt-1 ${
                 isSolvent ? 'text-emerald-400' : 'text-rose-400'
               }`}
             >
               {isSolvent ? currencySymbol : `-${currencySymbol}`}
-              {netWorth.toLocaleString(locale, { maximumFractionDigits: 0 })}
+              {Math.abs(netWorth).toLocaleString(locale, { maximumFractionDigits: 0 })}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-xs text-muted-foreground">
-              Assets ({currencySymbol}{totalAssets.toLocaleString(locale, { maximumFractionDigits: 0 })}) - Debt
+              Assets {currencySymbol}{totalAssets.toLocaleString(locale, { maximumFractionDigits: 0 })} - Debt {currencySymbol}{totalLiabilities.toLocaleString(locale, { maximumFractionDigits: 0 })}
             </p>
           </CardContent>
+          <div className="absolute -right-6 -bottom-6 w-20 h-20 rounded-full bg-emerald-500/10 blur-xl pointer-events-none" />
         </Card>
 
-        {/* Total Outstanding Liabilities */}
-        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
+        {/* 2. Liquid Reserves & Runway */}
+        <Card className="border-border/80 bg-card/60 backdrop-blur-sm relative overflow-hidden">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between text-muted-foreground text-xs uppercase font-semibold">
-              <span>Outstanding Debt</span>
-              <TrendingDown className="w-4 h-4 text-rose-400" />
+              <span>Liquid Reserves</span>
+              <ShieldCheck className="w-4 h-4 text-blue-400" />
             </div>
-            <CardTitle className="text-2xl font-bold font-mono tracking-tight text-foreground pt-1">
-              {currencySymbol}{totalLiabilities.toLocaleString(locale, { maximumFractionDigits: 0 })}
+            <CardTitle className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-foreground pt-1">
+              {currencySymbol}{liquidAssets.toLocaleString(locale, { maximumFractionDigits: 0 })}
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="pt-0 flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Cash, Bank & Mutual Funds</p>
+            <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-300 border-blue-500/30">
+              ~{runwayMonths} mos runway
+            </Badge>
+          </CardContent>
+          <div className="absolute -right-6 -bottom-6 w-20 h-20 rounded-full bg-blue-500/10 blur-xl pointer-events-none" />
+        </Card>
+
+        {/* 3. Monthly Debt Service (EMI) */}
+        <Card className="border-border/80 bg-card/60 backdrop-blur-sm relative overflow-hidden">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between text-muted-foreground text-xs uppercase font-semibold">
+              <span>Monthly EMI Outflow</span>
+              <Landmark className="w-4 h-4 text-amber-400" />
+            </div>
+            <CardTitle className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-foreground pt-1">
+              {currencySymbol}{totalMonthlyEmi.toLocaleString(locale, { maximumFractionDigits: 0 })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 flex items-center justify-between">
             <Link
               to="/liabilities"
               className="text-xs text-primary hover:underline inline-flex items-center gap-1"
             >
-              View loans & mortgages →
+              Manage debt obligations →
             </Link>
-          </CardContent>
-        </Card>
-
-        {/* Monthly EMI Outflow */}
-        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between text-muted-foreground text-xs uppercase font-semibold">
-              <span>Monthly EMI</span>
-              <Landmark className="w-4 h-4 text-amber-400" />
-            </div>
-            <CardTitle className="text-2xl font-bold font-mono tracking-tight text-foreground pt-1">
-              {currencySymbol}{totalMonthlyEmi.toLocaleString(locale, { maximumFractionDigits: 0 })}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-xs text-muted-foreground">Monthly cash outflow for debt service</p>
-          </CardContent>
-        </Card>
-
-        {/* Debt-To-Assets Ratio */}
-        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between text-muted-foreground text-xs uppercase font-semibold">
-              <span>Debt-To-Assets</span>
-              <Percent className="w-4 h-4 text-blue-400" />
-            </div>
-            <CardTitle className="text-2xl font-bold font-mono tracking-tight text-foreground pt-1">
-              {debtToAssets.toFixed(1)}%
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
             <Badge
-              variant={
-                debtToAssets <= 30 ? 'success' : debtToAssets <= 50 ? 'secondary' : 'destructive'
-              }
+              variant={debtToAssets <= 30 ? 'success' : debtToAssets <= 50 ? 'secondary' : 'destructive'}
               className="text-[10px]"
             >
-              {debtToAssets <= 30
-                ? 'Low Leverage'
-                : debtToAssets <= 50
-                  ? 'Moderate'
-                  : 'High Leverage'}
+              {debtToAssets.toFixed(1)}% Leverage
             </Badge>
           </CardContent>
+          <div className="absolute -right-6 -bottom-6 w-20 h-20 rounded-full bg-amber-500/10 blur-xl pointer-events-none" />
+        </Card>
+
+        {/* 4. Monthly Net Savings / Cashflow */}
+        <Card className="border-border/80 bg-card/60 backdrop-blur-sm relative overflow-hidden">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between text-muted-foreground text-xs uppercase font-semibold">
+              <span>Net Monthly Flow</span>
+              {netMonthlySavings >= 0 ? (
+                <TrendingUp className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <TrendingDown className="w-4 h-4 text-rose-400" />
+              )}
+            </div>
+            <CardTitle
+              className={`text-2xl sm:text-3xl font-bold font-mono tracking-tight pt-1 ${
+                netMonthlySavings >= 0 ? 'text-emerald-400' : 'text-rose-400'
+              }`}
+            >
+              {netMonthlySavings >= 0 ? `+${currencySymbol}` : `-${currencySymbol}`}
+              {Math.abs(netMonthlySavings).toLocaleString(locale, { maximumFractionDigits: 0 })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              +{currencySymbol}{monthlyInflow.toLocaleString(locale, { maximumFractionDigits: 0 })} in / -{currencySymbol}{monthlyOutflow.toLocaleString(locale, { maximumFractionDigits: 0 })} out
+            </p>
+          </CardContent>
+          <div className="absolute -right-6 -bottom-6 w-20 h-20 rounded-full bg-emerald-500/10 blur-xl pointer-events-none" />
         </Card>
       </div>
 
-      {/* Grid: Auth Card + Supabase Database Manager Card */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Authentication Card */}
-        <AuthCard />
-
-        {/* Database GUI (Supabase Studio) Card */}
-        <Card className="border-border/80 bg-card/60 backdrop-blur-md flex flex-col justify-between">
+      {/* Grid: Asset Allocation Breakdown & Actionable Attention Radar */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left (2 cols): Asset Allocation Portfolio Distribution */}
+        <Card className="lg:col-span-2 border-border/80 bg-card/60 backdrop-blur-sm flex flex-col justify-between">
           <div>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Database className="w-5 h-5 text-emerald-400" />
-                  <CardTitle className="text-base">Database GUI (Supabase Studio)</CardTitle>
+                  <PieChart className="w-5 h-5 text-primary" />
+                  <CardTitle className="text-base font-semibold">Asset Allocation Distribution</CardTitle>
                 </div>
-                <Badge variant="success">phpMyAdmin Alternative</Badge>
+                <Link to="/portfolio" className="text-xs text-primary hover:underline flex items-center gap-1">
+                  View Full Portfolio <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
               <CardDescription>
-                Visual PostgreSQL table browser, SQL editor, and RLS policy manager.
+                Diversification across physical assets, demat equities, mutual funds, and cash
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Supabase Studio is your local web-based database manager running at port{' '}
-                <code className="text-primary font-mono font-semibold">54323</code>. You can inspect
-                tables, edit rows directly, and test SQL queries with a spreadsheet-like GUI.
-              </p>
-              <div className="p-3 rounded-lg bg-secondary/40 border border-border/50 text-xs font-mono space-y-1">
-                <p className="text-muted-foreground">
-                  Postgres Port: <span className="text-foreground">54322</span>
-                </p>
-                <p className="text-muted-foreground">
-                  Studio URL: <span className="text-primary">http://localhost:54323</span>
-                </p>
-                <p className="text-muted-foreground">
-                  Auth API: <span className="text-foreground">http://localhost:54321</span>
-                </p>
+
+            <CardContent className="space-y-4">
+              {/* Distribution Horizontal Progress Bar */}
+              <div className="h-3 w-full bg-secondary/60 rounded-full overflow-hidden flex gap-0.5">
+                {portfolioSummary.allocations.length > 0 ? (
+                  portfolioSummary.allocations.map((alloc) => (
+                    <div
+                      key={alloc.assetClassId}
+                      style={{
+                        width: `${Math.max(alloc.percentage, 2)}%`,
+                        backgroundColor: alloc.colorHex || '#3b82f6',
+                      }}
+                      title={`${alloc.name}: ${alloc.percentage.toFixed(1)}%`}
+                    />
+                  ))
+                ) : (
+                  <div className="w-full bg-muted" />
+                )}
+              </div>
+
+              {/* Allocation Legend Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
+                {portfolioSummary.allocations.map((alloc) => (
+                  <div
+                    key={alloc.assetClassId}
+                    className="p-3 rounded-xl bg-secondary/30 border border-border/50 flex flex-col justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: alloc.colorHex || '#3b82f6' }}
+                      />
+                      <span className="text-xs font-medium text-foreground truncate">
+                        {alloc.name}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-baseline justify-between">
+                      <span className="text-sm font-bold font-mono text-foreground">
+                        {currencySymbol}
+                        {alloc.totalValue.toDecimal().toLocaleString(locale, { maximumFractionDigits: 0 })}
+                      </span>
+                      <span className="text-xs font-semibold text-muted-foreground font-mono">
+                        {alloc.percentage.toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </div>
-          <div className="p-6 pt-0">
-            <a
-              href="http://localhost:54323"
-              target="_blank"
-              rel="noreferrer"
-              className="w-full inline-block"
-            >
-              <Button variant="outline" size="sm" className="w-full gap-2 font-mono">
-                Launch Supabase Studio
-                <ExternalLink className="w-3.5 h-3.5" />
-              </Button>
-            </a>
+
+          <div className="p-4 border-t border-border/50 bg-secondary/10 flex items-center justify-between text-xs text-muted-foreground">
+            <span>Total Tracked Capital: <strong className="text-foreground">{currencySymbol}{portfolioSummary.totalValue.toDecimal().toLocaleString(locale, { maximumFractionDigits: 0 })}</strong></span>
+            <span>Positions: <strong className="text-foreground">{holdings.length}</strong></span>
           </div>
+        </Card>
+
+        {/* Right (1 col): Actionable Family Attention Items */}
+        <Card className="border-border/80 bg-card/60 backdrop-blur-sm flex flex-col">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-400" />
+              <CardTitle className="text-base font-semibold">Action & Attention</CardTitle>
+            </div>
+            <CardDescription>
+              Upcoming commitments, valuations, and tax considerations
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 flex-1 flex flex-col justify-between">
+            <div className="space-y-2.5">
+              {/* Item 1: Upcoming EMI */}
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
+                <Calendar className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div className="text-xs space-y-0.5">
+                  <p className="font-semibold text-foreground">Upcoming EMI Obligations</p>
+                  <p className="text-muted-foreground">
+                    Estimated {currencySymbol}{totalMonthlyEmi.toLocaleString(locale, { maximumFractionDigits: 0 })} monthly debt service due across active loans.
+                  </p>
+                </div>
+              </div>
+
+              {/* Item 2: Section 112A HUF Exemption */}
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-3">
+                <Percent className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="text-xs space-y-0.5">
+                  <p className="font-semibold text-foreground">HUF Section 112A Tax Shield</p>
+                  <p className="text-muted-foreground">
+                    ₹1,25,000 annual LTCG tax-free exemption active for Shamalbhai Vaghela HUF.
+                  </p>
+                </div>
+              </div>
+
+              {/* Item 3: Valuation Freshness */}
+              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-start gap-3">
+                <Clock className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                <div className="text-xs space-y-0.5">
+                  <p className="font-semibold text-foreground">Appraisal & Valuation Check</p>
+                  <p className="text-muted-foreground">
+                    Physical real estate and jewelry appraisals are current for Q4.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-3">
+              <Link to="/analytics" className="w-full inline-block">
+                <Button variant="outline" size="sm" className="w-full gap-2 text-xs">
+                  Inspect Tax & Performance Radar
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
         </Card>
       </div>
 
-      {/* Asset Class Taxonomy (Database Seeded Table) */}
-      <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Database className="w-5 h-5 text-primary" />
-              <CardTitle>Asset Class Taxonomy (Database Schema)</CardTitle>
+      {/* Quick Access Navigation Row for Modules */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Link to="/portfolio" className="group">
+          <Card className="p-4 border-border/70 hover:border-primary/50 transition-all bg-card/40 hover:bg-card/70 group-hover:shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-blue-500/15 text-blue-400 group-hover:scale-105 transition-transform">
+                <PieChart className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Portfolio</p>
+                <p className="text-xs text-muted-foreground">{holdings.length} assets recorded</p>
+              </div>
             </div>
-            <Badge variant="secondary">PostgreSQL Seed</Badge>
-          </div>
-          <CardDescription>
-            Taxonomy classes defined in{' '}
-            <code className="text-primary font-mono">
-              supabase/migrations/20260101000001_core_schema.sql
-            </code>
-            .
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoadingAssetClasses ? (
-            <p className="text-xs text-muted-foreground">Connecting to local database...</p>
-          ) : assetClasses && assetClasses.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5 pt-1">
-              {assetClasses.map((ac) => (
-                <div
-                  key={ac.id}
-                  className="p-3 rounded-lg bg-secondary/30 border border-border/50 text-center space-y-1"
-                >
-                  <span
-                    className="w-3 h-3 rounded-full inline-block"
-                    style={{ backgroundColor: ac.colorHex }}
-                  />
-                  <p className="text-xs font-semibold text-foreground truncate">{ac.name}</p>
-                  <p className="text-[10px] text-muted-foreground font-mono">{ac.id}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-4 rounded-lg bg-secondary/30 border border-dashed border-border/60 text-xs text-muted-foreground">
-              Run <code className="text-primary font-mono">npm run db:start</code> in your terminal
-              to start the local Supabase PostgreSQL containers and seed the taxonomy table.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </Card>
+        </Link>
 
-      {/* Pure Domain Engine Verification */}
-      <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Cpu className="w-5 h-5 text-primary" />
-              <CardTitle>Pure Domain Engine Scaffold Verification</CardTitle>
+        <Link to="/liabilities" className="group">
+          <Card className="p-4 border-border/70 hover:border-amber-500/50 transition-all bg-card/40 hover:bg-card/70 group-hover:shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-amber-500/15 text-amber-400 group-hover:scale-105 transition-transform">
+                <Landmark className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Liabilities</p>
+                <p className="text-xs text-muted-foreground">
+                  {currencySymbol}{totalLiabilities.toLocaleString(locale, { maximumFractionDigits: 0 })} outstanding
+                </p>
+              </div>
             </div>
-            <Badge variant="success">Boundary Verified</Badge>
-          </div>
-          <CardDescription>
-            Validating that framework-independent models from{' '}
-            <code className="text-primary font-mono">@wealthnest/domain</code> execute without
-            floating-point errors.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-            <div className="p-4 rounded-lg bg-secondary/40 border border-border/50">
-              <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                Holding A Value
-              </span>
-              <p className="text-xl font-bold font-mono text-foreground mt-1">
-                {demoMoneyA.format('en-IN')}
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                BigInt paise: {demoMoneyA.cents.toString()}
-              </p>
-            </div>
-            <div className="p-4 rounded-lg bg-secondary/40 border border-border/50">
-              <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                Holding B Value
-              </span>
-              <p className="text-xl font-bold font-mono text-foreground mt-1">
-                {demoMoneyB.format('en-IN')}
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                BigInt paise: {demoMoneyB.cents.toString()}
-              </p>
-            </div>
-            <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-              <span className="text-xs text-primary font-semibold uppercase tracking-wider">
-                Calculated Sum (A + B)
-              </span>
-              <p className="text-xl font-bold font-mono text-emerald-400 mt-1">
-                {totalDemo.format('en-IN')}
-              </p>
-              <p className="text-[11px] text-emerald-400/80 mt-0.5">
-                Strict ISO currency validation
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </Card>
+        </Link>
 
-      {/* Architecture Layers Status */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Layers className="w-5 h-5 text-primary" />
-            <h3 className="text-lg font-semibold text-foreground">Active Architecture Layers</h3>
-          </div>
-          <Badge variant="secondary">npm workspaces</Badge>
-        </div>
+        <Link to="/goals" className="group">
+          <Card className="p-4 border-border/70 hover:border-purple-500/50 transition-all bg-card/40 hover:bg-card/70 group-hover:shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-purple-500/15 text-purple-400 group-hover:scale-105 transition-transform">
+                <Target className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Goals</p>
+                <p className="text-xs text-muted-foreground">Education & Retirement</p>
+              </div>
+            </div>
+          </Card>
+        </Link>
 
-        {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground">
-            Loading architecture status...
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {systemStatus?.layers.map((layer) => (
-              <Card
-                key={layer.name}
-                className="border-border/70 hover:border-border transition-colors"
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base font-medium flex items-center gap-2">
-                      <Box className="w-4 h-4 text-primary" />
-                      {layer.name}
-                    </CardTitle>
-                    <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      <span>{layer.status}</span>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {layer.description}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        <Link to="/transactions" className="group">
+          <Card className="p-4 border-border/70 hover:border-emerald-500/50 transition-all bg-card/40 hover:bg-card/70 group-hover:shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-emerald-500/15 text-emerald-400 group-hover:scale-105 transition-transform">
+                <ArrowUpRight className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Transactions</p>
+                <p className="text-xs text-muted-foreground">Cashflow & Trade Ledger</p>
+              </div>
+            </div>
+          </Card>
+        </Link>
       </div>
-
-      {/* Local Domain & Docker Quick Status */}
-      <Card className="border-border/60 bg-secondary/20">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Environment & Access Configuration</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            <div className="p-3 rounded-md bg-secondary/50 border border-border/40">
-              <span className="text-muted-foreground block mb-1">Local Web Domain</span>
-              <span className="font-mono text-primary font-semibold">http://wealthnest.local</span>
-            </div>
-            <div className="p-3 rounded-md bg-secondary/50 border border-border/40">
-              <span className="text-muted-foreground block mb-1">Supabase Studio (DB GUI)</span>
-              <span className="font-mono text-emerald-400 font-semibold">
-                http://localhost:54323
-              </span>
-            </div>
-            <div className="p-3 rounded-md bg-secondary/50 border border-border/40">
-              <span className="text-muted-foreground block mb-1">PostgreSQL Port</span>
-              <span className="font-mono text-foreground font-semibold">127.0.0.1:54322</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
+export default HomePage;

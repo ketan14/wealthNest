@@ -22,6 +22,7 @@ import { AddHoldingModal, NewHoldingFormValues } from '@/components/portfolio/Ad
 import { EditHoldingModal, UpdateHoldingFormValues } from '@/components/portfolio/EditHoldingModal';
 import { ImportCasModal } from '@/components/portfolio/ImportCasModal';
 import { HoldingCard } from '@/components/portfolio/HoldingCard';
+import { RealEstateSubView } from '@/components/portfolio/RealEstateSubView';
 import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
 import { useIsMobile } from '@/lib/hooks/use-is-mobile';
 import {
@@ -252,7 +253,7 @@ export function PortfolioPage() {
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'all' | 'equities' | 'mutual_funds' | 'grouped'>('all');
+  const [viewMode, setViewMode] = useState<'all' | 'equities' | 'mutual_funds' | 'real_estate' | 'grouped'>('all');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [holdingToDelete, setHoldingToDelete] = useState<HoldingDetailDto | null>(null);
@@ -1046,6 +1047,20 @@ export function PortfolioPage() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => setViewMode('real_estate')}
+                  className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-1.5 ${
+                    viewMode === 'real_estate'
+                      ? 'bg-amber-600 text-white shadow-xs font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <span>Real Estate & Land</span>
+                  <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-background/20 font-bold">
+                    {activeHoldings.filter((h) => h.assetClassId === 'real_estate' || h.assetClassId === 'property').length}
+                  </span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setViewMode('grouped')}
                   className={`px-3 py-1.5 rounded-md font-medium transition-all ${
                     viewMode === 'grouped'
@@ -1618,6 +1633,16 @@ export function PortfolioPage() {
                   </tfoot>
                 )}
               </table>
+            </div>
+          ) : viewMode === 'real_estate' ? (
+            /* VIEW 3: Dedicated Real Estate & Mortgages Sub-View */
+            <div className="p-4 sm:p-6">
+              <RealEstateSubView
+                holdings={activeHoldings}
+                liabilities={liabilities}
+                onAddProperty={() => setIsModalOpen(true)}
+                onEditValuation={(prop) => setEditingHolding(prop)}
+              />
             </div>
           ) : viewMode === 'grouped' ? (
             /* VIEW 3: Grouped by Asset Class */

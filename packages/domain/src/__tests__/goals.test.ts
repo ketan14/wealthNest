@@ -5,6 +5,7 @@ import {
   calculateMonthsRemaining,
   evaluateGoal,
   calculateGoalsSummary,
+  validateHoldingAllocation,
 } from '../goals/goal-calculator.js';
 import { GoalDefinition } from '../goals/goal-types.js';
 
@@ -142,6 +143,56 @@ describe('Domain: Financial Goals Module', () => {
       expect(summary.emergencyFund.recommendedTargetCorpus.toDecimal()).toBe(300000);
       expect(summary.goalsOnTrackCount).toBe(1);
       expect(summary.totalGoalsCount).toBe(1);
+    });
+  });
+
+  describe('validateHoldingAllocation & Over-Allocation Invariants', () => {
+    const existingGoals: GoalDefinition[] = [
+      {
+        id: 'goal-1',
+        userId: 'u-1',
+        name: 'Higher Education for Krisha',
+        category: 'education',
+        targetAmount: Money.fromDecimal(5000000, 'INR'),
+        targetDate: new Date('2038-01-01T00:00:00Z'),
+        initialSaved: Money.zero('INR'),
+        monthlyContribution: Money.zero('INR'),
+        expectedReturnRate: 12.0,
+        inflationRate: 6.0,
+        priority: 'critical',
+        currency: 'INR',
+        linkedHoldings: [
+          {
+            holdingId: 'holding-ppfas',
+            holdingName: 'PPFAS Flexi Cap',
+            allocationPercentage: 60,
+            allocatedValue: Money.fromDecimal(600000, 'INR'),
+          },
+        ],
+      },
+    ];
+
+    it('allows allocation when total percentage <= 100%', () => {
+      const result = validateHoldingAllocation('holding-ppfas', 30, existingGoals);
+      expect(result.isValid).toBe(true);
+      expect(result.totalAllocationPercentage).toBe(90);
+      expect(result.remainingPercentage).toBe(10);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('rejects allocation when total percentage exceeds 100%', () => {
+      const result = validateHoldingAllocation('holding-ppfas', 50, existingGoals);
+      expect(result.isValid).toBe(false);
+      expect(result.totalAllocationPercentage).toBe(110);
+      expect(result.remainingPercentage).toBe(40);
+      expect(result.error).toContain('is over-allocated');
+    });
+
+    it('excludes target goal when updating existing goal allocation', () => {
+      const result = validateHoldingAllocation('holding-ppfas', 80, existingGoals, 'goal-1');
+      expect(result.isValid).toBe(true);
+      expect(result.totalAllocationPercentage).toBe(80);
+      expect(result.remainingPercentage).toBe(20);
     });
   });
 });

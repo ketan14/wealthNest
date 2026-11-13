@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { BottomNavigationBar } from '../components/layout/BottomNavigationBar';
 import { Sidebar } from '../components/layout/Sidebar';
 import { AdminProvider } from '../lib/admin/admin-context';
 
 describe('Phase 9.2: Mobile Navigation Shell & Ergonomics', () => {
-  it('TC-9.2-01A: renders BottomNavigationBar with 5 primary touch tabs', () => {
+  it('TC-9.2-01A: renders BottomNavigationBar with primary touch tabs and elevated Quick-Add button', () => {
     render(
       <MemoryRouter initialEntries={['/portfolio']}>
         <AdminProvider>
@@ -28,12 +28,24 @@ describe('Phase 9.2: Mobile Navigation Shell & Ergonomics', () => {
     expect(screen.getByTestId('bottom-nav-cashflow')).toBeInTheDocument();
     expect(screen.getByTestId('bottom-nav-settings')).toBeInTheDocument();
 
+    // Center Quick-Add action button
+    const quickAddButton = screen.getByTestId('bottom-nav-quick-add');
+    expect(quickAddButton).toBeInTheDocument();
+
     // Verify minimum touch target classes
     const tabs = screen.getAllByRole('link');
     tabs.forEach((tab) => {
       expect(tab.className).toMatch(/min-h-\[44px\]/);
       expect(tab.className).toMatch(/min-w-\[44px\]/);
     });
+
+    // Clicking Quick-Add opens GlobalQuickAddModal
+    fireEvent.click(quickAddButton);
+    expect(screen.getByTestId('global-quick-add-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('quick-action-transaction')).toBeInTheDocument();
+    expect(screen.getByTestId('quick-action-holding')).toBeInTheDocument();
+    expect(screen.getByTestId('quick-action-liability')).toBeInTheDocument();
+    expect(screen.getByTestId('quick-action-goal')).toBeInTheDocument();
   });
 
   it('TC-9.2-01B: Sidebar is responsive and hidden on mobile screens', () => {

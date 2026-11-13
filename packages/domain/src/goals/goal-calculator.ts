@@ -6,7 +6,88 @@ import {
   GoalHealthStatus,
   GoalsSummary,
   EmergencyFundRunway,
+  GoalHoldingLink,
 } from './goal-types.js';
+
+export interface HoldingAllocationValidationResult {
+  readonly isValid: boolean;
+  readonly holdingId: string;
+  readonly totalAllocationPercentage: number;
+  readonly remainingPercentage: number;
+  readonly error?: string;
+}
+
+/**
+ * Validates that an asset or holding is not over-allocated across goals.
+ * Enforces the domain invariant: Total allocation percentage per holding <= 100%.
+ */
+export function validateHoldingAllocation(
+  holdingId: string,
+  newAllocationPercentage: number,
+  existingGoals: readonly GoalDefinition[],
+  excludeGoalId?: string
+): HoldingAllocationValidationResult {
+  let currentTotalPercentage = 0;
+
+  for (const goal of existingGoals) {
+    if (excludeGoalId && goal.id === excludeGoalId) {
+      continue;
+    }
+    for (const link of goal.linkedHoldings) {
+      if (link.holdingId === holdingId) {
+        currentTotalPercentage += link.allocationPercentage;
+      }
+    }
+  }
+
+  const projectedTotal = currentTotalPercentage + newAllocationPercentage;
+  const remainingPercentage = Math.max(0, 100 - currentTotalPercentage);
+
+  if (projectedTotal > 100.001) {
+    return {
+      isValid: false,
+      holdingId,
+      totalAllocationPercentage: projectedTotal,
+      remainingPercentage,
+      error: `Holding ${holdingId} is over-allocated: requested ${newAllocationPercentage.toFixed(1)}%, but only ${remainingPercentage.toFixed(1)}% is available (current: ${currentTotalPercentage.toFixed(1)}%).`,
+    };
+  }
+
+  return {
+    isValid: true,
+    holdingId,
+    totalAllocationPercentage: projectedTotal,
+    remainingPercentage: Math.max(0, 100 - projectedTotal),
+  };
+}
+
+/**
+ * Validates all holding allocations across an entire list of goals.
+ */
+export function validateAllGoalAllocations(
+  goals: readonly GoalDefinition[]
+): { readonly isValid: boolean; readonly errors: readonly string[] } {
+  const allocationMap = new Map<string, number>();
+  const errors: string[] = [];
+
+  for (const goal of goals) {
+    for (const link of goal.linkedHoldings) {
+      const current = allocationMap.get(link.holdingId) || 0;
+      const updated = current + link.allocationPercentage;
+      allocationMap.set(link.holdingId, updated);
+      if (updated > 100.001) {
+        errors.push(
+          `Holding "${link.holdingName || link.holdingId}" is over-allocated (${updated.toFixed(1)}% across goals). Maximum allowed is 100%.`
+        );
+      }
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
 
 /**
  * Calculates remaining months between now and target date.
@@ -48,7 +129,7 @@ export function evaluateGoal(
   const currency = goal.currency;
   const months = calculateMonthsRemaining(goal.targetDate, evaluationDate);
 
-  // 1. Current total corpus (initial savings + sum of linked holdings)
+  // 1. Current total corpus (initial saved + sum of linked holdings)
   let currentCorpus = goal.initialSaved;
   for (const link of goal.linkedHoldings) {
     const val =
@@ -190,8 +271,7 @@ export function calculateGoalsSummary(
     overallPercentage = Number((totalCurrent.cents * 10000n) / totalTarget.cents) / 100;
   }
 
-  // Emergency Fund Runway
-  // 6 months of expenses recommended in India
+  // Emergency Fund Runway (6 months recommended in India)
   const recommendedCents = monthlyExpenses.cents * 6n;
   const recommendedTarget = Money.fromCents(recommendedCents, currency);
 

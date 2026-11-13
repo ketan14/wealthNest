@@ -98,7 +98,7 @@ export function Header() {
 
         <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground bg-accent/40 border border-border/40 px-3 py-1.5 rounded-md font-mono">
           <Globe className="w-3.5 h-3.5 text-primary" />
-          <span>port: 80 / 5173</span>
+          <span>wealthnest.local</span>
         </div>
 
         {/* User Authentication state */}

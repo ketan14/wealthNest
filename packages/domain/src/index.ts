@@ -6,6 +6,7 @@ export * from './models/asset-class.js';
 export * from './models/holding.js';
 export * from './models/transaction.js';
 export * from './models/liability.js';
+export * from './models/loan-amortization.js';
 export * from './models/asset-valuation.js';
 export * from './portfolio/portfolio-summary.js';
 export * from './cashflow/cashflow-summary.js';
