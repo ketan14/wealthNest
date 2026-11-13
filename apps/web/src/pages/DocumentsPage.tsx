@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   FolderLock,
   Upload,
@@ -143,6 +144,7 @@ export function DocumentsPage() {
   const { members, selectedMemberId } = useFamily();
   const { isSupportModeActive } = useSupportSession();
   const vaultRepo = useDocumentVaultRepository();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const useCase = useMemo(() => new ManageDocumentVaultUseCase(vaultRepo), [vaultRepo]);
 
@@ -181,6 +183,14 @@ export function DocumentsPage() {
   useEffect(() => {
     loadDocuments();
   }, [loadDocuments]);
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'new' && !isSupportModeActive) {
+      setIsUploadModalOpen(true);
+      searchParams.delete('action');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, isSupportModeActive]);
 
   const memberNameMap = useMemo(() => {
     const map = new Map<string, string>();

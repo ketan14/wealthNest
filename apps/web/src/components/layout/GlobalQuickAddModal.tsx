@@ -9,6 +9,8 @@ import {
   Sparkles,
   ChevronRight,
   TrendingUp,
+  FolderLock,
+  Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -94,6 +96,30 @@ export function GlobalQuickAddModal({
         navigate('/analytics');
       },
     },
+    {
+      id: 'document',
+      title: 'Upload to Document Vault',
+      description: 'Store PAN, HUF deed, CAS PDF, or insurance policy',
+      icon: FolderLock,
+      color: 'text-emerald-400',
+      bgColor: 'bg-emerald-500/15 border-emerald-500/30',
+      action: () => {
+        onClose();
+        navigate('/documents?action=new');
+      },
+    },
+    {
+      id: 'real-estate',
+      title: 'Real Estate Equity & LTV',
+      description: 'Track property valuation, linked home loan & rental yield',
+      icon: Building2,
+      color: 'text-amber-400',
+      bgColor: 'bg-amber-500/15 border-amber-500/30',
+      action: () => {
+        onClose();
+        navigate('/real-estate');
+      },
+    },
   ];
 
   return (
@@ -102,9 +128,11 @@ export function GlobalQuickAddModal({
       aria-modal="true"
       aria-labelledby="quick-add-title"
       data-testid="global-quick-add-modal"
+      onClick={onClose}
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-200"
     >
       <div
+        onClick={(e) => e.stopPropagation()}
         className="w-full sm:max-w-md bg-card border border-border sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in slide-in-from-bottom duration-250"
       >
         {/* Header */}

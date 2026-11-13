@@ -46,6 +46,8 @@ describe('Phase 9.2: Mobile Navigation Shell & Ergonomics', () => {
     expect(screen.getByTestId('quick-action-holding')).toBeInTheDocument();
     expect(screen.getByTestId('quick-action-liability')).toBeInTheDocument();
     expect(screen.getByTestId('quick-action-goal')).toBeInTheDocument();
+    expect(screen.getByTestId('quick-action-document')).toBeInTheDocument();
+    expect(screen.getByTestId('quick-action-real-estate')).toBeInTheDocument();
   });
 
   it('TC-9.2-01B: Sidebar is responsive and hidden on mobile screens', () => {
