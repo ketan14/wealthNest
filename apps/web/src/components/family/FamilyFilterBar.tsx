@@ -1,6 +1,7 @@
 import React from 'react';
+import { isAccountVisibleToViewer } from '@wealthnest/domain';
 import { useFamily } from '@/lib/family/family-context';
-import { Users, User, Shield, Briefcase, SlidersHorizontal } from 'lucide-react';
+import { Users, User, Shield, Briefcase, SlidersHorizontal, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 interface FamilyFilterBarProps {
@@ -19,13 +20,25 @@ export function FamilyFilterBar({
     selectedAccountId,
     setSelectedMemberId,
     setSelectedAccountId,
+    privacyRules,
+    privacySummary,
   } = useFamily();
 
-  // Filter accounts belonging to selected member, or all accounts if 'all'
+  // Filter accounts belonging to selected member and respecting household privacy rules
   const relevantAccounts = React.useMemo(() => {
-    if (selectedMemberId === 'all') return accounts;
-    return accounts.filter((a) => a.memberId === selectedMemberId);
-  }, [accounts, selectedMemberId]);
+    const memberScoped =
+      selectedMemberId === 'all'
+        ? accounts
+        : accounts.filter((a) => a.memberId === selectedMemberId);
+    return memberScoped.filter((a) =>
+      isAccountVisibleToViewer({
+        accountId: a.id,
+        ownerMemberId: a.memberId,
+        viewerMemberId: selectedMemberId,
+        privacyRules,
+      })
+    );
+  }, [accounts, selectedMemberId, privacyRules]);
 
   const getRelationshipIcon = (rel: string) => {
     switch (rel) {
@@ -102,6 +115,15 @@ export function FamilyFilterBar({
 
       {/* Right: Demat / Broker Selector & Management Button */}
       <div className="flex items-center gap-2">
+        {selectedMemberId === 'all' && privacySummary.privateCount > 0 && (
+          <span
+            title="Some accounts are marked Owner-Only and hidden in Combined Family view"
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-amber-500/10 text-amber-300 border border-amber-500/30"
+          >
+            <Lock className="w-3 h-3" />
+            {privacySummary.privateCount} Private
+          </span>
+        )}
         {showAccountSelector && relevantAccounts.length > 0 && (
           <div className="flex items-center gap-1.5">
             <Briefcase className="w-3.5 h-3.5 text-slate-400" />

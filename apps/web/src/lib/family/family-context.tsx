@@ -6,7 +6,13 @@ import {
   ManageFamilyMembersUseCase,
   ManagePortfolioAccountsUseCase,
 } from '@wealthnest/application';
-import { FamilyPortfolioSummary, calculateFamilyPortfolioSummary } from '@wealthnest/domain';
+import {
+  AccountVisibilityScope,
+  FamilyPortfolioSummary,
+  HouseholdPrivacySummary,
+  calculateFamilyPortfolioSummary,
+  summarizeHouseholdPrivacy,
+} from '@wealthnest/domain';
 import { isOk } from '@wealthnest/shared';
 import { useAuth } from '../supabase/auth-context';
 import {
@@ -48,7 +54,13 @@ interface FamilyContextType {
   }) => Promise<PortfolioAccountDto | null>;
   updateAccount: (account: PortfolioAccountDto) => Promise<void>;
   deleteAccount: (id: string) => Promise<void>;
+  privacyRules: Record<string, AccountVisibilityScope>;
+  privacySummary: HouseholdPrivacySummary;
+  setAccountVisibility: (accountId: string, visibility: AccountVisibilityScope) => void;
+  getAccountVisibility: (accountId: string) => AccountVisibilityScope;
 }
+
+const PRIVACY_STORAGE_KEY = 'wealthnest_family_privacy_rules';
 
 const FamilyContext = createContext<FamilyContextType>({
   members: DEFAULT_DEMO_MEMBERS,
@@ -68,6 +80,10 @@ const FamilyContext = createContext<FamilyContextType>({
   createAccount: async () => null,
   updateAccount: async () => {},
   deleteAccount: async () => {},
+  privacyRules: {},
+  privacySummary: { totalAccounts: 0, sharedCount: 0, privateCount: 0, privateAccountIds: [] },
+  setAccountVisibility: () => {},
+  getAccountVisibility: () => 'shared_family',
 });
 
 export function FamilyProvider({ children }: { children: React.ReactNode }) {
@@ -80,6 +96,14 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const [selectedAccountId, setSelectedAccountId] = useState<string | 'all'>('all');
   const [familySummary, setFamilySummary] = useState<FamilyPortfolioSummary | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [privacyRules, setPrivacyRules] = useState<Record<string, AccountVisibilityScope>>(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? window.localStorage.getItem(PRIVACY_STORAGE_KEY) : null;
+      return raw ? (JSON.parse(raw) as Record<string, AccountVisibilityScope>) : {};
+    } catch {
+      return {};
+    }
+  });
 
   const { holdingRepo, familyRepo } = useRepositories();
 
@@ -225,6 +249,33 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const setAccountVisibility = useCallback(
+    (accountId: string, visibility: AccountVisibilityScope) => {
+      setPrivacyRules((prev) => {
+        const next = { ...prev, [accountId]: visibility };
+        try {
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(PRIVACY_STORAGE_KEY, JSON.stringify(next));
+          }
+        } catch {
+          // Ignore storage quota errors
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  const getAccountVisibility = useCallback(
+    (accountId: string): AccountVisibilityScope => privacyRules[accountId] ?? 'shared_family',
+    [privacyRules]
+  );
+
+  const privacySummary = useMemo(
+    () => summarizeHouseholdPrivacy(accounts, privacyRules),
+    [accounts, privacyRules]
+  );
+
   return (
     <FamilyContext.Provider
       value={{
@@ -245,6 +296,10 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         createAccount,
         updateAccount,
         deleteAccount,
+        privacyRules,
+        privacySummary,
+        setAccountVisibility,
+        getAccountVisibility,
       }}
     >
       {children}

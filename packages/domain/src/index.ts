@@ -30,6 +30,7 @@ export * from './market/amfi-nav.js';
 export * from './market/nse-bse-cmp.js';
 export * from './portfolio/holding-synchronizer.js';
 export * from './family/family-types.js';
+export * from './family/family-privacy.js';
 export * from './family/family-wealth-calculator.js';
 export * from './importers/broker-csv-types.js';
 export * from './importers/csv-utils.js';

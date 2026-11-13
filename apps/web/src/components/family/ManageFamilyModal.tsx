@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useFamily } from '@/lib/family/family-context';
 import { FamilyMemberDto, PortfolioAccountDto } from '@wealthnest/application';
-import { X, Users, Shield, Briefcase, Plus, Trash2, Building } from 'lucide-react';
+import { X, Users, Shield, Briefcase, Plus, Trash2, Building, Lock, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 interface ManageFamilyModalProps {
@@ -35,8 +35,16 @@ const BROKER_OPTIONS = [
 ];
 
 export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
-  const { members, accounts, createMember, deleteMember, createAccount, deleteAccount } =
-    useFamily();
+  const {
+    members,
+    accounts,
+    createMember,
+    deleteMember,
+    createAccount,
+    deleteAccount,
+    getAccountVisibility,
+    setAccountVisibility,
+  } = useFamily();
 
   const [activeTab, setActiveTab] = useState<'members' | 'accounts'>('members');
   const [isAddingMember, setIsAddingMember] = useState(false);
@@ -374,16 +382,47 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
                         </div>
                       </div>
 
-                      {accounts.length > 1 && (
+                      <div className="flex items-center gap-1.5">
                         <button
                           type="button"
-                          onClick={() => deleteAccount(acc.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                          title="Delete account"
+                          onClick={() => {
+                            const current = getAccountVisibility(acc.id);
+                            setAccountVisibility(
+                              acc.id,
+                              current === 'shared_family' ? 'owner_only' : 'shared_family'
+                            );
+                          }}
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border transition-colors ${
+                            getAccountVisibility(acc.id) === 'owner_only'
+                              ? 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25'
+                              : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
+                          }`}
+                          title="Toggle account visibility between Shared Family and Owner-Only"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {getAccountVisibility(acc.id) === 'owner_only' ? (
+                            <>
+                              <Lock className="w-3 h-3" />
+                              Owner Only
+                            </>
+                          ) : (
+                            <>
+                              <Globe className="w-3 h-3" />
+                              Shared
+                            </>
+                          )}
                         </button>
-                      )}
+
+                        {accounts.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => deleteAccount(acc.id)}
+                            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                            title="Delete account"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
