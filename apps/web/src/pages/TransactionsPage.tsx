@@ -29,6 +29,8 @@ import {
 } from '@/components/transactions/RecordTransactionModal';
 import { TransactionCard } from '@/components/transactions/TransactionCard';
 import { RecurringRulesCard } from '@/components/transactions/RecurringRulesCard';
+import { CashflowSummarySection } from '@/components/transactions/CashflowSummarySection';
+import { DEMO_TRANSACTIONS } from '@/components/transactions/transactions-demo-data';
 import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
 import { useIsMobile } from '@/lib/hooks/use-is-mobile';
 import {
@@ -36,14 +38,10 @@ import {
   ArrowUpRight,
   Plus,
   Trash2,
-  TrendingUp,
-  TrendingDown,
   Scale,
-  Receipt,
   Search,
   Sparkles,
   Database,
-  Calendar,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useFamily } from '@/lib/family/family-context';
@@ -51,136 +49,6 @@ import { useSupportSession } from '@/lib/admin/support-session-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
-
-// Realistic sample Indian cashflow audit history for demo mode
-const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
-  {
-    id: 'demo-tx-1',
-    userId: 'demo-user',
-    memberId: 'mem-self',
-    accountId: 'acc-zerodha',
-    type: 'deposit',
-    amountCents: 15000000, // ₹1,50,000.00
-    currency: 'INR',
-    transactionDate: '2026-04-01T09:30:00Z',
-    notes: 'Monthly investment capital allocation from freelance contract earnings',
-    createdAt: '2026-04-01T09:30:00Z',
-  },
-  {
-    id: 'demo-tx-2',
-    userId: 'demo-user',
-    memberId: 'mem-self',
-    accountId: 'acc-zerodha',
-    assetId: 'asset-rel',
-    assetName: 'Reliance Industries Ltd',
-    assetTicker: 'RELIANCE',
-    type: 'buy',
-    quantity: 15,
-    amountCents: 3750000, // ₹37,500.00
-    currency: 'INR',
-    transactionDate: '2026-04-03T11:15:00Z',
-    notes: 'Ketan Vaghela direct equity accumulation on NSE dip',
-    createdAt: '2026-04-03T11:15:00Z',
-  },
-  {
-    id: 'demo-tx-3',
-    userId: 'demo-user',
-    memberId: 'mem-spouse',
-    accountId: 'acc-groww',
-    assetId: 'asset-nifty',
-    assetName: 'Nifty 50 Index ETF',
-    assetTicker: 'NIFTYBEES',
-    type: 'buy',
-    quantity: 100,
-    amountCents: 2400000, // ₹24,000.00
-    currency: 'INR',
-    transactionDate: '2026-04-05T10:00:00Z',
-    notes: 'Parul Vaghela monthly SIP auto-execution from Bank of Baroda account',
-    createdAt: '2026-04-05T10:00:00Z',
-  },
-  {
-    id: 'demo-tx-4',
-    userId: 'demo-user',
-    memberId: 'mem-huf',
-    accountId: 'acc-icici',
-    assetId: 'asset-tcs',
-    assetName: 'Tata Consultancy Services',
-    assetTicker: 'TCS',
-    type: 'dividend',
-    amountCents: 480000, // ₹4,800.00
-    currency: 'INR',
-    transactionDate: '2026-04-12T14:20:00Z',
-    notes: 'Q4 Final Dividend credited to Shamalbhai Vaghela HUF bank account',
-    createdAt: '2026-04-12T14:20:00Z',
-  },
-  {
-    id: 'demo-tx-5',
-    userId: 'demo-user',
-    memberId: 'mem-self',
-    accountId: 'acc-zerodha',
-    assetId: 'asset-sgb',
-    assetName: 'Sovereign Gold Bond 2028',
-    assetTicker: 'SGB-2028',
-    type: 'dividend',
-    amountCents: 375000, // ₹3,750.00
-    currency: 'INR',
-    transactionDate: '2026-04-15T10:00:00Z',
-    notes: 'RBI Semi-annual 2.5% tax-free interest payout',
-    createdAt: '2026-04-15T10:00:00Z',
-  },
-  {
-    id: 'demo-tx-5b',
-    userId: 'demo-user',
-    memberId: 'mem-child',
-    accountId: 'acc-cams',
-    assetId: 'asset-2b',
-    assetName: 'Bandhan Large & Mid Cap Fund',
-    assetTicker: 'BANDHAN-LM',
-    type: 'buy',
-    quantity: 67.93,
-    amountCents: 1000000, // ₹10,000.00
-    currency: 'INR',
-    transactionDate: '2026-04-10T10:00:00Z',
-    notes: 'Krisha Vaghela monthly education compounding SIP',
-    createdAt: '2026-04-10T10:00:00Z',
-  },
-  {
-    id: 'demo-tx-5c',
-    userId: 'demo-user',
-    memberId: 'mem-mother',
-    accountId: 'acc-bob-fd',
-    type: 'dividend',
-    amountCents: 937500, // ₹9,375.00
-    currency: 'INR',
-    transactionDate: '2026-04-01T00:00:00Z',
-    notes: 'Ramilaben Vaghela Bank of Baroda Senior Citizen FD quarterly interest',
-    createdAt: '2026-04-01T00:00:00Z',
-  },
-  {
-    id: 'demo-tx-6',
-    userId: 'demo-user',
-    memberId: 'mem-spouse',
-    accountId: 'acc-groww',
-    type: 'fee',
-    amountCents: 18500, // ₹185.00
-    currency: 'INR',
-    transactionDate: '2026-04-05T10:01:00Z',
-    notes: 'Securities Transaction Tax (STT), GST & Depository AMC charges',
-    createdAt: '2026-04-05T10:01:00Z',
-  },
-  {
-    id: 'demo-tx-7',
-    userId: 'demo-user',
-    memberId: 'mem-self',
-    accountId: 'acc-zerodha',
-    type: 'withdrawal',
-    amountCents: 3500000, // ₹35,000.00
-    currency: 'INR',
-    transactionDate: '2026-04-20T16:45:00Z',
-    notes: 'Quarterly home maintenance and insurance disbursement',
-    createdAt: '2026-04-20T16:45:00Z',
-  },
-];
 
 export function TransactionsPage() {
   const { user } = useAuth();
@@ -474,199 +342,12 @@ export function TransactionsPage() {
         </div>
       )}
 
-      {/* Top Cashflow Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Total Inflows */}
-        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Total Inflows
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-emerald-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-mono text-emerald-400">
-              +{summary.totalInflows.format('en-IN')}
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs font-bold font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                {summary.totalInflows.formatIndianCompact()}
-              </span>
-              <span className="text-[11px] text-muted-foreground">
-                {summary.inflowCount} Inflow events
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 2: Total Outflows */}
-        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Total Outflows
-            </CardTitle>
-            <TrendingDown className="h-4 w-4 text-rose-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-mono text-rose-400">
-              -{summary.totalOutflows.format('en-IN')}
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs font-bold font-mono px-2 py-0.5 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30">
-                {summary.totalOutflows.formatIndianCompact()}
-              </span>
-              <span className="text-[11px] text-muted-foreground">
-                {summary.outflowCount} Outflow events
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 3: Net Cashflow Balance */}
-        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Net Cashflow
-            </CardTitle>
-            <Scale className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-2xl font-bold font-mono ${
-                summary.isNetPositive ? 'text-emerald-400' : 'text-rose-400'
-              }`}
-            >
-              {summary.isNetPositive ? '+' : '-'}
-              {summary.netCashflow.format('en-IN')}
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span
-                className={`text-xs font-bold font-mono px-2 py-0.5 rounded border ${
-                  summary.isNetPositive
-                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                    : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-                }`}
-              >
-                {summary.isNetPositive ? '+' : '-'}
-                {summary.netCashflow.formatIndianCompact()}
-              </span>
-              <span className="text-[11px] text-muted-foreground">Net capital balance</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 4: Audit Volume & Transfers */}
-        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Audit Volume & Transfers
-            </CardTitle>
-            <Receipt className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-mono text-foreground">
-              {summary.totalCount} Records
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs font-bold font-mono px-2 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">
-                {summary.transferCount} Transfers ({summary.totalTransfersAmount.formatIndianCompact()})
-              </span>
-              <span className="text-[11px] text-muted-foreground">Zero P&L</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Cashflow Ratio & Type Breakdown Card */}
-      <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-primary" />
-              <CardTitle className="text-base">Cashflow Ratio & Category Breakdown</CardTitle>
-            </div>
-            <Badge variant="secondary">Zero Float Drift</Badge>
-          </div>
-          <CardDescription>
-            Comparison of capital inflows versus deployed outflows and fees.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Segmented ratio bar */}
-          <div className="w-full h-3 rounded-full overflow-hidden flex bg-secondary/60 p-0.5 border border-border/50">
-            <div
-              title={`Inflows: ${inflowRatio.toFixed(1)}%`}
-              style={{ width: `${inflowRatio}%` }}
-              className="h-full bg-emerald-500 rounded-l-full transition-all duration-300"
-            />
-            <div
-              title={`Outflows: ${outflowRatio.toFixed(1)}%`}
-              style={{ width: `${outflowRatio}%` }}
-              className="h-full bg-rose-500 rounded-r-full transition-all duration-300"
-            />
-          </div>
-
-          {/* Breakdown cards by type */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2.5 pt-1">
-            <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/50">
-              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">
-                Deposits
-              </span>
-              <p className="text-xs font-bold font-mono text-emerald-400 mt-0.5">
-                {summary.breakdownByType.deposit.formatIndianCompact()}
-              </p>
-            </div>
-            <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/50">
-              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">
-                Asset Buys
-              </span>
-              <p className="text-xs font-bold font-mono text-rose-400 mt-0.5">
-                {summary.breakdownByType.buy.formatIndianCompact()}
-              </p>
-            </div>
-            <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/50">
-              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">
-                Dividends
-              </span>
-              <p className="text-xs font-bold font-mono text-emerald-400 mt-0.5">
-                {summary.breakdownByType.dividend.formatIndianCompact()}
-              </p>
-            </div>
-            <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/50">
-              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">
-                Asset Sells
-              </span>
-              <p className="text-xs font-bold font-mono text-emerald-400 mt-0.5">
-                {summary.breakdownByType.sell.formatIndianCompact()}
-              </p>
-            </div>
-            <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/50">
-              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">
-                Withdrawals
-              </span>
-              <p className="text-xs font-bold font-mono text-rose-400 mt-0.5">
-                {summary.breakdownByType.withdrawal.formatIndianCompact()}
-              </p>
-            </div>
-            <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/50">
-              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">
-                Fees & STT
-              </span>
-              <p className="text-xs font-bold font-mono text-amber-400 mt-0.5">
-                {summary.breakdownByType.fee.formatIndianCompact()}
-              </p>
-            </div>
-            <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/50">
-              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">
-                Transfers
-              </span>
-              <p className="text-xs font-bold font-mono text-purple-400 mt-0.5">
-                {summary.breakdownByType.transfer.formatIndianCompact()}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Top Cashflow Summary Cards & Breakdown */}
+      <CashflowSummarySection
+        summary={summary}
+        inflowRatio={inflowRatio}
+        outflowRatio={outflowRatio}
+      />
 
       {/* Recurring SIP & EMI Rules */}
       <RecurringRulesCard
