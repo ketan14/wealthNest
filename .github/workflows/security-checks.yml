@@ -1,0 +1,62 @@
+name: Security & Database RLS Verification
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  code-and-dependency-checks:
+    name: Type-Check, Unit Tests & Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Type-Check & Build
+        run: npm run type-check && npm run build
+
+      - name: Verify Cloudflare Static Security Headers in Build Output
+        run: test -f apps/web/dist/_headers
+
+      - name: Run Monorepo Unit Tests
+        run: npm test
+
+      - name: Run Production Dependency Audit (PKG-01)
+        run: npm audit --omit=dev --audit-level=high
+
+  pgtap-database-rls-tests:
+    name: Supabase pgTAP RLS & RBAC Tests (TST-02)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Local Supabase Stack
+        run: supabase start
+
+      - name: Execute pgTAP Security Test Suites
+        run: supabase test db
+
+      - name: Stop Local Supabase Stack
+        if: always()
+        run: supabase stop --no-backup || true
+

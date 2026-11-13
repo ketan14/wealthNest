@@ -2,7 +2,7 @@
 
 **Derived From:** [wealthnest-security-audit.md](file:///home/ketan/projects/Krisha/wealthNest/docs/security/wealthnest-security-audit.md)  
 **Target:** `/home/ketan/projects/Krisha/wealthNest`  
-**Status:** Repo Fixes Implemented — Pending `supabase db push`, `supabase test db`, & Live Cloud Checks
+**Status:** Repo Fixes Implemented — Pending `supabase db push`, `supabase functions deploy admin-create-user`, `supabase test db`, & Live Cloud Checks
 
 ---
 
@@ -45,13 +45,13 @@
   - **Files:** `apps/web/src/App.tsx`, `apps/web/src/lib/supabase/auth-context.tsx`
   - **Verify:** Verified via `App.test.tsx`.
 
-- [~] **P1-4: Enforce Strong Password Policy & Email Confirmations** *(Repo updated; Supabase Cloud Dashboard check pending)*
-  - **Files:** `apps/web/src/pages/SignUpPage.tsx:62`, `supabase/config.toml:37`
-  - **Verify:** Client-side 12-char min verified via `AuthPages.test.tsx`. Still verify Supabase Cloud Auth settings.
+- [~] **P1-4: Enforce Strong Password Policy & Email Confirmations** *(Repo complexity + CSPRNG generator + `config.toml` enforced; Supabase Cloud Dashboard HIBP/Auth check pending)*
+  - **Files:** `apps/web/src/lib/validation/password.ts`, `apps/web/src/pages/SignUpPage.tsx`, `apps/web/src/components/admin/AdminUserProvisionModal.tsx`, `supabase/functions/admin-create-user/index.ts`, `supabase/config.toml`
+  - **Verify:** Verified via `AuthPages.test.tsx`, `AdminPortal.test.tsx`, and `SecurityHardening.test.ts`. Still verify Supabase Cloud Auth breached-password / HIBP settings.
 
-- [~] **P1-5: Add HTTP Security Headers & TLS / CSP Policies** *(Nginx headers & Tauri CSP added; Cloudflare edge headers pending)*
-  - **Files:** `infra/docker/nginx-prod.conf`, `src-tauri/tauri.conf.json:26`
-  - **Action:** Verify upstream TLS termination + Cloudflare Pages/Workers `_headers`.
+- [~] **P1-5: Add HTTP Security Headers & TLS / CSP Policies** *(Cloudflare `_headers`, Nginx header-inheritance fix + `limit_req`, and Tauri CSP verified; upstream TLS termination check pending)*
+  - **Files:** `apps/web/public/_headers`, `infra/docker/nginx-prod.conf`, `src-tauri/tauri.conf.json:26`
+  - **Verify:** `apps/web/dist/_headers` confirmed generated during `npm run build`. Verify upstream TLS termination in front of Docker/Nginx.
 
 ---
 
@@ -66,20 +66,24 @@
 - [x] **P2-3: Remove Hardcoded QA Supabase URL & Publishable Key Fallbacks** *(Verified in repo)*
   - **Files:** `apps/web/src/pages/LoginPage.tsx:40-53`, `apps/web/src/lib/config/server-config.ts`, `.github/workflows/build-installers.yml`
 
-- [~] **P2-4: Add Automated Database RLS / pgTAP Regression Tests** *(Test files created; live execution via `supabase test db` pending Docker/Postgres)*
-  - **Files:** `supabase/tests/01_rls_and_household_isolation.sql`, `supabase/tests/02_admin_rbac_and_audit_immutability.sql`
-  - **Action:** Run `supabase start && supabase test db` locally/in CI to verify all 31 assertions pass against live Postgres.
+- [~] **P2-4: Add Automated Database RLS / pgTAP Regression Tests** *(35 assertions + `.github/workflows/security-checks.yml` added; live execution via `supabase test db` pending Docker/Postgres)*
+  - **Files:** `supabase/tests/01_rls_and_household_isolation.sql`, `supabase/tests/02_admin_rbac_and_audit_immutability.sql`, `.github/workflows/security-checks.yml`
+  - **Action:** Run `supabase start && supabase test db` locally or trigger the `security-checks.yml` workflow to verify all 35 assertions pass against live Postgres.
 
-- [ ] **P2-5: Move Admin User Provisioning to a Server-Side Edge Function**
-  - **File:** `apps/web/src/lib/supabase/admin.adapter.ts:231-262`
-  - **Action:** Replace browser-side `isolatedClient.auth.signUp()` with a Supabase Edge Function calling `supabaseAdmin.auth.admin.createUser()` after verifying `is_platform_admin(caller)`.
+- [x] **P2-5: Move Admin User Provisioning to a Server-Side Edge Function** *(Verified in repo; automated via `supabase-migration.yml`)*
+  - **Files:** `supabase/functions/admin-create-user/index.ts`, `apps/web/src/lib/supabase/admin.adapter.ts`, `.github/workflows/supabase-migration.yml`
+  - **Verify:** `AdminPortal.test.tsx` verifies `adminAdapter.createUserDirectly` invokes `supabase.functions.invoke('admin-create-user', ...)`. Deploys via `supabase functions deploy admin-create-user` (optionally set `ALLOWED_ORIGINS` secret).
+
+- [~] **P2-6: Enforce Client-Side Financial File Parsing Bounds & Safe PDF Extraction** *(Verified in repo; server-side AV not applicable to local-only parsing)*
+  - **Files:** `apps/web/src/lib/validation/import-file.ts`, `apps/web/src/lib/pdf/pdfjs-extractor.adapter.ts`, `apps/web/src/components/portfolio/ImportCasModal.tsx`, `apps/web/src/components/analytics/CasReconciliationCard.tsx`
+  - **Verify:** `SecurityHardening.test.ts` verifies 20 MiB PDF / 5 MiB CSV caps, 100-page & 25k-row caps, `%PDF-` signature validation, and `isEvalSupported: false`.
 
 ---
 
 ## P3 — Low-Severity & Manual Verification Tasks
 
-- [ ] **P3-1:** Deduplicate `GoTrueClient` instances in `ConnectionManager` (`apps/web/src/lib/services/connection-manager.ts`).
-- [ ] **P3-2:** Run `npm audit --omit=dev --json` in a networked environment and resolve any High/Critical advisories.
-- [ ] **P3-3:** Verify `households` and `household_members` write RLS policies in live Supabase (`pg_policies`).
-- [ ] **P3-4:** Verify Supabase Cloud Auth rate limiting, brute-force protection, and refresh token reuse detection settings in the Supabase Dashboard.
+- [x] **P3-1:** Cache & deduplicate `GoTrueClient` instances with host+key-scoped `storageKey`s and block `https:` -> `http://` downgrades in `ConnectionManager` (`apps/web/src/lib/services/connection-manager.ts`, `supabase/config.toml` refresh rotation; verified by `ConnectionManager.test.ts`).
+- [~] **P3-2:** Run `npm audit --omit=dev --audit-level=high` in a networked environment (automated in `.github/workflows/security-checks.yml`; blocked in offline sandbox).
+- [~] **P3-3:** Apply migration `20260101000019_household_membership_write_rls.sql` via `supabase db push` and verify `households` and `household_members` write RLS policies in live Supabase (`pg_policies`). *(SQL migration & 4 `HH-03` pgTAP assertions created in `01_rls_and_household_isolation.sql`)*
+- [~] **P3-4:** Nginx edge rate limiting (`limit_req_zone`) & `[auth.rate_limit]` added in `infra/docker/nginx-prod.conf` and `supabase/config.toml`; verify live Supabase Cloud Dashboard Auth rate limiting and breached-password settings.
 

@@ -9,6 +9,10 @@ import {
 } from '@wealthnest/application';
 import { ImportSummaryResult } from '@wealthnest/domain';
 import { PdfJsTextExtractorAdapter } from '@/lib/pdf/pdfjs-extractor.adapter';
+import {
+  validateCsvTextBounds,
+  validateFinancialImportFile,
+} from '@/lib/validation/import-file';
 import { useCasImportRepository } from '@/lib/persistence/repository-context';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { Badge } from '@/components/ui/Badge';
@@ -164,8 +168,17 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
       const isCsv =
         file.name.endsWith('.csv') || file.type.includes('csv') || importSource !== 'cas_pdf';
 
+      const fileValidationError = validateFinancialImportFile(file, isCsv ? 'csv' : 'pdf');
+      if (fileValidationError) {
+        throw new Error(fileValidationError);
+      }
+
       if (isCsv) {
         const text = await file.text();
+        const csvBoundsError = validateCsvTextBounds(text);
+        if (csvBoundsError) {
+          throw new Error(csvBoundsError);
+        }
         const preferredBroker: 'ZERODHA' | 'GROWW' | undefined =
           importSource === 'zerodha_csv'
             ? 'ZERODHA'

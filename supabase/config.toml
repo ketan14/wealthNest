@@ -29,7 +29,22 @@ file_size_limit = "50MiB"
 site_url = "http://wealthnest.local"
 additional_redirect_urls = ["http://localhost:5173", "http://wealthnest.local"]
 jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
 enable_signup = true
+enable_anonymous_sign_ins = false
+enable_manual_linking = false
+minimum_password_length = 12
+password_requirements = "lower_upper_letters_digits_symbols"
+
+[auth.rate_limit]
+email_sent = 2
+sms_sent = 30
+anonymous_users = 30
+token_refresh = 150
+sign_in_sign_ups = 30
+token_verifications = 30
+web3 = 30
 
 [auth.email]
 enabled = true

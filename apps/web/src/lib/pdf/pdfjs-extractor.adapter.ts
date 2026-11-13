@@ -1,5 +1,10 @@
 import { Result, ok, err } from '@wealthnest/shared';
 import { PdfExtractorPort, PdfExtractionResult } from '@wealthnest/application';
+import {
+  hasPdfMagicHeader,
+  MAX_CAS_PDF_BYTES,
+  MAX_CAS_PDF_PAGES,
+} from '@/lib/validation/import-file';
 
 let pdfjsConfigured = false;
 
@@ -30,16 +35,32 @@ export class PdfJsTextExtractorAdapter implements PdfExtractorPort {
     password?: string
   ): Promise<Result<PdfExtractionResult>> {
     try {
+      if (!pdfBytes || pdfBytes.byteLength === 0) {
+        return err(new Error('Selected PDF file is empty.'));
+      }
+      if (pdfBytes.byteLength > MAX_CAS_PDF_BYTES) {
+        return err(new Error('CAS PDF exceeds the 20 MiB maximum file size limit.'));
+      }
+      if (!hasPdfMagicHeader(pdfBytes)) {
+        return err(new Error('Invalid PDF file signature. File does not start with %PDF-.'));
+      }
+
       const pdfjsLib = await getPdfJs();
-      // Load document into memory with optional password
+      // Disable eval()-based PostScript/font evaluation for defence against malicious PDFs
       const loadingTask = pdfjsLib.getDocument({
         data: new Uint8Array(pdfBytes),
         password: password || undefined,
         useSystemFonts: true,
+        isEvalSupported: false,
       });
 
       const pdfDoc = await loadingTask.promise;
       const totalPageCount = pdfDoc.numPages;
+      if (totalPageCount > MAX_CAS_PDF_PAGES) {
+        return err(
+          new Error(`CAS PDF exceeds the ${MAX_CAS_PDF_PAGES}-page safety parsing limit.`)
+        );
+      }
       const pages: string[] = [];
 
       for (let pageNum = 1; pageNum <= totalPageCount; pageNum++) {

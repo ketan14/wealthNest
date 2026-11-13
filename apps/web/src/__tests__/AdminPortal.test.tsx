@@ -12,6 +12,7 @@ import { AdminHouseholdsPage } from '../pages/admin/AdminHouseholdsPage';
 import { AdminRolesPage } from '../pages/admin/AdminRolesPage';
 import { AdminAuditLogsPage } from '../pages/admin/AdminAuditLogsPage';
 import { AdminSettingsPage } from '../pages/admin/AdminSettingsPage';
+import { AdminUserProvisionModal } from '../components/admin/AdminUserProvisionModal';
 import { adminAdapter } from '../lib/supabase/admin.adapter';
 
 // Mock Supabase client to avoid network calls in test environment
@@ -371,6 +372,45 @@ describe('Phase 7: Complete Admin Portal, User Management & Security Verificatio
           'super_admin'
         )
       ).rejects.toThrow('Forbidden: Only super_admin can assign a platform role on creation');
+    });
+
+    it('enforces 12-char complexity policy and CSPRNG password generation in AdminUserProvisionModal', async () => {
+      const { supabase } = await import('../lib/supabase/client');
+      const invokeSpy = vi.mocked(supabase.functions.invoke);
+      invokeSpy.mockClear();
+
+      render(
+        <AdminUserProvisionModal
+          isOpen={true}
+          initialMode="create"
+          isSuperAdmin={true}
+          adminActor={{ userId: 'admin-1', displayName: 'Super Admin' }}
+          onClose={vi.fn()}
+          onSuccess={vi.fn()}
+        />
+      );
+
+      fireEvent.change(screen.getByPlaceholderText('e.g. krisha.vaghela@wealthnest.local'), {
+        target: { value: 'newmember@wealthnest.test' },
+      });
+      const pwdInput = screen.getByPlaceholderText(
+        'Min 12 chars (A-Z, a-z, 0-9, symbol)'
+      ) as HTMLInputElement;
+      fireEvent.change(pwdInput, { target: { value: 'weakpass' } });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Create Account' }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/Password must be at least 12 characters/i)).toBeInTheDocument();
+      });
+      expect(invokeSpy).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: /Generate Password/i }));
+      expect(pwdInput.value.length).toBeGreaterThanOrEqual(16);
+      expect(pwdInput.value).toMatch(/[A-Z]/);
+      expect(pwdInput.value).toMatch(/[a-z]/);
+      expect(pwdInput.value).toMatch(/[0-9]/);
+      expect(pwdInput.value).toMatch(/[^A-Za-z0-9]/);
     });
   });
 });

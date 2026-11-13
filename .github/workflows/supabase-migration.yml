@@ -1,4 +1,4 @@
-name: Supabase — Automated Database Migration
+name: Supabase — Automated Database & Edge Function Deployment
 
 on:
   push:
@@ -6,11 +6,12 @@ on:
       - main
     paths:
       - 'supabase/migrations/**'
+      - 'supabase/functions/**'
   workflow_dispatch:
 
 jobs:
   deploy-migrations:
-    name: Deploy SQL Migrations to Supabase
+    name: Deploy SQL Migrations & Edge Functions to Supabase
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -21,9 +22,15 @@ jobs:
         with:
           version: latest
 
-      - name: Link and Push Migrations
+      - name: Link Project & Push Migrations
         run: |
           supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}"
           supabase db push --remote --password "${{ secrets.SUPABASE_DB_PASSWORD }}" --yes
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Deploy Edge Functions
+        run: |
+          supabase functions deploy admin-create-user --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}" --use-api
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

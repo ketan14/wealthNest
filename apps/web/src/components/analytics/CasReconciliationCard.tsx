@@ -18,6 +18,10 @@ import {
   ReconciliationStatus,
 } from '@wealthnest/domain';
 import { HoldingDetailDto } from '@wealthnest/application';
+import {
+  validateCsvTextBounds,
+  validateFinancialImportFile,
+} from '@/lib/validation/import-file';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -104,7 +108,19 @@ export function CasReconciliationCard({ holdings }: CasReconciliationCardProps) 
     if (!file) return;
     setParseWarning(null);
 
+    const fileError = validateFinancialImportFile(file, 'csv');
+    if (fileError) {
+      setParseWarning(fileError);
+      return;
+    }
+
     const text = await file.text();
+    const csvBoundsError = validateCsvTextBounds(text);
+    if (csvBoundsError) {
+      setParseWarning(csvBoundsError);
+      return;
+    }
+
     const parsed = detectAndParseBrokerCsv(text);
 
     if (parsed.holdings.length === 0 && parsed.trades.length === 0) {

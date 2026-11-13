@@ -13,6 +13,11 @@ import {
 } from 'lucide-react';
 import { PlatformRole } from '@wealthnest/domain';
 import { adminAdapter } from '../../lib/supabase/admin.adapter';
+import {
+  generateStrongPassword,
+  PASSWORD_POLICY_HINT,
+  validatePasswordComplexity,
+} from '../../lib/validation/password';
 
 interface AdminUserProvisionModalProps {
   isOpen: boolean;
@@ -60,12 +65,7 @@ export function AdminUserProvisionModal({
   if (!isOpen) return null;
 
   const handleGeneratePassword = () => {
-    const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%';
-    let pwd = 'WealthNest@';
-    for (let i = 0; i < 4; i++) {
-      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setUserPassword(pwd);
+    setUserPassword(generateStrongPassword(16));
   };
 
   const handleCopyCredentials = () => {
@@ -120,9 +120,10 @@ export function AdminUserProvisionModal({
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail.trim() || !userPassword || !adminActor) return;
-    if (userPassword.length < 6) {
-      setModalError('Password must be at least 6 characters');
+    if (!inviteEmail.trim() || !adminActor) return;
+    const passwordError = validatePasswordComplexity(userPassword);
+    if (passwordError) {
+      setModalError(passwordError);
       return;
     }
 
@@ -349,7 +350,7 @@ export function AdminUserProvisionModal({
                       required
                       value={userPassword}
                       onChange={(e) => setUserPassword(e.target.value)}
-                      placeholder="Min. 6 characters (e.g. WealthNest@2026)"
+                      placeholder={PASSWORD_POLICY_HINT}
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 pr-10 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500 font-mono"
                     />
                     <button
