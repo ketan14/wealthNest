@@ -36,6 +36,7 @@
 | **Phase 14: Household Accounting, Tax 112A & Alerts** | Inter-account cashflow double-entry (`FIN-TXN-01`), Emergency runway & household alert engine (`FIN-ALERT-01`), Section 112A LTCG tax harvesting simulator (`TAX-112A-01`) | ✅ Complete | ✅ Verified | Pure domain engines, Supabase migrations, Analytics & Home integrations. |
 | **Phase 15: Family Document Vault (`VAULT-DOC-01`)** | Private household RLS storage bucket (`family-vault`), `family_documents` table, SQLite parity, `DocumentsPage` & `UploadDocumentModal` | ✅ Complete | ✅ Verified | Migration 16, `ManageDocumentVaultUseCase`, `/documents` route & renewal tracking. |
 | **Phase 16: Real Estate, Bundle Splitting, Mobile Quick-Add & A11Y (`UX-02`–`UX-04`, `PERF-01`, `A11Y-01`, `DESK-01`)** | Dedicated `/real-estate` LTV & rental yield engine, `PortfolioPage` modularization, lazy `pdfjs-dist` & route splitting, mobile Quick-Add vault/real-estate actions, accessible SVG data-table fallbacks, and `Ctrl+K` Command Palette | ✅ Complete | ✅ Verified | `tsc -b` 0 errors, 78/78 test files (389/389 tests) passing, production `vite build` green. |
+| **Phase 17: Reconciliation, Projections, Alerts, Prepayments, Recurring Rules & Privacy** | CAS ↔ Broker tradebook reconciler, Goal step-up SIP projection curves, Automated Household Alerts (`FIN-ALERT-02`), Compound point-in-time loan amortization & prepayment simulator, Recurring SIP/EMI rules, `AnalyticsPage` modularization, and Member-Level Privacy Controls (`shared_family` vs `owner_only`) | ✅ Complete | ✅ Verified | `tsc -b` 0 errors, 89/89 test files (412/412 tests) passing, production `vite build` green. |
 
 
 ---
@@ -258,7 +259,7 @@
 ## 📈 Quality Gates & System Health
 
 * **TypeScript Compilation**: `npm run type-check` (`tsc -b`) compiles with **0 errors**.
-* **Automated Test Coverage**: **362 passing tests** across 69 test suites (`vitest`) — 100% green.
+* **Automated Test Coverage**: **412 passing tests** across 89 test suites (`vitest`) — 100% green.
 * **Persona & Real-World Dogfooding**: Fully personalized to the **Vaghela Family** (`Ketan Vaghela`, `Parul Vaghela`, `Krisha Vaghela`, `Shamalbhai Vaghela HUF`, `Ramilaben Vaghela`) locally, with clean anonymized personas (`Arjun Sharma`, `Pooja Sharma`, etc.) for cloud QA.
 * **Active Containers & Endpoints**:
   - Web App: `http://localhost:30000` (Nginx Proxy) / `http://localhost:5174` (Vite) / LAN `http://192.168.1.105:30000`

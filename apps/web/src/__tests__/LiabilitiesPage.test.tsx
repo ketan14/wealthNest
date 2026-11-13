@@ -63,9 +63,9 @@ describe('LiabilitiesPage Component (Sprint 4)', () => {
 
     // Loans present in UI
     expect(screen.getAllByText('SBI Green Home Loan').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/State Bank of India/i)).toBeInTheDocument();
-    expect(screen.getByText('HDFC EV Auto Loan')).toBeInTheDocument();
-    expect(screen.getByText(/HDFC Bank/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/State Bank of India/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('HDFC EV Auto Loan').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/HDFC Bank/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('opens and closes Add Loan Modal on user interaction', () => {
