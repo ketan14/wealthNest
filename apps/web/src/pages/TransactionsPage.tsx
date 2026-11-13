@@ -88,7 +88,7 @@ export function TransactionsPage() {
     isLoading: isLoadingDb,
     refetch,
   } = useQuery({
-    queryKey: ['cashflow-summary', user?.id],
+    queryKey: ['transactions-cashflow', user?.id],
     queryFn: async () => {
       if (!user) return null;
       const useCase = new GetCashflowSummaryUseCase(transactionAdapter);
@@ -101,7 +101,7 @@ export function TransactionsPage() {
 
   // All transactions depending on authentication state
   const allTransactions: TransactionDetailDto[] = useMemo(() => {
-    if (user && dbCashflowData) {
+    if (user && Array.isArray(dbCashflowData?.transactions)) {
       return [...dbCashflowData.transactions];
     }
     return localDemoTransactions;
@@ -210,6 +210,7 @@ export function TransactionsPage() {
     },
     onSuccess: () => {
       if (user) {
+        queryClient.invalidateQueries({ queryKey: ['transactions-cashflow', user.id] });
         queryClient.invalidateQueries({ queryKey: ['cashflow-summary', user.id] });
         queryClient.invalidateQueries({ queryKey: ['user-holdings', user.id] });
         queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
@@ -230,6 +231,7 @@ export function TransactionsPage() {
     },
     onSuccess: () => {
       if (user) {
+        queryClient.invalidateQueries({ queryKey: ['transactions-cashflow', user.id] });
         queryClient.invalidateQueries({ queryKey: ['cashflow-summary', user.id] });
       }
     },

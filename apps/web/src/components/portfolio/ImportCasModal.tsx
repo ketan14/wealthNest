@@ -278,6 +278,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
       if (user) {
         queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
         queryClient.invalidateQueries({ queryKey: ['transactions', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['transactions-cashflow', user.id] });
         queryClient.invalidateQueries({ queryKey: ['cashflow-summary', user.id] });
       }
       if (onSuccess) {

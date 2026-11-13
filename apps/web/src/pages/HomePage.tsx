@@ -146,16 +146,16 @@ export function HomePage() {
 
   // Metrics derived safely
   const totalAssets =
-    netWorthSummary?.totalAssets.toDecimal() ?? portfolioSummary.totalValue.toDecimal();
-  const totalLiabilities = netWorthSummary?.totalLiabilities.toDecimal() ?? 0;
+    netWorthSummary?.totalAssets?.toDecimal() ?? portfolioSummary.totalValue.toDecimal();
+  const totalLiabilities = netWorthSummary?.totalLiabilities?.toDecimal() ?? 0;
   const netWorth = totalAssets - totalLiabilities;
   const isSolvent = netWorth >= 0;
   const debtToAssets = totalAssets > 0 ? (totalLiabilities / totalAssets) * 100 : 0;
-  const totalMonthlyEmi = netWorthSummary?.totalMonthlyEmi.toDecimal() ?? 0;
+  const totalMonthlyEmi = netWorthSummary?.totalMonthlyEmi?.toDecimal() ?? 0;
 
   // Monthly Cashflow figures
-  const monthlyInflow = cashflowSummary?.totalInflows.toDecimal() ?? 0;
-  const monthlyOutflow = cashflowSummary?.totalOutflows.toDecimal() ?? 0;
+  const monthlyInflow = cashflowSummary?.totalInflows?.toDecimal() ?? 0;
+  const monthlyOutflow = cashflowSummary?.totalOutflows?.toDecimal() ?? 0;
   const netMonthlySavings = monthlyInflow - monthlyOutflow;
 
   // Emergency runway evaluation using pure domain engine
