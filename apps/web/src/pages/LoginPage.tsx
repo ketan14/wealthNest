@@ -1,10 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase/client';
-import { connectionManager } from '@/lib/services/connection-manager';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { Button } from '@/components/ui/Button';
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
+import {
+  useAuthBackendConnection,
+  AuthBackendRecoveryActions,
+  AuthBackendStatusBar,
+  isNetworkFetchError,
+  formatBackendUnreachableMessage,
+} from '@/components/auth/AuthBackendStatusBar';
 import {
   ShieldCheck,
   TrendingUp,
@@ -15,7 +21,6 @@ import {
   EyeOff,
   AlertCircle,
   Loader2,
-  RotateCcw,
 } from 'lucide-react';
 
 export function LoginPage() {
@@ -29,63 +34,11 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
+  const [isUnreachableError, setIsUnreachableError] = useState(false);
 
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
-  const [activeUrl, setActiveUrl] = useState(() => connectionManager.getSupabaseUrl());
-  const [connectionSwitched, setConnectionSwitched] = useState(false);
-
-  const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
-
-  const handleSwitchToRemote = async () => {
-    const remoteUrl =
-      typeof import.meta !== 'undefined' ? import.meta.env?.VITE_SUPABASE_URL : undefined;
-    const remoteKey =
-      typeof import.meta !== 'undefined'
-        ? import.meta.env?.VITE_SUPABASE_ANON_KEY || import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY
-        : undefined;
-
-    if (!remoteUrl || !remoteKey) {
-      setServerError(
-        'Remote Supabase endpoint is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (or configure a custom endpoint in Settings).'
-      );
-      return;
-    }
-
-    await connectionManager.switchServer({
-      mode: 'remote',
-      customSupabaseUrl: remoteUrl,
-      supabaseAnonKey: remoteKey,
-    });
-    setActiveUrl(remoteUrl);
-    setServerError(null);
-    setConnectionSwitched(true);
-  };
-
-  useEffect(() => {
-    const unsub = connectionManager.subscribeConfig(() => {
-      setActiveUrl(connectionManager.getSupabaseUrl());
-    });
-
-    // Auto-heal: If running over HTTPS (Cloudflare Workers) and mode is set to insecure http:// LAN,
-    // upgrade immediately to remote QA endpoint to prevent Mixed Content network errors
-    if (isHttps && connectionManager.getConfig().mode === 'lan') {
-      handleSwitchToRemote();
-    }
-
-    return () => unsub();
-  }, [isHttps]);
-
-  const handleSwitchToLocal = async () => {
-    await connectionManager.switchServer({
-      mode: 'local',
-      host: '127.0.0.1',
-      supabasePort: 54321,
-    });
-    setActiveUrl('http://127.0.0.1:54321');
-    setServerError(null);
-    setConnectionSwitched(true);
-  };
+  const backend = useAuthBackendConnection();
 
   // If in password recovery flow, send user to reset-password page
   if (!authLoading && isPasswordRecovery) {
@@ -117,6 +70,7 @@ export function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setServerError(null);
+    setIsUnreachableError(false);
 
     if (!validate()) return;
 
@@ -134,16 +88,17 @@ export function LoginPage() {
       navigate('/', { replace: true });
     } catch (err: unknown) {
       let message = 'Invalid email or password. Please try again.';
-      if (err instanceof Error) {
-        if (
-          err.message.includes('Failed to fetch') ||
-          err.message.includes('NetworkError') ||
-          err.name === 'TypeError'
-        ) {
-          message = `Cannot reach backend at ${connectionManager.getSupabaseUrl()}. Verify local Supabase is running or switch to Local (127.0.0.1).`;
-        } else {
-          message = err.message;
-        }
+      if (isNetworkFetchError(err)) {
+        setIsUnreachableError(true);
+        message = formatBackendUnreachableMessage({
+          activeUrl: backend.activeUrl,
+          activeMode: backend.activeMode,
+          hasConfiguredRemote: backend.hasConfiguredRemote,
+          isMobile: backend.isMobile,
+          isHttps: backend.isHttps,
+        });
+      } else if (err instanceof Error) {
+        message = err.message;
       }
       setServerError(message);
     } finally {
@@ -246,17 +201,15 @@ export function LoginPage() {
                 <div className="flex-1">
                   <p className="font-semibold">Authentication Failed</p>
                   <p className="mt-0.5 text-rose-300/90 leading-relaxed">{serverError}</p>
-                  {serverError.includes('Cannot reach backend') && (
-                    <button
-                      type="button"
-                      onClick={isHttps ? handleSwitchToRemote : handleSwitchToLocal}
-                      className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 font-medium transition-colors text-[11px] border border-slate-700"
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                      {isHttps
-                        ? 'Switch to QA Cloud (Supabase)'
-                        : 'Switch to Local Server (127.0.0.1:54321)'}
-                    </button>
+                  {isUnreachableError && (
+                    <AuthBackendRecoveryActions
+                      backend={backend}
+                      onErrorClear={() => {
+                        setServerError(null);
+                        setIsUnreachableError(false);
+                      }}
+                      onError={(msg) => setServerError(msg)}
+                    />
                   )}
                 </div>
               </div>
@@ -403,27 +356,14 @@ export function LoginPage() {
               </p>
             </div>
 
-            {/* Active Server Connection Indicator */}
-            <div className="mt-5 pt-4 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-400">
-              <span className="flex items-center gap-1.5 truncate max-w-[240px]" title={activeUrl}>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                <span className="truncate">
-                  Backend: <code className="text-slate-300 font-mono text-[11px]">{activeUrl}</code>
-                </span>
-              </span>
-              <button
-                type="button"
-                onClick={isHttps ? handleSwitchToRemote : handleSwitchToLocal}
-                className="text-emerald-400 hover:text-emerald-300 transition-colors text-xs font-medium ml-2 shrink-0"
-              >
-                {isHttps ? 'Use QA Cloud' : 'Use 127.0.0.1'}
-              </button>
-            </div>
-            {connectionSwitched && (
-              <p className="mt-2 text-[11px] text-emerald-400 text-center animate-in fade-in">
-                ✓ Switched to {activeUrl}. You can now sign in.
-              </p>
-            )}
+            {/* Active Server Connection Indicator & Pre-Auth Switcher */}
+            <AuthBackendStatusBar
+              backend={backend}
+              onSwitched={() => {
+                setServerError(null);
+                setIsUnreachableError(false);
+              }}
+            />
           </div>
         </div>
       </div>

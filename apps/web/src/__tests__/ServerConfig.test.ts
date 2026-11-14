@@ -3,6 +3,7 @@ import {
   isValidIPv4,
   isValidPort,
   isValidHttpUrl,
+  isSecretApiKey,
   buildSupabaseUrl,
   buildFrontendUrl,
   loadServerConfig,
@@ -58,6 +59,18 @@ describe('Phase 10: ServerConfig & LAN Validation Suite', () => {
       expect(isValidHttpUrl('ftp://example.com')).toBe(false);
       expect(isValidHttpUrl('javascript:alert(1)')).toBe(false);
       expect(isValidHttpUrl('not a url')).toBe(false);
+    });
+
+    it('detects secret/service_role keys while allowing public publishable/anon keys', () => {
+      const fakeServiceRoleJwt = `eyJhbGciOiJIUzI1NiJ9.${btoa(
+        JSON.stringify({ role: 'service_role' })
+      )}.sig`;
+      const fakeAnonJwt = `eyJhbGciOiJIUzI1NiJ9.${btoa(JSON.stringify({ role: 'anon' }))}.sig`;
+
+      expect(isSecretApiKey('sb_secret_abc123')).toBe(true);
+      expect(isSecretApiKey(fakeServiceRoleJwt)).toBe(true);
+      expect(isSecretApiKey('sb_publishable_abc123')).toBe(false);
+      expect(isSecretApiKey(fakeAnonJwt)).toBe(false);
     });
   });
 

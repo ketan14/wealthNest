@@ -14,12 +14,16 @@ export function isTauri(): boolean {
   );
 }
 
+export function isMobileUserAgent(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
 export function getAppPlatform(): AppPlatform {
   if (!isTauri()) return 'web';
 
-  const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
   const isMobileOS =
-    /android|iphone|ipad|ipod/.test(userAgent) ||
+    isMobileUserAgent() ||
     (typeof window !== 'undefined' && 'ontouchstart' in window && window.innerWidth < 768);
 
   return isMobileOS ? 'mobile' : 'desktop';

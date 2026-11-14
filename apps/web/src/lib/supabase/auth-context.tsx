@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { Session, User } from '@supabase/supabase-js';
 import { QueryClientContext } from '@tanstack/react-query';
 import { supabase } from './client';
+import { connectionManager } from '../services/connection-manager';
 
 
 interface AuthContextType {
@@ -49,55 +50,77 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       lastUserIdRef.current = nextUserId;
     };
 
-    // Initial session retrieval
-    supabase.auth
-      .getSession()
-      .then(({ data: { session: activeSession } }) => {
-        if (activeSession?.user) {
-          syncUserTransition(activeSession.user);
-          setSession(activeSession);
-          setUser(activeSession.user);
+    let activeAuthSub: { unsubscribe: () => void } | null = null;
+    let isDisposed = false;
+
+    const bindActiveClientAuth = () => {
+      activeAuthSub?.unsubscribe();
+      activeAuthSub = null;
+
+      // Initial session retrieval for the active SupabaseClient
+      supabase.auth
+        .getSession()
+        .then(({ data: { session: activeSession } }) => {
+          if (isDisposed) return;
+          if (activeSession?.user) {
+            syncUserTransition(activeSession.user);
+            setSession(activeSession);
+            setUser(activeSession.user);
+          } else {
+            syncUserTransition(null);
+            setSession(null);
+            setUser(null);
+          }
+          setIsLoading(false);
+        })
+        .catch(() => {
+          if (isDisposed) return;
+          syncUserTransition(null);
+          setSession(null);
+          setUser(null);
+          setIsLoading(false);
+        });
+
+      // Listen for auth state changes on the active SupabaseClient
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((event, nextSession) => {
+        if (isDisposed) return;
+        if (event === 'PASSWORD_RECOVERY') {
+          setIsPasswordRecovery(true);
+        } else if (event === 'SIGNED_OUT') {
+          setIsPasswordRecovery(false);
+          queryClientRef.current?.clear();
+        } else if (event === 'USER_UPDATED') {
+          setIsPasswordRecovery(false);
+        }
+
+        if (nextSession?.user) {
+          syncUserTransition(nextSession.user);
+          setSession(nextSession);
+          setUser(nextSession.user);
         } else {
           syncUserTransition(null);
           setSession(null);
           setUser(null);
         }
         setIsLoading(false);
-      })
-      .catch(() => {
-        syncUserTransition(null);
-        setSession(null);
-        setUser(null);
-        setIsLoading(false);
       });
 
-    // Listen for auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsPasswordRecovery(true);
-      } else if (event === 'SIGNED_OUT') {
-        setIsPasswordRecovery(false);
-        queryClientRef.current?.clear();
-      } else if (event === 'USER_UPDATED') {
-        setIsPasswordRecovery(false);
-      }
+      activeAuthSub = subscription;
+    };
 
-      if (nextSession?.user) {
-        syncUserTransition(nextSession.user);
-        setSession(nextSession);
-        setUser(nextSession.user);
-      } else {
-        syncUserTransition(null);
-        setSession(null);
-        setUser(null);
-      }
-      setIsLoading(false);
+    bindActiveClientAuth();
+
+    // Re-bind auth listeners if ConnectionManager switches endpoints (e.g. LoginPage switcher)
+    const unsubConfig = connectionManager.subscribeConfig(() => {
+      bindActiveClientAuth();
     });
 
     return () => {
-      subscription.unsubscribe();
+      isDisposed = true;
+      activeAuthSub?.unsubscribe();
+      unsubConfig();
     };
   }, []);
 

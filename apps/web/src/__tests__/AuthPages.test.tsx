@@ -7,6 +7,9 @@ import { SignUpPage } from '../pages/SignUpPage';
 import { LoginPage } from '../pages/LoginPage';
 import { ResetPasswordPage } from '../pages/ResetPasswordPage';
 import { supabase } from '../lib/supabase/client';
+import { connectionManager } from '../lib/services/connection-manager';
+import { SERVER_CONFIG_STORAGE_KEY } from '../lib/config/server-config';
+import { formatBackendUnreachableMessage } from '../components/auth/AuthBackendStatusBar';
 
 // Mock Supabase client
 vi.mock('../lib/supabase/client', () => ({
@@ -52,8 +55,10 @@ function renderWithProviders(ui: React.ReactElement, initialRoute = '/signup') {
 }
 
 describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    window.localStorage.removeItem(SERVER_CONFIG_STORAGE_KEY);
+    await connectionManager.resetToDefaults();
     (supabase.auth.getSession as any).mockResolvedValue({
       data: { session: null },
     });
@@ -523,6 +528,85 @@ describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
       });
       expect(queryClient.getQueryData(['portfolio', 'usr-cached'])).toBeUndefined();
       expect(supabase.auth.signOut).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Pre-Auth Mobile Backend Configuration Recovery', () => {
+    it('omits 127.0.0.1 advice on mobile network errors and lets users switch to Cloud Supabase before login', async () => {
+      const originalUserAgent = navigator.userAgent;
+      Object.defineProperty(navigator, 'userAgent', {
+        configurable: true,
+        value: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36',
+      });
+
+      (supabase.auth.signInWithPassword as any).mockRejectedValueOnce(
+        new TypeError('Failed to fetch')
+      );
+
+      try {
+        renderWithProviders(<></>, '/login');
+
+        fireEvent.change(screen.getByLabelText(/Email Address/i), {
+          target: { value: 'mobile@wealthnest.local' },
+        });
+        fireEvent.change(screen.getByLabelText(/^Password$/i), {
+          target: { value: 'WealthNest@2026' },
+        });
+        fireEvent.click(screen.getByRole('button', { name: /Sign In/i }));
+
+        const alert = await screen.findByRole('alert');
+        expect(alert).toHaveTextContent(/Cannot reach backend at http:\/\/192\.168\.1\.105:54321/i);
+        expect(alert).not.toHaveTextContent(/127\.0\.0\.1/i);
+
+        fireEvent.click(screen.getByRole('button', { name: /Configure Backend/i }));
+        expect(
+          await screen.findByRole('dialog', { name: /Configure Backend Server/i })
+        ).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: /Remote \/ Production/i }));
+        fireEvent.change(screen.getByLabelText(/Supabase Project URL/i), {
+          target: { value: 'https://qa-cloud.supabase.co' },
+        });
+        fireEvent.change(screen.getByLabelText(/Supabase Publishable \/ Anon Key/i), {
+          target: { value: 'sb_publishable_mobile_qa_key' },
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: /Save & Connect/i }));
+
+        await waitFor(() => {
+          expect(connectionManager.getSupabaseUrl()).toBe('https://qa-cloud.supabase.co');
+        });
+        expect(
+          screen.getByText(/Switched to https:\/\/qa-cloud\.supabase\.co/i)
+        ).toBeInTheDocument();
+        expect(supabase.auth.onAuthStateChange).toHaveBeenCalledTimes(2);
+      } finally {
+        Object.defineProperty(navigator, 'userAgent', {
+          configurable: true,
+          value: originalUserAgent,
+        });
+      }
+    });
+
+    it('formats unreachable backend messages cleanly across mobile and desktop modes', () => {
+      const mobileMsg = formatBackendUnreachableMessage({
+        activeUrl: 'http://192.168.1.105:54321',
+        activeMode: 'lan',
+        hasConfiguredRemote: true,
+        isMobile: true,
+        isHttps: false,
+      });
+      expect(mobileMsg).toContain('Switch to Cloud Supabase');
+      expect(mobileMsg).not.toContain('127.0.0.1');
+
+      const desktopMsg = formatBackendUnreachableMessage({
+        activeUrl: 'http://192.168.1.105:54321',
+        activeMode: 'lan',
+        hasConfiguredRemote: false,
+        isMobile: false,
+        isHttps: false,
+      });
+      expect(desktopMsg).toContain('127.0.0.1');
     });
   });
 });

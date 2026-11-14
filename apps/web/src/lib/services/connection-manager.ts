@@ -8,6 +8,7 @@ import {
   isValidIPv4,
   isValidPort,
   isValidHttpUrl,
+  isSecretApiKey,
 } from '../config/server-config';
 
 export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'error';
@@ -133,6 +134,16 @@ export class ConnectionManager {
       };
     }
 
+    if (isSecretApiKey(configToTest.supabaseAnonKey)) {
+      return {
+        success: false,
+        status: 'error',
+        url: buildSupabaseUrl(configToTest),
+        message:
+          'Refusing secret/service_role API key in client settings. Use the public Supabase Publishable or Anon key instead.',
+      };
+    }
+
     if (configToTest.mode === 'remote') {
       if (!configToTest.customSupabaseUrl || !isValidHttpUrl(configToTest.customSupabaseUrl)) {
         return {
@@ -196,15 +207,23 @@ export class ConnectionManager {
       clearTimeout(timeoutId);
       const isAbort = (err as Error)?.name === 'AbortError';
 
-      const troubleshooting = [
-        'Ensure the host machine is running and connected to the same Wi-Fi network.',
-        'Verify Supabase is running (run "supabase status" on the host).',
-        'Check that Windows Firewall allows inbound connections on port ' +
-          configToTest.supabasePort +
-          '.',
-        'If running inside WSL2, verify port forwarding rule: "netsh interface portproxy add v4tov4 ...".',
-        'Verify the configured IPv4 address matches your host machine current Wi-Fi IP (ipconfig).',
-      ];
+      const troubleshooting =
+        configToTest.mode === 'remote'
+          ? [
+              'Verify your device has active internet access and no VPN/firewall is blocking HTTPS.',
+              'Confirm the Supabase Project URL matches https://<project-ref>.supabase.co.',
+              'Check your public Publishable / Anon Key in Supabase Project Settings -> API.',
+              'Verify the Supabase project is active and not paused.',
+            ]
+          : [
+              'Ensure the host machine is running and connected to the same Wi-Fi network.',
+              'Verify Supabase is running (run "supabase status" on the host).',
+              'Check that Windows Firewall allows inbound connections on port ' +
+                configToTest.supabasePort +
+                '.',
+              'If running inside WSL2, verify port forwarding rule: "netsh interface portproxy add v4tov4 ...".',
+              'Verify the configured IPv4 address matches your host machine current Wi-Fi IP (ipconfig).',
+            ];
 
       return {
         success: false,
@@ -230,6 +249,16 @@ export class ConnectionManager {
       ...this.currentConfig,
       ...newConfig,
     };
+
+    if (isSecretApiKey(updated.supabaseAnonKey)) {
+      return {
+        success: false,
+        status: 'error',
+        url: buildSupabaseUrl(updated),
+        message:
+          'Refusing secret/service_role API key in client settings. Use the public Supabase Publishable or Anon key instead.',
+      };
+    }
 
     if (options?.testFirst) {
       const testRes = await this.testConnection(updated);

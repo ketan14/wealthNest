@@ -6,6 +6,13 @@ import { Button } from '@/components/ui/Button';
 import { AuthBrandingPanel } from '@/components/auth/AuthBrandingPanel';
 import { TermsPrivacyModal } from '@/components/auth/TermsPrivacyModal';
 import {
+  useAuthBackendConnection,
+  AuthBackendRecoveryActions,
+  AuthBackendStatusBar,
+  isNetworkFetchError,
+  formatBackendUnreachableMessage,
+} from '@/components/auth/AuthBackendStatusBar';
+import {
   PASSWORD_POLICY_HINT,
   validatePasswordComplexity,
 } from '@/lib/validation/password';
@@ -38,8 +45,11 @@ export function SignUpPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
+  const [isUnreachableError, setIsUnreachableError] = useState(false);
   const [isConfirmationRequired, setIsConfirmationRequired] = useState(false);
   const [termsModalOpen, setTermsModalOpen] = useState(false);
+
+  const backend = useAuthBackendConnection();
 
   // If already authenticated, redirect to home page
   if (!authLoading && user) {
@@ -83,6 +93,7 @@ export function SignUpPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setServerError(null);
+    setIsUnreachableError(false);
 
     if (!validate()) return;
 
@@ -112,10 +123,19 @@ export function SignUpPage() {
         navigate('/login', { replace: true });
       }
     } catch (err: unknown) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : 'Unable to register account. Please try again or contact support.';
+      let message = 'Unable to register account. Please try again or contact support.';
+      if (isNetworkFetchError(err)) {
+        setIsUnreachableError(true);
+        message = formatBackendUnreachableMessage({
+          activeUrl: backend.activeUrl,
+          activeMode: backend.activeMode,
+          hasConfiguredRemote: backend.hasConfiguredRemote,
+          isMobile: backend.isMobile,
+          isHttps: backend.isHttps,
+        });
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
       setServerError(message);
     } finally {
       setSubmitting(false);
@@ -177,6 +197,16 @@ export function SignUpPage() {
                   <div className="flex-1">
                     <p className="font-semibold">Registration Error</p>
                     <p className="mt-0.5 text-rose-300/90">{serverError}</p>
+                    {isUnreachableError && (
+                      <AuthBackendRecoveryActions
+                        backend={backend}
+                        onErrorClear={() => {
+                          setServerError(null);
+                          setIsUnreachableError(false);
+                        }}
+                        onError={(msg) => setServerError(msg)}
+                      />
+                    )}
                   </div>
                 </div>
               )}
@@ -475,6 +505,15 @@ export function SignUpPage() {
                   </Link>
                 </p>
               </div>
+
+              {/* Active Server Connection Indicator & Pre-Auth Switcher */}
+              <AuthBackendStatusBar
+                backend={backend}
+                onSwitched={() => {
+                  setServerError(null);
+                  setIsUnreachableError(false);
+                }}
+              />
             </div>
           )}
         </div>

@@ -8,6 +8,11 @@ on:
         description: 'Optional version label (e.g., v0.1.0-qa)'
         required: false
         default: 'v0.1.0-qa'
+      allow_lan_fallback:
+        description: 'Allow building without remote VITE_SUPABASE_URL/key (LAN-only testing)'
+        required: false
+        default: false
+        type: boolean
   # Automatically build & publish a GitHub Release whenever a version tag is pushed (e.g., git tag v0.1.0 && git push --tags)
   push:
     tags:
@@ -32,6 +37,15 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Validate Remote Supabase Build Environment
+        if: ${{ inputs.allow_lan_fallback != true }}
+        run: |
+          if [ -z "${VITE_SUPABASE_URL:-}" ] || { [ -z "${VITE_SUPABASE_ANON_KEY:-}" ] && [ -z "${VITE_SUPABASE_PUBLISHABLE_KEY:-}" ]; }; then
+            echo "::error::Missing Supabase client environment variables (VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY or VITE_SUPABASE_ANON_KEY)."
+            echo "::error::Add them under GitHub Repository Settings -> Secrets and variables -> Actions, otherwise mobile (.apk) and desktop (.exe) installers default to http://192.168.1.105:54321."
+            exit 1
+          fi
 
       - name: Setup Node.js 22 (Includes Built-in node:sqlite DatabaseSync)
         uses: actions/setup-node@v4

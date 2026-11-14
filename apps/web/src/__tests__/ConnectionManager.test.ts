@@ -145,4 +145,26 @@ describe('Phase 10: ConnectionManager & Endpoint Switching', () => {
       });
     }
   });
+
+  it('rejects secret/service_role API keys and returns remote troubleshooting steps for cloud mode', async () => {
+    const secretRes = await connectionManager.switchServer({
+      mode: 'remote',
+      customSupabaseUrl: 'https://custom.supabase.co',
+      supabaseAnonKey: 'sb_secret_never_use_in_client',
+    });
+    expect(secretRes.success).toBe(false);
+    expect(secretRes.message).toContain('Refusing secret/service_role API key');
+
+    const fetchMock = vi.fn().mockRejectedValue(new Error('Failed to fetch'));
+    vi.stubGlobal('fetch', fetchMock);
+    const remoteErr = await connectionManager.testConnection({
+      mode: 'remote',
+      customSupabaseUrl: 'https://custom.supabase.co',
+      supabaseAnonKey: 'sb_publishable_valid_key',
+    });
+    expect(remoteErr.success).toBe(false);
+    expect(remoteErr.troubleshooting?.some((tip) => tip.includes('Publishable / Anon Key'))).toBe(
+      true
+    );
+  });
 });

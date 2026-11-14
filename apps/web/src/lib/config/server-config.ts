@@ -2,6 +2,7 @@
  * WealthNest — Centralized Server & Connection Configuration
  * Supports Local Development, LAN Development (Wi-Fi), and Remote / Production.
  */
+import { isTauri } from '../tauri/tauri-runtime';
 
 export type ConnectionMode = 'local' | 'lan' | 'remote';
 
@@ -23,14 +24,47 @@ export const DEFAULT_LAN_HOST = '192.168.1.105';
 export const DEFAULT_FRONTEND_PORT = 30000;
 export const DEFAULT_SUPABASE_PORT = 54321;
 
+export const LOCAL_DEMO_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+
 export const DEFAULT_SUPABASE_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || undefined;
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL?.trim()) || undefined;
 
 // Standard Supabase local development anon key (supports legacy anon key and new publishable key)
 export const DEFAULT_SUPABASE_ANON_KEY =
   (typeof import.meta !== 'undefined' &&
-    (import.meta.env?.VITE_SUPABASE_ANON_KEY || import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY)) ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+    (import.meta.env?.VITE_SUPABASE_ANON_KEY?.trim() ||
+      import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY?.trim())) ||
+  LOCAL_DEMO_ANON_KEY;
+
+/**
+ * Returns true when a valid remote Supabase URL was supplied at build time.
+ */
+export function hasConfiguredRemoteBackend(): boolean {
+  return Boolean(DEFAULT_SUPABASE_URL && isValidHttpUrl(DEFAULT_SUPABASE_URL));
+}
+
+/**
+ * Detects server-only Supabase secret keys (sb_secret_* or service_role JWTs)
+ * so client configuration forms reject privileged keys before saving.
+ */
+export function isSecretApiKey(apiKey: string): boolean {
+  const trimmed = apiKey.trim();
+  if (!trimmed) return false;
+  if (/^sb_secret_/i.test(trimmed)) return true;
+
+  const parts = trimmed.split('.');
+  const payloadPart = parts[1];
+  if (parts.length !== 3 || !payloadPart || typeof atob !== 'function') return false;
+  try {
+    const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+    const payload = JSON.parse(atob(padded)) as { role?: unknown };
+    return payload?.role === 'service_role';
+  } catch {
+    return false;
+  }
+}
 
 const isTestEnv = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
 
@@ -158,21 +192,39 @@ export function loadServerConfig(): ServerConfig {
     const parsed = JSON.parse(raw);
     if (parsed && parsed.version === 1) {
       const isTest = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
-      let mode = parsed.mode === 'lan' || parsed.mode === 'remote' ? parsed.mode : 'local';
+      let mode: ConnectionMode =
+        parsed.mode === 'lan' || parsed.mode === 'remote' ? parsed.mode : 'local';
       let customUrl =
-        typeof parsed.customSupabaseUrl === 'string' ? parsed.customSupabaseUrl : undefined;
+        typeof parsed.customSupabaseUrl === 'string' && parsed.customSupabaseUrl.trim()
+          ? parsed.customSupabaseUrl.trim()
+          : undefined;
+      const rawSavedKey =
+        typeof parsed.supabaseAnonKey === 'string' ? parsed.supabaseAnonKey.trim() : '';
 
-      // On HTTPS production, upgrade legacy or stale http:// LAN config to remote when configured
-      if (
+      const shouldUpgradeToRemoteOnHttps =
         !isTest &&
         typeof window !== 'undefined' &&
         window.location.protocol === 'https:' &&
+        mode !== 'remote' &&
+        Boolean(customUrl || hasConfiguredRemoteBackend());
+
+      const isStalePlaceholderLanConfig =
         mode === 'lan' &&
-        (customUrl || DEFAULT_SUPABASE_URL)
-      ) {
+        parsed.host === DEFAULT_LAN_HOST &&
+        (!parsed.lastConnectedAt || rawSavedKey === LOCAL_DEMO_ANON_KEY);
+
+      const shouldUpgradeToRemoteOnTauri =
+        !isTest && isTauri() && hasConfiguredRemoteBackend() && isStalePlaceholderLanConfig;
+
+      if (shouldUpgradeToRemoteOnHttps || shouldUpgradeToRemoteOnTauri) {
         mode = 'remote';
         customUrl = customUrl || DEFAULT_SUPABASE_URL;
       }
+
+      const shouldUpgradeDemoKey =
+        (shouldUpgradeToRemoteOnHttps || shouldUpgradeToRemoteOnTauri) &&
+        (!rawSavedKey || rawSavedKey === LOCAL_DEMO_ANON_KEY) &&
+        DEFAULT_SUPABASE_ANON_KEY !== LOCAL_DEMO_ANON_KEY;
 
       return {
         version: 1,
@@ -185,10 +237,9 @@ export function loadServerConfig(): ServerConfig {
           ? parsed.supabasePort
           : DEFAULT_SUPABASE_PORT,
         customSupabaseUrl: customUrl,
-        supabaseAnonKey:
-          typeof parsed.supabaseAnonKey === 'string' && parsed.supabaseAnonKey
-            ? parsed.supabaseAnonKey
-            : DEFAULT_SUPABASE_ANON_KEY,
+        supabaseAnonKey: shouldUpgradeDemoKey
+          ? DEFAULT_SUPABASE_ANON_KEY
+          : rawSavedKey || DEFAULT_SUPABASE_ANON_KEY,
         lastConnectedAt:
           typeof parsed.lastConnectedAt === 'string' ? parsed.lastConnectedAt : undefined,
       };
