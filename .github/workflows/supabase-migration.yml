@@ -53,7 +53,7 @@ jobs:
         if: steps.check_secrets.outputs.configured == 'true'
         run: |
           if [ -n "${ALLOWED_ORIGINS:-}" ]; then
-            supabase secrets set "ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
+            supabase secrets set "ALLOWED_ORIGINS=${ALLOWED_ORIGINS}" --remote="${{ secrets.SUPABASE_PROJECT_ID }}" --yes
           else
             echo "::notice::Repository secret ALLOWED_ORIGINS is not set; admin-create-user will allow wildcard (*) CORS until ALLOWED_ORIGINS is configured."
           fi
@@ -64,6 +64,6 @@ jobs:
       - name: Deploy Edge Functions
         if: steps.check_secrets.outputs.configured == 'true'
         run: |
-          supabase functions deploy admin-create-user --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}" --use-api
+          supabase functions deploy admin-create-user --remote="${{ secrets.SUPABASE_PROJECT_ID }}" --use-api --no-verify-jwt --yes
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
