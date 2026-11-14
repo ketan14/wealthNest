@@ -27,33 +27,28 @@ function resolveRateLimit(envName: string, fallback: number, maxCap: number): nu
   return Math.min(Math.floor(raw), maxCap);
 }
 
+const ALLOWED_CORS_HEADERS =
+  'authorization, x-client-info, apikey, content-type, x-retry-count, x-region';
+
 function buildCorsHeaders(req: Request): { headers: Record<string, string>; originAllowed: boolean } {
-  const configuredOriginsRaw = Deno.env.get('ALLOWED_ORIGINS') ?? '';
-  const configuredOrigins = configuredOriginsRaw
+  const configuredOrigins = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);
 
   const reqOrigin = req.headers.get('Origin') ?? '';
-
-  if (configuredOrigins.length > 0) {
-    const matched = reqOrigin && configuredOrigins.includes(reqOrigin);
-    return {
-      originAllowed: !reqOrigin || Boolean(matched),
-      headers: {
-        'Access-Control-Allow-Origin': matched ? reqOrigin : configuredOrigins[0],
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Vary': 'Origin',
-      },
-    };
-  }
+  const hasAllowlist = configuredOrigins.length > 0;
+  const matched = Boolean(reqOrigin && configuredOrigins.includes(reqOrigin));
 
   return {
-    originAllowed: true,
+    originAllowed: !hasAllowlist || !reqOrigin || matched,
     headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      'Access-Control-Allow-Origin': hasAllowlist
+        ? matched
+          ? reqOrigin
+          : configuredOrigins[0]
+        : '*',
+      'Access-Control-Allow-Headers': ALLOWED_CORS_HEADERS,
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Vary': 'Origin',
     },

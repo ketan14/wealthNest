@@ -55,7 +55,7 @@ jobs:
           if [ -n "${ALLOWED_ORIGINS:-}" ]; then
             supabase secrets set "ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
           else
-            echo "::notice::Repository secret ALLOWED_ORIGINS is not set; admin-create-user will use default wealthnest.local/*.pages.dev CORS origins."
+            echo "::notice::Repository secret ALLOWED_ORIGINS is not set; admin-create-user will allow wildcard (*) CORS until ALLOWED_ORIGINS is configured."
           fi
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

@@ -53,3 +53,8 @@ enable_confirmations = true
 
 [analytics]
 enabled = false
+
+# Function-level JWT verification is enforced cryptographically inside index.ts via supabaseAdmin.auth.getUser(jwt)
+# so ES256 tokens and sb_publishable_ keys are not prematurely rejected at the Edge Gateway.
+[functions.admin-create-user]
+verify_jwt = false
