@@ -10,7 +10,6 @@ import {
   AdminAuditLogEntry,
 } from '@wealthnest/domain';
 import { AdminRepositoryPort, AdminAuditLogPort } from '@wealthnest/application';
-import { isOfflineLocalActive } from './auth-context';
 import { supabase } from './client';
 import { DEMO_ADMIN_USERS, DEMO_HOUSEHOLDS, demoAuditLogsStore } from './admin-demo-data';
 
@@ -276,15 +275,13 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
 
       return { userId, email: createdEmail };
     } catch (err: any) {
-      const isOfflineOrTestFallback =
-        isOfflineLocalActive() ||
-        import.meta.env?.MODE === 'test';
+      const isTestFallback = import.meta.env?.MODE === 'test';
       const isNetworkError =
         !err?.message ||
         err.message.includes('fetch') ||
         err.message.includes('FunctionsFetchError');
 
-      if (isOfflineOrTestFallback && isNetworkError) {
+      if (isTestFallback && isNetworkError) {
         const fallbackId = `usr-${Date.now()}`;
         const newUser: AdminUserSummary = {
           id: fallbackId,

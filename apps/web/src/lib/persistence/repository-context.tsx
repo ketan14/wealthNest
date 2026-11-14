@@ -30,11 +30,7 @@ import { SupabaseAssetClassAdapter } from '../supabase/asset-class.adapter';
 import { SupabaseBackupAdapter } from '../supabase/backup.adapter';
 import { SupabaseCasImportAdapter } from '../supabase/cas-import.adapter';
 import { SupabaseDocumentVaultAdapter } from '../supabase/document-vault.adapter';
-import { isTauri } from '../tauri/tauri-runtime';
 import { TauriSqliteAdapter } from '../tauri/tauri-sqlite-adapter';
-import { isOfflineLocalActive } from '../supabase/auth-context';
-
-const isTestEnv = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
 
 export interface RepositoryBundle {
   readonly holdingRepo: HoldingRepositoryPort;
@@ -117,10 +113,7 @@ export function RepositoryProvider({
   sqliteDb,
 }: RepositoryProviderProps) {
   const bundle = useMemo<RepositoryBundle>(() => {
-    const resolvedMode =
-      customRepositories?.mode ??
-      mode ??
-      ((isTestEnv ? isTauri() : false) || isOfflineLocalActive() ? 'sqlite' : 'supabase');
+    const resolvedMode = customRepositories?.mode ?? mode ?? 'supabase';
     const baseBundle =
       resolvedMode === 'sqlite' ? createSqliteRepositoryBundle(sqliteDb) : defaultSupabaseBundle;
 

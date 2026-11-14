@@ -4,14 +4,6 @@ on:
   # Trigger manually from GitHub -> Actions -> "Run workflow" button
   workflow_dispatch:
     inputs:
-      target_env:
-        description: 'Target backend environment (qa = Remote QA Supabase, offline = Local SQLite)'
-        required: true
-        default: 'qa'
-        type: choice
-        options:
-          - 'qa'
-          - 'offline'
       release_tag:
         description: 'Optional version label (e.g., v0.1.0-qa)'
         required: false
@@ -25,10 +17,10 @@ permissions:
   contents: write
 
 env:
-  VITE_APP_ENV: ${{ inputs.target_env || 'qa' }}
-  VITE_SUPABASE_URL: ${{ (inputs.target_env == 'offline') && '' || vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL || '' }}
-  VITE_SUPABASE_ANON_KEY: ${{ (inputs.target_env == 'offline') && '' || vars.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY || '' }}
-  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ (inputs.target_env == 'offline') && '' || vars.VITE_SUPABASE_PUBLISHABLE_KEY || secrets.VITE_SUPABASE_PUBLISHABLE_KEY || '' }}
+  VITE_APP_ENV: 'qa'
+  VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL || '' }}
+  VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY || '' }}
+  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || secrets.VITE_SUPABASE_PUBLISHABLE_KEY || '' }}
 
 jobs:
   # ============================================================================
@@ -169,8 +161,7 @@ jobs:
         with:
           name: WealthNest-Android-Signed-APK
           path: |
-            src-tauri/gen/android/app/build/outputs/apk/universal/release/wealthnest-offline-signed.apk
-            src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
+            src-tauri/gen/android/app/build/outputs/apk/universal/release/wealthnest-signed.apk
             src-tauri/gen/android/app/build/outputs/bundle/universalRelease/*.aab
           retention-days: 30
 
@@ -202,6 +193,6 @@ jobs:
           files: |
             release-assets/windows/**/*.exe
             release-assets/windows/**/*.msi
-            release-assets/android/**/wealthnest-offline-signed.apk
+            release-assets/android/**/wealthnest-signed.apk
             release-assets/android/**/*.aab
 

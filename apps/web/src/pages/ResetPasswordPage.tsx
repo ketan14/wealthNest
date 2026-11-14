@@ -14,15 +14,13 @@ export function ResetPasswordPage() {
     user,
     session,
     isLoading: authLoading,
-    isOfflineUser,
     isPasswordRecovery,
     clearPasswordRecovery,
   } = useAuth();
   const navigate = useNavigate();
   const [completed, setCompleted] = useState(false);
 
-  const hasActiveRecoverySession =
-    isPasswordRecovery || Boolean((session || user) && !isOfflineUser);
+  const hasActiveRecoverySession = isPasswordRecovery || Boolean(session || user);
 
   const handlePasswordUpdated = () => {
     clearPasswordRecovery();
@@ -89,7 +87,7 @@ export function ResetPasswordPage() {
                 </div>
                 <Button
                   type="button"
-                  onClick={() => navigate(user && !isOfflineUser ? '/' : '/login')}
+                  onClick={() => navigate(user ? '/' : '/login')}
                   className="w-full h-11 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-semibold border-0"
                 >
                   Continue to WealthNest

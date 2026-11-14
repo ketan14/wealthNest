@@ -20,13 +20,13 @@ export class SupabaseUserAdapter implements UserRepositoryPort {
         // ignore localStorage errors in non-browser envs
       }
 
-      // 2. Return local default/cached profile for demo or offline vault users without making a PostgreSQL query
-      if (!id || id.startsWith('demo-') || id === 'usr-local-vault') {
+      // 2. Return local default/cached profile for demo users without making a PostgreSQL query
+      if (!id || id.startsWith('demo-')) {
         if (localCachedProfile) return ok(localCachedProfile);
         return ok({
           id,
-          email: id === 'usr-local-vault' ? 'investor@wealthnest.local' : 'investor@wealthnest.in',
-          displayName: id === 'usr-local-vault' ? 'Ketan Vaghela' : 'WealthNest Investor',
+          email: 'investor@wealthnest.in',
+          displayName: 'WealthNest Investor',
           defaultCurrency: 'INR',
           preferences: DEFAULT_USER_PREFERENCES,
           createdAt: new Date().toISOString(),
@@ -98,7 +98,7 @@ export class SupabaseUserAdapter implements UserRepositoryPort {
         // ignore
       }
 
-      if (!user.id || user.id.startsWith('demo-') || user.id === 'usr-local-vault') {
+      if (!user.id || user.id.startsWith('demo-')) {
         return ok(undefined);
       }
 

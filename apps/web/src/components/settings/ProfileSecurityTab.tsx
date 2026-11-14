@@ -32,8 +32,8 @@ export function ProfileSecurityTab({
   onSaveProfile,
   onSignOut,
 }: ProfileSecurityTabProps) {
-  const { user, isOfflineUser } = useAuth();
-  const canChangePassword = Boolean(user && !isOfflineUser);
+  const { user } = useAuth();
+  const canChangePassword = Boolean(user);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -162,8 +162,8 @@ export function ProfileSecurityTab({
               <UpdatePasswordForm submitLabel="Update Password" accent="indigo" />
             ) : (
               <p className="text-xs text-slate-400 p-3.5 rounded-lg bg-slate-950 border border-slate-800">
-                Password updates apply to authenticated Supabase server/cloud accounts and are
-                unavailable in Local Vault or Demo mode.
+                Password updates apply to authenticated Supabase server/cloud accounts. Sign in to
+                update your password.
               </p>
             )}
           </CardContent>

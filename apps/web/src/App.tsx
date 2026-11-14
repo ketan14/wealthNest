@@ -131,7 +131,7 @@ export function App() {
                         <Route path="/login" element={<LoginPage />} />
                         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-                        {/* Investor App Shell (Authenticated / Tauri Local Vault) */}
+                        {/* Investor App Shell (Authenticated) */}
                         <Route
                           path="/"
                           element={

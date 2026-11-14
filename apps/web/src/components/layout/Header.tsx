@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { usePrivacy } from '@/lib/preferences/privacy-context';
-import { isTauri } from '@/lib/tauri/tauri-runtime';
 import { connectionManager } from '@/lib/services/connection-manager';
 import { ServerConfig } from '@/lib/config/server-config';
 import {
@@ -13,7 +12,6 @@ import {
   LogIn,
   UserPlus,
   LogOut,
-  HardDrive,
   Wifi,
   Server,
   Search,
@@ -27,9 +25,8 @@ export interface HeaderProps {
 }
 
 export function Header({ onOpenCommandPalette }: HeaderProps) {
-  const { user, isOfflineUser, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const { hideBalances, toggleHideBalances } = usePrivacy();
-  const inTauri = isTauri();
   const [config, setConfig] = useState<ServerConfig>(() => connectionManager.getConfig());
 
   useEffect(() => {
@@ -37,18 +34,6 @@ export function Header({ onOpenCommandPalette }: HeaderProps) {
   }, []);
 
   const renderEnvironmentBadge = () => {
-    if (isOfflineUser) {
-      return (
-        <Badge
-          variant="secondary"
-          className="gap-1.5 py-1 px-3 border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-        >
-          <HardDrive className="w-3.5 h-3.5" />
-          <span>OFFLINE LOCAL VAULT</span>
-        </Badge>
-      );
-    }
-
     if (config.mode === 'lan') {
       return (
         <Link to="/settings?tab=connection" title="Click to manage Server Connection">
@@ -148,15 +133,6 @@ export function Header({ onOpenCommandPalette }: HeaderProps) {
         {/* User Authentication state */}
         {user ? (
           <div className="flex items-center gap-3">
-            {isOfflineUser && (
-              <Badge
-                variant="secondary"
-                className="hidden sm:inline-flex gap-1.5 py-1 px-2.5 text-[11px] border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-              >
-                <HardDrive className="w-3 h-3" />
-                Offline Local Vault
-              </Badge>
-            )}
             <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-secondary/60 border border-border/60 text-xs">
               <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
                 <User className="w-3.5 h-3.5" />
@@ -165,18 +141,16 @@ export function Header({ onOpenCommandPalette }: HeaderProps) {
                 {user.email}
               </span>
             </div>
-            {!inTauri && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={signOut}
-                title="Sign Out"
-                className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1.5"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Sign Out</span>
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={signOut}
+              title="Sign Out"
+              className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
           </div>
         ) : (
           <div className="flex items-center gap-2">

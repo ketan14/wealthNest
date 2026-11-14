@@ -186,14 +186,14 @@ npx wrangler pages deploy apps/web/dist --project-name=wealthnest-qa
 You do **NOT** need to build a new Android APK specifically for QA! 
 
 WealthNest includes dynamic server switching via [`ServerConnectionSettings.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/components/settings/ServerConnectionSettings.tsx):
-1. Install your universal Android APK ([`wealthnest-offline-signed.apk`](file:///home/ketan/projects/Krisha/wealthNest/.github/workflows/build-installers.yml)) on any Android phone or emulator.
-2. Launch the app and go to **Settings** ➔ **Server Connection**.
+1. Install your universal Android APK ([`wealthnest-signed.apk`](file:///home/ketan/projects/Krisha/wealthNest/.github/workflows/build-installers.yml)) on any Android phone or emulator.
+2. Launch the app and sign in with your QA Supabase account, or go to **Settings** ➔ **Server Connection** to point at another server.
 3. Change the active environment:
    - Select **"Custom Cloud / QA"**.
    - **Supabase Cloud URL:** Enter `https://<your-project-ref>.supabase.co`.
    - **Supabase Anon Key:** Enter `<your-supabase-anon-key>`.
 4. Tap **"Save & Connect"**.
-5. The mobile app immediately re-initializes its Supabase client proxy to your QA cloud database with full offline fallback!
+5. The mobile app immediately re-initializes its Supabase client proxy to your QA cloud database!
 
 ---
 

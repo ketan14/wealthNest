@@ -106,7 +106,7 @@ sign_release_apk() {
   local sdk_root="$1"
   local apk_dir="$PROJECT_ROOT/src-tauri/gen/android/app/build/outputs/apk/universal/release"
   local unsigned_apk="$apk_dir/app-universal-release-unsigned.apk"
-  local signed_apk="$apk_dir/wealthnest-offline-signed.apk"
+  local signed_apk="$apk_dir/wealthnest-signed.apk"
   local keystore_path="$PROJECT_ROOT/src-tauri/gen/android/wealthnest-local.keystore"
 
   if [ ! -f "$unsigned_apk" ]; then
@@ -183,7 +183,7 @@ echo ""
 echo "=================================================="
 echo "✅ Android Build Complete!"
 echo "Your APK and AAB artifacts are located at:"
-echo "👉 Signed Installable APK : $PROJECT_ROOT/src-tauri/gen/android/app/build/outputs/apk/universal/release/wealthnest-offline-signed.apk"
+echo "👉 Signed Installable APK : $PROJECT_ROOT/src-tauri/gen/android/app/build/outputs/apk/universal/release/wealthnest-signed.apk"
 echo "👉 Release APK Directory  : $PROJECT_ROOT/src-tauri/gen/android/app/build/outputs/apk/universal/release/"
 echo "👉 AAB Bundle Directory   : $PROJECT_ROOT/src-tauri/gen/android/app/build/outputs/bundle/universalRelease/"
 echo "=================================================="

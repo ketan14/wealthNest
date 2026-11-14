@@ -83,7 +83,7 @@ export function ServerConnectionSettings() {
     // If an active authenticated session exists and the backend URL is changing, ask confirmation
     const currentActiveUrl = connectionManager.getSupabaseUrl();
     const targetUrl = buildSupabaseUrl(config);
-    if (user && user.id !== 'usr-local-vault' && currentActiveUrl !== targetUrl) {
+    if (user && currentActiveUrl !== targetUrl) {
       setPendingSaveConfig(config);
       setShowSwitchWarningModal(true);
       return;
