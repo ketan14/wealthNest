@@ -1,9 +1,10 @@
 # WealthNest — Progressive Onboarding, Financial Profile & Atomic Household Provisioning (Future Scope)
 
 **Document Type:** Future-Scope Product, Database & Security Architecture Specification  
-**Target Phase:** Phase 19 (Planned Future Scope following Phase 18A/18B groundwork)  
+**Target Phase:** Phase 19 (Planned Future Scope building on prioritized Phase 18A Part 2 household architecture)  
 **Status:** Proposed for Review (Zero Code, Schemas, Dependencies, or RLS Policies Modified)  
-**Umbrella Plan:** [next-phase-development-plan.md](file:///home/ketan/projects/Krisha/wealthNest/docs/next-phase-development-plan.md)
+**Umbrella Plan:** [next-phase-development-plan.md](file:///home/ketan/projects/Krisha/wealthNest/docs/next-phase-development-plan.md)  
+**Prerequisite Household Spec:** [household-ownership-and-access-model.md](file:///home/ketan/projects/Krisha/wealthNest/docs/architecture/household-ownership-and-access-model.md)
 
 ---
 
@@ -16,7 +17,7 @@ Collect only what WealthNest needs to provide meaningful financial insights, kee
 2. **Do Not Duplicate `taxRegime`:** Keep [UserPreferences](file:///home/ketan/projects/Krisha/wealthNest/packages/domain/src/models/user.ts#L6-L22) as the single source of truth for `taxRegime` (`'new' | 'old'`), `numberFormat`, `fiscalYearStart`, `theme`, and `autoRefreshMarketData`, and promote it from browser `localStorage` into PostgreSQL (`public.user_preferences`).
 3. **Never Treat Income Bands as Exact Tax Inputs:** Use `annual_income_band` solely for broad planning nudges and educational guidance, never as exact marginal-tax or taxable-income math.
 4. **Versioned Onboarding & Feature-Scoped Eligibility:** Track `onboarding_version` and `onboarding_status` explicitly so adding future required fields or optional features (e.g., tax harvesting or PAN matching) never breaks existing or legacy accounts.
-5. **Preserve Canonical `family_members` Entity:** Today `public.family_members` ([20260101000007](file:///home/ketan/projects/Krisha/wealthNest/supabase/migrations/20260101000007_family_entities_and_accounts.sql#L6-L19)) is already the canonical financial-person table referenced via `member_id` across `portfolio_accounts`, `holdings`, `transactions`, `goals`, `liabilities`, and `family_documents`. Do **not** introduce a competing person table or prematurely migrate `family_members` off `user_id` ownership before multi-tenant household refactors settle.
+5. **Preserve Canonical `family_members` Entity (Evolved in Phase 18A Part 2):** Today `public.family_members` ([20260101000007](file:///home/ketan/projects/Krisha/wealthNest/supabase/migrations/20260101000007_family_entities_and_accounts.sql#L6-L19)) is already the canonical financial-person table referenced via `member_id` across holdings, transactions, goals, liabilities, accounts, and vault documents. **Phase 18A Part 2** evolves it to `household_id` tenancy with optional `linked_user_id` (`UNIQUE (household_id, linked_user_id) WHERE linked_user_id IS NOT NULL`) per [household-ownership-and-access-model.md](file:///home/ketan/projects/Krisha/wealthNest/docs/architecture/household-ownership-and-access-model.md); Phase 19 links directly into that `family_members` record without introducing a competing person table.
 6. **Atomic Server-Side Provisioning & True DB Enforcement:** Provision `user_financial_profiles`, `user_preferences`, `households`, `household_members`, `family_members` (`self`), and `profiles.onboarding_*` state in one transactional PostgreSQL `SECURITY DEFINER` RPC — never via independent frontend inserts — and guard `onboarding_*` columns at the database layer so `ProtectedRoute` is never the sole boundary.
 
 ---
@@ -61,7 +62,7 @@ Before implementing Phase 19 migrations, every schema assumption must align with
 | **User Profile (`public.profiles`)** | Columns: `id`, `display_name`, `default_currency` (default `'INR'` via [000013](file:///home/ketan/projects/Krisha/wealthNest/supabase/migrations/20260101000013_profiles_insert_policy_and_inr_default.sql#L13-L25)), `created_at`, `updated_at`. RLS allows blanket `UPDATE` where `auth.uid() = id` ([000001](file:///home/ketan/projects/Krisha/wealthNest/supabase/migrations/20260101000001_core_schema.sql#L94-L96)). | Adding `onboarding_status` / `onboarding_version` / `onboarding_completed_at` with blanket self-`UPDATE` RLS lets any authenticated client bypass onboarding via REST `PATCH` on `profiles`. | Protect `onboarding_*` columns with a `BEFORE UPDATE` trigger rejecting client changes unless executed by the `complete_user_onboarding` RPC / privileged DB context. |
 | **Preferences (`UserPreferences`)** | Stored **only** in browser `localStorage` (`wealthnest_user_preferences`) inside [user.adapter.ts](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/lib/supabase/user.adapter.ts#L91-L177), and `preferences_json` in [sqlite-schema.ts](file:///home/ketan/projects/Krisha/wealthNest/packages/application/src/persistence/sqlite/sqlite-schema.ts#L7-L14). Zero `user_preferences` table in Supabase today. | `complete_user_onboarding()` cannot update `user_preferences.tax_regime` inside a Postgres transaction until `public.user_preferences` exists in Supabase and adapters read/write it. | Create `public.user_preferences` (paired with Phase 18B `localStorage` cleanup), keeping `profiles.default_currency` as the single currency column to avoid drift. |
 | **Households (`households`, `household_members`)** | [000009](file:///home/ketan/projects/Krisha/wealthNest/supabase/migrations/20260101000009_admin_portal_and_access_control.sql#L154-L172) defines `households(id, name, created_by, created_at, updated_at)` and `household_members(id, household_id, user_id, household_role, joined_at)` with `'primary_owner' \| 'member' \| 'viewer'`. Write policies hardened in [000019](file:///home/ketan/projects/Krisha/wealthNest/supabase/migrations/20260101000019_household_membership_write_rls.sql#L101-L180). | `UNIQUE (household_id, user_id)` prevents duplicate membership in the *same* household, not duplicate initial households on concurrent calls; invited users joining someone else's household already hold a row in `household_members`. | Lock per-user via `pg_advisory_xact_lock`, check `EXISTS (SELECT 1 FROM household_members WHERE user_id = v_uid)` before creating a new household, and preserve `household_role`. |
-| **Canonical Financial Member (`family_members`)** | Referenced via `member_id` in `portfolio_accounts` (`NOT NULL`), `holdings`, `transactions`, `goals`, `liabilities` (+ `co_borrower_ids`), `family_documents`. Keyed by `user_id` with household sharing via [000014](file:///home/ketan/projects/Krisha/wealthNest/supabase/migrations/20260101000014_household_collaboration_rls.sql#L139-L150). | Only a non-unique index (`idx_family_members_user_rel`) exists ([000007](file:///home/ketan/projects/Krisha/wealthNest/supabase/migrations/20260101000007_family_entities_and_accounts.sql#L21-L22)); multiple `'self'` or `is_primary` rows can be inserted. | Deduplicate safely if present, add partial unique indexes (`UNIQUE (user_id) WHERE relationship = 'self'`, `UNIQUE (user_id) WHERE is_primary = true`), and use `ON CONFLICT DO NOTHING`. |
+| **Canonical Financial Member (`family_members`)** | Currently keyed by `user_id` ([000007](file:///home/ketan/projects/Krisha/wealthNest/supabase/migrations/20260101000007_family_entities_and_accounts.sql#L6-L19)) with household sharing via [000014](file:///home/ketan/projects/Krisha/wealthNest/supabase/migrations/20260101000014_household_collaboration_rls.sql#L139-L150) and non-unique `idx_family_members_user_rel`. **Phase 18A Part 2** migrates `family_members` to `household_id` tenancy + nullable `linked_user_id`. | Unchecked onboarding creation could duplicate entities or ignore already-linked household invitations (`UNIQUE (household_id, linked_user_id)`). | Phase 19 `complete_user_onboarding()` runs atop **Phase 18A Part 2** (`family_members.household_id`, `UNIQUE (household_id, linked_user_id) WHERE linked_user_id IS NOT NULL`), linking/creating cleanly idempotently via `ON CONFLICT DO NOTHING`. |
 | **Signup Trigger & Existing Users** | `handle_new_user()` creates only `profiles`. Admin-created users enter via [admin-create-user](file:///home/ketan/projects/Krisha/wealthNest/supabase/functions/admin-create-user/index.ts#L140-L151). Seeded / existing QA accounts (`investor@wealthnest.local`) already own holdings without onboarding fields. | Enforcing RLS / route blocks on `onboarding_status = 'completed'` without backfill would immediately lock out existing seeded, QA, and admin-created accounts. | Backfill pre-cutover active accounts / users with existing holdings to `onboarding_status = 'completed', onboarding_version = 0` (legacy grandfathered) and allow soft profile review banners without blocking access. |
 
 ---
@@ -77,7 +78,8 @@ erDiagram
     AUTH_USERS ||--|| USER_PREFERENCES : "1:1 tax & UI settings"
     AUTH_USERS ||--o{ HOUSEHOLD_MEMBERS : "authenticates into"
     HOUSEHOLDS ||--o{ HOUSEHOLD_MEMBERS : "grants workspace access"
-    AUTH_USERS ||--o{ FAMILY_MEMBERS : "owns canonical financial entity"
+    HOUSEHOLDS ||--o{ FAMILY_MEMBERS : "owns tracked entities (Phase 18A.2)"
+    AUTH_USERS ||--o{ FAMILY_MEMBERS : "optional linked_user_id"
     FAMILY_MEMBERS ||--o{ PORTFOLIO_ACCOUNTS : "holds accounts"
     FAMILY_MEMBERS ||--o{ HOLDINGS : "member_id attribution"
     FAMILY_MEMBERS ||--o{ TRANSACTIONS : "member_id attribution"
@@ -137,7 +139,8 @@ erDiagram
 
     FAMILY_MEMBERS {
         uuid id PK
-        uuid user_id FK
+        uuid household_id FK
+        uuid linked_user_id FK
         text name
         text relationship
         text pan_masked
@@ -226,7 +229,7 @@ flowchart TD
 
 | Sub-Phase | Deliverables & Scope | Dependencies / Alignment |
 |---|---|---|
-| **19A: Schema, Constraints & Backfill** | Add `profiles.onboarding_*` columns + update-guard trigger; create `user_financial_profiles` and `user_preferences` tables + RLS; add partial unique indexes on `family_members` (`'self'`, `is_primary`); grandfather existing pre-cutover users (`onboarding_version = 0`). | Aligns directly with **Phase 18B** Postgres preference migration & `localStorage` cleanup. |
+| **19A: Schema, Constraints & Backfill** | Add `profiles.onboarding_*` columns + update-guard trigger; create `user_financial_profiles` and `user_preferences` tables + RLS; grandfather existing pre-cutover users (`onboarding_version = 0`). | Runs atop **Phase 18A Part 2** (`family_members.household_id`, `linked_user_id`) and aligns with **Phase 18B** Postgres preference migration & `localStorage` cleanup. |
 | **19B: Atomic RPC & Domain/Adapter Parity** | Implement `complete_user_onboarding(...)` (plus optional `save_onboarding_draft(...)`); update `@wealthnest/domain`, `ManageUserSettingsUseCase`, `SupabaseUserAdapter`, and SQLite schema parity. | Requires **19A**. |
 | **19C: Progressive 3-Step Onboarding UI (`/onboarding`)** | Build minimal step-by-step UI (About You, Financial Preferences with India-first residency/risk context, Household confirmation), integrate `PreferencesProvider` & `FamilyProvider` cache invalidation on completion. | Requires **19B**; follows [ResponsiveModalShell](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/components/ui/ResponsiveModalShell.tsx) mobile responsiveness standards. |
 | **19D: Route Gating, RLS Write Gate & pgTAP Suite** | Wire React route redirect guards (`not_started` / `in_progress`), enforce DB write gates + `profiles.onboarding_*` tamper tests in pgTAP, verify invited household member + admin-provisioned + legacy user flows. | Requires **19B** & **19C**. |

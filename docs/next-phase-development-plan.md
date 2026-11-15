@@ -1,22 +1,24 @@
-# WealthNest — Next-Phase Development Plan (UX Modal Hardening & Android Direct-Supabase Roadmap)
+# WealthNest — Next-Phase Development Plan (Phase 18A Priority Track, Mobile Roadmap & Future Onboarding)
 
 **Status:** Pending Review (Proposed Continuation After Phase 17 in [ongoing.md](file:///home/ketan/projects/Krisha/wealthNest/docs/progress/ongoing.md))  
-**Scope:** Web/Mobile Modal Scrollability Remediation + Phase 0–4 Android Direct-Supabase Engineering Execution + Phase 19 Future-Scope Progressive Onboarding  
+**Scope:** Phase 18A (Modal Scrollability `[Complete]` + **Priority 1 Household-Based Access Control & Financial Ownership**) + Phase 18B–18F Android Direct-Supabase Roadmap + Phase 19 Future Onboarding  
 **Baseline State:** Phases 0–17 complete in repo; Security Remediation P0–P3 repo fixes committed ([security-remediation-checklist.md](file:///home/ketan/projects/Krisha/wealthNest/docs/security/security-remediation-checklist.md)) with live DB push & pgTAP verification pending.
 
 ---
 
 ## 1. Executive Decisions & Reference Index
 
-This document consolidates the completed post-Phase-17 audits into an actionable, sequenced implementation plan for review before schema or build-pipeline changes begin:
+This document consolidates the completed post-Phase-17 audits and approved product architecture decisions into a prioritized execution plan:
 
-1. **Modal & Mobile Scrollability Remediation (`Phase 18A`)**: Immediately resolves clipped action footers (starting with the CAS Import wizard's blocked `Confirm & Import (...)` button) and standardizes responsive modal scrolling across all dialogs and sheets before mobile testing.
-2. **Android Target Stack (`Capacitor` + `apps/web` + `@wealthnest/*`)**: Adopt Capacitor (`in.wealthnest.app`) wrapping the existing React + TypeScript + Vite web bundle and shared packages, retaining `src-tauri/` exclusively for Desktop builds and rejecting React Native / Native Kotlin rewrites.
-3. **Direct-to-Supabase Backend Posture**: Connect Android directly to Supabase using authenticated RLS policies and atomic PostgreSQL `SECURITY DEFINER` RPCs—without introducing a separate middleware backend.
-4. **Progressive Onboarding & Financial Profile (`Phase 19 — Future Scope`)**: Keep `/signup` minimal, separate financial-planning profile attributes from general identity & `UserPreferences`, preserve `family_members` as the canonical tracked-entity table, and atomically provision initial households via `complete_user_onboarding()`.
+1. **Modal & Mobile Scrollability Remediation (`Phase 18A — Part 1, Completed`)**: Resolves clipped action footers (starting with the CAS Import wizard's blocked `Confirm & Import (...)` button) and standardizes responsive modal scrolling via `<ResponsiveModalShell>` across all 23 overlays.
+2. **Household-Based Access Control & Financial Ownership (`Phase 18A — Part 2, Top Development Priority`)**: Prioritized **first** ahead of mobile packaging (`18C`+) and onboarding (`19`). Transitions WealthNest from `user_id`-centric tenancy to `household_id`-rooted access control (`primary_owner`, multiple `admin`s, `member`, `viewer`), unlinked & optionally linkable `family_members` (`linked_user_id`), token-hashed `household_invitations`, joint ownership (`holding_owners` + `liability_parties`), server-enforced record privacy (`household_shared`, `owner_only`, `restricted`), `<household_id>/...` Storage isolation, and desktop SQLite parity ([household-ownership-and-access-model.md](file:///home/ketan/projects/Krisha/wealthNest/docs/architecture/household-ownership-and-access-model.md)).
+3. **Android Target Stack (`Capacitor` + `apps/web` + `@wealthnest/*`)**: Adopt Capacitor (`in.wealthnest.app`) wrapping the existing React + TypeScript + Vite web bundle and shared packages, retaining `src-tauri/` exclusively for Desktop builds and rejecting React Native / Native Kotlin rewrites.
+4. **Direct-to-Supabase Backend Posture**: Connect Android directly to Supabase using authenticated RLS policies and atomic PostgreSQL `SECURITY DEFINER` RPCs—without introducing a separate middleware backend.
+5. **Progressive Onboarding & Financial Profile (`Phase 19 — Future Scope`)**: Keep `/signup` minimal, separate financial-planning profile attributes from general identity & `UserPreferences`, and hook `complete_user_onboarding()` cleanly into the household-rooted model established in Phase 18A Part 2.
 
 | Reference Document | Purpose |
 |---|---|
+| [household-ownership-and-access-model.md](file:///home/ketan/projects/Krisha/wealthNest/docs/architecture/household-ownership-and-access-model.md) | **Priority 1 Phase 18A blueprint:** `household_id` tenancy, `linked_user_id` family entities, roles, privacy, joint ownership, invites, Stage 1 audit & Phases 1–8 |
 | [android-architecture-assessment.md](file:///home/ketan/projects/Krisha/wealthNest/docs/mobile/android-architecture-assessment.md) | Stack recommendation, current-state audit, Keystore/PKCE/Biometric design, SQLCipher offline blueprint, risks |
 | [supabase-mobile-security-checklist.md](file:///home/ketan/projects/Krisha/wealthNest/docs/mobile/supabase-mobile-security-checklist.md) | P0 mobile blockers, `CRED-*`, `AUTH-*`, `DATA-*`, `NET-*`, `LOG-*`, `FIN-*`, and `TC-MOB-ISO-01`..`10` |
 | [mobile-api-operation-matrix.md](file:///home/ketan/projects/Krisha/wealthNest/docs/mobile/mobile-api-operation-matrix.md) | 14-domain operation classification, 24 existing RPCs, and 12 target atomic RPC specifications |
@@ -31,24 +33,26 @@ This document consolidates the completed post-Phase-17 audits into an actionable
 
 ```mermaid
 flowchart TD
-    P18A["Phase 18A: Web and Mobile Modal Scrollability Fixes"]
-    P18B["Phase 18B / Mobile Phase 0: Cloud Security Push, Household RLS, PII Cleanup"]
+    P18A1["Phase 18A Part 1: Web and Mobile Modal Scrollability Fixes (Complete)"]
+    P18A2["Phase 18A Part 2 (Priority 1): Household-Based Access Control and Financial Ownership"]
+    P18B["Phase 18B / Mobile Phase 0: Cloud Push, Token Hygiene, Legacy RPC Bug Fixes"]
     P18C["Phase 18C / Mobile Phase 1: Capacitor Shell, Keystore Auth, App Links, Release TLS"]
     P18D["Phase 18D / Mobile Phase 2: Atomic PostgreSQL Financial RPCs and Write Parity"]
     P18E["Phase 18E / Mobile Phase 3: Biometrics, FLAG_SECURE, SAF, FCM, Play Signing"]
     P18F["Phase 18F / Mobile Phase 4 Optional: SQLCipher Offline-First Sync Engine"]
-    P19["Phase 19 Future Scope: Progressive Onboarding, Financial Profile and Atomic Household Provisioning"]
+    P19["Phase 19 Future Scope: Progressive Onboarding and Financial Profile"]
 
-    P18A --> P18C
+    P18A1 --> P18A2
+    P18A2 --> P18B
+    P18A2 --> P19
     P18B --> P18C
-    P18B --> P19
     P18C --> P18D
     P18D --> P18E
     P18E --> P18F
 ```
 
-> [!NOTE]
-> `Phase 18A` (UI/Modal CSS & layout fixes) and `Phase 18B` (SQL migrations, RLS, PII cleanup) have zero code conflicts and can run in parallel once reviewed, or land as two focused PRs before Capacitor wrapping (`Phase 18C`). `Phase 19` builds on `Phase 18B`'s `localStorage` cleanup and household RLS groundwork and is scheduled as a separate future phase for review.
+> [!IMPORTANT]
+> **Priority Shift:** **Phase 18A Part 2 (Household-Based Access Control & Financial Ownership)** is prioritized ahead of Mobile Phases `18B`–`18F` and `Phase 19` so all subsequent RPCs, SQLite/SQLCipher tables, and onboarding flows build on `household_id` tenancy and joint ownership rather than legacy `user_id` assumptions. Note that household invite flows, `.eq('user_id')` adapter updates, and server-enforced privacy rules previously drafted in `18B` now execute directly within **Phase 18A Part 2 (§3.6)**.
 
 ---
 
@@ -115,7 +119,7 @@ All 15 Group C modals already enforce `max-h-[90dvh] flex flex-col overflow-hidd
   - Slots for `header`/`subHeader` (`shrink-0`), `children` body (`flex-1 min-h-0 overflow-y-auto overscroll-contain` or flex `scrollableBody={false}`), `formProps` wrapper spanning body + footer, and optional `footer` (`shrink-0`) so primary CTAs remain anchored and tappable on short viewports and when Android keyboards open.
 - [x] Migrate all 23 Group A, Group B, Group C, and CAS overlays onto `<ResponsiveModalShell>` and verify via automated JSDOM regression suite (`ResponsiveModalScrollability.test.tsx`).
 
-### 3.5 Phase 18A Verification Gate
+### 3.5 Phase 18A Part 1 Verification Gate (Modal Scrollability)
 - **Automated JSDOM Gate**: Verified in [`ResponsiveModalScrollability.test.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/__tests__/ResponsiveModalScrollability.test.tsx).
 - **Manual Browser / Device QA Checklist**: Documented in [`phase-18a-modal-scrollability-verification.md`](file:///home/ketan/projects/Krisha/wealthNest/docs/QA/phase-18a-modal-scrollability-verification.md) for testing across:
   - **Mobile portrait (`360x780`, `390x844`)**: `ImportCasModal` reaches and clicks `Confirm & Import (...)` with 50+ equities; all Group A/B/C primary buttons stay visible without horizontal page overflow.
@@ -124,22 +128,41 @@ All 15 Group C modals already enforce `max-h-[90dvh] flex flex-col overflow-hidd
 
 ---
 
-## 4. Phase 18B (Mobile Phase 0) — Database, RLS & Client Integrity Prerequisites
+### 3.6 Phase 18A Part 2 (Priority 1 Active Track) — Household-Based Access Control & Financial Ownership Implementation
 
-Addresses every P0 database, household isolation, and plaintext storage blocker before compiling or distributing an Android client.
+**Authoritative Architecture Spec:** [household-ownership-and-access-model.md](file:///home/ketan/projects/Krisha/wealthNest/docs/architecture/household-ownership-and-access-model.md)  
+**Priority Status:** **#1 Active Development Priority** (executes ahead of Mobile Packaging `18C`–`18F` and Onboarding `19`).
+
+#### Stage 1 — Repository Audit (Mandatory First Gate Before Any Destructive Migration)
+- [ ] Inspect and inventory every `user_id` usage across SQL migrations (`000001`–`000019`), financial tables (`assets`, `holdings`, `transactions`, `liabilities`, `asset_valuations`, `liability_balances`, `asset_liability_links`, `loan_payments`, `goals`, `goal_holding_allocations`, `family_members`, `portfolio_accounts`, `import_batches`, `family_documents`), RLS policies, RPCs (`000009`, `000010`, `000014`, `000019`), `family-vault` Storage policies, adapters, SQLite schema ([`sqlite-schema.ts`](file:///home/ketan/projects/Krisha/wealthNest/packages/application/src/persistence/sqlite/sqlite-schema.ts)), UI calculation hooks, backup/import flows, and pgTAP suites.
+- [ ] Classify every `user_id` reference into: **Login identity**, **Tenant boundary**, **Financial owner**, **Record creator/updater**, and **Permission subject**.
+- [ ] Confirm Beta Data Disposition decision with product owner (disposable reset + fresh seed vs. household/ownership backfill) before applying destructive DDL.
+
+#### Incremental Implementation Phases (Phases 1–8)
+- [ ] **Phase 1 — Schema & Identity Model:** Confirm `profiles` (`REFERENCES auth.users(id)`), `households`, and `family_members` (`household_id` tenant boundary, nullable `linked_user_id` with per-household uniqueness `UNIQUE (household_id, linked_user_id) WHERE linked_user_id IS NOT NULL`, optional email—supporting login-less profiles & multi-household membership). Create append-only `household_audit_logs` separate from platform-admin [`admin_audit_logs`](file:///home/ketan/projects/Krisha/wealthNest/supabase/migrations/20260101000017_security_hardening_rls_and_grants.sql#L6-L9).
+- [ ] **Phase 2 — Household Membership & Governance Roles:** Evolve `household_members` (`household_role` `'primary_owner' | 'admin' | 'member' | 'viewer'`, `status` `'active' | 'suspended' | 'revoked'`), enforce **exactly one active `primary_owner` per household** via partial unique index + atomic ownership-transfer RPC, restrict admin appointment/removal to `primary_owner`, and add `family_member_access` explicit delegation grants.
+- [ ] **Phase 3 — Financial Ownership & Privacy Rules:** Move all financial tables to `household_id` tenancy (no `ON DELETE CASCADE` from `auth.users`), add explicit `visibility` (`'household_shared' | 'owner_only' | 'restricted'`, preventing admins from auto-reading private records and ensuring unlinked managed profiles cannot become orphaned), implement **`holding_owners`** (reconciling `assets` vs `holdings` + updating [`idx_holdings_user_asset_account`](file:///home/ketan/projects/Krisha/wealthNest/supabase/migrations/20260101000004_separate_equities_and_mutual_funds.sql#L20-L21)), and replace `liabilities.co_borrower_ids` with **`liability_parties`** (`DEFERRABLE` percentage triggers).
+- [ ] **Phase 4 — RLS, RPCs & Storage Security:** Replace legacy `user_id`-only / [`000014`](file:///home/ketan/projects/Krisha/wealthNest/supabase/migrations/20260101000014_household_collaboration_rls.sql) policies with non-recursive `SECURITY DEFINER SET search_path = public` household/ownership/visibility helpers across all financial tables (including `loan_payments`, `asset_liability_links`, `import_batches`), update `family-vault` Storage paths to `<household_id>/<doc_id>/<file>` checked against DB permissions, and update Support Mode RPCs ([`000010`](file:///home/ketan/projects/Krisha/wealthNest/supabase/migrations/20260101000010_admin_support_sessions.sql#L258-L296)).
+- [ ] **Phase 5 — Secure Invitation & Account-Linking Workflow:** Replace mock state in [`HouseholdSharingCard.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/components/settings/HouseholdSharingCard.tsx) with `household_invitations` (SHA-256 `token_hash`, expiry, revocation, optional pre-linked `family_member_id`, `'admin' | 'member' | 'viewer'` role) and an atomic, idempotent `accept_household_invitation` RPC requiring `email_confirmed_at IS NOT NULL` + matching `invited_email` (zero silent email auto-linking).
+- [ ] **Phase 6 — Frontend Household Experience & Adapter Parity:** Remove legacy `.eq('user_id', userId)` filters across Supabase adapters (`holding`, `transaction`, `liability`, `liability-valuations-links`, `goal`, `family`, `cas-import`), add Active Household Switcher + role-aware actions, default new member records to their linked `family_members` entity while **requiring explicit owner/joint selection for admins**, add `visibility` selector, and update `@wealthnest/application` ports + [`sqlite-schema.ts`](file:///home/ketan/projects/Krisha/wealthNest/packages/application/src/persistence/sqlite/sqlite-schema.ts) parity.
+- [ ] **Phase 7 — Financial Calculations & Reporting Validation:** Update [`family-wealth-calculator.ts`](file:///home/ketan/projects/Krisha/wealthNest/packages/domain/src/family/family-wealth-calculator.ts) with deterministic `BigInt` largest-remainder joint share splitting (preventing double-counting and 1-paisa drift), perspective-neutral `"You"` attribution (`linked_user_id = auth.uid()`), multi-household Section 112A PAN disclaimers, and household-scoped backup/restore/exports ([`backup.adapter.ts`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/lib/supabase/backup.adapter.ts)).
+- [ ] **Phase 8 — Regression, DB Security Testing & Deliverables:** Implement pgTAP + API integration tests covering all 19 access-control, multi-household, joint-ownership, invite, user-deletion preservation, Storage, export, and ownership-transfer cases, and complete all five §15 documentation deliverables (`docs/architecture/household-ownership-and-access-model.md`, `docs/architecture/household-permission-matrix.md`, `docs/implementation/household-migration-plan.md`, `docs/security/household-rls-security-review.md`, `docs/testing/household-access-control-test-plan.md`).
+
+---
+
+## 4. Phase 18B (Mobile Phase 0) — Cloud Push, PII Hygiene & Pre-Capacitor Prerequisites
+
+Follows **Phase 18A Part 2** and closes remaining cloud deployment, plaintext storage, and mobile-specific integrity prerequisites before compiling or distributing an Android client.
 
 ### 4.1 Complete Pending Security Checklist Cloud Actions
-- [ ] Apply migrations `20260101000017`, `20260101000018`, and `20260101000019` to QA/Production via `supabase db push` ([security-remediation-checklist.md](file:///home/ketan/projects/Krisha/wealthNest/docs/security/security-remediation-checklist.md)).
+- [ ] Apply pending & Phase 18A security/household migrations to QA/Production via `supabase db push` ([security-remediation-checklist.md](file:///home/ketan/projects/Krisha/wealthNest/docs/security/security-remediation-checklist.md)).
 - [ ] Deploy Edge Function `admin-create-user` with verified `ALLOWED_ORIGINS`.
 - [ ] Execute `supabase start && supabase test db` (or trigger `.github/workflows/security-checks.yml`) to pass all existing pgTAP assertions (`P2-4`, `P3-3`).
 - [ ] Verify live Supabase Cloud Auth settings: HIBP breached-password check, `[auth.rate_limit]`, SMTP confirmation delivery (`P1-4`, `P3-4`), and TLS termination (`P1-5`).
 
-### 4.2 Household Collaboration & RLS Fixes
-- [ ] Add household RLS policies for `loan_payments`, `asset_liability_links`, and `import_batches` (currently lacking household-scoped policies matching `20260101000014`).
-- [ ] Add a SQL cross-household validation check/trigger on `asset_liability_links` preventing linking an asset from Household A to a liability in Household B.
-- [ ] Remove redundant client `.eq('user_id', userId)` query filters across the **6 Supabase adapter modules** where `20260101000014` already permits household-shared reads, so non-owner household members see shared holdings/assets/transactions cleanly.
-- [ ] Replace local `useState` demo state in `HouseholdSharingCard.tsx` with persistent database-backed invite/member flows (`create_household_invite`, `accept_household_invite` RPCs / tables).
-- [ ] Move `wealthnest_family_privacy_rules` out of browser `localStorage` into server-enforced household privacy scope tables/policies so field/record privacy holds across devices and direct REST calls.
+### 4.2 Promoted Household Collaboration & RLS Alignment *(Handled in Phase 18A Part 2 — §3.6)*
+- Promoted to **Phase 18A Part 2 (§3.6)** above: household-scoped RLS on `loan_payments`, `asset_liability_links`, and `import_batches` (plus cross-household `asset_liability_links` prevention), removal of client `.eq('user_id', userId)` adapter filters, DB-backed `household_invitations` replacing [`HouseholdSharingCard.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/components/settings/HouseholdSharingCard.tsx) demo state, and moving `wealthnest_family_privacy_rules` into server-enforced record `visibility` (`household_shared` | `owner_only` | `restricted`).
+- [ ] Verify in `Phase 18B` that `HouseholdSharingCard.tsx` and invite links resolve Android App Link HTTPS `redirectTo` targets (`https://app.wealthnest.in/invite/...`) alongside [`ForgotPasswordModal.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/components/auth/ForgotPasswordModal.tsx#L55-L149).
 
 ### 4.3 Plaintext Token / PII Cleanup & Auth Hygiene
 - [ ] Strip unencrypted defaults and PII storage in `localStorage` across:
@@ -233,19 +256,19 @@ Only initiate after Phases 18B–18E pass production stability gates:
 
 ---
 
-## 9. Phase 19 (Future Scope) — Progressive Onboarding, Financial Profile & Atomic Household Provisioning
+## 9. Phase 19 (Future Scope) — Progressive Onboarding, Financial Profile & Personalized Planning
 
-Scheduled as the next product/database phase after Phase 18A/18B review. Full ERD, field taxonomy, database baseline audit findings, and security/privacy guardrails live in [progressive-onboarding-and-financial-profile.md](file:///home/ketan/projects/Krisha/wealthNest/docs/product/progressive-onboarding-and-financial-profile.md).
+Scheduled as the next product/database phase after **Phase 18A Part 2** establishes `household_id`-rooted ownership, `family_members.linked_user_id`, and `household_invitations`. Full field taxonomy, ERD, and DPDP privacy guardrails live in [progressive-onboarding-and-financial-profile.md](file:///home/ketan/projects/Krisha/wealthNest/docs/product/progressive-onboarding-and-financial-profile.md).
 
-- [ ] **Phase 19A — Schema Extensions, Preference Persistence & Legacy Backfill**:
-  - Extend `public.profiles` with versioned state (`onboarding_status`, `onboarding_version`, `onboarding_completed_at`) protected by a `BEFORE UPDATE` guard against direct client bypass.
+- [ ] **Phase 19A — Financial Profile & Preference Persistence**:
+  - Extend `public.profiles` with versioned onboarding state (`onboarding_status`, `onboarding_version`, `onboarding_completed_at`) protected by a `BEFORE UPDATE` guard against direct client bypass.
   - Create `public.user_financial_profiles` (`date_of_birth`, `occupation_type`, `residency_status`, `annual_income_band`, `risk_profile`, optional `state` / `city` with strict `CHECK` constraints) and `public.user_preferences` (moving `UserPreferences.taxRegime` and locale/UI preferences out of browser-only `localStorage`).
-  - Preserve `public.family_members` (`user_id`-scoped canonical entity) and add partial unique indexes for `'self'` and `is_primary = true`; grandfather existing pre-cutover users cleanly (`onboarding_version = 0`).
-- [ ] **Phase 19B — Atomic Provisioning RPC & Adapter Parity**:
-  - Implement transactional `SECURITY DEFINER SET search_path = public` RPC `complete_user_onboarding(...)` (deriving `auth.uid()` internally, using per-user advisory locks, skipping extra household creation for invited users already in `household_members`, and writing `user_financial_profiles` + `user_preferences` + initial `households` + `household_members` (`primary_owner`) + `'self'` `family_members` + `profiles.onboarding_*` atomically).
+  - Grandfather existing pre-cutover users cleanly (`onboarding_version = 0`) and align `complete_user_onboarding()` with Phase 18A Part 2's `household_id`-scoped `family_members` (`UNIQUE (household_id, linked_user_id) WHERE linked_user_id IS NOT NULL`).
+- [ ] **Phase 19B — Atomic Onboarding RPC & Adapter Parity**:
+  - Implement transactional `SECURITY DEFINER SET search_path = public` RPC `complete_user_onboarding(...)` (deriving `auth.uid()` internally, using per-user advisory locks, skipping extra household creation when accepting an invite, and updating `user_financial_profiles` + `user_preferences` + initial `households` / `household_members` (`primary_owner`) / linked `family_members` + `profiles.onboarding_*` atomically).
   - Update `@wealthnest/domain`, `ManageUserSettingsUseCase`, `SupabaseUserAdapter`, and Tauri SQLite schema (`sqlite-schema.ts`) to stay in parity.
 - [ ] **Phase 19C — Progressive 3-Step `/onboarding` UI**:
-  - Keep `/signup` minimal (Name, Email, Password, Terms); guide verified users through a 3-step `/onboarding` wizard (Step 1: About You; Step 2: Tax Regime & Guided Risk Profile; Step 3: Household & Self Setup Confirmation) with clear explanations and zero forced PII (`Aadhaar`, bank/broker credentials, CAS passwords never collected).
+  - Keep `/signup` minimal (Name, Email, Password, Terms); guide verified users through a 3-step `/onboarding` wizard (Step 1: About You; Step 2: Tax Regime & Guided Risk Profile; Step 3: Household & Linked Profile Confirmation) with clear explanations and zero forced PII (`Aadhaar`, bank/broker credentials, CAS passwords never collected).
 - [ ] **Phase 19D — Route Guards, RLS Enforcement & pgTAP Tests**:
   - Enforce server-side write gates on financial tables for un-onboarded sessions while leaving `/onboarding`, `/settings`, and legacy grandfathered accounts accessible; verify tamper resistance, invitee onboarding, and idempotency in pgTAP.
 - [ ] **Phase 19E — Optional Progressive Profile Expansion (Later)**:
@@ -259,9 +282,10 @@ Before implementation begins, confirm the following decisions during review:
 
 | # | Decision / External Dependency | Default Plan | Sign-Off Needed |
 |---|---|---|---|
-| 1 | Split **Phase 18A** (CAS + Group A/B/C modal scroll fixes) as the immediate first PR? | Yes — unblocks CAS import testing on web & mobile immediately | Reviewer approval |
-| 2 | Production domain for HTTPS App Links (`assetlinks.json`) & OAuth/reset redirects? | Verify canonical production hostname (`https://app.wealthnest.in`) before Phase 18C | Confirm exact domain |
-| 3 | Retain `src-tauri/` for Desktop only while adopting Capacitor for Android? | Yes ([android-architecture-assessment.md](file:///home/ketan/projects/Krisha/wealthNest/docs/mobile/android-architecture-assessment.md)) | Architecture approval |
-| 4 | Google Play Console (`in.wealthnest.app` + Play App Signing SHA-256) & Firebase project (FCM)? | Play Console SHA-256 required before **Phase 18C** (`assetlinks.json`); Firebase FCM required before **Phase 18E** | Confirm package ID & accounts |
-| 5 | Keep Phase 18F (SQLCipher offline writes) deferred behind online + read-cache Phases 18B–18E? | Yes — reduces conflict/audit risk on initial launch | Scope approval |
-| 6 | Stage **Phase 19 (Progressive Onboarding & Financial Profile)** after **Phase 18B** groundwork? | Yes ([progressive-onboarding-and-financial-profile.md](file:///home/ketan/projects/Krisha/wealthNest/docs/product/progressive-onboarding-and-financial-profile.md)) | Product & schema review |
+| 1 | Land **Phase 18A Part 1** (CAS + Modal scroll fixes) as an immediate review PR while starting **Phase 18A Part 2 Stage 1 Audit**? | Yes — ships UX fixes now and prioritizes Household Access Control ([household-ownership-and-access-model.md](file:///home/ketan/projects/Krisha/wealthNest/docs/architecture/household-ownership-and-access-model.md)) next | Reviewer approval |
+| 2 | **Phase 18A Part 2 Beta Migration Disposition (§12):** Treat current QA/beta rows as disposable (backup + clean reset/reseed) or run full backfill? | Recommended for zero-production beta: take DB backup, reset & reseed clean household-rooted fixtures cleanly | Product owner sign-off (before Phase 1 DDL) |
+| 3 | Confirm canonical role & ownership decisions (`household_role` `'primary_owner' \| 'admin' \| 'member' \| 'viewer'`, `holding_owners` + `liability_parties`, separate `household_audit_logs`)? | Yes ([household-ownership-and-access-model.md](file:///home/ketan/projects/Krisha/wealthNest/docs/architecture/household-ownership-and-access-model.md)) | Schema approval |
+| 4 | Production domain for HTTPS App Links (`assetlinks.json`) & OAuth/reset/invite redirects? | Verify canonical production hostname (`https://app.wealthnest.in`) before Phase 18B/18C | Confirm exact domain |
+| 5 | Retain `src-tauri/` for Desktop only while adopting Capacitor for Android? | Yes ([android-architecture-assessment.md](file:///home/ketan/projects/Krisha/wealthNest/docs/mobile/android-architecture-assessment.md)) | Architecture approval |
+| 6 | Google Play Console (`in.wealthnest.app` + Play App Signing SHA-256) & Firebase project (FCM)? | Play Console SHA-256 required before **Phase 18C** (`assetlinks.json`); Firebase FCM required before **Phase 18E** | Confirm package ID & accounts |
+| 7 | Keep Phase 18F (SQLCipher offline writes) deferred behind online + read-cache Phases 18B–18E, and stage **Phase 19** on top of **Phase 18A Part 2**? | Yes ([progressive-onboarding-and-financial-profile.md](file:///home/ketan/projects/Krisha/wealthNest/docs/product/progressive-onboarding-and-financial-profile.md)) | Scope approval |
