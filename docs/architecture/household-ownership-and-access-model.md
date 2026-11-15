@@ -138,6 +138,6 @@ erDiagram
 ### Planned Deliverables Checklist (§15)
 - [x] `docs/architecture/household-ownership-and-access-model.md` (this baseline blueprint; update post-audit & per phase)
 - [ ] `docs/architecture/household-permission-matrix.md`
-- [ ] `docs/implementation/household-migration-plan.md` (including Stage 1 `user_id` inventory & ERD)
+- [x] [household-migration-plan.md](file:///home/ketan/projects/Krisha/wealthNest/docs/implementation/household-migration-plan.md) (Stage 1 `user_id` inventory, defects register, ERD & Phase 1–8 migration plan)
 - [ ] `docs/security/household-rls-security-review.md` (migration & RLS inventory)
 - [ ] `docs/testing/household-access-control-test-plan.md` (DB/pgTAP + API test results & beta checklist)
