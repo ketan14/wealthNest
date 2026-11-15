@@ -8,7 +8,12 @@ import {
   HoldingDetailDto,
 } from '@wealthnest/application';
 import { useAuth } from '@/lib/supabase/auth-context';
-import { useHoldingRepository, useLiabilityRepository } from '@/lib/persistence/repository-context';
+import { useHousehold } from '@/lib/supabase/household-context';
+import {
+  useHoldingRepository,
+  useLiabilityRepository,
+  useRepositories,
+} from '@/lib/persistence/repository-context';
 import { LiabilityDto } from '@wealthnest/application';
 import type { NewHoldingFormValues } from '@/components/portfolio/AddHoldingModal';
 import type { UpdateHoldingFormValues } from '@/components/portfolio/EditHoldingModal';
@@ -38,6 +43,8 @@ import { usePreferences } from '@/lib/preferences/preferences-context';
 
 export function PortfolioPage() {
   const { user } = useAuth();
+  const { activeHouseholdId, canEditFinancials } = useHousehold();
+  const { mode } = useRepositories();
   const queryClient = useQueryClient();
   const { selectedMemberId, selectedAccountId, members, accounts, privacyRules } = useFamily();
   const { isSupportModeActive, supportData } = useSupportSession();
@@ -55,7 +62,12 @@ export function PortfolioPage() {
   const [holdingToDelete, setHoldingToDelete] = useState<HoldingDetailDto | null>(null);
   const isMobile = useIsMobile();
 
+  const isDemoMode = mode === 'supabase' && (!user?.id || user.id.startsWith('demo-'));
+  const hasLiveBackend = !isDemoMode && Boolean(activeHouseholdId || user?.id);
+  const scopeId = activeHouseholdId || user?.id || '';
+
   const handleDeleteRequest = (h: HoldingDetailDto) => {
+    if (!canEditFinancials || isSupportModeActive) return;
     if (typeof window !== 'undefined' && (window.confirm as any)?.mock) {
       if (window.confirm(`Delete holding "${h.name}" from your portfolio?`)) {
         deleteHoldingMutation.mutate(h.holdingId);
@@ -73,13 +85,15 @@ export function PortfolioPage() {
 
   // Query authenticated liabilities
   const { data: dbLiabilities } = useQuery<readonly LiabilityDto[]>({
-    queryKey: ['user-liabilities', user?.id],
+    queryKey: ['user-liabilities', scopeId],
     queryFn: async () => {
-      if (!user) return [];
-      const res = await liabilityAdapter.listLiabilitiesByUser(user.id);
+      if (!scopeId) return [];
+      const res = await (liabilityAdapter.listLiabilitiesByHousehold
+        ? liabilityAdapter.listLiabilitiesByHousehold(scopeId)
+        : liabilityAdapter.listLiabilitiesByUser(scopeId));
       return res.success ? res.value : [];
     },
-    enabled: !!user,
+    enabled: hasLiveBackend,
   });
 
   const liabilities = (dbLiabilities ? [...dbLiabilities] : []) as LiabilityDto[];
@@ -90,15 +104,15 @@ export function PortfolioPage() {
     isLoading: isLoadingDb,
     refetch,
   } = useQuery({
-    queryKey: ['portfolio-summary', user?.id],
+    queryKey: ['portfolio-summary', scopeId],
     queryFn: async () => {
-      if (!user) return null;
+      if (!scopeId) return null;
       const useCase = new GetPortfolioSummaryUseCase(holdingAdapter);
-      const res = await useCase.execute(user.id, 'INR');
+      const res = await useCase.execute(scopeId, 'INR');
       if (!res.success) throw res.error;
       return res.value;
     },
-    enabled: !!user,
+    enabled: hasLiveBackend,
   });
 
   // Consolidated pool of all holdings (DB, support session, or local demo)
@@ -133,18 +147,20 @@ export function PortfolioPage() {
         updatedAt: item.asOfDate,
       }));
     }
-    if (user && dbPortfolioData) {
-      return [...dbPortfolioData.holdings];
+    if (hasLiveBackend) {
+      return dbPortfolioData ? [...dbPortfolioData.holdings] : [];
     }
     return localDemoHoldings;
-  }, [isSupportModeActive, supportData, user, dbPortfolioData, localDemoHoldings]);
+  }, [isSupportModeActive, supportData, hasLiveBackend, dbPortfolioData, localDemoHoldings]);
 
   // Active holdings filtered by Family Member / Legal Entity, Demat Account & Privacy Rules
   const activeHoldings: HoldingDetailDto[] = useMemo(() => {
     const memberAccountFiltered = allHoldings.filter((h) => {
       if (selectedMemberId !== 'all') {
         const belongs =
-          h.memberId === selectedMemberId || (!h.memberId && selectedMemberId === 'mem-self');
+          h.memberId === selectedMemberId ||
+          h.owners?.some((o) => o.familyMemberId === selectedMemberId) ||
+          (!h.memberId && !h.owners?.length && selectedMemberId === 'mem-self');
         if (!belongs) return false;
       }
       if (selectedAccountId !== 'all') {
@@ -244,11 +260,15 @@ export function PortfolioPage() {
       const unitCostCents = Math.round(values.unitCost * 100);
       const currentValueCents = Math.round(values.currentValue * 100);
 
-      if (user) {
-        // Authenticated: Persist to PostgreSQL database
+      if (hasLiveBackend) {
+        if (!canEditFinancials) {
+          throw new Error('View-only household role cannot add holdings.');
+        }
+        // Authenticated / SQLite: Persist to active household
         const useCase = new AddHoldingUseCase(holdingAdapter);
         const res = await useCase.execute({
-          userId: user.id,
+          userId: user?.id || scopeId || 'local-user',
+          householdId: activeHouseholdId || undefined,
           name: values.name,
           ticker: values.ticker,
           isin: values.isin,
@@ -264,6 +284,9 @@ export function PortfolioPage() {
           costBasisVerified: values.costBasisVerified,
           memberId: values.memberId,
           accountId: values.accountId,
+          visibility: values.visibility,
+          ownerShares: values.ownerShares,
+          restrictedGranteeUserIds: values.restrictedGranteeUserIds,
         });
 
         if (!res.success) throw res.error;
@@ -276,8 +299,10 @@ export function PortfolioPage() {
       }
     },
     onSuccess: () => {
-      if (user) {
-        queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
+      if (hasLiveBackend) {
+        queryClient.invalidateQueries({ queryKey: ['portfolio-summary'] });
+        queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] });
+        queryClient.invalidateQueries({ queryKey: ['holdings'] });
       }
     },
   });
@@ -294,18 +319,22 @@ export function PortfolioPage() {
         return;
       }
 
-      // 2. If authenticated user and real database holding
-      if (user) {
+      // 2. If real database holding
+      if (hasLiveBackend) {
+        if (!canEditFinancials) {
+          throw new Error('View-only household role cannot delete holdings.');
+        }
         const useCase = new DeleteHoldingUseCase(holdingAdapter);
-        const res = await useCase.execute(holdingId, user.id);
+        const res = await useCase.execute(holdingId, scopeId || user?.id || '');
         if (!res.success) throw res.error;
       }
     },
     onSuccess: () => {
       setDeletingId(null);
-      if (user) {
-        queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['portfolio-holdings', user.id] });
+      if (hasLiveBackend) {
+        queryClient.invalidateQueries({ queryKey: ['portfolio-summary'] });
+        queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] });
+        queryClient.invalidateQueries({ queryKey: ['holdings'] });
       }
     },
     onError: (err) => {
@@ -330,6 +359,8 @@ export function PortfolioPage() {
                   quantity: values.quantity,
                   unitCostCents,
                   currentValueCents,
+                  visibility: values.visibility ?? h.visibility,
+                  owners: values.ownerShares ?? h.owners,
                   updatedAt: new Date().toISOString(),
                 }
               : h
@@ -338,35 +369,43 @@ export function PortfolioPage() {
         return;
       }
 
-      // 2. If authenticated user and real database holding
-      if (user) {
+      // 2. If real database holding
+      if (hasLiveBackend) {
+        if (!canEditFinancials) {
+          throw new Error('View-only household role cannot update holdings.');
+        }
         if (holdingAdapter.updateHoldingValues) {
           const res = await holdingAdapter.updateHoldingValues({
             holdingId: values.holdingId,
-            userId: user.id,
+            userId: user?.id || scopeId || 'local-user',
             quantity: values.quantity,
             unitCostCents,
             currentValueCents,
+            visibility: values.visibility,
+            ownerShares: values.ownerShares,
           });
           if (!res.success) throw res.error;
         }
       }
     },
     onSuccess: () => {
-      if (user) {
-        queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['portfolio-holdings', user.id] });
+      if (hasLiveBackend) {
+        queryClient.invalidateQueries({ queryKey: ['portfolio-summary'] });
+        queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] });
+        queryClient.invalidateQueries({ queryKey: ['holdings'] });
       }
     },
   });
 
-  // Seed sample Indian holdings for authenticated user if empty
+  // Seed sample Indian holdings for active household if empty
   const handleSeedStarterHoldings = async () => {
-    if (!user) return;
+    if (!hasLiveBackend || !canEditFinancials) return;
     for (const h of DEMO_HOLDINGS.slice(0, 4)) {
       const useCase = new AddHoldingUseCase(holdingAdapter);
       await useCase.execute({
-        userId: user.id,
+        userId: user?.id || scopeId || 'local-user',
+        householdId: activeHouseholdId || undefined,
+        visibility: 'household_shared',
         name: h.name,
         ticker: h.ticker,
         isin: h.isin,
@@ -388,15 +427,20 @@ export function PortfolioPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       <PortfolioHeader
-        isAuthenticated={Boolean(user)}
+        isAuthenticated={hasLiveBackend}
+        canEditFinancials={canEditFinancials}
         marketSession={marketSession}
         isPolling={isPolling}
         onTogglePolling={() => setIsPolling((prev) => !prev)}
         isRefreshingNavs={isRefreshingNavs}
         onRefreshNavs={() => void handleRefreshLiveNavs()}
         isSupportModeActive={isSupportModeActive}
-        onOpenImportModal={() => setIsImportModalOpen(true)}
-        onOpenAddModal={() => setIsModalOpen(true)}
+        onOpenImportModal={() => {
+          if (canEditFinancials) setIsImportModalOpen(true);
+        }}
+        onOpenAddModal={() => {
+          if (canEditFinancials) setIsModalOpen(true);
+        }}
         onOpenManageFamily={() => setIsManageFamilyOpen(true)}
         selectedMemberId={selectedMemberId}
         navRefreshMessage={navRefreshMessage}
@@ -421,7 +465,8 @@ export function PortfolioPage() {
         deleteError={deleteError}
         onDismissDeleteError={() => setDeleteError(null)}
         isLoadingDb={isLoadingDb}
-        isAuthenticated={Boolean(user)}
+        isAuthenticated={hasLiveBackend}
+        canEditFinancials={canEditFinancials}
         isMobile={isMobile}
         activeHoldings={activeHoldings}
         filteredHoldings={filteredHoldings}
@@ -437,10 +482,18 @@ export function PortfolioPage() {
         currencySymbol={currencySymbol}
         locale={locale}
         deletingId={deletingId}
-        onOpenAddModal={() => setIsModalOpen(true)}
-        onOpenImportModal={() => setIsImportModalOpen(true)}
+        onOpenAddModal={() => {
+          if (canEditFinancials) setIsModalOpen(true);
+        }}
+        onOpenImportModal={() => {
+          if (canEditFinancials) setIsImportModalOpen(true);
+        }}
         onSeedStarterHoldings={handleSeedStarterHoldings}
-        onEditHolding={setEditingHolding}
+        onEditHolding={(holding) => {
+          if (canEditFinancials && !isSupportModeActive) {
+            setEditingHolding(holding);
+          }
+        }}
         onDeleteHolding={handleDeleteRequest}
       />
 
@@ -460,8 +513,10 @@ export function PortfolioPage() {
         isImportOpen={isImportModalOpen}
         onCloseImport={() => setIsImportModalOpen(false)}
         onImportSuccess={(importedItems, memberId, accountId) => {
-          if (user) {
-            queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
+          if (hasLiveBackend) {
+            queryClient.invalidateQueries({ queryKey: ['portfolio-summary'] });
+            queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] });
+            queryClient.invalidateQueries({ queryKey: ['holdings'] });
           } else if (importedItems && importedItems.length > 0) {
             const chosenMemberId =
               memberId || (selectedMemberId !== 'all' ? selectedMemberId : 'mem-self');

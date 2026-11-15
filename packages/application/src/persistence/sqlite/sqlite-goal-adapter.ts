@@ -1,5 +1,5 @@
 import { Result, ok, err } from '@wealthnest/shared';
-import { GoalCategory, GoalPriority } from '@wealthnest/domain';
+import { GoalCategory, GoalPriority, RecordVisibility } from '@wealthnest/domain';
 import { SqliteDatabase } from './sqlite-connection.js';
 import {
   GoalRepositoryPort,
@@ -8,83 +8,110 @@ import {
   UpdateGoalParams,
   LinkHoldingToGoalParams,
 } from '../../ports/goal-repository.port.js';
-import { generateId } from './sqlite-utils.js';
+import { generateId, isHouseholdScope } from './sqlite-utils.js';
+
+interface GoalRow {
+  id: string;
+  user_id: string;
+  household_id?: string | null;
+  visibility?: string | null;
+  created_by?: string | null;
+  name: string;
+  category: string;
+  target_amount_paise: number;
+  target_date: string;
+  initial_saved_paise: number;
+  monthly_contribution_paise: number;
+  expected_return_rate: number;
+  inflation_rate: number;
+  priority: string;
+  currency: string;
+  notes?: string | null;
+  member_id?: string | null;
+  created_at: string;
+}
 
 export class SqliteGoalAdapter implements GoalRepositoryPort {
   constructor(private readonly db: SqliteDatabase) {}
 
+  private mapGoalRows(rows: GoalRow[]): GoalDetailDto[] {
+    return rows.map((r) => {
+      const links = this.db
+        .prepare<{
+          holding_id: string;
+          allocation_percentage: number;
+          holding_name: string;
+          ticker?: string;
+          current_value_paise: number;
+        }>(
+          `SELECT 
+             gh.holding_id,
+             gh.allocation_percentage,
+             a.name as holding_name,
+             a.ticker as ticker,
+             h.current_value_paise as current_value_paise
+           FROM goal_holdings gh
+           JOIN holdings h ON gh.holding_id = h.id
+           JOIN assets a ON h.user_id = a.user_id AND h.asset_id = a.id
+           WHERE gh.goal_id = ?;`
+        )
+        .all(r.id);
+
+      return {
+        id: r.id,
+        householdId: r.household_id || undefined,
+        userId: r.user_id,
+        visibility: (r.visibility as RecordVisibility) || 'household_shared',
+        createdBy: r.created_by || undefined,
+        name: r.name,
+        category: r.category as GoalCategory,
+        targetAmountCents: r.target_amount_paise,
+        targetDate: r.target_date,
+        initialSavedCents: r.initial_saved_paise,
+        monthlyContributionCents: r.monthly_contribution_paise,
+        expectedReturnRate: r.expected_return_rate,
+        inflationRate: r.inflation_rate,
+        priority: r.priority as GoalPriority,
+        currency: r.currency,
+        notes: r.notes || undefined,
+        memberId: r.member_id || undefined,
+        createdAt: r.created_at,
+        updatedAt: r.created_at,
+        linkedHoldings: links.map((l) => ({
+          holdingId: l.holding_id,
+          holdingName: l.holding_name,
+          ticker: l.ticker || undefined,
+          allocationPercentage: l.allocation_percentage,
+          currentValueCents: l.current_value_paise,
+        })),
+      };
+    });
+  }
+
   async listGoalsByUser(userId: string): Promise<Result<GoalDetailDto[]>> {
     try {
       const rows = this.db
-        .prepare<{
-          id: string;
-          user_id: string;
-          name: string;
-          category: string;
-          target_amount_paise: number;
-          target_date: string;
-          initial_saved_paise: number;
-          monthly_contribution_paise: number;
-          expected_return_rate: number;
-          inflation_rate: number;
-          priority: string;
-          currency: string;
-          notes?: string;
-          member_id?: string;
-          created_at: string;
-        }>('SELECT * FROM financial_goals WHERE user_id = ? ORDER BY target_date ASC;')
+        .prepare<GoalRow>('SELECT * FROM financial_goals WHERE user_id = ? ORDER BY target_date ASC;')
         .all(userId);
 
-      const mapped: GoalDetailDto[] = rows.map((r) => {
-        const links = this.db
-          .prepare<{
-            holding_id: string;
-            allocation_percentage: number;
-            holding_name: string;
-            ticker?: string;
-            current_value_paise: number;
-          }>(
-            `SELECT 
-               gh.holding_id,
-               gh.allocation_percentage,
-               a.name as holding_name,
-               a.ticker as ticker,
-               h.current_value_paise as current_value_paise
-             FROM goal_holdings gh
-             JOIN holdings h ON gh.holding_id = h.id
-             JOIN assets a ON h.user_id = a.user_id AND h.asset_id = a.id
-             WHERE gh.goal_id = ?;`
-          )
-          .all(r.id);
+      return ok(this.mapGoalRows(rows));
+    } catch (errEx) {
+      return err(errEx instanceof Error ? errEx : new Error(String(errEx)));
+    }
+  }
 
-        return {
-          id: r.id,
-          userId: r.user_id,
-          name: r.name,
-          category: r.category as GoalCategory,
-          targetAmountCents: r.target_amount_paise,
-          targetDate: r.target_date,
-          initialSavedCents: r.initial_saved_paise,
-          monthlyContributionCents: r.monthly_contribution_paise,
-          expectedReturnRate: r.expected_return_rate,
-          inflationRate: r.inflation_rate,
-          priority: r.priority as GoalPriority,
-          currency: r.currency,
-          notes: r.notes || undefined,
-          memberId: r.member_id || undefined,
-          createdAt: r.created_at,
-          updatedAt: r.created_at,
-          linkedHoldings: links.map((l) => ({
-            holdingId: l.holding_id,
-            holdingName: l.holding_name,
-            ticker: l.ticker || undefined,
-            allocationPercentage: l.allocation_percentage,
-            currentValueCents: l.current_value_paise,
-          })),
-        };
-      });
+  async listGoalsByHousehold(householdId: string): Promise<Result<GoalDetailDto[]>> {
+    if (!isHouseholdScope(this.db, householdId)) {
+      return this.listGoalsByUser(householdId);
+    }
+    try {
+      const rows = this.db
+        .prepare<GoalRow>(
+          'SELECT * FROM financial_goals WHERE household_id = ? ORDER BY target_date ASC;'
+        )
+        .all(householdId);
 
-      return ok(mapped);
+      return ok(this.mapGoalRows(rows));
     } catch (errEx) {
       return err(errEx instanceof Error ? errEx : new Error(String(errEx)));
     }
@@ -93,13 +120,24 @@ export class SqliteGoalAdapter implements GoalRepositoryPort {
   async createGoal(params: CreateGoalParams): Promise<Result<GoalDetailDto>> {
     try {
       const id = generateId('gol');
+      const visibility = params.visibility ?? 'household_shared';
+
+      if (params.householdId) {
+        this.db
+          .prepare('INSERT OR IGNORE INTO profiles (id, display_name) VALUES (?, ?);')
+          .run(params.userId, 'User');
+        this.db
+          .prepare('INSERT OR IGNORE INTO households (id, name, created_by) VALUES (?, ?, ?);')
+          .run(params.householdId, 'My Household', params.userId);
+      }
+
       this.db
         .prepare(
           `INSERT INTO financial_goals (
              id, user_id, name, category, target_amount_paise, target_date,
              initial_saved_paise, monthly_contribution_paise, expected_return_rate,
-             inflation_rate, priority, currency, notes, member_id
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+             inflation_rate, priority, currency, notes, member_id, household_id, visibility, created_by
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
         )
         .run(
           id,
@@ -115,7 +153,10 @@ export class SqliteGoalAdapter implements GoalRepositoryPort {
           params.priority ?? 'medium',
           params.currency || 'INR',
           params.notes ?? null,
-          params.memberId ?? null
+          params.memberId ?? null,
+          params.householdId ?? null,
+          visibility,
+          params.userId
         );
 
       const listRes = await this.listGoalsByUser(params.userId);
@@ -145,7 +186,7 @@ export class SqliteGoalAdapter implements GoalRepositoryPort {
              priority = COALESCE(?, priority),
              notes = COALESCE(?, notes),
              member_id = COALESCE(?, member_id)
-           WHERE id = ? AND user_id = ?;`
+           WHERE id = ? AND (user_id = ? OR household_id = ?);`
         )
         .run(
           params.name ?? null,
@@ -160,10 +201,19 @@ export class SqliteGoalAdapter implements GoalRepositoryPort {
           params.notes ?? null,
           params.memberId ?? null,
           params.goalId,
-          params.userId
+          params.userId,
+          params.householdId ?? params.userId
         );
 
-      const listRes = await this.listGoalsByUser(params.userId);
+      if (params.visibility) {
+        this.db
+          .prepare(`UPDATE financial_goals SET visibility = ? WHERE id = ?;`)
+          .run(params.visibility, params.goalId);
+      }
+
+      const listRes = params.householdId
+        ? await this.listGoalsByHousehold(params.householdId)
+        : await this.listGoalsByUser(params.userId);
       if (!listRes.success) return listRes;
       const found = listRes.value.find((g) => g.id === params.goalId);
       if (!found) return err(new Error('Failed to retrieve updated goal'));
@@ -174,11 +224,11 @@ export class SqliteGoalAdapter implements GoalRepositoryPort {
     }
   }
 
-  async deleteGoal(goalId: string, userId: string): Promise<Result<void>> {
+  async deleteGoal(goalId: string, scopeId: string): Promise<Result<void>> {
     try {
       this.db
-        .prepare('DELETE FROM financial_goals WHERE id = ? AND user_id = ?;')
-        .run(goalId, userId);
+        .prepare('DELETE FROM financial_goals WHERE id = ? AND (user_id = ? OR household_id = ?);')
+        .run(goalId, scopeId, scopeId);
       return ok(undefined);
     } catch (errEx) {
       return err(errEx instanceof Error ? errEx : new Error(String(errEx)));
@@ -206,7 +256,7 @@ export class SqliteGoalAdapter implements GoalRepositoryPort {
   async unlinkHoldingFromGoal(
     goalId: string,
     holdingId: string,
-    _userId: string
+    _scopeId: string
   ): Promise<Result<void>> {
     try {
       this.db

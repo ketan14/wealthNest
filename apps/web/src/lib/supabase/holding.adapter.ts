@@ -1,4 +1,5 @@
 import { Result, ok, err } from '@wealthnest/shared';
+import { HoldingOwnerShareInput, RecordVisibility } from '@wealthnest/domain';
 import {
   HoldingRepositoryPort,
   HoldingDetailDto,
@@ -7,9 +8,19 @@ import {
 } from '@wealthnest/application';
 import { supabase } from './client';
 import { toValidUuidOrNull } from './uuid-utils';
+import { resolveHouseholdIdForWrite, syncRestrictedRecordGrants } from './household-scope';
+
+interface JoinedHoldingOwnerRow {
+  family_member_id: string;
+  ownership_share: number | string;
+  is_primary_owner: boolean;
+}
 
 interface JoinedHoldingQueryRow {
   id: string;
+  household_id: string;
+  visibility: RecordVisibility;
+  created_by: string | null;
   quantity: number | string;
   unit_cost_cents: number | string;
   current_value_cents: number | string;
@@ -21,6 +32,7 @@ interface JoinedHoldingQueryRow {
   cost_basis_verified: boolean | null;
   member_id: string | null;
   account_id: string | null;
+  holding_owners?: JoinedHoldingOwnerRow[] | null;
   assets: {
     id: string;
     name: string;
@@ -38,13 +50,21 @@ interface JoinedHoldingQueryRow {
 }
 
 export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
-  async listDetailsByUser(userId: string): Promise<Result<HoldingDetailDto[]>> {
+  async listDetailsByHousehold(householdId: string): Promise<Result<HoldingDetailDto[]>> {
     try {
+      const validHouseholdId = toValidUuidOrNull(householdId);
+      if (!validHouseholdId) {
+        return ok([]);
+      }
+
       const { data, error } = await supabase
         .from('holdings')
         .select(
           `
           id,
+          household_id,
+          visibility,
+          created_by,
           quantity,
           unit_cost_cents,
           current_value_cents,
@@ -56,6 +76,11 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
           cost_basis_verified,
           member_id,
           account_id,
+          holding_owners (
+            family_member_id,
+            ownership_share,
+            is_primary_owner
+          ),
           assets (
             id,
             name,
@@ -72,7 +97,7 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
           )
         `
         )
-        .eq('user_id', userId)
+        .eq('household_id', validHouseholdId)
         .order('current_value_cents', { ascending: false });
 
       if (error) {
@@ -86,9 +111,21 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
         if (!row.assets) continue;
 
         const assetClass = row.assets.asset_classes;
+        const owners: HoldingOwnerShareInput[] | undefined =
+          row.holding_owners && row.holding_owners.length > 0
+            ? row.holding_owners.map((o) => ({
+                familyMemberId: o.family_member_id,
+                ownershipShare: Number(o.ownership_share),
+                isPrimaryOwner: Boolean(o.is_primary_owner),
+              }))
+            : undefined;
+
         mapped.push({
           holdingId: row.id,
           assetId: row.assets.id,
+          householdId: row.household_id,
+          visibility: row.visibility,
+          createdBy: row.created_by ?? undefined,
           name: row.assets.name,
           ticker: row.assets.ticker ?? undefined,
           isin: row.assets.isin ?? undefined,
@@ -107,6 +144,7 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
           costBasisVerified: Boolean(row.cost_basis_verified),
           memberId: row.member_id ?? undefined,
           accountId: row.account_id ?? undefined,
+          owners,
         });
       }
 
@@ -116,13 +154,55 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
     }
   }
 
+  async listDetailsByUser(scopeId: string): Promise<Result<HoldingDetailDto[]>> {
+    return this.listDetailsByHousehold(scopeId);
+  }
+
+  async setHoldingOwners(
+    holdingId: string,
+    owners: readonly HoldingOwnerShareInput[]
+  ): Promise<Result<void>> {
+    try {
+      const payload = owners.map((o) => ({
+        family_member_id: o.familyMemberId,
+        ownership_share: o.ownershipShare,
+        is_primary_owner: Boolean(o.isPrimaryOwner),
+      }));
+
+      const { error } = await supabase.rpc('set_holding_owners', {
+        p_holding_id: holdingId,
+        p_owners: payload,
+      });
+
+      if (error) {
+        return err(new Error(error.message));
+      }
+
+      return ok(undefined);
+    } catch (e) {
+      return err(e instanceof Error ? e : new Error(String(e)));
+    }
+  }
+
   async createHoldingWithAsset(params: CreateHoldingParams): Promise<Result<HoldingDetailDto>> {
     try {
+      const householdId = await resolveHouseholdIdForWrite(params.householdId, params.userId);
+      const visibility: RecordVisibility = params.visibility ?? 'household_shared';
+      const actorId = toValidUuidOrNull(params.userId);
+      const validMemberId = toValidUuidOrNull(params.memberId);
+      const primaryOwnerId =
+        params.ownerShares?.find((o) => o.isPrimaryOwner)?.familyMemberId ??
+        params.ownerShares?.[0]?.familyMemberId ??
+        validMemberId ??
+        undefined;
+
       // 1. Insert into assets table
       const { data: assetData, error: assetError } = await supabase
         .from('assets')
         .insert({
-          user_id: params.userId,
+          household_id: householdId,
+          visibility,
+          ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
           name: params.name,
           ticker: params.ticker ? params.ticker.toUpperCase() : null,
           isin: params.isin || null,
@@ -133,8 +213,8 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
         .select('id')
         .single();
 
-      if (assetError) {
-        return err(new Error(`Failed to create asset: ${assetError.message}`));
+      if (assetError || !assetData) {
+        return err(new Error(`Failed to create asset: ${assetError?.message || 'Unknown error'}`));
       }
 
       const assetId = assetData.id;
@@ -143,7 +223,9 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
       const { data: holdingData, error: holdingError } = await supabase
         .from('holdings')
         .insert({
-          user_id: params.userId,
+          household_id: householdId,
+          visibility,
+          ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
           asset_id: assetId,
           quantity: params.quantity,
           unit_cost_cents: params.unitCostCents,
@@ -153,17 +235,52 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
           amc_name: params.amcName || null,
           scheme_plan: params.schemePlan || null,
           cost_basis_verified: Boolean(params.costBasisVerified),
-          member_id: toValidUuidOrNull(params.memberId),
+          member_id: toValidUuidOrNull(primaryOwnerId),
           account_id: toValidUuidOrNull(params.accountId),
         })
         .select('id, updated_at')
         .single();
 
-      if (holdingError) {
-        return err(new Error(`Failed to create holding: ${holdingError.message}`));
+      if (holdingError || !holdingData) {
+        return err(
+          new Error(`Failed to create holding: ${holdingError?.message || 'Unknown error'}`)
+        );
       }
 
-      // 3. Query asset class metadata for complete DTO
+      // 3. Persist joint ownership shares when provided (or single owner row when member is assigned)
+      const normalizedOwners: HoldingOwnerShareInput[] | undefined =
+        params.ownerShares && params.ownerShares.length > 0
+          ? [...params.ownerShares]
+          : validMemberId
+            ? [{ familyMemberId: validMemberId, ownershipShare: 100, isPrimaryOwner: true }]
+            : undefined;
+
+      if (normalizedOwners && normalizedOwners.length > 0) {
+        const ownersRes = await this.setHoldingOwners(holdingData.id, normalizedOwners);
+        if (!ownersRes.success) {
+          return err(ownersRes.error);
+        }
+      }
+
+      // 4. Persist explicit restricted visibility grants on asset and holding if applicable
+      if (visibility === 'restricted' && params.restrictedGranteeUserIds?.length) {
+        await syncRestrictedRecordGrants({
+          householdId,
+          recordType: 'asset',
+          recordId: assetId,
+          visibility,
+          granteeUserIds: params.restrictedGranteeUserIds,
+        });
+        await syncRestrictedRecordGrants({
+          householdId,
+          recordType: 'holding',
+          recordId: holdingData.id,
+          visibility,
+          granteeUserIds: params.restrictedGranteeUserIds,
+        });
+      }
+
+      // 5. Query asset class metadata for complete DTO
       const { data: classData } = await supabase
         .from('asset_classes')
         .select('name, color_hex')
@@ -173,6 +290,9 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
       const created: HoldingDetailDto = {
         holdingId: holdingData.id,
         assetId,
+        householdId,
+        visibility,
+        createdBy: actorId ?? undefined,
         name: params.name,
         ticker: params.ticker ? params.ticker.toUpperCase() : undefined,
         isin: params.isin,
@@ -189,8 +309,9 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
         amcName: params.amcName,
         schemePlan: params.schemePlan,
         costBasisVerified: params.costBasisVerified,
-        memberId: params.memberId,
+        memberId: primaryOwnerId,
         accountId: params.accountId,
+        owners: normalizedOwners,
       };
 
       return ok(created);
@@ -199,26 +320,22 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
     }
   }
 
-  async deleteHolding(holdingId: string, userId: string): Promise<Result<void>> {
+  async deleteHolding(holdingId: string, _scopeId: string): Promise<Result<void>> {
     try {
-      // Demo holdings do not exist in PostgreSQL
       if (holdingId.startsWith('demo-')) {
         return ok(undefined);
       }
 
-      // Find asset ID to cascade delete
       const { data: holding } = await supabase
         .from('holdings')
         .select('asset_id')
         .eq('id', holdingId)
-        .eq('user_id', userId)
         .maybeSingle();
 
       const { error: deleteHoldingError } = await supabase
         .from('holdings')
         .delete()
-        .eq('id', holdingId)
-        .eq('user_id', userId);
+        .eq('id', holdingId);
 
       if (deleteHoldingError) {
         return err(new Error(deleteHoldingError.message));
@@ -226,9 +343,9 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
 
       if (holding?.asset_id) {
         try {
-          await supabase.from('assets').delete().eq('id', holding.asset_id).eq('user_id', userId);
+          await supabase.from('assets').delete().eq('id', holding.asset_id);
         } catch {
-          // Non-blocking asset cleanup
+          // Non-blocking asset cleanup if shared with another holding
         }
       }
 
@@ -244,19 +361,30 @@ export class SupabaseHoldingAdapter implements HoldingRepositoryPort {
         return ok(undefined);
       }
 
+      const updates: Record<string, unknown> = {
+        quantity: params.quantity,
+        unit_cost_cents: params.unitCostCents,
+        current_value_cents: params.currentValueCents,
+        updated_at: new Date().toISOString(),
+      };
+      if (params.visibility !== undefined) {
+        updates.visibility = params.visibility;
+      }
+
       const { error } = await supabase
         .from('holdings')
-        .update({
-          quantity: params.quantity,
-          unit_cost_cents: params.unitCostCents,
-          current_value_cents: params.currentValueCents,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', params.holdingId)
-        .eq('user_id', params.userId);
+        .update(updates)
+        .eq('id', params.holdingId);
 
       if (error) {
         return err(new Error(error.message));
+      }
+
+      if (params.ownerShares && params.ownerShares.length > 0) {
+        const ownersRes = await this.setHoldingOwners(params.holdingId, params.ownerShares);
+        if (!ownersRes.success) {
+          return err(ownersRes.error);
+        }
       }
 
       return ok(undefined);

@@ -1,5 +1,5 @@
 import { Result } from '@wealthnest/shared';
-import { StatementProvider, ImportSummaryResult } from '@wealthnest/domain';
+import { StatementProvider, ImportSummaryResult, RecordVisibility } from '@wealthnest/domain';
 
 export interface ImportCasItemDto {
   readonly isin: string;
@@ -48,6 +48,8 @@ export interface CasPreviewDto {
 
 export interface ConfirmCasImportParams {
   readonly userId: string;
+  readonly householdId?: string;
+  readonly visibility?: RecordVisibility;
   readonly provider: StatementProvider;
   readonly statementDate: string;
   readonly items: readonly ImportCasItemDto[];

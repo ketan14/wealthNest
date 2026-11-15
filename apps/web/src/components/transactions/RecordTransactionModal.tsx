@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { TransactionType } from '@wealthnest/domain';
+import { RecordVisibility, TransactionType } from '@wealthnest/domain';
 import { Button } from '@/components/ui/Button';
 import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 import {
@@ -13,7 +13,9 @@ import {
   Briefcase,
 } from 'lucide-react';
 import { useFamily } from '@/lib/family/family-context';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
+import { VisibilityControl } from '@/components/household/VisibilityControl';
 
 export interface NewTransactionFormValues {
   type: TransactionType;
@@ -28,6 +30,8 @@ export interface NewTransactionFormValues {
   memberId?: string;
   accountId?: string;
   destinationAccountId?: string;
+  visibility?: RecordVisibility;
+  restrictedGranteeUserIds?: string[];
 }
 
 interface RecordTransactionModalProps {
@@ -96,6 +100,7 @@ export function RecordTransactionModal({
   availableAssets = [],
 }: RecordTransactionModalProps) {
   const { members, accounts, selectedMemberId, selectedAccountId } = useFamily();
+  const { canEditFinancials } = useHousehold();
   const { currencySymbol, currencyCode } = usePreferences();
 
   const [type, setType] = useState<TransactionType>('buy');
@@ -108,6 +113,8 @@ export function RecordTransactionModal({
     () => new Date().toISOString().split('T')[0]
   );
   const [notes, setNotes] = useState('');
+  const [visibility, setVisibility] = useState<RecordVisibility>('household_shared');
+  const [restrictedGranteeUserIds, setRestrictedGranteeUserIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // Entity & Demat Account state
@@ -158,6 +165,11 @@ export function RecordTransactionModal({
       matchedAsset?.ticker ||
       (customAssetTicker.trim() ? customAssetTicker.trim().toUpperCase() : undefined);
 
+    if (!canEditFinancials) {
+      setError('Viewers have read-only access and cannot record transactions.');
+      return;
+    }
+
     try {
       await onSubmit({
         type,
@@ -172,6 +184,9 @@ export function RecordTransactionModal({
         memberId: txMemberId || undefined,
         accountId: txAccountId || undefined,
         destinationAccountId: type === 'transfer' ? txDestAccountId || undefined : undefined,
+        visibility,
+        restrictedGranteeUserIds:
+          visibility === 'restricted' ? restrictedGranteeUserIds : undefined,
       });
 
       // Reset form
@@ -182,6 +197,8 @@ export function RecordTransactionModal({
       setAmount('');
       setQuantity('');
       setNotes('');
+      setVisibility('household_shared');
+      setRestrictedGranteeUserIds([]);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to record transaction');
@@ -232,7 +249,7 @@ export function RecordTransactionModal({
           >
             Cancel
           </Button>
-          <Button type="submit" size="sm" disabled={isLoading} className="gap-2">
+          <Button type="submit" size="sm" disabled={isLoading || !canEditFinancials} className="gap-2">
             {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             Save Transaction
           </Button>
@@ -481,6 +498,15 @@ export function RecordTransactionModal({
               />
             </div>
           </div>
+
+          <VisibilityControl
+            visibility={visibility}
+            onChange={setVisibility}
+            granteeUserIds={restrictedGranteeUserIds}
+            onGranteeUserIdsChange={setRestrictedGranteeUserIds}
+            disabled={!canEditFinancials}
+            compact
+          />
 
           <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 text-xs text-muted-foreground space-y-1">
             <p>

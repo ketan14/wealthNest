@@ -6,11 +6,14 @@ import {
   EntityTaxSummary,
   FamilyPortfolioSummary,
 } from './family-types.js';
+import { HoldingOwnerShareInput } from '../household/household-types.js';
+import { allocateBigIntByShares } from '../household/joint-ownership.js';
 
 export interface HoldingFamilyItem {
   readonly id: string;
   readonly memberId?: string;
   readonly accountId?: string;
+  readonly owners?: readonly HoldingOwnerShareInput[];
   readonly currentValuePaise: bigint;
   readonly costBasisPaise: bigint;
   readonly holdingPeriodDays?: number;
@@ -39,28 +42,95 @@ export function calculateFamilyPortfolioSummary(
   const primaryMember = members.find((m) => m.isPrimary) || members[0];
   const primaryMemberId = primaryMember?.id || 'default-primary-member';
 
+  // Map account -> owning member for fallback attribution
+  const accountOwnerMap = new Map<string, string>();
+  for (const acc of accounts) {
+    accountOwnerMap.set(acc.id, acc.memberId);
+  }
+
+  // Track exact BigInt paise wealth, holding count, and unrealized LTCG/STCG per member
+  // using proportional largest-remainder splitting for joint holdings.
+  const memberWealthMap = new Map<string, bigint>();
+  const memberHoldingCountMap = new Map<string, number>();
+  const memberLtcgMap = new Map<string, bigint>();
+  const memberStcgMap = new Map<string, bigint>();
+
+  for (const member of members) {
+    memberWealthMap.set(member.id, 0n);
+    memberHoldingCountMap.set(member.id, 0);
+    memberLtcgMap.set(member.id, 0n);
+    memberStcgMap.set(member.id, 0n);
+  }
+
+  let totalGrossLtcgPaise = 0n;
+  let totalGrossStcgPaise = 0n;
+
+  for (const h of holdings) {
+    const resolvedShares =
+      h.owners && h.owners.length > 0
+        ? h.owners.map((o) => ({
+            familyMemberId: o.familyMemberId,
+            sharePercentage: o.ownershipShare,
+            isPrimary: Boolean(o.isPrimaryOwner),
+          }))
+        : [
+            {
+              familyMemberId:
+                h.memberId ||
+                (h.accountId ? accountOwnerMap.get(h.accountId) : undefined) ||
+                primaryMemberId,
+              sharePercentage: 100,
+              isPrimary: true,
+            },
+          ];
+
+    if (h.currentValuePaise > 0n) {
+      const valueSplits = allocateBigIntByShares(h.currentValuePaise, resolvedShares);
+      for (const split of valueSplits) {
+        memberWealthMap.set(
+          split.familyMemberId,
+          (memberWealthMap.get(split.familyMemberId) ?? 0n) + split.allocatedCents
+        );
+      }
+    }
+
+    for (const slice of resolvedShares) {
+      memberHoldingCountMap.set(
+        slice.familyMemberId,
+        (memberHoldingCountMap.get(slice.familyMemberId) ?? 0) + 1
+      );
+    }
+
+    const unrealizedPnlPaise = h.currentValuePaise - h.costBasisPaise;
+    if (unrealizedPnlPaise > 0n) {
+      const isLongTerm = (h.holdingPeriodDays ?? 0) >= 365;
+      const gainSplits = allocateBigIntByShares(unrealizedPnlPaise, resolvedShares);
+      if (isLongTerm) {
+        totalGrossLtcgPaise += unrealizedPnlPaise;
+        for (const split of gainSplits) {
+          memberLtcgMap.set(
+            split.familyMemberId,
+            (memberLtcgMap.get(split.familyMemberId) ?? 0n) + split.allocatedCents
+          );
+        }
+      } else {
+        totalGrossStcgPaise += unrealizedPnlPaise;
+        for (const split of gainSplits) {
+          memberStcgMap.set(
+            split.familyMemberId,
+            (memberStcgMap.get(split.familyMemberId) ?? 0n) + split.allocatedCents
+          );
+        }
+      }
+    }
+  }
+
   // 3. Member wealth distribution
   const memberDistributions: MemberWealthDistribution[] = [];
 
   for (const member of members) {
     const memberAccounts = accounts.filter((a) => a.memberId === member.id);
-    const memberAccountIds = new Set(memberAccounts.map((a) => a.id));
-
-    // Holdings directly assigned to this member OR assigned to an account of this member
-    // If holding has no memberId and no accountId, attribute to primary member
-    const memberHoldings = holdings.filter((h) => {
-      if (h.memberId === member.id) return true;
-      if (h.accountId && memberAccountIds.has(h.accountId)) return true;
-      if (!h.memberId && !h.accountId && member.id === primaryMemberId) return true;
-      return false;
-    });
-
-    let memberWealthPaise = 0n;
-    for (const mh of memberHoldings) {
-      if (mh.currentValuePaise > 0n) {
-        memberWealthPaise += mh.currentValuePaise;
-      }
-    }
+    const memberWealthPaise = memberWealthMap.get(member.id) ?? 0n;
 
     const percentageOfTotal =
       totalFamilyWealthPaise > 0n
@@ -75,7 +145,7 @@ export function calculateFamilyPortfolioSummary(
       isPrimary: member.isPrimary,
       totalWealthPaise: memberWealthPaise,
       percentageOfTotal,
-      holdingCount: memberHoldings.length,
+      holdingCount: memberHoldingCountMap.get(member.id) ?? 0,
       accountCount: memberAccounts.length,
       accounts: memberAccounts,
     });
@@ -117,36 +187,10 @@ export function calculateFamilyPortfolioSummary(
   // 5. Multi-Entity Indian Capital Gains Tax Segregation (Section 112A per legal PAN entity)
   const entityTaxSummaries: EntityTaxSummary[] = [];
   let combinedFamilyTaxPaise = 0n;
-  let totalGrossLtcgPaise = 0n;
-  let totalGrossStcgPaise = 0n;
 
   for (const member of members) {
-    const memberAccounts = accounts.filter((a) => a.memberId === member.id);
-    const memberAccountIds = new Set(memberAccounts.map((a) => a.id));
-
-    const memberHoldings = holdings.filter((h) => {
-      if (h.memberId === member.id) return true;
-      if (h.accountId && memberAccountIds.has(h.accountId)) return true;
-      if (!h.memberId && !h.accountId && member.id === primaryMemberId) return true;
-      return false;
-    });
-
-    let entityGrossLtcgPaise = 0n;
-    let entityGrossStcgPaise = 0n;
-
-    for (const h of memberHoldings) {
-      const unrealizedPnlPaise = h.currentValuePaise - h.costBasisPaise;
-      if (unrealizedPnlPaise > 0n) {
-        const isLongTerm = (h.holdingPeriodDays ?? 0) >= 365;
-        if (isLongTerm) {
-          entityGrossLtcgPaise += unrealizedPnlPaise;
-          totalGrossLtcgPaise += unrealizedPnlPaise;
-        } else {
-          entityGrossStcgPaise += unrealizedPnlPaise;
-          totalGrossStcgPaise += unrealizedPnlPaise;
-        }
-      }
-    }
+    const entityGrossLtcgPaise = memberLtcgMap.get(member.id) ?? 0n;
+    const entityGrossStcgPaise = memberStcgMap.get(member.id) ?? 0n;
 
     // Apply Section 112A ₹1.25L exemption specifically to this legal entity
     const exemptionAppliedPaise =

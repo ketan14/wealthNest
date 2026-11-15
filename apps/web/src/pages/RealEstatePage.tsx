@@ -9,6 +9,7 @@ import {
 } from '@wealthnest/domain';
 import { HoldingDetailDto, LiabilityDto } from '@wealthnest/application';
 import { useAuth } from '@/lib/supabase/auth-context';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { useFamily } from '@/lib/family/family-context';
 import { useRepositories } from '@/lib/persistence/repository-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
@@ -156,11 +157,15 @@ function saveOverrides(userId: string, overrides: Record<string, PropertyMetrics
 
 export function RealEstatePage() {
   const { user } = useAuth();
+  const { activeHouseholdId, canEditFinancials } = useHousehold();
   const { members, selectedMemberId } = useFamily();
-  const { holdingRepo, liabilityRepo } = useRepositories();
+  const { holdingRepo, liabilityRepo, mode } = useRepositories();
   const { isSupportModeActive } = useSupportSession();
 
-  const effectiveUserId = user?.id || 'demo-user';
+  const isDemoMode = mode === 'supabase' && (!user?.id || user.id.startsWith('demo-'));
+  const scopeId = isDemoMode ? user?.id || 'demo-user' : activeHouseholdId || user?.id || '';
+  const effectiveUserId = scopeId || 'demo-user';
+  const [holdingOwnersMap, setHoldingOwnersMap] = useState<Record<string, string[]>>({});
 
   const [baseProperties, setBaseProperties] = useState<RealEstatePropertyInput[]>([]);
   const [overrides, setOverrides] = useState<Record<string, PropertyMetricsOverride>>({});
@@ -174,15 +179,20 @@ export function RealEstatePage() {
     setErrorMessage(null);
     setOverrides(loadOverrides(effectiveUserId));
 
-    if (!user) {
-      setBaseProperties(DEMO_PROPERTIES);
+    if (isDemoMode || !scopeId) {
+      setBaseProperties(isDemoMode ? DEMO_PROPERTIES : []);
+      setHoldingOwnersMap({});
       setIsLoading(false);
       return;
     }
 
     const [holdingsRes, liabilitiesRes] = await Promise.all([
-      holdingRepo.listDetailsByUser(user.id),
-      liabilityRepo.listLiabilitiesByUser(user.id),
+      holdingRepo.listDetailsByHousehold
+        ? holdingRepo.listDetailsByHousehold(scopeId)
+        : holdingRepo.listDetailsByUser(scopeId),
+      liabilityRepo.listLiabilitiesByHousehold
+        ? liabilityRepo.listLiabilitiesByHousehold(scopeId)
+        : liabilityRepo.listLiabilitiesByUser(scopeId),
     ]);
 
     if (!holdingsRes.success) {
@@ -198,6 +208,13 @@ export function RealEstatePage() {
     const realEstateHoldings = holdingsRes.value.filter(
       (h: HoldingDetailDto) => h.assetClassId === 'real_estate'
     );
+
+    const ownersByHolding: Record<string, string[]> = {};
+    for (const h of realEstateHoldings) {
+      if (h.owners && h.owners.length > 0) {
+        ownersByHolding[h.holdingId] = h.owners.map((o) => o.familyMemberId);
+      }
+    }
 
     const mapped: RealEstatePropertyInput[] = realEstateHoldings.map((h: HoldingDetailDto) => {
       const linkedLoans = activeLiabilities.filter((l) => l.linkedAssetId === h.assetId);
@@ -227,13 +244,18 @@ export function RealEstatePage() {
       };
     });
 
+    setHoldingOwnersMap(ownersByHolding);
     setBaseProperties(mapped);
     setIsLoading(false);
-  }, [user, effectiveUserId, holdingRepo, liabilityRepo]);
+  }, [isDemoMode, scopeId, holdingRepo, liabilityRepo]);
 
   useEffect(() => {
     loadRealEstateData();
   }, [loadRealEstateData]);
+
+  useEffect(() => {
+    setOverrides(loadOverrides(effectiveUserId));
+  }, [effectiveUserId]);
 
   const memberNameMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -264,8 +286,11 @@ export function RealEstatePage() {
     if (!selectedMemberId || selectedMemberId.toLowerCase() === 'all') {
       return mergedProperties;
     }
-    return mergedProperties.filter((p) => p.memberId === selectedMemberId);
-  }, [mergedProperties, selectedMemberId]);
+    return mergedProperties.filter(
+      (p) =>
+        p.memberId === selectedMemberId || holdingOwnersMap[p.id]?.includes(selectedMemberId)
+    );
+  }, [mergedProperties, selectedMemberId, holdingOwnersMap]);
 
   const summary = useMemo(
     () => summarizeRealEstatePortfolio(memberFilteredProperties),
@@ -273,6 +298,7 @@ export function RealEstatePage() {
   );
 
   const handleSaveOverride = (propertyId: string, override: PropertyMetricsOverride) => {
+    if (!canEditFinancials || isSupportModeActive) return;
     const next = { ...overrides, [propertyId]: override };
     setOverrides(next);
     saveOverrides(effectiveUserId, next);

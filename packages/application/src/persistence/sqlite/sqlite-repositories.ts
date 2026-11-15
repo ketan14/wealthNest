@@ -1,3 +1,4 @@
+export { SqliteHouseholdAdapter } from './sqlite-household-adapter.js';
 export { SqliteFamilyAdapter } from './sqlite-family-adapter.js';
 export {
   SqliteAssetClassAdapter,

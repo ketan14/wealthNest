@@ -7,7 +7,7 @@ import {
   ImportCasTransactionDto,
   CasPreviewDto,
 } from '@wealthnest/application';
-import { ImportSummaryResult } from '@wealthnest/domain';
+import { ImportSummaryResult, RecordVisibility } from '@wealthnest/domain';
 import { PdfJsTextExtractorAdapter } from '@/lib/pdf/pdfjs-extractor.adapter';
 import {
   validateCsvTextBounds,
@@ -15,6 +15,8 @@ import {
 } from '@/lib/validation/import-file';
 import { useCasImportRepository } from '@/lib/persistence/repository-context';
 import { useAuth } from '@/lib/supabase/auth-context';
+import { useHousehold } from '@/lib/supabase/household-context';
+import { VisibilityControl } from '@/components/household/VisibilityControl';
 import { Badge } from '@/components/ui/Badge';
 import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 import { X, FileSpreadsheet } from 'lucide-react';
@@ -37,6 +39,7 @@ interface ImportCasModalProps {
 
 export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalProps) {
   const { user } = useAuth();
+  const { activeHouseholdId, canEditFinancials } = useHousehold();
   const queryClient = useQueryClient();
   const { members, accounts, selectedMemberId, selectedAccountId } = useFamily();
   const casImportRepo = useCasImportRepository();
@@ -44,6 +47,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
   const [importSource, setImportSource] = useState<'cas_pdf' | 'zerodha_csv' | 'groww_csv'>(
     'cas_pdf'
   );
+  const [visibility, setVisibility] = useState<RecordVisibility>('household_shared');
   const [step, setStep] = useState<'upload' | 'preview' | 'summary'>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState('');
@@ -249,6 +253,9 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
   const confirmMutation = useMutation({
     mutationFn: async () => {
       if (!previewData) throw new Error('No preview data found to import.');
+      if (!canEditFinancials) {
+        throw new Error('Viewers have read-only access and cannot import holdings.');
+      }
 
       if (user) {
         // Authenticated: Persist into database via repository port
@@ -256,6 +263,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
 
         const res = await useCase.execute({
           userId: user.id,
+          householdId: activeHouseholdId,
+          visibility,
           provider: previewData.provider,
           statementDate: previewData.statementDate,
           items,
@@ -290,10 +299,11 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
       setImportSummary(summary);
       setStep('summary');
       if (user) {
-        queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['transactions', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['transactions-cashflow', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['cashflow-summary', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['portfolio-summary'] });
+        queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] });
+        queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        queryClient.invalidateQueries({ queryKey: ['transactions-cashflow'] });
+        queryClient.invalidateQueries({ queryKey: ['cashflow-summary'] });
       }
       if (onSuccess) {
         onSuccess(
@@ -424,7 +434,14 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
 
       {/* Wizard Step 2: Verification & Preview Grid */}
       {step === 'preview' && previewData && (
-        <CasPreviewStep
+        <div className="space-y-3">
+          <VisibilityControl
+            visibility={visibility}
+            onChange={(v) => setVisibility(v === 'restricted' ? 'owner_only' : v)}
+            disabled={!canEditFinancials}
+            compact
+          />
+          <CasPreviewStep
           previewData={previewData}
           members={members}
           accounts={accounts}
@@ -460,6 +477,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
           onClose={handleClose}
           onConfirm={() => confirmMutation.mutate()}
         />
+        </div>
       )}
 
       {/* Wizard Step 3: Import Summary */}

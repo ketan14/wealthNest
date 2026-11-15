@@ -14,6 +14,7 @@ import {
 import { seedDefaultHouseholdState } from './tauri-sqlite-seed';
 import { executePortfolioWrite } from './tauri-sqlite-write-portfolio';
 import { executePlanningWrite } from './tauri-sqlite-write-planning';
+import { executeHouseholdWrite } from './tauri-sqlite-write-household';
 import { executeRelationalRead } from './tauri-sqlite-read';
 
 export { type TauriRawDatabaseConnection, LOCAL_SQLITE_STORAGE_KEY, DEFAULT_LOCAL_USER_ID };
@@ -142,6 +143,9 @@ export class TauriSqliteAdapter implements SqliteDatabase {
 
   private executeWrite(sql: string, params: unknown[]): number {
     const now = new Date().toISOString();
+    const householdResult = executeHouseholdWrite(this.state, sql, params, now);
+    if (householdResult !== null) return householdResult;
+
     const portfolioResult = executePortfolioWrite(this.state, sql, params, now);
     if (portfolioResult !== null) return portfolioResult;
 

@@ -2,6 +2,8 @@ import { CurrencyCode } from '../money/currency.js';
 import { Money } from '../money/money.js';
 import { LoanType, LiabilityStatus } from '../models/liability.js';
 import { LoanPrepaymentEvent } from '../models/loan-amortization.js';
+import { allocateBigIntByShares } from '../household/joint-ownership.js';
+import type { LiabilityPartyShareInput } from '../household/household-types.js';
 
 export interface ResolvedAssetValuation {
   readonly assetId: string;
@@ -298,4 +300,35 @@ export function applyLoanPayment(params: {
     totalPrincipalReduction,
     interestExpense,
   };
+}
+
+/**
+ * Computes exact BigInt paise liability balance attributable to a specific family member
+ * across sole and co-borrowed loans using proportional liability_parties splits
+ * without double-counting in household totals.
+ */
+export function calculateMemberLiabilitySharePaise(params: {
+  readonly outstandingBalanceCents: bigint;
+  readonly memberId: string;
+  readonly primaryMemberId?: string;
+  readonly parties?: readonly LiabilityPartyShareInput[];
+}): bigint {
+  if (params.outstandingBalanceCents <= 0n) {
+    return 0n;
+  }
+
+  if (params.parties && params.parties.length > 0) {
+    const splits = allocateBigIntByShares(
+      params.outstandingBalanceCents,
+      params.parties.map((p) => ({
+        familyMemberId: p.familyMemberId,
+        sharePercentage: p.liabilityShare,
+        isPrimary: p.partyRole === 'primary_borrower',
+      }))
+    );
+    const match = splits.find((s) => s.familyMemberId === params.memberId);
+    return match ? match.allocatedCents : 0n;
+  }
+
+  return params.primaryMemberId === params.memberId ? params.outstandingBalanceCents : 0n;
 }

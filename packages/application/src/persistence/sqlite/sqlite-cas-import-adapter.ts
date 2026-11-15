@@ -11,19 +11,28 @@ export class SqliteCasImportAdapter implements CasImportRepositoryPort {
     params: ConfirmCasImportParams
   ): Promise<Result<ImportSummaryResult>> {
     try {
-      // Ensure user profile exists for foreign key integrity
+      // Ensure user profile (and optional household) exist for foreign key integrity
       this.db
         .prepare(
           `INSERT OR IGNORE INTO profiles (id, display_name, default_currency) VALUES (?, 'Local Investor', 'INR');`
         )
         .run(params.userId);
+      if (params.householdId) {
+        this.db
+          .prepare('INSERT OR IGNORE INTO households (id, name, created_by) VALUES (?, ?, ?);')
+          .run(params.householdId, 'My Household', params.userId);
+      }
 
-      // Verify optional memberId / accountId exist for this user in SQLite to respect composite FKs
+      const visibility = params.visibility ?? 'household_shared';
+
+      // Verify optional memberId / accountId exist for this user or household in SQLite
       let validMemberId: string | null = null;
       if (params.memberId) {
         const memRow = this.db
-          .prepare<{ id: string }>('SELECT id FROM family_members WHERE user_id = ? AND id = ?;')
-          .get(params.userId, params.memberId);
+          .prepare<{ id: string }>(
+            'SELECT id FROM family_members WHERE id = ? AND (user_id = ? OR household_id = ?);'
+          )
+          .get(params.memberId, params.userId, params.householdId ?? params.userId);
         if (memRow) {
           validMemberId = memRow.id;
         }
@@ -33,9 +42,9 @@ export class SqliteCasImportAdapter implements CasImportRepositoryPort {
       if (params.accountId) {
         const accRow = this.db
           .prepare<{ id: string }>(
-            'SELECT id FROM portfolio_accounts WHERE user_id = ? AND id = ?;'
+            'SELECT id FROM portfolio_accounts WHERE id = ? AND (user_id = ? OR household_id = ?);'
           )
-          .get(params.userId, params.accountId);
+          .get(params.accountId, params.userId, params.householdId ?? params.userId);
         if (accRow) {
           validAccountId = accRow.id;
         }
@@ -102,8 +111,8 @@ export class SqliteCasImportAdapter implements CasImportRepositoryPort {
 
             this.db
               .prepare(
-                `INSERT INTO assets (id, user_id, name, ticker, isin, asset_class_id, currency)
-                 VALUES (?, ?, ?, ?, ?, ?, ?);`
+                `INSERT INTO assets (id, user_id, name, ticker, isin, asset_class_id, currency, household_id, visibility, created_by)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
               )
               .run(
                 newAssetId,
@@ -112,7 +121,10 @@ export class SqliteCasImportAdapter implements CasImportRepositoryPort {
                 item.ticker || null,
                 item.isin || null,
                 assetClassToUse,
-                item.currency || 'INR'
+                item.currency || 'INR',
+                params.householdId ?? null,
+                visibility,
+                params.userId
               );
 
             existingAssetId = newAssetId;
@@ -185,8 +197,9 @@ export class SqliteCasImportAdapter implements CasImportRepositoryPort {
               .prepare(
                 `INSERT INTO holdings (
                    id, user_id, asset_id, quantity, unit_cost_paise, current_value_paise,
-                   member_id, account_id, demat_account_id, folio_number, amc_name, scheme_plan, cost_basis_verified
-                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+                   member_id, account_id, demat_account_id, folio_number, amc_name, scheme_plan, cost_basis_verified,
+                   household_id, visibility, created_by
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
               )
               .run(
                 newHoldingId,
@@ -201,8 +214,20 @@ export class SqliteCasImportAdapter implements CasImportRepositoryPort {
                 item.folioNumber ?? null,
                 item.amcName ?? null,
                 item.schemePlan ?? null,
-                item.costBasisVerified ? 1 : 0
+                item.costBasisVerified ? 1 : 0,
+                params.householdId ?? null,
+                visibility,
+                params.userId
               );
+
+            if (validMemberId) {
+              this.db
+                .prepare(
+                  `INSERT INTO holding_owners (id, household_id, holding_id, family_member_id, ownership_share, is_primary_owner)
+                   VALUES (?, ?, ?, ?, 100, 1);`
+                )
+                .run(generateId('ho'), params.householdId ?? null, newHoldingId, validMemberId);
+            }
 
             imported++;
             if (isMutualFund) {
@@ -246,8 +271,8 @@ export class SqliteCasImportAdapter implements CasImportRepositoryPort {
               const newAssetId = generateId('ast');
               this.db
                 .prepare(
-                  `INSERT INTO assets (id, user_id, name, ticker, isin, asset_class_id, currency)
-                   VALUES (?, ?, ?, ?, ?, 'mutual_fund', ?);`
+                  `INSERT INTO assets (id, user_id, name, ticker, isin, asset_class_id, currency, household_id, visibility, created_by)
+                   VALUES (?, ?, ?, ?, ?, 'mutual_fund', ?, ?, ?, ?);`
                 )
                 .run(
                   newAssetId,
@@ -255,7 +280,10 @@ export class SqliteCasImportAdapter implements CasImportRepositoryPort {
                   tx.schemeName || 'Imported Security',
                   tx.ticker || null,
                   tx.isin || null,
-                  tx.currency || 'INR'
+                  tx.currency || 'INR',
+                  params.householdId ?? null,
+                  visibility,
+                  params.userId
                 );
               assetId = newAssetId;
             }
@@ -273,8 +301,8 @@ export class SqliteCasImportAdapter implements CasImportRepositoryPort {
                 .prepare(
                   `INSERT INTO transactions (
                      id, user_id, asset_id, type, quantity, amount_paise, currency,
-                     transaction_date, notes, member_id, account_id
-                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+                     transaction_date, notes, member_id, account_id, household_id, visibility, created_by
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
                 )
                 .run(
                   newTxId,
@@ -287,7 +315,10 @@ export class SqliteCasImportAdapter implements CasImportRepositoryPort {
                   tx.date,
                   tx.description || null,
                   validMemberId,
-                  validAccountId
+                  validAccountId,
+                  params.householdId ?? null,
+                  visibility,
+                  params.userId
                 );
               transactionsImported++;
             }

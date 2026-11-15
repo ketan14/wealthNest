@@ -5,12 +5,15 @@ import {
   DocumentCategory,
   ALLOWED_VAULT_MIME_TYPES,
   MAX_VAULT_FILE_SIZE_BYTES,
+  RecordVisibility,
   validateDocumentUpload,
   formatFileSize,
 } from '@wealthnest/domain';
 import { FamilyMemberDto } from '@wealthnest/application';
 import { Button } from '@/components/ui/Button';
 import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
+import { VisibilityControl } from '@/components/household/VisibilityControl';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { validateVaultFileBlobSignature } from '@/lib/validation/import-file';
 
 export interface UploadDocumentFormData {
@@ -21,6 +24,8 @@ export interface UploadDocumentFormData {
   documentDate?: string;
   expiryDate?: string;
   notes?: string;
+  visibility?: RecordVisibility;
+  restrictedGranteeUserIds?: string[];
 }
 
 interface UploadDocumentModalProps {
@@ -38,6 +43,7 @@ export function UploadDocumentModal({
   members,
   defaultMemberId,
 }: UploadDocumentModalProps) {
+  const { canEditFinancials } = useHousehold();
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<DocumentCategory>('identity_pan');
@@ -45,6 +51,8 @@ export function UploadDocumentModal({
   const [documentDate, setDocumentDate] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [notes, setNotes] = useState('');
+  const [visibility, setVisibility] = useState<RecordVisibility>('household_shared');
+  const [restrictedGranteeUserIds, setRestrictedGranteeUserIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -73,6 +81,11 @@ export function UploadDocumentModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!canEditFinancials) {
+      setError('Viewers have read-only access and cannot upload vault documents.');
+      return;
+    }
 
     if (!file) {
       setError('Please select a document file to upload.');
@@ -109,6 +122,9 @@ export function UploadDocumentModal({
         documentDate: documentDate || undefined,
         expiryDate: expiryDate || undefined,
         notes: notes.trim() || undefined,
+        visibility,
+        restrictedGranteeUserIds:
+          visibility === 'restricted' ? restrictedGranteeUserIds : undefined,
       });
       // Reset state and close
       setFile(null);
@@ -117,6 +133,8 @@ export function UploadDocumentModal({
       setDocumentDate('');
       setExpiryDate('');
       setNotes('');
+      setVisibility('household_shared');
+      setRestrictedGranteeUserIds([]);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload document.');
@@ -165,7 +183,7 @@ export function UploadDocumentModal({
           <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting || !canEditFinancials}>
             {isSubmitting ? 'Uploading...' : 'Save to Vault'}
           </Button>
         </div>
@@ -314,6 +332,15 @@ export function UploadDocumentModal({
               className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none"
             />
           </div>
+
+          <VisibilityControl
+            visibility={visibility}
+            onChange={setVisibility}
+            granteeUserIds={restrictedGranteeUserIds}
+            onGranteeUserIdsChange={setRestrictedGranteeUserIds}
+            disabled={!canEditFinancials}
+            compact
+          />
     </ResponsiveModalShell>
   );
 }

@@ -126,7 +126,8 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
       expect(
         screen.getByPlaceholderText(/e\.g\. Parul Vaghela or Vaghela HUF/i)
       ).toBeInTheDocument();
-      expect(screen.getByText(/Relationship \/ Entity Type/i)).toBeInTheDocument();
+      expect(screen.getByText(/^Relationship$/i)).toBeInTheDocument();
+      expect(screen.getByText(/^Entity Kind$/i)).toBeInTheDocument();
       expect(screen.getByText(/PAN Card \(Optional\)/i)).toBeInTheDocument();
     });
 
@@ -364,9 +365,14 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
         />
       );
 
-      // Verify borrower fields
+      // Verify borrower fields and joint share toggle
       expect(screen.getByText(/Primary Borrower/i)).toBeInTheDocument();
-      expect(screen.getByText(/Joint Co-Borrowers \(Optional\)/i)).toBeInTheDocument();
+      const jointToggle = screen.getByLabelText(
+        /Configure Joint Borrowers \/ Guarantors & Share Split/i
+      );
+      expect(jointToggle).toBeInTheDocument();
+      fireEvent.click(jointToggle);
+      expect(screen.getByRole('button', { name: /Add Co-Borrower/i })).toBeInTheDocument();
     });
   });
 });

@@ -1,4 +1,5 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   ExportPortfolioDataUseCase,
   ValidateAndParseBackupUseCase,
@@ -9,6 +10,7 @@ import {
 } from '@wealthnest/application';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { useAuth } from '@/lib/supabase/auth-context';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { useRepositories } from '@/lib/persistence/repository-context';
 import { userAdapter } from '@/lib/supabase/user.adapter';
 import { Button } from '@/components/ui/Button';
@@ -40,9 +42,34 @@ export function SettingsPage() {
   } = usePreferences();
 
   const { user, signOut } = useAuth();
+  const { activeHousehold, activeHouseholdId, canEditFinancials } = useHousehold();
   const { members, accounts } = useFamily();
-  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const resolvedTab: SettingsTab =
+    tabParam === 'family' ||
+    tabParam === 'connection' ||
+    tabParam === 'localization' ||
+    tabParam === 'data' ||
+    tabParam === 'system' ||
+    tabParam === 'profile'
+      ? tabParam
+      : 'profile';
+  const [activeTab, setActiveTab] = useState<SettingsTab>(resolvedTab);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
+
+  useEffect(() => {
+    if (
+      tabParam === 'family' ||
+      tabParam === 'connection' ||
+      tabParam === 'localization' ||
+      tabParam === 'data' ||
+      tabParam === 'system' ||
+      tabParam === 'profile'
+    ) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
 
   // Profile edit states
   const [nameInput, setNameInput] = useState(displayName);
@@ -127,7 +154,10 @@ export function SettingsPage() {
     setIsExporting(true);
     setExportSuccessMessage(null);
     try {
-      const res = await exportUseCase.execute(user?.id || 'demo-user-001');
+      const res = await exportUseCase.execute(user?.id || 'demo-user-001', {
+        householdId: activeHouseholdId,
+        householdName: activeHousehold?.name,
+      });
       if (res.success) {
         const saved = await handleDownloadFile(
           res.value.backupJsonString,
@@ -151,7 +181,10 @@ export function SettingsPage() {
   ) => {
     setIsExporting(true);
     try {
-      const res = await exportUseCase.execute(user?.id || 'demo-user-001');
+      const res = await exportUseCase.execute(user?.id || 'demo-user-001', {
+        householdId: activeHouseholdId,
+        householdName: activeHousehold?.name,
+      });
       if (res.success) {
         const dateStr = new Date().toISOString().split('T')[0];
         let content = '';
@@ -229,6 +262,10 @@ export function SettingsPage() {
 
   const handleExecuteRestore = async () => {
     if (!backupPreview || !backupPreview.isValid || !backupPreview.data) return;
+    if (!canEditFinancials) {
+      setRestoreError('Viewers have read-only access and cannot restore backups into this household.');
+      return;
+    }
     const targetUserId = user?.id || 'usr-local-default';
 
     setIsRestoring(true);
@@ -236,6 +273,7 @@ export function SettingsPage() {
 
     const res = await restoreUseCase.execute({
       targetUserId,
+      householdId: activeHouseholdId,
       backupData: backupPreview.data,
     });
 

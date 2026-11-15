@@ -212,59 +212,49 @@ erDiagram
 
 ---
 
-## 5. Phased Implementation Plan
+## 5. Phased Implementation Plan & Execution Status
 
 To evolve WealthNest cleanly without breaking working financial math or desktop parity, execution is sequenced into 8 gated phases:
 
-1. **Phase 1 — Household Core, Identity Separation & Auto-Provisioning (DB DDL + Trigger)**
-   - Extend `household_members` with `'admin'` role + `status ('active' | 'suspended' | 'revoked')` + partial unique index `(household_id) WHERE household_role = 'primary_owner' AND status = 'active'`.
-   - Evolve `family_members`: add `household_id`, nullable `linked_user_id REFERENCES auth.users(id) ON DELETE SET NULL`, `created_by`, unique partial index `(household_id, linked_user_id) WHERE linked_user_id IS NOT NULL`, `entity_type ('individual' | 'huf' | 'minor')`.
-   - Add `family_member_access` and append-only `household_audit_logs`.
-   - Update `handle_new_user()` so standard & admin-created signups atomically create `profiles` + default personal `households` + `primary_owner` `household_members` + self `family_members` (with explicit skip/claim pathway when onboarding via invitation).
-   - Add `transfer_household_primary_owner(p_household_id, p_new_owner_user_id)` and `assign_household_admin(...)` `SECURITY DEFINER` RPCs (primary-owner-only).
+1. **[x] Phase 1 — Household Core, Identity Separation & Auto-Provisioning (`20260101000020`)**
+   - Extended `household_members` with `'admin'` role + `status ('active' | 'suspended' | 'revoked')` + partial unique index `(household_id) WHERE household_role = 'primary_owner' AND status = 'active'`.
+   - Evolved `family_members`: added `household_id`, nullable `linked_user_id REFERENCES auth.users(id) ON DELETE SET NULL`, `created_by`/`updated_by`, unique partial index `(household_id, linked_user_id) WHERE linked_user_id IS NOT NULL`, `entity_type ('individual' | 'huf' | 'minor')`, and optional `email`.
+   - Added `family_member_access` and append-only `household_audit_logs`.
+   - Updated `handle_new_user()` and added `ensure_user_default_household()` so standard & admin-created signups atomically create `profiles` + default personal `households` + `primary_owner` `household_members` + self `family_members` (with `skip_default_household` pathway for invitations).
+   - Added `transfer_household_primary_owner(p_household_id, p_new_owner_user_id)` and `assign_household_role(...)` `SECURITY DEFINER` RPCs (primary-owner-only).
 
-2. **Phase 2 — Invitations & Verified Email-Confirmed Account Linking (DB + Auth UI)**
-   - Create `public.household_invitations` (SHA-256 `token_hash` only, nullable `family_member_id`, `role IN ('admin','member','viewer')`, `expires_at`, `accepted_at`, `revoked_at`).
-   - Implement `create_household_invitation`, `revoke_household_invitation`, and `accept_household_invitation` (`SECURITY DEFINER`), enforcing `auth.users.email_confirmed_at IS NOT NULL`, normalized email match, expiry/revocation checks, duplicate-link rejection, idempotent membership upsert, and audit logging.
-   - Replace client-only mock logic in [`HouseholdSharingCard.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/components/settings/HouseholdSharingCard.tsx) & wire `/signup` / `/accept-invite` flows.
+2. **[x] Phase 2 — Invitations & Verified Email-Confirmed Account Linking (`20260101000021`, `HouseholdSharingCard`, `InviteAcceptPage`)**
+   - Created `public.household_invitations` (SHA-256 `token_hash` only, nullable `family_member_id`, `role IN ('admin','member','viewer')`, `expires_at`, `accepted_at`, `revoked_at`).
+   - Implemented `create_household_invitation`, `preview_household_invitation`, `revoke_household_invitation`, and `accept_household_invitation` (`SECURITY DEFINER`), enforcing `auth.users.email_confirmed_at IS NOT NULL`, normalized email match, expiry/revocation checks, duplicate-link rejection, idempotent membership upsert, and audit logging.
+   - Replaced client-only mock logic in [`HouseholdSharingCard.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/components/settings/HouseholdSharingCard.tsx) & wired `/invite`, `/signup?invite=`, and `/login?invite=` flows.
 
-3. **Phase 3 — Financial Schema Scoping, Joint Ownership & Privacy Columns (DB DDL)**
-   - Add `household_id NOT NULL`, `visibility ('household_shared' | 'owner_only' | 'restricted') DEFAULT 'household_shared'`, `created_by`, `updated_by` (`ON DELETE SET NULL`) to all 13 financial/vault tables: `assets`, `holdings`, `transactions`, `import_batches`, `asset_valuations`, `liabilities`, `liability_balances`, `asset_liability_links`, `loan_payments`, `goals`, `goal_holding_allocations`, `portfolio_accounts`, `family_documents`.
-   - Migrate uniqueness constraints (`idx_assets_household_isin`, `idx_holdings_household_asset_account_owner`, `unique_household_asset_valuation_date`).
-   - Create `holding_owners` (`holding_id, family_member_id, ownership_percentage, ownership_type`) & `liability_parties` (`liability_id, family_member_id, party_role, responsibility_percentage`), with `DEFERRABLE INITIALLY DEFERRED` constraint triggers enforcing `SUM = 100` (and borrower > 0 check on liabilities), plus cross-household FK guard triggers on child/link tables (`goal_holding_allocations`, `asset_liability_links`, `holdings.account_id`, `transactions`).
-   - Create `restricted_record_grants` (queried only when `visibility = 'restricted'`), backfill/drop `co_borrower_ids`, and drop `ON DELETE CASCADE` from creator `auth.users(id)`.
+3. **[x] Phase 3 — Financial Schema Scoping, Joint Ownership & Privacy Columns (`20260101000022`, `20260101000023`)**
+   - Migrated all financial/vault tables to `household_id NOT NULL`, `visibility ('household_shared' | 'owner_only' | 'restricted') DEFAULT 'household_shared'`, `created_by`, `updated_by` (`ON DELETE SET NULL`), and dropped legacy `user_id` columns on those tables under approved **Option A**.
+   - Migrated uniqueness indexes to `household_id` scope (`uniq_holdings_household_asset_scope`, `unique_asset_valuation_date`).
+   - Created `holding_owners` & `liability_parties` with `DEFERRABLE INITIALLY DEFERRED` constraint triggers enforcing `SUM = 100`, plus cross-household FK guard triggers (`validate_financial_row_integrity`, `assert_same_household_fk`).
+   - Created `restricted_record_grants` and dropped legacy `co_borrower_ids`.
 
-4. **Phase 4 — Household + Privacy RLS, Storage Re-Scoping & Support RPC Refactor**
-   - Drop legacy `is_same_household` / `can_edit_household_record` policies across `000014` & `000016`, plus legacy `auth.uid() = user_id` policies on `import_batches`, `asset_liability_links`, `loan_payments`.
-   - Deploy `SECURITY DEFINER STABLE` evaluators (`can_view_household_financial_row`, `can_edit_household_financial_row`, `has_entity_permission`) enforcing:
-     - Active household boundary (`household_id` must match active membership)
-     - Role capabilities (`primary_owner`, `admin`, `member`, `viewer`)
-     - Privacy isolation (`owner_only` hidden from admins/owners unless user is an owner or holder of `family_member_access`; unlinked profiles restricted from non-viewable lockout per [`§4.2`](file:///home/ketan/projects/Krisha/wealthNest/docs/architecture/household-ownership-and-access-model.md#L103))
-   - Move `family-vault` Storage objects & policies to **`<household_id>/<document_id>/<sanitized_file_name>`** validated against `public.family_documents`.
-   - Update `support_get_user_*` (`000010`) and admin role types (`000009`) to respect household isolation & hide private `owner_only` / `restricted` rows during support views.
-   - Verify least-privilege grants against [`000011`](file:///home/ketan/projects/Krisha/wealthNest/supabase/migrations/20260101000011_grant_public_table_privileges.sql) (`REVOKE ALL FROM PUBLIC, anon`).
+4. **[x] Phase 4 — Household + Privacy RLS, Storage Re-Scoping & Support RPC Refactor (`20260101000023`)**
+   - Dropped legacy `is_same_household` / `can_edit_household_record` & `auth.uid() = user_id` policies across all financial/vault tables (`import_batches`, `asset_liability_links`, `loan_payments`, etc.).
+   - Deployed `SECURITY DEFINER STABLE` evaluators enforcing active household boundary, role capabilities (`primary_owner`, `admin`, `member`, `viewer`), `family_member_access` delegation, and `owner_only` / `restricted` privacy isolation.
+   - Moved `family-vault` Storage objects & policies to **`<household_id>/<document_id>/<sanitized_file_name>`** validated against `public.family_documents`.
+   - Added `set_holding_owners` / `set_liability_parties` RPCs and updated `support_get_user_*` (`000010`) & admin role projections (`000009`) to respect household isolation and hide private records.
 
-5. **Phase 5 — `pgTAP` Database Verification Gate**
-   - Expand [`supabase/tests/`](file:///home/ketan/projects/Krisha/wealthNest/supabase/tests) with automated suites proving:
-     1. Multi-household non-bleeding (married member in Marital H1 & Parental H2).
-     2. Only `primary_owner` can add/remove `admin` or transfer ownership; 1-active-owner invariant holds.
-     3. Admins cannot read or mutate another linked member's `owner_only` / `restricted` records or Storage objects.
-     4. Deleted `auth.users` login preserves household assets, holdings, loans, and documents.
-     5. `accept_household_invitation` blocks unconfirmed emails, wrong emails, expired, revoked, and replayed tokens.
+5. **[x] Phase 5 — `pgTAP` Database Verification Gate (`03_household_ownership_privacy_and_invitations.sql`)**
+   - Expanded [`supabase/tests/`](file:///home/ketan/projects/Krisha/wealthNest/supabase/tests) (`01`, `02`, `03`: 3 suites, 70 assertions) proving multi-household non-bleeding, `primary_owner`-only admin/transfer gates, admin `owner_only` / `restricted` privacy isolation, Storage path RLS, user-deletion data preservation, and invitation token security.
 
-6. **Phase 6 — Application Ports, Adapters, Backup & SQLite Parity**
-   - Update `@wealthnest/application` ports and Supabase adapters (`holding`, `transaction`, `liability`, `liability-valuations-links`, `goal`, `cas-import`, `family`, `document-vault`, `backup`) to query/write via `householdId`, `visibility`, `holding_owners`, and `liability_parties` (eliminating all `.eq('user_id', userId)` financial filters, eliminating silent `localStorage` fallback in `family.adapter.ts`, and fixing `backup.adapter.ts` `financial_goals` & `onConflict` bugs).
-   - Update [`sqlite-schema.ts`](file:///home/ketan/projects/Krisha/wealthNest/packages/application/src/persistence/sqlite/sqlite-schema.ts), SQLite adapters, and [`apps/web/src/lib/tauri/`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/lib/tauri) (`tauri-sqlite-types.ts`, `tauri-sqlite-seed.ts`, `tauri-sqlite-read.ts`, `tauri-sqlite-write-*.ts`) in lockstep.
+6. **[x] Phase 6 — Application Ports, Adapters, Backup & SQLite Parity**
+   - Updated `@wealthnest/application` ports and Supabase adapters (`holding`, `transaction`, `liability`, `liability-valuations-links`, `goal`, `cas-import`, `family`, `document-vault`, `backup`) to query/write via `householdId`, `visibility`, `holding_owners`, `liability_parties`, and `restricted_record_grants`.
+   - Updated [`sqlite-schema.ts`](file:///home/ketan/projects/Krisha/wealthNest/packages/application/src/persistence/sqlite/sqlite-schema.ts), SQLite adapters, and [`apps/web/src/lib/tauri/`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/lib/tauri) in lockstep.
 
-7. **Phase 7 — Domain Math (`BigInt` Fractional Ownership) & Household UI**
-   - Add `ActiveHouseholdProvider` & **Household Switcher** (re-keying all React Query keys to `householdId`).
-   - Implement `allocatePaiseByShares` (deterministic largest-remainder `BigInt` distribution) in `@wealthnest/domain` for joint `holding_owners` and `liability_parties` across net worth, family breakdowns, and Section 112A LTCG tax harvesting (including multi-household PAN limitation notice).
-   - Require explicit owner/joint selector when an Admin creates a holding, account, loan, goal, or document; default to caller's linked `family_members.id` for regular members; remove UI fallback masks (`toValidUuidOrNull` demo masking, `DEMO_GOALS` override when DB empty, `RealEstatePage` per-user `localStorage` overrides).
-   - Add UI Privacy selector (`household_shared` | `owner_only` | `restricted`) backed by DB, removing client-only `wealthnest_family_privacy_rules`.
+7. **[x] Phase 7 — Domain Math (`BigInt` Fractional Ownership) & Household UI**
+   - Added `HouseholdProvider` & **Household Switcher** (clearing & re-keying React Query caches to `activeHouseholdId`).
+   - Implemented `allocatePaiseByShares` (deterministic largest-remainder `BigInt` distribution) in `@wealthnest/domain` for joint `holding_owners` and `liability_parties` across net worth, family breakdowns, and Section 112A LTCG tax harvesting.
+   - Wired `VisibilityControl`, `JointOwnershipEditor`, and `canEditFinancials` viewer guards across all 8 financial pages, modals, and Settings UI.
 
-8. **Phase 8 — Regression, QA Seed Rebuild & Snapshot Sync**
-   - Rebuild [`seed_qa.sql`](file:///home/ketan/projects/Krisha/wealthNest/supabase/seed_qa.sql) with multi-user multi-household fixtures (e.g., primary owner, spouse with own login, linked parent spanning marital/parental households, unlinked minor & HUF, joint home loan & joint property, private holding, and admin account).
-   - Update and execute full Vitest + `tsc` + pgTAP regression suites; regenerate [`full_schema.sql`](file:///home/ketan/projects/Krisha/wealthNest/supabase/full_schema.sql) and publish `docs/architecture/household-permission-matrix.md`, `docs/security/household-rls-security-review.md`, and `docs/testing/household-access-control-test-plan.md`.
+8. **[ ] Phase 8 — Regression, QA Seed Rebuild & Snapshot Sync**
+   - **[x]** Rebuilt [`seed_qa.sql`](file:///home/ketan/projects/Krisha/wealthNest/supabase/seed_qa.sql) with Option A multi-user/multi-household fixtures (`seed_qa_multi_household_matrix`, updated `seed_qa_primary_household` & `seed_qa_secondary_user`) and executed Vitest + `tsc` + pgTAP regression suites ([`HouseholdAccessControl.test.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/__tests__/HouseholdAccessControl.test.tsx)).
+   - **[ ]** Remaining doc/snapshot follow-ups before release tag: regenerate [`full_schema.sql`](file:///home/ketan/projects/Krisha/wealthNest/supabase/full_schema.sql) and publish `docs/architecture/household-permission-matrix.md`, `docs/security/household-rls-security-review.md`, and `docs/testing/household-access-control-test-plan.md`.
 
 ---
 

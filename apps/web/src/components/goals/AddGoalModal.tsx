@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { GoalCategory, GoalPriority, Money } from '@wealthnest/domain';
+import { GoalCategory, GoalPriority, Money, RecordVisibility } from '@wealthnest/domain';
 import { CreateGoalParams } from '@wealthnest/application';
 import { useFamily } from '@/lib/family/family-context';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
+import { VisibilityControl } from '@/components/household/VisibilityControl';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
@@ -98,6 +100,7 @@ export function AddGoalModal({
   isSubmitting = false,
 }: AddGoalModalProps) {
   const { members, selectedMemberId } = useFamily();
+  const { canEditFinancials } = useHousehold();
   const { currencySymbol, currencyCode } = usePreferences();
   const [name, setName] = useState('');
   const [category, setCategory] = useState<GoalCategory>('wealth_creation');
@@ -111,6 +114,8 @@ export function AddGoalModal({
   const [expectedReturnRate, setExpectedReturnRate] = useState<number>(12.0);
   const [inflationRate, setInflationRate] = useState<number>(6.0);
   const [priority, setPriority] = useState<GoalPriority>('high');
+  const [visibility, setVisibility] = useState<RecordVisibility>('household_shared');
+  const [restrictedGranteeUserIds, setRestrictedGranteeUserIds] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -152,6 +157,11 @@ export function AddGoalModal({
       return;
     }
 
+    if (!canEditFinancials) {
+      setError('Viewers have read-only access and cannot create goals.');
+      return;
+    }
+
     const initVal = parseFloat(initialSavedRupees) || 0;
     const monthlyVal = parseFloat(monthlyContributionRupees) || 0;
 
@@ -169,6 +179,9 @@ export function AddGoalModal({
         currency: 'INR',
         notes: notes.trim() || undefined,
         memberId: memberId || undefined,
+        visibility,
+        restrictedGranteeUserIds:
+          visibility === 'restricted' ? restrictedGranteeUserIds : undefined,
       });
 
       // Reset and close
@@ -176,6 +189,8 @@ export function AddGoalModal({
       setTargetAmountRupees('');
       setInitialSavedRupees('');
       setMonthlyContributionRupees('');
+      setVisibility('household_shared');
+      setRestrictedGranteeUserIds([]);
       onClose();
     } catch (err: any) {
       setError(err?.message || 'Failed to create goal');
@@ -220,7 +235,7 @@ export function AddGoalModal({
           <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting} className="gap-2 shadow-md">
+          <Button type="submit" disabled={isSubmitting || !canEditFinancials} className="gap-2 shadow-md">
             <Target className="w-4 h-4" />
             {isSubmitting ? 'Creating Goal...' : 'Save Financial Goal'}
           </Button>
@@ -450,6 +465,16 @@ export function AddGoalModal({
               ))}
             </div>
           </div>
+
+          {/* Visibility & Privacy */}
+          <VisibilityControl
+            visibility={visibility}
+            onChange={setVisibility}
+            granteeUserIds={restrictedGranteeUserIds}
+            onGranteeUserIdsChange={setRestrictedGranteeUserIds}
+            disabled={!canEditFinancials}
+            compact
+          />
 
           {/* Notes */}
           <div className="space-y-1.5">

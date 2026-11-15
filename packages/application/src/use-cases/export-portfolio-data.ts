@@ -29,8 +29,12 @@ export class ExportPortfolioDataUseCase {
     private readonly goalRepo: GoalRepositoryPort
   ) {}
 
-  async execute(userId: string): Promise<Result<ExportedPortfolioFiles>> {
+  async execute(
+    userId: string,
+    options?: { readonly householdId?: string; readonly householdName?: string }
+  ): Promise<Result<ExportedPortfolioFiles>> {
     try {
+      const scopeId = options?.householdId || userId;
       // 1. Fetch user profile
       const userRes = await this.userRepo.getById(userId as any);
       const userProfile =
@@ -47,10 +51,18 @@ export class ExportPortfolioDataUseCase {
 
       // 2. Fetch all modules in parallel
       const [holdingsRes, transactionsRes, liabilitiesRes, goalsRes] = await Promise.all([
-        this.holdingRepo.listDetailsByUser(userId),
-        this.transactionRepo.listByUser(userId),
-        this.liabilityRepo.listLiabilitiesByUser(userId),
-        this.goalRepo.listGoalsByUser(userId),
+        this.holdingRepo.listDetailsByHousehold
+          ? this.holdingRepo.listDetailsByHousehold(scopeId)
+          : this.holdingRepo.listDetailsByUser(scopeId),
+        this.transactionRepo.listByHousehold
+          ? this.transactionRepo.listByHousehold(scopeId)
+          : this.transactionRepo.listByUser(scopeId),
+        this.liabilityRepo.listLiabilitiesByHousehold
+          ? this.liabilityRepo.listLiabilitiesByHousehold(scopeId)
+          : this.liabilityRepo.listLiabilitiesByUser(scopeId),
+        this.goalRepo.listGoalsByHousehold
+          ? this.goalRepo.listGoalsByHousehold(scopeId)
+          : this.goalRepo.listGoalsByUser(scopeId),
       ]);
 
       const holdings = isOk(holdingsRes) ? holdingsRes.value : [];
@@ -73,6 +85,9 @@ export class ExportPortfolioDataUseCase {
         version: '1.0.0',
         schema: 'wealthnest-portfolio-v1',
         exportedAt: new Date().toISOString(),
+        ...(options?.householdId
+          ? { household: { id: options.householdId, name: options.householdName } }
+          : {}),
         user: {
           id: userId,
           email: userProfile.email,

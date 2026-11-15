@@ -9,6 +9,7 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
   if (existingProfile) return false;
 
   const now = new Date().toISOString();
+  const householdId = 'hh-local-vaghela';
 
   // 1. Profile
   state.profiles.push({
@@ -20,11 +21,32 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     updated_at: now,
   });
 
+  // 1b. Default Household & Membership
+  state.households.push({
+    id: householdId,
+    name: 'Vaghela Household',
+    created_by: userId,
+    created_at: now,
+    updated_at: now,
+  });
+  state.household_members.push({
+    id: 'hhm-local-owner',
+    household_id: householdId,
+    user_id: userId,
+    household_role: 'primary_owner',
+    status: 'active',
+    joined_at: now,
+  });
+
   // 2. Vaghela Household Family Members
   const members: RowRecord[] = [
     {
       id: 'mem-self',
       user_id: userId,
+      household_id: householdId,
+      linked_user_id: userId,
+      email: 'ketan@wealthnest.local',
+      entity_type: 'individual',
       name: 'Ketan Vaghela',
       relationship: 'self',
       pan_masked: 'ABCDE1234F',
@@ -36,6 +58,10 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     {
       id: 'mem-spouse',
       user_id: userId,
+      household_id: householdId,
+      linked_user_id: null,
+      email: 'parul@wealthnest.local',
+      entity_type: 'individual',
       name: 'Parul Vaghela',
       relationship: 'spouse',
       pan_masked: 'BGTYU5678K',
@@ -47,6 +73,10 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     {
       id: 'mem-child',
       user_id: userId,
+      household_id: householdId,
+      linked_user_id: null,
+      email: null,
+      entity_type: 'minor',
       name: 'Krisha Vaghela',
       relationship: 'child',
       pan_masked: 'MINR90123C',
@@ -58,6 +88,10 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     {
       id: 'mem-huf',
       user_id: userId,
+      household_id: householdId,
+      linked_user_id: null,
+      email: null,
+      entity_type: 'huf',
       name: 'Shamalbhai Vaghela HUF',
       relationship: 'huf',
       pan_masked: 'AAACH9999H',
@@ -70,6 +104,10 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     {
       id: 'mem-mother',
       user_id: userId,
+      household_id: householdId,
+      linked_user_id: null,
+      email: null,
+      entity_type: 'individual',
       name: 'Ramilaben Vaghela',
       relationship: 'parent',
       pan_masked: 'PRTYK4321M',
@@ -86,6 +124,8 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     {
       id: 'acc-zerodha',
       user_id: userId,
+      household_id: householdId,
+      visibility: 'household_shared',
       member_id: 'mem-self',
       account_name: 'Zerodha Kite',
       broker_name: 'Zerodha',
@@ -97,6 +137,8 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     {
       id: 'acc-groww',
       user_id: userId,
+      household_id: householdId,
+      visibility: 'household_shared',
       member_id: 'mem-spouse',
       account_name: 'Groww / BoB Direct Demat',
       broker_name: 'Groww',
@@ -108,6 +150,8 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     {
       id: 'acc-icici',
       user_id: userId,
+      household_id: householdId,
+      visibility: 'household_shared',
       member_id: 'mem-huf',
       account_name: 'ICICI Direct HUF',
       broker_name: 'ICICI Direct',
@@ -119,6 +163,8 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     {
       id: 'acc-cams',
       user_id: userId,
+      household_id: householdId,
+      visibility: 'household_shared',
       member_id: 'mem-child',
       account_name: 'CAMS / Parag Parikh Folio',
       broker_name: 'CAMS',
@@ -130,6 +176,8 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     {
       id: 'acc-sbi-ppf',
       user_id: userId,
+      household_id: householdId,
+      visibility: 'household_shared',
       member_id: 'mem-self',
       account_name: 'SBI PPF & Fixed Income',
       broker_name: 'SBI',
@@ -141,6 +189,8 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     {
       id: 'acc-bob-fd',
       user_id: userId,
+      household_id: householdId,
+      visibility: 'household_shared',
       member_id: 'mem-mother',
       account_name: 'Bank of Baroda Senior Citizen Deposit',
       broker_name: 'Bank of Baroda',
@@ -286,6 +336,8 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     state.assets.push({
       id: item.assetId,
       user_id: userId,
+      household_id: householdId,
+      visibility: 'household_shared',
       name: item.name,
       ticker: item.ticker,
       isin: item.isin,
@@ -297,6 +349,8 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     state.holdings.push({
       id: item.holdingId,
       user_id: userId,
+      household_id: householdId,
+      visibility: 'household_shared',
       asset_id: item.assetId,
       quantity: item.quantity,
       unit_cost_paise: item.unitCostPaise,
@@ -310,6 +364,16 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
       cost_basis_verified: item.costBasisVerified,
       updated_at: now,
     });
+
+    state.holding_owners.push({
+      id: `ho-${item.holdingId}`,
+      household_id: householdId,
+      holding_id: item.holdingId,
+      family_member_id: item.memberId,
+      ownership_share: 100,
+      is_primary_owner: 1,
+      created_at: now,
+    });
   }
 
   // 5. Seed Baseline Transactions
@@ -317,6 +381,8 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     {
       id: 'txn-local-1',
       user_id: userId,
+      household_id: householdId,
+      visibility: 'household_shared',
       asset_id: 'asset-1',
       type: 'buy',
       quantity: 15,
@@ -331,6 +397,8 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     {
       id: 'txn-local-2',
       user_id: userId,
+      household_id: householdId,
+      visibility: 'household_shared',
       asset_id: 'asset-2b',
       type: 'buy',
       quantity: 67.93,
@@ -345,6 +413,8 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     {
       id: 'txn-local-3',
       user_id: userId,
+      household_id: householdId,
+      visibility: 'household_shared',
       asset_id: 'asset-3',
       type: 'dividend',
       quantity: null,
@@ -362,6 +432,8 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
   state.liabilities.push({
     id: 'lia-local-1',
     user_id: userId,
+    household_id: householdId,
+    visibility: 'household_shared',
     name: 'SBI Green Home Loan',
     loan_type: 'home_loan',
     lender: 'State Bank of India',
@@ -380,9 +452,19 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     notes: 'Pegged to EBLR repo rate',
     created_at: now,
   });
+  state.liability_parties.push({
+    id: 'lp-local-1',
+    household_id: householdId,
+    liability_id: 'lia-local-1',
+    family_member_id: 'mem-self',
+    party_role: 'primary_borrower',
+    liability_share: 100,
+    created_at: now,
+  });
   state.liability_balances.push({
     id: 'lbal-local-1',
     user_id: userId,
+    household_id: householdId,
     liability_id: 'lia-local-1',
     balance_paise: 412500000,
     as_of_date: '2026-01-10',
@@ -396,6 +478,8 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     {
       id: 'gol-local-1',
       user_id: userId,
+      household_id: householdId,
+      visibility: 'household_shared',
       name: 'Krisha Higher Education & University Corpus',
       category: 'education',
       target_amount_paise: 350000000,
@@ -414,6 +498,8 @@ export function seedDefaultHouseholdState(state: RelationalDatabaseState, userId
     {
       id: 'gol-local-2',
       user_id: userId,
+      household_id: householdId,
+      visibility: 'household_shared',
       name: 'Ketan & Parul Retirement (FIRE Target: 52)',
       category: 'retirement',
       target_amount_paise: 2500000000,

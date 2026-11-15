@@ -16,6 +16,7 @@ import { TransactionRepositoryPort } from '../ports/transaction-repository.port.
 
 export interface GetPerformanceAnalyticsParams {
   readonly userId: string;
+  readonly householdId?: string;
   readonly currency?: CurrencyCode;
   readonly modelType?: AllocationModelType;
 }
@@ -54,21 +55,26 @@ export class GetPerformanceAnalyticsUseCase {
   ) {}
 
   async execute(params: GetPerformanceAnalyticsParams): Promise<Result<PerformanceAnalyticsDto>> {
-    if (!params.userId || params.userId.trim().length === 0) {
-      return err(new Error('User ID is required.'));
+    const scopeId = params.householdId || params.userId;
+    if (!scopeId || scopeId.trim().length === 0) {
+      return err(new Error('Household or User ID is required.'));
     }
 
     const currency: CurrencyCode = params.currency || 'INR';
     const modelType: AllocationModelType = params.modelType || 'balanced';
 
-    // 1. Fetch user holdings
-    const holdingsResult = await this.holdingRepo.listDetailsByUser(params.userId);
+    // 1. Fetch holdings
+    const holdingsResult = await (params.householdId && this.holdingRepo.listDetailsByHousehold
+      ? this.holdingRepo.listDetailsByHousehold(params.householdId)
+      : this.holdingRepo.listDetailsByUser(params.userId));
     if (!holdingsResult.success) {
       return err(holdingsResult.error);
     }
 
-    // 2. Fetch user transactions
-    const transactionsResult = await this.transactionRepo.listByUser(params.userId);
+    // 2. Fetch transactions
+    const transactionsResult = await (params.householdId && this.transactionRepo.listByHousehold
+      ? this.transactionRepo.listByHousehold(params.householdId)
+      : this.transactionRepo.listByUser(params.userId));
     if (!transactionsResult.success) {
       return err(transactionsResult.error);
     }

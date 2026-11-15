@@ -8,6 +8,7 @@ import {
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { useHousehold } from '@/lib/supabase/household-context';
 
 interface RealEstatePropertyListProps {
   isLoading: boolean;
@@ -28,6 +29,7 @@ export function RealEstatePropertyList({
   getPropertyTypeLabel,
   onEditProperty,
 }: RealEstatePropertyListProps) {
+  const { canEditFinancials } = useHousehold();
   if (isLoading) {
     return (
       <Card>
@@ -100,7 +102,14 @@ export function RealEstatePropertyList({
                 <Button
                   size="sm"
                   variant="ghost"
-                  disabled={isSupportModeActive}
+                  disabled={isSupportModeActive || !canEditFinancials}
+                  title={
+                    isSupportModeActive
+                      ? 'Disabled in Support Impersonation Mode (Read-Only)'
+                      : !canEditFinancials
+                        ? 'View-only household role cannot edit property metrics'
+                        : undefined
+                  }
                   onClick={() => onEditProperty(prop)}
                   aria-label={`Configure ${prop.name}`}
                   className="shrink-0 text-xs gap-1.5"

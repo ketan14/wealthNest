@@ -31,6 +31,9 @@ export function executePlanningWrite(
       linked_asset_id,
       member_id,
       notes,
+      household_id,
+      visibility,
+      created_by,
     ] = params;
     const existing = state.liabilities.find((r) => r.id === id);
     if (existing) {
@@ -56,10 +59,33 @@ export function executePlanningWrite(
         linked_asset_id: linked_asset_id ?? null,
         member_id: member_id ?? null,
         notes: notes ?? null,
+        household_id: household_id ?? null,
+        visibility: visibility ?? 'household_shared',
+        created_by: created_by ?? user_id,
         created_at: now,
       });
     }
     return 1;
+  }
+
+  if (/UPDATE liabilities SET visibility = \? WHERE id = \?/i.test(sql)) {
+    const [visibility, id] = params;
+    const lia = state.liabilities.find((r) => r.id === id);
+    if (lia) {
+      lia.visibility = visibility;
+      return 1;
+    }
+    return 0;
+  }
+
+  if (/UPDATE liabilities SET member_id = \? WHERE id = \?/i.test(sql)) {
+    const [member_id, id] = params;
+    const lia = state.liabilities.find((r) => r.id === id);
+    if (lia) {
+      lia.member_id = member_id;
+      return 1;
+    }
+    return 0;
   }
 
   if (/UPDATE liabilities SET/i.test(sql)) {
@@ -78,8 +104,11 @@ export function executePlanningWrite(
       notes,
       id,
       user_id,
+      household_id,
     ] = params;
-    const lia = state.liabilities.find((r) => r.id === id && r.user_id === user_id);
+    const lia = state.liabilities.find(
+      (r) => r.id === id && (r.user_id === user_id || r.household_id === household_id)
+    );
     if (lia) {
       if (name !== null && name !== undefined) lia.name = name;
       if (loan_type !== null && loan_type !== undefined) lia.loan_type = loan_type;
@@ -102,17 +131,22 @@ export function executePlanningWrite(
   }
 
   if (/DELETE FROM liabilities WHERE id = \?/i.test(sql)) {
-    const [id, user_id] = params;
+    const [id, user_id, household_id] = params;
     const before = state.liabilities.length;
     state.liabilities = state.liabilities.filter(
-      (r) => !(r.id === id && (!user_id || r.user_id === user_id))
+      (r) =>
+        !(
+          r.id === id &&
+          (!user_id || r.user_id === user_id || r.household_id === (household_id ?? user_id))
+        )
     );
     return before - state.liabilities.length;
   }
 
   // 9. liability_balances
   if (/INSERT INTO liability_balances/i.test(sql)) {
-    const [id, user_id, liability_id, balance_paise, as_of_date, source, notes] = params;
+    const [id, user_id, liability_id, balance_paise, as_of_date, source, notes, household_id] =
+      params;
     const existing = state.liability_balances.find(
       (r) => r.liability_id === liability_id && r.as_of_date === as_of_date
     );
@@ -129,6 +163,7 @@ export function executePlanningWrite(
         as_of_date,
         source: source || 'manual',
         notes: notes ?? null,
+        household_id: household_id ?? null,
         created_at: now,
       });
     }
@@ -137,7 +172,17 @@ export function executePlanningWrite(
 
   // 10. asset_valuations
   if (/INSERT INTO asset_valuations/i.test(sql)) {
-    const [id, user_id, asset_id, valuation_paise, currency, as_of_date, source, notes] = params;
+    const [
+      id,
+      user_id,
+      asset_id,
+      valuation_paise,
+      currency,
+      as_of_date,
+      source,
+      notes,
+      household_id,
+    ] = params;
     const existing = state.asset_valuations.find(
       (r) => r.user_id === user_id && r.asset_id === asset_id && r.as_of_date === as_of_date
     );
@@ -155,6 +200,7 @@ export function executePlanningWrite(
         as_of_date,
         source: source || 'manual_appraisal',
         notes: notes ?? null,
+        household_id: household_id ?? null,
         created_at: now,
       });
     }
@@ -163,7 +209,15 @@ export function executePlanningWrite(
 
   // 11. asset_liability_links
   if (/INSERT INTO asset_liability_links/i.test(sql)) {
-    const [id, user_id, asset_id, liability_id, link_type, ownership_share_percentage] = params;
+    const [
+      id,
+      user_id,
+      asset_id,
+      liability_id,
+      link_type,
+      ownership_share_percentage,
+      household_id,
+    ] = params;
     const existing = state.asset_liability_links.find(
       (r) => r.asset_id === asset_id && r.liability_id === liability_id
     );
@@ -178,6 +232,7 @@ export function executePlanningWrite(
         liability_id,
         link_type: link_type || 'mortgage',
         ownership_share_percentage: ownership_share_percentage ?? 100,
+        household_id: household_id ?? null,
         created_at: now,
       });
     }
@@ -185,10 +240,19 @@ export function executePlanningWrite(
   }
 
   if (/DELETE FROM asset_liability_links/i.test(sql)) {
-    const [user_id, asset_id, liability_id] = params;
+    const hasHouseholdOr = /\(user_id = \? OR household_id = \?\)/i.test(sql);
+    const user_id = params[0];
+    const household_id = hasHouseholdOr ? params[1] : params[0];
+    const asset_id = hasHouseholdOr ? params[2] : params[1];
+    const liability_id = hasHouseholdOr ? params[3] : params[2];
     const before = state.asset_liability_links.length;
     state.asset_liability_links = state.asset_liability_links.filter(
-      (r) => !(r.user_id === user_id && r.asset_id === asset_id && r.liability_id === liability_id)
+      (r) =>
+        !(
+          (r.user_id === user_id || r.household_id === household_id) &&
+          r.asset_id === asset_id &&
+          r.liability_id === liability_id
+        )
     );
     return before - state.asset_liability_links.length;
   }
@@ -210,6 +274,9 @@ export function executePlanningWrite(
       currency,
       notes,
       member_id,
+      household_id,
+      visibility,
+      created_by,
     ] = params;
     const existing = state.financial_goals.find((r) => r.id === id);
     if (existing) {
@@ -230,10 +297,23 @@ export function executePlanningWrite(
         currency: currency || 'INR',
         notes: notes ?? null,
         member_id: member_id ?? null,
+        household_id: household_id ?? null,
+        visibility: visibility ?? 'household_shared',
+        created_by: created_by ?? user_id,
         created_at: now,
       });
     }
     return 1;
+  }
+
+  if (/UPDATE financial_goals SET visibility = \? WHERE id = \?/i.test(sql)) {
+    const [visibility, id] = params;
+    const gol = state.financial_goals.find((r) => r.id === id);
+    if (gol) {
+      gol.visibility = visibility;
+      return 1;
+    }
+    return 0;
   }
 
   if (/UPDATE financial_goals SET/i.test(sql)) {
@@ -251,8 +331,11 @@ export function executePlanningWrite(
       member_id,
       id,
       user_id,
+      household_id,
     ] = params;
-    const gol = state.financial_goals.find((r) => r.id === id && r.user_id === user_id);
+    const gol = state.financial_goals.find(
+      (r) => r.id === id && (r.user_id === user_id || r.household_id === (household_id ?? user_id))
+    );
     if (gol) {
       if (name !== null && name !== undefined) gol.name = name;
       if (category !== null && category !== undefined) gol.category = category;
@@ -276,10 +359,14 @@ export function executePlanningWrite(
   }
 
   if (/DELETE FROM financial_goals WHERE id = \?/i.test(sql)) {
-    const [id, user_id] = params;
+    const [id, user_id, household_id] = params;
     const before = state.financial_goals.length;
     state.financial_goals = state.financial_goals.filter(
-      (r) => !(r.id === id && (!user_id || r.user_id === user_id))
+      (r) =>
+        !(
+          r.id === id &&
+          (!user_id || r.user_id === user_id || r.household_id === (household_id ?? user_id))
+        )
     );
     return before - state.financial_goals.length;
   }

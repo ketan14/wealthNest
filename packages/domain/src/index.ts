@@ -32,6 +32,8 @@ export * from './portfolio/holding-synchronizer.js';
 export * from './family/family-types.js';
 export * from './family/family-privacy.js';
 export * from './family/family-wealth-calculator.js';
+export * from './household/household-types.js';
+export * from './household/joint-ownership.js';
 export * from './importers/broker-csv-types.js';
 export * from './importers/csv-utils.js';
 export * from './importers/zerodha-csv-parser.js';

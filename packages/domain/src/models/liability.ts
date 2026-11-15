@@ -1,5 +1,6 @@
 import { CurrencyCode } from '../money/currency.js';
 import { Money } from '../money/money.js';
+import type { LiabilityParty, RecordVisibility } from '../household/household-types.js';
 
 export type LoanType =
   | 'home_loan'
@@ -20,7 +21,10 @@ export type AssetLiabilityLinkType =
 
 export interface LiabilityEntity {
   readonly id: string;
+  readonly householdId?: string;
   readonly userId: string;
+  readonly visibility?: RecordVisibility;
+  readonly createdBy?: string;
   readonly name: string;
   readonly loanType: LoanType;
   readonly lender: string;
@@ -36,7 +40,8 @@ export interface LiabilityEntity {
   readonly status: LiabilityStatus;
   readonly linkedAssetId?: string;
   readonly memberId?: string; // Primary borrower member ID
-  readonly coBorrowerMemberIds?: readonly string[]; // Co-borrower family member IDs
+  readonly coBorrowerMemberIds?: readonly string[]; // Legacy co-borrower family member IDs
+  readonly parties?: readonly LiabilityParty[];
   readonly notes?: string;
   readonly createdAt: string;
   readonly updatedAt: string;

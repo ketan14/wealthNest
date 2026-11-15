@@ -15,13 +15,26 @@ export class SqliteBackupAdapter implements BackupPort {
     private readonly goalAdapter: SqliteGoalAdapter
   ) {}
 
-  async createFullBackup(userId: string): Promise<Result<PortfolioBackupData>> {
+  async createFullBackup(scopeId: string): Promise<Result<PortfolioBackupData>> {
     try {
+      const hhRow = this.db
+        .prepare<{ id: string; name: string }>('SELECT id, name FROM households WHERE id = ?;')
+        .get(scopeId);
+
+      const isHousehold = Boolean(hhRow);
       const [holdingsRes, transactionsRes, liabilitiesRes, goalsRes] = await Promise.all([
-        this.holdingAdapter.listDetailsByUser(userId),
-        this.transactionAdapter.listByUser(userId),
-        this.liabilityAdapter.listLiabilitiesByUser(userId),
-        this.goalAdapter.listGoalsByUser(userId),
+        isHousehold
+          ? this.holdingAdapter.listDetailsByHousehold(scopeId)
+          : this.holdingAdapter.listDetailsByUser(scopeId),
+        isHousehold
+          ? this.transactionAdapter.listByHousehold(scopeId)
+          : this.transactionAdapter.listByUser(scopeId),
+        isHousehold
+          ? this.liabilityAdapter.listLiabilitiesByHousehold(scopeId)
+          : this.liabilityAdapter.listLiabilitiesByUser(scopeId),
+        isHousehold
+          ? this.goalAdapter.listGoalsByHousehold(scopeId)
+          : this.goalAdapter.listGoalsByUser(scopeId),
       ]);
 
       if (!holdingsRes.success) return holdingsRes;
@@ -45,9 +58,9 @@ export class SqliteBackupAdapter implements BackupPort {
         schema: 'wealthnest-portfolio-v1',
         exportedAt: new Date().toISOString(),
         user: {
-          id: userId,
-          email: `${userId}@wealthnest.local`,
-          displayName: 'Investor',
+          id: scopeId,
+          email: `${scopeId}@wealthnest.local`,
+          displayName: hhRow?.name || 'Investor',
           defaultCurrency: 'INR',
         },
         holdings,
@@ -72,8 +85,9 @@ export class SqliteBackupAdapter implements BackupPort {
   }
 
   async restoreFromBackup(
-    userId: string,
-    backup: PortfolioBackupData
+    scopeId: string,
+    backup: PortfolioBackupData,
+    options?: { readonly targetUserId?: string; readonly householdId?: string }
   ): Promise<
     Result<{
       readonly restoredHoldings: number;
@@ -83,6 +97,12 @@ export class SqliteBackupAdapter implements BackupPort {
     }>
   > {
     try {
+      const userId = options?.targetUserId ?? scopeId;
+      const hhMatch = this.db
+        .prepare<{ id: string }>('SELECT id FROM households WHERE id = ?;')
+        .get(options?.householdId ?? scopeId);
+      const householdId = options?.householdId ?? hhMatch?.id ?? null;
+
       // Begin transaction for atomic restore
       this.db.exec('BEGIN IMMEDIATE TRANSACTION;');
 
@@ -102,14 +122,21 @@ export class SqliteBackupAdapter implements BackupPort {
             backup.user.defaultCurrency || 'INR'
           );
 
+        if (householdId) {
+          this.db
+            .prepare('INSERT OR IGNORE INTO households (id, name, created_by) VALUES (?, ?, ?);')
+            .run(householdId, 'Restored Household', userId);
+        }
+
         // Restore Holdings & Assets
         let restoredHoldings = 0;
         for (const h of backup.holdings) {
           const assetId = h.assetId || generateId('ast');
+          const visibility = h.visibility ?? 'household_shared';
           this.db
             .prepare(
-              `INSERT INTO assets (id, user_id, name, ticker, isin, asset_class_id, currency)
-               VALUES (?, ?, ?, ?, ?, ?, ?)
+              `INSERT INTO assets (id, user_id, name, ticker, isin, asset_class_id, currency, household_id, visibility, created_by)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(id) DO UPDATE SET
                  name = excluded.name,
                  ticker = excluded.ticker,
@@ -124,7 +151,10 @@ export class SqliteBackupAdapter implements BackupPort {
               h.ticker ?? null,
               h.isin ?? null,
               h.assetClassId || 'equity',
-              h.currency || 'INR'
+              h.currency || 'INR',
+              householdId,
+              visibility,
+              userId
             );
 
           const holdingId = h.holdingId || generateId('hld');
@@ -132,8 +162,9 @@ export class SqliteBackupAdapter implements BackupPort {
             .prepare(
               `INSERT INTO holdings (
                  id, user_id, asset_id, quantity, unit_cost_paise, current_value_paise,
-                 member_id, account_id, demat_account_id, folio_number, amc_name, scheme_plan, cost_basis_verified
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 member_id, account_id, demat_account_id, folio_number, amc_name, scheme_plan, cost_basis_verified,
+                 household_id, visibility, created_by
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(id) DO UPDATE SET
                  quantity = excluded.quantity,
                  unit_cost_paise = excluded.unit_cost_paise,
@@ -152,7 +183,10 @@ export class SqliteBackupAdapter implements BackupPort {
               h.folioNumber ?? null,
               h.amcName ?? null,
               h.schemePlan ?? null,
-              h.costBasisVerified ? 1 : 0
+              h.costBasisVerified ? 1 : 0,
+              householdId,
+              visibility,
+              userId
             );
           restoredHoldings++;
         }
@@ -161,10 +195,11 @@ export class SqliteBackupAdapter implements BackupPort {
         let restoredTransactions = 0;
         for (const t of backup.transactions) {
           const txnId = t.id || generateId('txn');
+          const visibility = t.visibility ?? 'household_shared';
           this.db
             .prepare(
-              `INSERT INTO transactions (id, user_id, asset_id, type, quantity, amount_paise, currency, transaction_date, notes, member_id, account_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `INSERT INTO transactions (id, user_id, asset_id, type, quantity, amount_paise, currency, transaction_date, notes, member_id, account_id, destination_account_id, household_id, visibility, created_by)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(id) DO UPDATE SET
                  amount_paise = excluded.amount_paise,
                  notes = excluded.notes;`
@@ -180,7 +215,11 @@ export class SqliteBackupAdapter implements BackupPort {
               t.transactionDate,
               t.notes ?? null,
               t.memberId ?? null,
-              t.accountId ?? null
+              t.accountId ?? null,
+              t.destinationAccountId ?? null,
+              householdId,
+              visibility,
+              userId
             );
           restoredTransactions++;
         }
@@ -189,13 +228,15 @@ export class SqliteBackupAdapter implements BackupPort {
         let restoredLiabilities = 0;
         for (const l of backup.liabilities) {
           const liaId = l.id || generateId('lia');
+          const visibility = l.visibility ?? 'household_shared';
           this.db
             .prepare(
               `INSERT INTO liabilities (
                  id, user_id, name, loan_type, lender, account_number, original_principal_paise,
                  interest_rate, interest_type, tenure_months, emi_amount_paise, currency,
-                 start_date, end_date, status, linked_asset_id, member_id, notes
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 start_date, end_date, status, linked_asset_id, member_id, notes,
+                 household_id, visibility, created_by
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(id) DO UPDATE SET
                  interest_rate = excluded.interest_rate,
                  emi_amount_paise = excluded.emi_amount_paise;`
@@ -218,15 +259,18 @@ export class SqliteBackupAdapter implements BackupPort {
               l.status || 'active',
               l.linkedAssetId ?? null,
               l.memberId ?? null,
-              l.notes ?? null
+              l.notes ?? null,
+              householdId,
+              visibility,
+              userId
             );
 
           // Add balance snapshot
           const balId = generateId('lbal');
           this.db
             .prepare(
-              `INSERT INTO liability_balances (id, user_id, liability_id, balance_paise, as_of_date, source)
-               VALUES (?, ?, ?, ?, ?, ?)
+              `INSERT INTO liability_balances (id, user_id, liability_id, balance_paise, as_of_date, source, notes, household_id, created_by)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(liability_id, as_of_date) DO UPDATE SET balance_paise = excluded.balance_paise;`
             )
             .run(
@@ -235,7 +279,10 @@ export class SqliteBackupAdapter implements BackupPort {
               liaId,
               Number(l.currentBalanceCents ?? l.originalPrincipalCents),
               l.lastBalanceDate || new Date().toISOString().slice(0, 10),
-              'restore'
+              'restore',
+              null,
+              householdId,
+              userId
             );
           restoredLiabilities++;
         }
@@ -244,13 +291,15 @@ export class SqliteBackupAdapter implements BackupPort {
         let restoredGoals = 0;
         for (const g of backup.goals) {
           const golId = g.id || generateId('gol');
+          const visibility = g.visibility ?? 'household_shared';
           this.db
             .prepare(
               `INSERT INTO financial_goals (
                  id, user_id, name, category, target_amount_paise, target_date,
                  initial_saved_paise, monthly_contribution_paise, expected_return_rate,
-                 inflation_rate, priority, currency, notes, member_id
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 inflation_rate, priority, currency, notes, member_id,
+                 household_id, visibility, created_by
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(id) DO UPDATE SET
                  target_amount_paise = excluded.target_amount_paise;`
             )
@@ -268,7 +317,10 @@ export class SqliteBackupAdapter implements BackupPort {
               g.priority ?? 'medium',
               g.currency || 'INR',
               g.notes ?? null,
-              g.memberId ?? null
+              g.memberId ?? null,
+              householdId,
+              visibility,
+              userId
             );
           restoredGoals++;
         }

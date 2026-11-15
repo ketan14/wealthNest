@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/supabase/auth-context';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { useRepositories } from '@/lib/persistence/repository-context';
 import { HoldingDetailDto, TransactionDetailDto } from '@wealthnest/application';
 import {
@@ -169,24 +170,29 @@ const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
 
 export function AnalyticsPage() {
   const { user } = useAuth();
-  const userId = user?.id || '';
+  const { activeHouseholdId } = useHousehold();
   const { selectedMemberId, selectedAccountId, members, activeMember, privacyRules } = useFamily();
   const { currencySymbol, preferences } = usePreferences();
   const locale = preferences.numberFormat || 'en-IN';
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
-  const { holdingRepo, transactionRepo } = useRepositories();
+  const { holdingRepo, transactionRepo, mode } = useRepositories();
+
+  const isDemoMode = mode === 'supabase' && (!user?.id || user.id.startsWith('demo-'));
+  const hasLiveBackend = !isDemoMode && Boolean(activeHouseholdId || user?.id);
+  const scopeId = activeHouseholdId || user?.id || '';
 
   // Allocation strategy model state
   const [modelType, setModelType] = useState<AllocationModelType>('balanced');
 
-  // 1. Query holdings (Supabase or demo fallback)
+  // 1. Query holdings (Household backend or demo fallback)
   const { data: rawHoldings = [] } = useQuery<HoldingDetailDto[]>({
-    queryKey: ['portfolio-holdings', userId],
+    queryKey: ['portfolio-holdings', hasLiveBackend ? scopeId : 'demo'],
     queryFn: async () => {
-      if (!userId) return DEMO_HOLDINGS;
-      const res = await holdingRepo.listDetailsByUser(userId);
-      if (!res.success || res.value.length === 0) return DEMO_HOLDINGS;
-      return res.value;
+      if (!hasLiveBackend || !scopeId) return DEMO_HOLDINGS;
+      const res = await (holdingRepo.listDetailsByHousehold
+        ? holdingRepo.listDetailsByHousehold(scopeId)
+        : holdingRepo.listDetailsByUser(scopeId));
+      return res.success ? res.value : [];
     },
     enabled: true,
   });
@@ -196,7 +202,9 @@ export function AnalyticsPage() {
     const memberAccountFiltered = rawHoldings.filter((h) => {
       if (selectedMemberId !== 'all') {
         const belongs =
-          h.memberId === selectedMemberId || (!h.memberId && selectedMemberId === 'mem-self');
+          h.memberId === selectedMemberId ||
+          h.owners?.some((o) => o.familyMemberId === selectedMemberId) ||
+          (!h.memberId && !h.owners?.length && selectedMemberId === 'mem-self');
         if (!belongs) return false;
       }
       if (selectedAccountId !== 'all') {
@@ -209,12 +217,13 @@ export function AnalyticsPage() {
 
   // 2. Query transactions
   const { data: rawTransactions = [] } = useQuery<TransactionDetailDto[]>({
-    queryKey: ['transactions-list', userId],
+    queryKey: ['transactions-list', hasLiveBackend ? scopeId : 'demo'],
     queryFn: async () => {
-      if (!userId) return DEMO_TRANSACTIONS;
-      const res = await transactionRepo.listByUser(userId);
-      if (!res.success || res.value.length === 0) return DEMO_TRANSACTIONS;
-      return res.value;
+      if (!hasLiveBackend || !scopeId) return DEMO_TRANSACTIONS;
+      const res = await (transactionRepo.listByHousehold
+        ? transactionRepo.listByHousehold(scopeId)
+        : transactionRepo.listByUser(scopeId));
+      return res.success ? res.value : [];
     },
     enabled: true,
   });

@@ -19,6 +19,7 @@ import {
 } from '@wealthnest/application';
 import { useRepositories } from '@/lib/persistence/repository-context';
 import { useAuth } from '@/lib/supabase/auth-context';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -41,6 +42,8 @@ import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 
 export function TransactionsPage() {
   const { user } = useAuth();
+  const { activeHouseholdId, canEditFinancials } = useHousehold();
+  const { transactionRepo: transactionAdapter, holdingRepo: holdingAdapter, mode } = useRepositories();
   const queryClient = useQueryClient();
   const { selectedMemberId, selectedAccountId, members, accounts, privacyRules } = useFamily();
   const { isSupportModeActive } = useSupportSession();
@@ -51,6 +54,10 @@ export function TransactionsPage() {
     'all' | 'inflow' | 'outflow' | 'trades' | 'transfers'
   >('all');
 
+  const isDemoMode = mode === 'supabase' && (!user?.id || user.id.startsWith('demo-'));
+  const hasLiveBackend = !isDemoMode && Boolean(activeHouseholdId || user?.id);
+  const scopeId = activeHouseholdId || user?.id || '';
+
   // Local state for interactive demo mode when not logged in
   const [localDemoTransactions, setLocalDemoTransactions] =
     useState<TransactionDetailDto[]>(DEMO_TRANSACTIONS);
@@ -58,6 +65,7 @@ export function TransactionsPage() {
   const isMobile = useIsMobile();
 
   const handleDeleteRequest = (tx: TransactionDetailDto) => {
+    if (!canEditFinancials || isSupportModeActive) return;
     if (typeof window !== 'undefined' && (window.confirm as any)?.mock) {
       if (window.confirm('Delete this transaction record from the audit log?')) {
         deleteMutation.mutate(tx.id);
@@ -67,19 +75,20 @@ export function TransactionsPage() {
     setTxToDelete(tx);
   };
 
-  const { transactionRepo: transactionAdapter, holdingRepo: holdingAdapter } = useRepositories();
   const { currencySymbol, currencyCode, preferences } = usePreferences();
   const locale = preferences.numberFormat || 'en-IN';
 
   // Query user holdings for asset dropdown in modal
   const { data: userHoldings } = useQuery({
-    queryKey: ['user-holdings', user?.id],
+    queryKey: ['user-holdings', scopeId],
     queryFn: async () => {
-      if (!user) return [];
-      const res = await holdingAdapter.listDetailsByUser(user.id);
+      if (!scopeId) return [];
+      const res = await (holdingAdapter.listDetailsByHousehold
+        ? holdingAdapter.listDetailsByHousehold(scopeId)
+        : holdingAdapter.listDetailsByUser(scopeId));
       return res.success ? res.value : [];
     },
-    enabled: !!user,
+    enabled: hasLiveBackend,
   });
 
   // Query authenticated transactions from Supabase via Clean Architecture Use Case
@@ -88,24 +97,24 @@ export function TransactionsPage() {
     isLoading: isLoadingDb,
     refetch,
   } = useQuery({
-    queryKey: ['transactions-cashflow', user?.id],
+    queryKey: ['transactions-cashflow', scopeId],
     queryFn: async () => {
-      if (!user) return null;
+      if (!scopeId) return null;
       const useCase = new GetCashflowSummaryUseCase(transactionAdapter);
-      const res = await useCase.execute(user.id, 'INR');
+      const res = await useCase.execute(scopeId, 'INR');
       if (!res.success) throw res.error;
       return res.value;
     },
-    enabled: !!user,
+    enabled: hasLiveBackend,
   });
 
-  // All transactions depending on authentication state
+  // All transactions depending on authentication / persistence state
   const allTransactions: TransactionDetailDto[] = useMemo(() => {
-    if (user && Array.isArray(dbCashflowData?.transactions)) {
-      return [...dbCashflowData.transactions];
+    if (hasLiveBackend) {
+      return Array.isArray(dbCashflowData?.transactions) ? [...dbCashflowData.transactions] : [];
     }
     return localDemoTransactions;
-  }, [user, dbCashflowData, localDemoTransactions]);
+  }, [hasLiveBackend, dbCashflowData, localDemoTransactions]);
 
   // Active transactions filtered by Family Member / Entity, Demat Account & Privacy Rules
   const activeTransactions: TransactionDetailDto[] = useMemo(() => {
@@ -166,11 +175,15 @@ export function TransactionsPage() {
     mutationFn: async (values: NewTransactionFormValues) => {
       const amountCents = Math.round(values.amount * 100);
 
-      if (user) {
-        // Authenticated: Persist to PostgreSQL database with automated holding synchronization
+      if (hasLiveBackend) {
+        if (!canEditFinancials) {
+          throw new Error('View-only household role cannot record transactions.');
+        }
+        // Authenticated / SQLite: Persist to active household with automated holding synchronization
         const useCase = new RecordTransactionUseCase(transactionAdapter, holdingAdapter);
         const res = await useCase.execute({
-          userId: user.id,
+          userId: user?.id || scopeId || 'local-user',
+          householdId: activeHouseholdId || undefined,
           assetId: values.assetId,
           type: values.type,
           quantity: values.quantity,
@@ -181,6 +194,8 @@ export function TransactionsPage() {
           memberId: values.memberId,
           accountId: values.accountId,
           destinationAccountId: values.destinationAccountId,
+          visibility: values.visibility,
+          restrictedGranteeUserIds: values.restrictedGranteeUserIds,
         });
 
         if (!res.success) throw res.error;
@@ -190,6 +205,8 @@ export function TransactionsPage() {
         const newDemoItem: TransactionDetailDto = {
           id: `demo-tx-${Date.now()}`,
           userId: 'demo-user',
+          householdId: activeHouseholdId || 'demo-household-vaghela',
+          visibility: values.visibility ?? 'household_shared',
           assetId: values.assetId,
           assetName: values.assetName,
           assetTicker: values.assetTicker,
@@ -209,11 +226,12 @@ export function TransactionsPage() {
       }
     },
     onSuccess: () => {
-      if (user) {
-        queryClient.invalidateQueries({ queryKey: ['transactions-cashflow', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['cashflow-summary', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['user-holdings', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['portfolio-summary', user.id] });
+      if (hasLiveBackend) {
+        queryClient.invalidateQueries({ queryKey: ['transactions-cashflow'] });
+        queryClient.invalidateQueries({ queryKey: ['cashflow-summary'] });
+        queryClient.invalidateQueries({ queryKey: ['user-holdings'] });
+        queryClient.invalidateQueries({ queryKey: ['portfolio-summary'] });
+        queryClient.invalidateQueries({ queryKey: ['holdings'] });
       }
     },
   });
@@ -221,29 +239,34 @@ export function TransactionsPage() {
   // Mutation: Delete Transaction
   const deleteMutation = useMutation({
     mutationFn: async (transactionId: string) => {
-      if (user) {
-        const useCase = new DeleteTransactionUseCase(transactionAdapter);
-        const res = await useCase.execute(transactionId, user.id);
-        if (!res.success) throw res.error;
-      } else {
+      if (transactionId.startsWith('demo-') || !hasLiveBackend) {
         setLocalDemoTransactions((prev) => prev.filter((t) => t.id !== transactionId));
+        return;
       }
+      if (!canEditFinancials) {
+        throw new Error('View-only household role cannot delete transactions.');
+      }
+      const useCase = new DeleteTransactionUseCase(transactionAdapter);
+      const res = await useCase.execute(transactionId, scopeId || user?.id || '');
+      if (!res.success) throw res.error;
     },
     onSuccess: () => {
-      if (user) {
-        queryClient.invalidateQueries({ queryKey: ['transactions-cashflow', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['cashflow-summary', user.id] });
+      if (hasLiveBackend) {
+        queryClient.invalidateQueries({ queryKey: ['transactions-cashflow'] });
+        queryClient.invalidateQueries({ queryKey: ['cashflow-summary'] });
       }
     },
   });
 
-  // Seed sample starter transactions for authenticated user
+  // Seed sample starter transactions for active household
   const handleSeedStarterTransactions = async () => {
-    if (!user) return;
+    if (!hasLiveBackend || !canEditFinancials) return;
     for (const tx of DEMO_TRANSACTIONS.slice(0, 4)) {
       const useCase = new RecordTransactionUseCase(transactionAdapter);
       await useCase.execute({
-        userId: user.id,
+        userId: user?.id || scopeId || 'local-user',
+        householdId: activeHouseholdId || undefined,
+        visibility: 'household_shared',
         type: tx.type,
         amountCents: tx.amountCents,
         currency: 'INR',
@@ -280,8 +303,11 @@ export function TransactionsPage() {
             >
               India First (₹ INR)
             </Badge>
-            <Badge variant={user ? 'success' : 'secondary'} className="font-mono text-[10px]">
-              {user ? 'Database Active' : 'Demo Mode'}
+            <Badge
+              variant={hasLiveBackend ? 'success' : 'secondary'}
+              className="font-mono text-[10px]"
+            >
+              {hasLiveBackend ? 'Database Active' : 'Demo Mode'}
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
@@ -291,10 +317,16 @@ export function TransactionsPage() {
 
         <div className="flex items-center gap-3">
           <Button
-            onClick={() => setIsModalOpen(true)}
-            disabled={isSupportModeActive}
+            onClick={() => {
+              if (canEditFinancials && !isSupportModeActive) setIsModalOpen(true);
+            }}
+            disabled={isSupportModeActive || !canEditFinancials}
             title={
-              isSupportModeActive ? 'Disabled in Support Impersonation Mode (Read-Only)' : undefined
+              isSupportModeActive
+                ? 'Disabled in Support Impersonation Mode (Read-Only)'
+                : !canEditFinancials
+                  ? 'View-only household role cannot record transactions'
+                  : undefined
             }
             className="gap-2 shadow-sm disabled:opacity-50"
           >
@@ -308,7 +340,7 @@ export function TransactionsPage() {
       <FamilyFilterBar onOpenManageModal={() => setIsManageFamilyOpen(true)} />
 
       {/* Mode Alert Banner if not authenticated */}
-      {!user && (
+      {!hasLiveBackend && (
         <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center text-primary shrink-0">
@@ -343,6 +375,9 @@ export function TransactionsPage() {
       {/* Recurring SIP & EMI Rules */}
       <RecurringRulesCard
         onPostTransaction={async (values) => {
+          if (!canEditFinancials || isSupportModeActive) {
+            throw new Error('View-only household role cannot post recurring transactions.');
+          }
           await recordMutation.mutateAsync(values);
         }}
         isPosting={recordMutation.isPending}
@@ -353,14 +388,17 @@ export function TransactionsPage() {
       <TransactionAuditLogCard
         isLoadingDb={isLoadingDb}
         isMobile={isMobile}
-        hasUser={Boolean(user)}
+        hasUser={hasLiveBackend}
+        canEditFinancials={canEditFinancials}
         activeTransactionsCount={activeTransactions.length}
         filteredTransactions={filteredTransactions}
         categoryFilter={categoryFilter}
         onCategoryFilterChange={setCategoryFilter}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
-        onOpenRecordModal={() => setIsModalOpen(true)}
+        onOpenRecordModal={() => {
+          if (canEditFinancials && !isSupportModeActive) setIsModalOpen(true);
+        }}
         onSeedStarterTransactions={handleSeedStarterTransactions}
         onDeleteRequest={handleDeleteRequest}
         isDeleting={deleteMutation.isPending}

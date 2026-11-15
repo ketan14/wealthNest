@@ -32,6 +32,7 @@ interface LoanPortfolioSectionProps {
   readonly members: readonly LoanPortfolioMember[];
   readonly currencySymbol: string;
   readonly locale: string;
+  readonly canEditFinancials?: boolean;
   readonly onAddFirstLoan: () => void;
   readonly onPayEmi: (liability: LiabilityDto) => void;
   readonly onUpdateBalance: (liability: LiabilityDto) => void;
@@ -70,6 +71,7 @@ export function LoanPortfolioSection({
   members,
   currencySymbol,
   locale,
+  canEditFinancials = true,
   onAddFirstLoan,
   onPayEmi,
   onUpdateBalance,
@@ -140,7 +142,12 @@ export function LoanPortfolioSection({
                 : 'Add home loans, car loans, education debt, or credit lines to keep an accurate, reconciled net-worth balance.'}
             </p>
           </div>
-          <Button onClick={onAddFirstLoan} className="gap-2 text-xs">
+          <Button
+            onClick={onAddFirstLoan}
+            disabled={!canEditFinancials}
+            title={!canEditFinancials ? 'View-only household role cannot add loans' : undefined}
+            className="gap-2 text-xs"
+          >
             <Plus className="w-4 h-4" />
             Add First Loan
           </Button>
@@ -280,9 +287,14 @@ export function LoanPortfolioSection({
                           <Button
                             variant="default"
                             size="sm"
+                            disabled={!canEditFinancials}
                             className="h-7 text-[11px] gap-1 px-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium"
                             onClick={() => onPayEmi(l)}
-                            title="Record monthly EMI and interest split"
+                            title={
+                              canEditFinancials
+                                ? 'Record monthly EMI and interest split'
+                                : 'View-only household role cannot record EMIs'
+                            }
                           >
                             <Landmark className="w-3 h-3" />
                             Pay EMI
@@ -290,9 +302,14 @@ export function LoanPortfolioSection({
                           <Button
                             variant="secondary"
                             size="sm"
+                            disabled={!canEditFinancials}
                             className="h-7 text-[11px] gap-1 px-2.5"
                             onClick={() => onUpdateBalance(l)}
-                            title="Record a new outstanding balance"
+                            title={
+                              canEditFinancials
+                                ? 'Record a new outstanding balance'
+                                : 'View-only household role cannot update balances'
+                            }
                           >
                             <History className="w-3 h-3 text-primary" />
                             Bal
@@ -300,18 +317,28 @@ export function LoanPortfolioSection({
                           <Button
                             variant="ghost"
                             size="sm"
+                            disabled={!canEditFinancials}
                             className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
                             onClick={() => onEditLiability(l)}
-                            title="Edit loan details"
+                            title={
+                              canEditFinancials
+                                ? 'Edit loan details'
+                                : 'View-only household role cannot edit loans'
+                            }
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
+                            disabled={!canEditFinancials}
                             className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                             onClick={() => onDeleteLiability(l)}
-                            title="Delete loan"
+                            title={
+                              canEditFinancials
+                                ? 'Delete loan'
+                                : 'View-only household role cannot delete loans'
+                            }
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>

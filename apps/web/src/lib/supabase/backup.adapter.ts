@@ -1,16 +1,18 @@
 import { Result, ok, err } from '@wealthnest/shared';
 import { BackupPort, PortfolioBackupData } from '@wealthnest/application';
 import { supabase } from './client';
+import { toValidUuidOrNull } from './uuid-utils';
+import { resolveHouseholdIdForWrite } from './household-scope';
 
 export class SupabaseBackupAdapter implements BackupPort {
-  async createFullBackup(_userId: string): Promise<Result<PortfolioBackupData>> {
-    // Delegated to ExportPortfolioDataUseCase for unified logic
+  async createFullBackup(_scopeId: string): Promise<Result<PortfolioBackupData>> {
     return err(new Error('Use ExportPortfolioDataUseCase for backup generation'));
   }
 
   async restoreFromBackup(
-    userId: string,
-    backup: PortfolioBackupData
+    scopeId: string,
+    backup: PortfolioBackupData,
+    options?: { readonly targetUserId?: string; readonly householdId?: string }
   ): Promise<
     Result<{
       readonly restoredHoldings: number;
@@ -20,9 +22,15 @@ export class SupabaseBackupAdapter implements BackupPort {
     }>
   > {
     try {
-      if (!userId) {
-        return err(new Error('User ID is required for restore'));
-      }
+      const requestedHousehold =
+        options?.householdId ?? backup.household?.id ?? toValidUuidOrNull(scopeId) ?? undefined;
+      const actorId =
+        toValidUuidOrNull(options?.targetUserId) ?? toValidUuidOrNull(backup.user?.id) ?? null;
+
+      const householdId = await resolveHouseholdIdForWrite(
+        requestedHousehold,
+        actorId ?? undefined
+      );
 
       let restoredHoldings = 0;
       let restoredTransactions = 0;
@@ -31,11 +39,13 @@ export class SupabaseBackupAdapter implements BackupPort {
 
       // 1. Restore Assets and Holdings
       for (const h of backup.holdings) {
-        // Ensure parent asset exists
+        const visibility = h.visibility ?? 'household_shared';
         const { error: assetErr } = await supabase.from('assets').upsert(
           {
             id: h.assetId,
-            user_id: userId,
+            household_id: householdId,
+            visibility,
+            ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
             name: h.name,
             ticker: h.ticker || null,
             isin: h.isin || null,
@@ -49,29 +59,42 @@ export class SupabaseBackupAdapter implements BackupPort {
           return err(new Error(`Failed to restore asset '${h.name}': ${assetErr.message}`));
         }
 
-        // Upsert holding
         const { error: holdingErr } = await supabase.from('holdings').upsert(
           {
             id: h.holdingId,
-            user_id: userId,
+            household_id: householdId,
+            visibility,
+            ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
             asset_id: h.assetId,
             quantity: h.quantity,
             unit_cost_cents: h.unitCostCents,
             current_value_cents: h.currentValueCents,
-            member_id: h.memberId || null,
-            account_id: h.accountId || null,
+            member_id: toValidUuidOrNull(h.memberId),
+            account_id: toValidUuidOrNull(h.accountId),
             demat_account_id: h.dematAccountId || null,
             folio_number: h.folioNumber || null,
             amc_name: h.amcName || null,
             scheme_plan: h.schemePlan || null,
             cost_basis_verified: h.costBasisVerified ?? true,
           },
-          { onConflict: 'user_id, asset_id' }
+          { onConflict: 'id' }
         );
 
         if (holdingErr) {
           return err(new Error(`Failed to restore holding '${h.name}': ${holdingErr.message}`));
         }
+
+        if (h.owners && h.owners.length > 0) {
+          await supabase.rpc('set_holding_owners', {
+            p_holding_id: h.holdingId,
+            p_owners: h.owners.map((o) => ({
+              family_member_id: o.familyMemberId,
+              ownership_share: o.ownershipShare,
+              is_primary_owner: Boolean(o.isPrimaryOwner),
+            })),
+          });
+        }
+
         restoredHoldings++;
       }
 
@@ -80,16 +103,18 @@ export class SupabaseBackupAdapter implements BackupPort {
         const { error: txErr } = await supabase.from('transactions').upsert(
           {
             id: t.id,
-            user_id: userId,
-            asset_id: t.assetId || null,
+            household_id: householdId,
+            visibility: t.visibility ?? 'household_shared',
+            ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
+            asset_id: toValidUuidOrNull(t.assetId),
             type: t.type,
-            quantity: t.quantity || null,
+            quantity: t.quantity ?? null,
             amount_cents: t.amountCents,
             currency: t.currency || 'INR',
             transaction_date: t.transactionDate,
             notes: t.notes || null,
-            member_id: t.memberId || null,
-            account_id: t.accountId || null,
+            member_id: toValidUuidOrNull(t.memberId),
+            account_id: toValidUuidOrNull(t.accountId),
           },
           { onConflict: 'id' }
         );
@@ -105,21 +130,24 @@ export class SupabaseBackupAdapter implements BackupPort {
         const { error: libErr } = await supabase.from('liabilities').upsert(
           {
             id: l.id,
-            user_id: userId,
+            household_id: householdId,
+            visibility: l.visibility ?? 'household_shared',
+            ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
             name: l.name,
             loan_type: l.loanType,
             lender: l.lender,
             account_number: l.accountNumber || null,
-            original_principal_cents: l.originalPrincipalCents,
+            original_principal_cents: Number(l.originalPrincipalCents),
             interest_rate: l.interestRate,
             interest_type: l.interestType || 'floating',
             tenure_months: l.tenureMonths || null,
-            emi_amount_cents: l.emiAmountCents,
+            emi_amount_cents: Number(l.emiAmountCents),
             currency: l.currency || 'INR',
             start_date: l.startDate || null,
             end_date: l.endDate || null,
             status: l.status,
-            linked_asset_id: l.linkedAssetId || null,
+            linked_asset_id: toValidUuidOrNull(l.linkedAssetId),
+            member_id: toValidUuidOrNull(l.memberId),
             notes: l.notes || null,
           },
           { onConflict: 'id' }
@@ -128,15 +156,29 @@ export class SupabaseBackupAdapter implements BackupPort {
         if (libErr) {
           return err(new Error(`Failed to restore liability '${l.name}': ${libErr.message}`));
         }
+
+        if (l.parties && l.parties.length > 0) {
+          await supabase.rpc('set_liability_parties', {
+            p_liability_id: l.id,
+            p_parties: l.parties.map((p) => ({
+              family_member_id: p.familyMemberId,
+              party_role: p.partyRole,
+              liability_share: p.liabilityShare,
+            })),
+          });
+        }
+
         restoredLiabilities++;
       }
 
-      // 4. Restore Financial Goals
+      // 4. Restore Goals (fixed table name 'goals')
       for (const g of backup.goals) {
-        const { error: goalErr } = await supabase.from('financial_goals').upsert(
+        const { error: goalErr } = await supabase.from('goals').upsert(
           {
             id: g.id,
-            user_id: userId,
+            household_id: householdId,
+            visibility: g.visibility ?? 'household_shared',
+            ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
             name: g.name,
             category: g.category,
             target_amount_cents: g.targetAmountCents,
@@ -146,8 +188,9 @@ export class SupabaseBackupAdapter implements BackupPort {
             expected_return_rate: g.expectedReturnRate || 12.0,
             inflation_rate: g.inflationRate || 6.0,
             priority: g.priority || 'medium',
+            currency: g.currency || 'INR',
             notes: g.notes || null,
-            member_id: g.memberId || null,
+            member_id: toValidUuidOrNull(g.memberId),
           },
           { onConflict: 'id' }
         );

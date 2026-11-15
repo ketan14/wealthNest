@@ -1,4 +1,5 @@
 import { Result, err } from '@wealthnest/shared';
+import { validateOwnershipShares } from '@wealthnest/domain';
 import {
   LiabilityRepositoryPort,
   UpdateLiabilityParams,
@@ -23,6 +24,19 @@ export class UpdateLiabilityUseCase {
 
     if (params.emiAmountCents !== undefined && params.emiAmountCents < 0n) {
       return err(new Error('EMI amount cannot be negative.'));
+    }
+
+    if (params.parties && params.parties.length > 0) {
+      const shareCheck = validateOwnershipShares(
+        params.parties.map((p) => ({
+          familyMemberId: p.familyMemberId,
+          sharePercentage: p.liabilityShare,
+          isPrimary: p.partyRole === 'primary_borrower',
+        }))
+      );
+      if (!shareCheck.valid) {
+        return err(new Error(shareCheck.error || 'Invalid liability borrower share allocation.'));
+      }
     }
 
     return this.liabilityRepo.updateLiability(params);

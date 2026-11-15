@@ -18,9 +18,13 @@ import {
 } from '@wealthnest/domain';
 import { ManageDocumentVaultUseCase, FamilyDocumentDto } from '@wealthnest/application';
 import { useAuth } from '@/lib/supabase/auth-context';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { useFamily } from '@/lib/family/family-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
-import { useDocumentVaultRepository } from '@/lib/persistence/repository-context';
+import {
+  useDocumentVaultRepository,
+  useRepositories,
+} from '@/lib/persistence/repository-context';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
@@ -35,10 +39,16 @@ import { DocumentVaultList } from '@/components/vault/DocumentVaultList';
 
 export function DocumentsPage() {
   const { user } = useAuth();
+  const { activeHouseholdId, canEditFinancials } = useHousehold();
+  const { mode } = useRepositories();
   const { members, selectedMemberId } = useFamily();
   const { isSupportModeActive } = useSupportSession();
   const vaultRepo = useDocumentVaultRepository();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const isDemoMode = mode === 'supabase' && (!user?.id || user.id.startsWith('demo-'));
+  const hasLiveBackend = !isDemoMode && Boolean(activeHouseholdId || user?.id);
+  const scopeId = activeHouseholdId || user?.id || '';
 
   const useCase = useMemo(() => new ManageDocumentVaultUseCase(vaultRepo), [vaultRepo]);
 
@@ -59,27 +69,27 @@ export function DocumentsPage() {
     setIsLoading(true);
     setErrorMessage(null);
 
-    if (!user) {
-      setDocuments(DEMO_DOCUMENTS);
+    if (!hasLiveBackend || !scopeId) {
+      setDocuments(isDemoMode ? DEMO_DOCUMENTS : []);
       setIsLoading(false);
       return;
     }
 
-    const res = await useCase.listDocuments(user.id);
+    const res = await useCase.listDocuments(scopeId);
     if (res.success) {
       setDocuments(res.value);
     } else {
       setErrorMessage(res.error.message);
     }
     setIsLoading(false);
-  }, [user, useCase]);
+  }, [hasLiveBackend, isDemoMode, scopeId, useCase]);
 
   useEffect(() => {
     loadDocuments();
   }, [loadDocuments]);
 
   useEffect(() => {
-    if (searchParams.get('action') === 'new' && !isSupportModeActive) {
+    if (searchParams.get('action') === 'new' && !isSupportModeActive && canEditFinancials) {
       setIsUploadModalOpen(true);
       searchParams.delete('action');
       setSearchParams(searchParams, { replace: true });
@@ -124,7 +134,10 @@ export function DocumentsPage() {
   }, [memberFilteredDocs, selectedCategory, searchQuery, memberNameMap]);
 
   const handleUpload = async (formData: UploadDocumentFormData) => {
-    if (!user) {
+    if (hasLiveBackend && !canEditFinancials) {
+      throw new Error('View-only household role cannot upload documents.');
+    }
+    if (!hasLiveBackend) {
       // Demo mode: append locally so users can test the flow interactively
       const now = new Date().toISOString();
       const newDemoDoc: FamilyDocumentDto = {
@@ -150,7 +163,10 @@ export function DocumentsPage() {
     }
 
     const res = await useCase.uploadDocument({
-      userId: user.id,
+      userId: user?.id || scopeId || 'local-user',
+      householdId: activeHouseholdId || undefined,
+      visibility: formData.visibility,
+      restrictedGranteeUserIds: formData.restrictedGranteeUserIds,
       memberId: formData.memberId,
       title: formData.title,
       category: formData.category,
@@ -173,14 +189,18 @@ export function DocumentsPage() {
 
   const handleDownload = async (doc: FamilyDocumentDto) => {
     setErrorMessage(null);
-    if (!user) {
+    if (!hasLiveBackend || doc.id.startsWith('demo-')) {
       setStatusMessage(
         `Demo preview: "${doc.fileName}" (${formatFileSize(doc.fileSizeBytes)}) is stored in private household RLS path ${doc.storagePath}.`
       );
       return;
     }
 
-    const res = await useCase.getDownloadUrl(doc.id, doc.storagePath, user.id);
+    const res = await useCase.getDownloadUrl(
+      doc.id,
+      doc.storagePath,
+      scopeId || user?.id || ''
+    );
     if (!res.success) {
       setErrorMessage(res.error.message);
       return;
@@ -193,9 +213,16 @@ export function DocumentsPage() {
     setIsDeleting(true);
     setErrorMessage(null);
 
-    if (!user) {
+    if (!hasLiveBackend || docPendingDelete.id.startsWith('demo-')) {
       setDocuments((prev) => prev.filter((d) => d.id !== docPendingDelete.id));
       setStatusMessage(`Removed "${docPendingDelete.title}" from demo vault.`);
+      setDocPendingDelete(null);
+      setIsDeleting(false);
+      return;
+    }
+
+    if (!canEditFinancials) {
+      setErrorMessage('View-only household role cannot delete documents.');
       setDocPendingDelete(null);
       setIsDeleting(false);
       return;
@@ -204,7 +231,7 @@ export function DocumentsPage() {
     const res = await useCase.deleteDocument(
       docPendingDelete.id,
       docPendingDelete.storagePath,
-      user.id
+      scopeId || user?.id || ''
     );
     if (res.success) {
       setDocuments((prev) => prev.filter((d) => d.id !== docPendingDelete.id));
@@ -240,8 +267,17 @@ export function DocumentsPage() {
         </div>
 
         <Button
-          onClick={() => setIsUploadModalOpen(true)}
-          disabled={isSupportModeActive}
+          onClick={() => {
+            if (canEditFinancials && !isSupportModeActive) setIsUploadModalOpen(true);
+          }}
+          disabled={isSupportModeActive || !canEditFinancials}
+          title={
+            isSupportModeActive
+              ? 'Disabled in Support Impersonation Mode (Read-Only)'
+              : !canEditFinancials
+                ? 'View-only household role cannot upload documents'
+                : undefined
+          }
           className="flex items-center gap-2 self-start sm:self-auto"
         >
           <Upload className="w-4 h-4" />
@@ -384,9 +420,14 @@ export function DocumentsPage() {
         nowMs={nowMs}
         thirtyDaysMs={thirtyDaysMs}
         isSupportModeActive={isSupportModeActive}
-        onOpenUploadModal={() => setIsUploadModalOpen(true)}
+        canEditFinancials={canEditFinancials}
+        onOpenUploadModal={() => {
+          if (canEditFinancials && !isSupportModeActive) setIsUploadModalOpen(true);
+        }}
         onDownload={handleDownload}
-        onRequestDelete={setDocPendingDelete}
+        onRequestDelete={(doc) => {
+          if (canEditFinancials && !isSupportModeActive) setDocPendingDelete(doc);
+        }}
       />
 
       {/* Modals */}

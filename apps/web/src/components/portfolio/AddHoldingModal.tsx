@@ -1,13 +1,21 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AssetClassDefinition } from '@wealthnest/domain';
+import {
+  AssetClassDefinition,
+  HoldingOwnerShareInput,
+  RecordVisibility,
+  validateOwnershipShares,
+} from '@wealthnest/domain';
 import { ListAssetClassesUseCase } from '@wealthnest/application';
 import { useAssetClassRepository } from '@/lib/persistence/repository-context';
 import { Button } from '@/components/ui/Button';
 import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 import { X, Plus, AlertCircle, Loader2, Users, Briefcase } from 'lucide-react';
 import { useFamily } from '@/lib/family/family-context';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
+import { VisibilityControl } from '@/components/household/VisibilityControl';
+import { JointOwnershipEditor } from '@/components/household/JointOwnershipEditor';
 import { FALLBACK_ASSET_CLASSES, HoldingMetadataFields } from './HoldingMetadataFields';
 
 export interface NewHoldingFormValues {
@@ -27,6 +35,9 @@ export interface NewHoldingFormValues {
   costBasisVerified?: boolean;
   memberId?: string;
   accountId?: string;
+  visibility?: RecordVisibility;
+  ownerShares?: HoldingOwnerShareInput[];
+  restrictedGranteeUserIds?: string[];
 }
 
 interface AddHoldingModalProps {
@@ -43,6 +54,7 @@ export function AddHoldingModal({
   isLoading = false,
 }: AddHoldingModalProps) {
   const { members, accounts, selectedMemberId, selectedAccountId } = useFamily();
+  const { canEditFinancials } = useHousehold();
   const { currencySymbol } = usePreferences();
 
   const [name, setName] = useState('');
@@ -58,6 +70,9 @@ export function AddHoldingModal({
   const [unitCost, setUnitCost] = useState('');
   const [currentValue, setCurrentValue] = useState('');
   const [currency] = useState('INR');
+  const [visibility, setVisibility] = useState<RecordVisibility>('household_shared');
+  const [restrictedGranteeUserIds, setRestrictedGranteeUserIds] = useState<string[]>([]);
+  const [isJointOwnership, setIsJointOwnership] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Entity & Demat Account state
@@ -67,15 +82,28 @@ export function AddHoldingModal({
   const [holdingAccountId, setHoldingAccountId] = useState<string>(() => {
     return selectedAccountId !== 'all' ? selectedAccountId : '';
   });
+  const [ownerShares, setOwnerShares] = useState<HoldingOwnerShareInput[]>(() => [
+    {
+      familyMemberId:
+        selectedMemberId !== 'all' ? selectedMemberId : members[0]?.id || 'mem-self',
+      ownershipShare: 100,
+      isPrimaryOwner: true,
+    },
+  ]);
 
   useEffect(() => {
-    if (selectedMemberId !== 'all') {
-      setHoldingMemberId(selectedMemberId);
-    }
+    const fallbackMember =
+      selectedMemberId !== 'all' ? selectedMemberId : members[0]?.id || 'mem-self';
+    setHoldingMemberId(fallbackMember);
+    setOwnerShares((prev) =>
+      prev.length <= 1
+        ? [{ familyMemberId: fallbackMember, ownershipShare: 100, isPrimaryOwner: true }]
+        : prev
+    );
     if (selectedAccountId !== 'all') {
       setHoldingAccountId(selectedAccountId);
     }
-  }, [selectedMemberId, selectedAccountId]);
+  }, [members, selectedMemberId, selectedAccountId]);
 
   const relevantAccounts = useMemo(() => {
     return accounts.filter((a) => a.memberId === holdingMemberId);
@@ -138,6 +166,36 @@ export function AddHoldingModal({
       return;
     }
 
+    if (!canEditFinancials) {
+      setError('Viewers have read-only access and cannot add holdings.');
+      return;
+    }
+
+    const effectiveShares: HoldingOwnerShareInput[] =
+      isJointOwnership && ownerShares.length > 0
+        ? ownerShares
+        : holdingMemberId
+          ? [{ familyMemberId: holdingMemberId, ownershipShare: 100, isPrimaryOwner: true }]
+          : [];
+
+    if (effectiveShares.length > 0) {
+      const shareCheck = validateOwnershipShares(
+        effectiveShares.map((s) => ({
+          familyMemberId: s.familyMemberId,
+          sharePercentage: s.ownershipShare,
+        }))
+      );
+      if (!shareCheck.valid) {
+        setError(shareCheck.error || 'Ownership shares must total 100%.');
+        return;
+      }
+    }
+
+    const primaryOwner =
+      effectiveShares.find((s) => s.isPrimaryOwner)?.familyMemberId ||
+      effectiveShares[0]?.familyMemberId ||
+      holdingMemberId;
+
     try {
       await onSubmit({
         name: name.trim(),
@@ -156,8 +214,12 @@ export function AddHoldingModal({
         schemePlan:
           assetClassId === 'mutual_fund' && schemePlan.trim() ? schemePlan.trim() : undefined,
         costBasisVerified: assetClassId === 'mutual_fund' ? costBasisVerified : true,
-        memberId: holdingMemberId || undefined,
+        memberId: primaryOwner || undefined,
         accountId: holdingAccountId || undefined,
+        visibility,
+        ownerShares: effectiveShares.length > 0 ? effectiveShares : undefined,
+        restrictedGranteeUserIds:
+          visibility === 'restricted' ? restrictedGranteeUserIds : undefined,
       });
 
       // Reset form
@@ -173,6 +235,9 @@ export function AddHoldingModal({
       setQuantity('');
       setUnitCost('');
       setCurrentValue('');
+      setVisibility('household_shared');
+      setRestrictedGranteeUserIds([]);
+      setIsJointOwnership(false);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add holding');
@@ -244,7 +309,7 @@ export function AddHoldingModal({
           >
             Cancel
           </Button>
-          <Button type="submit" size="sm" disabled={isLoading} className="gap-2">
+          <Button type="submit" size="sm" disabled={isLoading || !canEditFinancials} className="gap-2">
             {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             Save Position
           </Button>
@@ -277,49 +342,93 @@ export function AddHoldingModal({
           </div>
 
           {/* Legal Entity & Demat Account Selection */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-secondary/20 border border-border/50">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5 text-blue-400" />
-                Legal Entity / Member
-              </label>
-              <select
-                value={holdingMemberId}
-                onChange={(e) => {
-                  setHoldingMemberId(e.target.value);
-                  const firstAcc = accounts.find((a) => a.memberId === e.target.value);
-                  setHoldingAccountId(firstAcc?.id || '');
-                }}
-                className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-              >
-                {members.map((m) => (
-                  <option key={m.id} value={m.id} className="bg-slate-900 text-foreground">
-                    {m.name} ({m.relationship.toUpperCase()})
+          <div className="space-y-3 p-3 rounded-xl bg-secondary/20 border border-border/50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-blue-400" />
+                  Primary Legal Entity / Member
+                </label>
+                <select
+                  value={holdingMemberId}
+                  onChange={(e) => {
+                    const nextMemberId = e.target.value;
+                    setHoldingMemberId(nextMemberId);
+                    const firstAcc = accounts.find((a) => a.memberId === nextMemberId);
+                    setHoldingAccountId(firstAcc?.id || '');
+                    if (!isJointOwnership) {
+                      setOwnerShares([
+                        { familyMemberId: nextMemberId, ownershipShare: 100, isPrimaryOwner: true },
+                      ]);
+                    }
+                  }}
+                  className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                >
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id} className="bg-slate-900 text-foreground">
+                      {m.name} ({m.relationship.toUpperCase()})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
+                  <Briefcase className="w-3.5 h-3.5 text-slate-400" />
+                  Demat / Broker / Folio
+                </label>
+                <select
+                  value={holdingAccountId}
+                  onChange={(e) => setHoldingAccountId(e.target.value)}
+                  className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                >
+                  <option value="" className="bg-slate-900 text-foreground">
+                    -- None / General --
                   </option>
-                ))}
-              </select>
+                  {relevantAccounts.map((a) => (
+                    <option key={a.id} value={a.id} className="bg-slate-900 text-foreground">
+                      {a.brokerName}: {a.accountName}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
-                <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-                Demat / Broker / Folio
-              </label>
-              <select
-                value={holdingAccountId}
-                onChange={(e) => setHoldingAccountId(e.target.value)}
-                className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-              >
-                <option value="" className="bg-slate-900 text-foreground">
-                  -- None / General --
-                </option>
-                {relevantAccounts.map((a) => (
-                  <option key={a.id} value={a.id} className="bg-slate-900 text-foreground">
-                    {a.brokerName}: {a.accountName}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {members.length > 1 && (
+              <div className="pt-1 border-t border-border/40 space-y-2">
+                <label className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isJointOwnership}
+                    onChange={(e) => {
+                      const next = e.target.checked;
+                      setIsJointOwnership(next);
+                      if (!next && holdingMemberId) {
+                        setOwnerShares([
+                          {
+                            familyMemberId: holdingMemberId,
+                            ownershipShare: 100,
+                            isPrimaryOwner: true,
+                          },
+                        ]);
+                      }
+                    }}
+                    className="rounded border-border accent-primary"
+                  />
+                  <span>Configure Joint Ownership Split (exact % summing to 100%)</span>
+                </label>
+
+                {isJointOwnership && (
+                  <JointOwnershipEditor
+                    mode="holding"
+                    members={members}
+                    shares={ownerShares}
+                    onChange={setOwnerShares}
+                    disabled={!canEditFinancials}
+                  />
+                )}
+              </div>
+            )}
           </div>
 
           <HoldingMetadataFields
@@ -414,6 +523,15 @@ export function AddHoldingModal({
               </label>
             </div>
           )}
+
+          <VisibilityControl
+            visibility={visibility}
+            onChange={setVisibility}
+            granteeUserIds={restrictedGranteeUserIds}
+            onGranteeUserIdsChange={setRestrictedGranteeUserIds}
+            disabled={!canEditFinancials}
+            compact
+          />
 
           <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 text-xs text-muted-foreground space-y-1">
             <p>

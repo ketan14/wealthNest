@@ -59,8 +59,43 @@ export function executePortfolioWrite(
   }
 
   // 3. family_members
+  if (/UPDATE family_members SET linked_user_id = NULL WHERE id = \?/i.test(sql)) {
+    const [id, household_id] = params;
+    const m = state.family_members.find(
+      (r) => r.id === id && (!household_id || r.household_id === household_id)
+    );
+    if (m) {
+      m.linked_user_id = null;
+      return 1;
+    }
+    return 0;
+  }
+
+  if (/UPDATE family_members SET linked_user_id = \? WHERE id = \?/i.test(sql)) {
+    const [linked_user_id, id] = params;
+    const m = state.family_members.find((r) => r.id === id);
+    if (m) {
+      m.linked_user_id = linked_user_id;
+      return 1;
+    }
+    return 0;
+  }
+
   if (/INSERT INTO family_members/i.test(sql)) {
-    const [id, user_id, name, relationship, pan_masked, color_hex, is_primary, notes] = params;
+    const [
+      id,
+      user_id,
+      name,
+      relationship,
+      pan_masked,
+      color_hex,
+      is_primary,
+      notes,
+      household_id,
+      email,
+      linked_user_id,
+      entity_type,
+    ] = params;
     const existing = state.family_members.find((r) => r.id === id);
     if (existing) {
       existing.name = name;
@@ -69,6 +104,11 @@ export function executePortfolioWrite(
       existing.color_hex = color_hex;
       existing.is_primary = is_primary;
       existing.notes = notes;
+      if (household_id !== undefined && household_id !== null) existing.household_id = household_id;
+      if (email !== undefined) existing.email = email;
+      if (linked_user_id !== undefined && linked_user_id !== null)
+        existing.linked_user_id = linked_user_id;
+      if (entity_type !== undefined) existing.entity_type = entity_type;
     } else {
       state.family_members.push({
         id,
@@ -79,6 +119,10 @@ export function executePortfolioWrite(
         color_hex,
         is_primary,
         notes,
+        household_id: household_id ?? null,
+        email: email ?? null,
+        linked_user_id: linked_user_id ?? null,
+        entity_type: entity_type ?? 'individual',
         created_at: now,
       });
     }
@@ -103,6 +147,8 @@ export function executePortfolioWrite(
       depository,
       account_number_masked,
       account_type,
+      household_id,
+      visibility,
     ] = params;
     const existing = state.portfolio_accounts.find((r) => r.id === id);
     if (existing) {
@@ -112,6 +158,8 @@ export function executePortfolioWrite(
       existing.depository = depository;
       existing.account_number_masked = account_number_masked;
       existing.account_type = account_type;
+      if (household_id !== undefined && household_id !== null) existing.household_id = household_id;
+      if (visibility !== undefined && visibility !== null) existing.visibility = visibility;
     } else {
       state.portfolio_accounts.push({
         id,
@@ -122,6 +170,8 @@ export function executePortfolioWrite(
         depository,
         account_number_masked,
         account_type,
+        household_id: household_id ?? null,
+        visibility: visibility ?? 'household_shared',
         created_at: now,
       });
     }
@@ -137,8 +187,9 @@ export function executePortfolioWrite(
 
   // 5. assets
   if (/INSERT INTO assets/i.test(sql)) {
-    if (/'mutual_fund'/i.test(sql) && params.length === 6) {
-      const [id, user_id, name, ticker, isin, currency] = params;
+    if (/'mutual_fund'/i.test(sql) && params.length <= 9) {
+      const [id, user_id, name, ticker, isin, currency, household_id, visibility, created_by] =
+        params;
       state.assets.push({
         id,
         user_id,
@@ -147,11 +198,25 @@ export function executePortfolioWrite(
         isin,
         asset_class_id: 'mutual_fund',
         currency: currency || 'INR',
+        household_id: household_id ?? null,
+        visibility: visibility ?? 'household_shared',
+        created_by: created_by ?? user_id,
         created_at: now,
       });
       return 1;
     }
-    const [id, user_id, name, ticker, isin, asset_class_id, currency] = params;
+    const [
+      id,
+      user_id,
+      name,
+      ticker,
+      isin,
+      asset_class_id,
+      currency,
+      household_id,
+      visibility,
+      created_by,
+    ] = params;
     const existing = state.assets.find((r) => r.id === id);
     if (existing) {
       existing.name = name;
@@ -168,6 +233,9 @@ export function executePortfolioWrite(
         isin: isin ?? null,
         asset_class_id: asset_class_id || 'equity',
         currency: currency || 'INR',
+        household_id: household_id ?? null,
+        visibility: visibility ?? 'household_shared',
+        created_by: created_by ?? user_id,
         created_at: now,
       });
     }
@@ -213,6 +281,9 @@ export function executePortfolioWrite(
       amc_name,
       scheme_plan,
       cost_basis_verified,
+      household_id,
+      visibility,
+      created_by,
     ] = params;
     const existing = state.holdings.find(
       (r) => r.id === id || (r.user_id === user_id && r.asset_id === asset_id)
@@ -237,10 +308,35 @@ export function executePortfolioWrite(
         amc_name: amc_name ?? null,
         scheme_plan: scheme_plan ?? null,
         cost_basis_verified: cost_basis_verified ?? 1,
+        household_id: household_id ?? null,
+        visibility: visibility ?? 'household_shared',
+        created_by: created_by ?? user_id,
         updated_at: now,
       });
     }
     return 1;
+  }
+
+  if (/UPDATE holdings SET member_id = \?/i.test(sql)) {
+    const [member_id, id] = params;
+    const h = state.holdings.find((r) => r.id === id);
+    if (h) {
+      h.member_id = member_id;
+      h.updated_at = now;
+      return 1;
+    }
+    return 0;
+  }
+
+  if (/UPDATE holdings SET visibility = \? WHERE id = \?/i.test(sql)) {
+    const [visibility, id] = params;
+    const h = state.holdings.find((r) => r.id === id);
+    if (h) {
+      h.visibility = visibility;
+      h.updated_at = now;
+      return 1;
+    }
+    return 0;
   }
 
   if (
@@ -284,8 +380,10 @@ export function executePortfolioWrite(
   if (
     /UPDATE holdings SET quantity = \?, unit_cost_paise = \?, current_value_paise = \?/i.test(sql)
   ) {
-    const [quantity, unit_cost_paise, current_value_paise, id, user_id] = params;
-    const h = state.holdings.find((r) => r.id === id && r.user_id === user_id);
+    const [quantity, unit_cost_paise, current_value_paise, id, user_id, household_id] = params;
+    const h = state.holdings.find(
+      (r) => r.id === id && (r.user_id === user_id || r.household_id === household_id)
+    );
     if (h) {
       h.quantity = quantity;
       h.unit_cost_paise = unit_cost_paise;
@@ -297,16 +395,21 @@ export function executePortfolioWrite(
   }
 
   if (/DELETE FROM holdings WHERE id = \?/i.test(sql)) {
-    const [id, user_id] = params;
+    const [id, user_id, household_id] = params;
     const before = state.holdings.length;
     state.holdings = state.holdings.filter(
-      (r) => !(r.id === id && (!user_id || r.user_id === user_id))
+      (r) =>
+        !(
+          r.id === id &&
+          (!user_id || r.user_id === user_id || r.household_id === (household_id ?? user_id))
+        )
     );
     return before - state.holdings.length;
   }
 
   // 7. transactions
   if (/INSERT INTO transactions/i.test(sql)) {
+    const hasDestination = /destination_account_id/i.test(sql);
     const [
       id,
       user_id,
@@ -320,6 +423,11 @@ export function executePortfolioWrite(
       member_id,
       account_id,
     ] = params;
+    const destination_account_id = hasDestination ? params[11] : null;
+    const household_id = hasDestination ? params[12] : params[11];
+    const visibility = hasDestination ? params[13] : params[12];
+    const created_by = hasDestination ? params[14] : params[13];
+
     const existing = state.transactions.find((r) => r.id === id);
     if (existing) {
       existing.amount_paise = amount_paise;
@@ -337,6 +445,10 @@ export function executePortfolioWrite(
         notes: notes ?? null,
         member_id: member_id ?? null,
         account_id: account_id ?? null,
+        destination_account_id: destination_account_id ?? null,
+        household_id: household_id ?? null,
+        visibility: visibility ?? 'household_shared',
+        created_by: created_by ?? user_id,
         created_at: now,
       });
     }
@@ -344,10 +456,14 @@ export function executePortfolioWrite(
   }
 
   if (/DELETE FROM transactions WHERE id = \?/i.test(sql)) {
-    const [id, user_id] = params;
+    const [id, user_id, household_id] = params;
     const before = state.transactions.length;
     state.transactions = state.transactions.filter(
-      (r) => !(r.id === id && (!user_id || r.user_id === user_id))
+      (r) =>
+        !(
+          r.id === id &&
+          (!user_id || r.user_id === user_id || r.household_id === (household_id ?? user_id))
+        )
     );
     return before - state.transactions.length;
   }

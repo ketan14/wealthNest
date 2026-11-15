@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { HoldingDetailDto } from '@wealthnest/application';
+import {
+  HoldingOwnerShareInput,
+  RecordVisibility,
+  validateOwnershipShares,
+} from '@wealthnest/domain';
 import { Button } from '@/components/ui/Button';
 import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 import { usePreferences } from '@/lib/preferences/preferences-context';
+import { useFamily } from '@/lib/family/family-context';
+import { useHousehold } from '@/lib/supabase/household-context';
+import { VisibilityControl } from '@/components/household/VisibilityControl';
+import { JointOwnershipEditor } from '@/components/household/JointOwnershipEditor';
 import { X, AlertCircle } from 'lucide-react';
 
 export interface UpdateHoldingFormValues {
@@ -12,6 +21,8 @@ export interface UpdateHoldingFormValues {
   currentValue: number; // in rupees
   valuationDate?: string;
   notes?: string;
+  visibility?: RecordVisibility;
+  ownerShares?: HoldingOwnerShareInput[];
 }
 
 interface EditHoldingModalProps {
@@ -30,6 +41,8 @@ export function EditHoldingModal({
   isLoading = false,
 }: EditHoldingModalProps) {
   const { currencySymbol, preferences } = usePreferences();
+  const { members } = useFamily();
+  const { canEditFinancials } = useHousehold();
   const locale = preferences.numberFormat || 'en-IN';
 
   const [quantity, setQuantity] = useState<string>('1');
@@ -39,6 +52,8 @@ export function EditHoldingModal({
     new Date().toISOString().split('T')[0]!
   );
   const [notes, setNotes] = useState<string>('');
+  const [visibility, setVisibility] = useState<RecordVisibility>('household_shared');
+  const [ownerShares, setOwnerShares] = useState<HoldingOwnerShareInput[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const isRealEstate = holding?.assetClassId === 'real_estate';
@@ -55,9 +70,23 @@ export function EditHoldingModal({
       setCurrentValue((holding.currentValueCents / 100).toString());
       setValuationDate(new Date().toISOString().split('T')[0]!);
       setNotes('');
+      setVisibility(holding.visibility || 'household_shared');
+      if (holding.owners && holding.owners.length > 0) {
+        setOwnerShares([...holding.owners]);
+      } else if (holding.memberId) {
+        setOwnerShares([
+          { familyMemberId: holding.memberId, ownershipShare: 100, isPrimaryOwner: true },
+        ]);
+      } else if (members[0]) {
+        setOwnerShares([
+          { familyMemberId: members[0].id, ownershipShare: 100, isPrimaryOwner: true },
+        ]);
+      } else {
+        setOwnerShares([]);
+      }
       setError(null);
     }
-  }, [holding, isOpen]);
+  }, [holding, isOpen, members]);
 
   if (!isOpen || !holding) return null;
 
@@ -84,6 +113,24 @@ export function EditHoldingModal({
       return;
     }
 
+    if (!canEditFinancials) {
+      setError('Viewers have read-only access and cannot edit holdings.');
+      return;
+    }
+
+    if (ownerShares.length > 0) {
+      const shareCheck = validateOwnershipShares(
+        ownerShares.map((s) => ({
+          familyMemberId: s.familyMemberId,
+          sharePercentage: s.ownershipShare,
+        }))
+      );
+      if (!shareCheck.valid) {
+        setError(shareCheck.error || 'Ownership shares must total 100%.');
+        return;
+      }
+    }
+
     try {
       await onSubmit({
         holdingId: holding.holdingId,
@@ -92,6 +139,8 @@ export function EditHoldingModal({
         currentValue: parsedCurrentVal,
         valuationDate,
         notes,
+        visibility,
+        ownerShares: ownerShares.length > 0 ? ownerShares : undefined,
       });
       onClose();
     } catch (err: any) {
@@ -147,7 +196,7 @@ export function EditHoldingModal({
           <Button
             type="submit"
             size="sm"
-            disabled={isLoading}
+            disabled={isLoading || !canEditFinancials}
             className="text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
           >
             {isLoading ? 'Updating...' : 'Save Updated Valuation'}
@@ -280,6 +329,23 @@ export function EditHoldingModal({
               </div>
             </div>
           )}
+
+          {members.length > 0 && ownerShares.length > 0 && (
+            <JointOwnershipEditor
+              mode="holding"
+              members={members}
+              shares={ownerShares}
+              onChange={setOwnerShares}
+              disabled={!canEditFinancials}
+            />
+          )}
+
+          <VisibilityControl
+            visibility={visibility}
+            onChange={setVisibility}
+            disabled={!canEditFinancials}
+            compact
+          />
     </ResponsiveModalShell>
   );
 }

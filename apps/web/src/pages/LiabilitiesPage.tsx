@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/supabase/auth-context';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { useRepositories } from '@/lib/persistence/repository-context';
 import {
   GetNetWorthSummaryUseCase,
@@ -33,7 +34,12 @@ import { Landmark, Plus, RefreshCw, TrendingDown, Calendar, Percent, Wallet } fr
 
 export function LiabilitiesPage() {
   const { user } = useAuth();
-  const userId = user?.id || '';
+  const { activeHouseholdId, canEditFinancials } = useHousehold();
+  const { mode } = useRepositories();
+  const isDemoMode = mode === 'supabase' && (!user?.id || user.id.startsWith('demo-'));
+  const hasLiveBackend = !isDemoMode && Boolean(activeHouseholdId || user?.id);
+  const scopeId = activeHouseholdId || user?.id || '';
+  const userId = user?.id || scopeId;
   const queryClient = useQueryClient();
   const { members, selectedMemberId } = useFamily();
   const { isSupportModeActive, supportData } = useSupportSession();
@@ -70,14 +76,16 @@ export function LiabilitiesPage() {
     isLoading: isLoadingLiabilities,
     refetch: refetchLiabilities,
   } = useQuery({
-    queryKey: ['liabilities-list', userId],
+    queryKey: ['liabilities-list', scopeId],
     queryFn: async () => {
-      if (!userId) return [];
-      const res = await liabilityRepo.listLiabilitiesByUser(userId);
+      if (!scopeId) return [];
+      const res = await (liabilityRepo.listLiabilitiesByHousehold
+        ? liabilityRepo.listLiabilitiesByHousehold(scopeId)
+        : liabilityRepo.listLiabilitiesByUser(scopeId));
       if (!res.success) throw res.error;
       return res.value;
     },
-    enabled: Boolean(userId),
+    enabled: hasLiveBackend,
   });
 
   // Query 2: Integrated Net Worth and Property Equities Summary
@@ -86,20 +94,27 @@ export function LiabilitiesPage() {
     isLoading: isLoadingSummary,
     refetch: refetchSummary,
   } = useQuery<NetWorthSummary | null>({
-    queryKey: ['net-worth-summary', userId, selectedMemberId],
+    queryKey: ['net-worth-summary', scopeId, selectedMemberId],
     queryFn: async () => {
-      if (!userId) return null;
+      if (!scopeId) return null;
       const useCase = new GetNetWorthSummaryUseCase(holdingRepo, liabilityRepo);
-      const res = await useCase.execute({ userId, memberId: selectedMemberId });
+      const res = await useCase.execute({
+        userId: userId || 'demo-user',
+        householdId: activeHouseholdId || undefined,
+        memberId: selectedMemberId,
+      });
       if (!res.success) throw res.error;
       return res.value;
     },
-    enabled: Boolean(userId),
+    enabled: hasLiveBackend,
   });
 
   // Mutation: Save / Create / Update Liability
   const saveLiabilityMutation = useMutation({
     mutationFn: async (params: CreateLiabilityParams | UpdateLiabilityParams) => {
+      if (hasLiveBackend && !canEditFinancials) {
+        throw new Error('View-only household role cannot modify liabilities.');
+      }
       if ('id' in params) {
         const useCase = new UpdateLiabilityUseCase(liabilityRepo);
         const res = await useCase.execute(params);
@@ -113,9 +128,9 @@ export function LiabilitiesPage() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['liabilities-list', userId] });
-      queryClient.invalidateQueries({ queryKey: ['net-worth-summary', userId] });
-      queryClient.invalidateQueries({ queryKey: ['holdings-details', userId] });
+      queryClient.invalidateQueries({ queryKey: ['liabilities-list'] });
+      queryClient.invalidateQueries({ queryKey: ['net-worth-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['holdings-details'] });
     },
   });
 
@@ -128,20 +143,25 @@ export function LiabilitiesPage() {
         return;
       }
 
-      // 2. Real database loan for authenticated user
+      if (!canEditFinancials) {
+        throw new Error('View-only household role cannot delete liabilities.');
+      }
+
+      // 2. Real database loan for active household
       const useCase = new DeleteLiabilityUseCase(liabilityRepo);
-      const res = await useCase.execute(id, userId);
+      const res = await useCase.execute(id, scopeId || userId);
       if (!res.success) throw res.error;
     },
     onSuccess: () => {
-      if (userId) {
-        queryClient.invalidateQueries({ queryKey: ['liabilities-list', userId] });
-        queryClient.invalidateQueries({ queryKey: ['net-worth-summary', userId] });
+      if (scopeId || userId) {
+        queryClient.invalidateQueries({ queryKey: ['liabilities-list'] });
+        queryClient.invalidateQueries({ queryKey: ['net-worth-summary'] });
       }
     },
   });
 
   const handleDelete = (l: LiabilityDto) => {
+    if (!canEditFinancials || isSupportModeActive) return;
     setLiabilityToDelete(l);
   };
 
@@ -177,12 +197,12 @@ export function LiabilitiesPage() {
         updatedAt: item.startDate,
       }));
     }
-    const base: readonly LiabilityDto[] =
-      liabilities.length > 0 ? liabilities : localDemoLiabilities;
+    const base: readonly LiabilityDto[] = hasLiveBackend ? liabilities : localDemoLiabilities;
     if (!selectedMemberId || selectedMemberId === 'all') return base;
     return base.filter(
       (l) =>
         l.memberId === selectedMemberId ||
+        l.parties?.some((p) => p.familyMemberId === selectedMemberId) ||
         (l.coBorrowerMemberIds && l.coBorrowerMemberIds.includes(selectedMemberId))
     );
   }, [isSupportModeActive, supportData, liabilities, localDemoLiabilities, selectedMemberId]);
@@ -274,12 +294,17 @@ export function LiabilitiesPage() {
           </Button>
           <Button
             onClick={() => {
+              if (!canEditFinancials || isSupportModeActive) return;
               setEditingLiability(null);
               setIsAddModalOpen(true);
             }}
-            disabled={isSupportModeActive}
+            disabled={isSupportModeActive || !canEditFinancials}
             title={
-              isSupportModeActive ? 'Disabled in Support Impersonation Mode (Read-Only)' : undefined
+              isSupportModeActive
+                ? 'Disabled in Support Impersonation Mode (Read-Only)'
+                : !canEditFinancials
+                  ? 'View-only household role cannot add liabilities'
+                  : undefined
             }
             className="gap-2 shadow-lg shadow-primary/20 disabled:opacity-50"
           >
@@ -398,7 +423,12 @@ export function LiabilitiesPage() {
           propertyEquities={effectiveSummary.propertyEquities}
           currencySymbol={currencySymbol}
           locale={locale}
-          onUpdateAppraisal={(asset) => setValuationModalAsset(asset)}
+          canEditFinancials={canEditFinancials}
+          onUpdateAppraisal={(asset) => {
+            if (canEditFinancials && !isSupportModeActive) {
+              setValuationModalAsset(asset);
+            }
+          }}
         />
       )}
 
@@ -411,13 +441,20 @@ export function LiabilitiesPage() {
         members={members}
         currencySymbol={currencySymbol}
         locale={locale}
+        canEditFinancials={canEditFinancials}
         onAddFirstLoan={() => {
+          if (!canEditFinancials || isSupportModeActive) return;
           setEditingLiability(null);
           setIsAddModalOpen(true);
         }}
-        onPayEmi={setEmiModalLiability}
-        onUpdateBalance={setBalanceModalLiability}
+        onPayEmi={(l) => {
+          if (canEditFinancials && !isSupportModeActive) setEmiModalLiability(l);
+        }}
+        onUpdateBalance={(l) => {
+          if (canEditFinancials && !isSupportModeActive) setBalanceModalLiability(l);
+        }}
         onEditLiability={(l) => {
+          if (!canEditFinancials || isSupportModeActive) return;
           setEditingLiability(l);
           setIsAddModalOpen(true);
         }}
@@ -474,7 +511,7 @@ export function LiabilitiesPage() {
           userId={userId}
           onSuccess={() => {
             refetchSummary();
-            queryClient.invalidateQueries({ queryKey: ['holdings-details', userId] });
+            queryClient.invalidateQueries({ queryKey: ['holdings-details'] });
           }}
         />
       )}

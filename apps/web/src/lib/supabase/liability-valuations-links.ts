@@ -7,17 +7,52 @@ import {
   RecordAssetValuationParams,
 } from '@wealthnest/application';
 import { supabase } from './client';
+import { toValidUuidOrNull } from './uuid-utils';
+import { resolveHouseholdIdForWrite } from './household-scope';
+
+async function resolveEntityHouseholdId(
+  explicitHouseholdId: string | undefined,
+  table: 'liabilities' | 'assets',
+  entityId: string,
+  userId?: string
+): Promise<string> {
+  const direct = toValidUuidOrNull(explicitHouseholdId);
+  if (direct) return direct;
+
+  const validEntityId = toValidUuidOrNull(entityId);
+  if (validEntityId) {
+    const { data } = await supabase
+      .from(table)
+      .select('household_id')
+      .eq('id', validEntityId)
+      .maybeSingle();
+    if (data?.household_id) {
+      return String(data.household_id);
+    }
+  }
+
+  return resolveHouseholdIdForWrite(undefined, userId);
+}
 
 export async function recordLiabilityBalance(
   params: RecordLiabilityBalanceParams
 ): Promise<Result<LiabilityBalanceDto>> {
   try {
+    const householdId = await resolveEntityHouseholdId(
+      params.householdId,
+      'liabilities',
+      params.liabilityId,
+      params.userId
+    );
+    const actorId = toValidUuidOrNull(params.userId);
+
     const { data, error } = await supabase
       .from('liability_balances')
       .upsert(
         {
+          household_id: householdId,
           liability_id: params.liabilityId,
-          user_id: params.userId,
+          ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
           balance_cents: Number(params.balanceCents),
           as_of_date: params.asOfDate,
           source: params.source || 'manual',
@@ -25,7 +60,7 @@ export async function recordLiabilityBalance(
         },
         { onConflict: 'liability_id, as_of_date' }
       )
-      .select()
+      .select('*')
       .single();
 
     if (error || !data) {
@@ -36,8 +71,9 @@ export async function recordLiabilityBalance(
 
     return ok({
       id: data.id,
+      householdId: data.household_id,
       liabilityId: data.liability_id,
-      userId: data.user_id,
+      userId: data.created_by || data.household_id,
       balanceCents: BigInt(Math.round(Number(data.balance_cents))),
       asOfDate: data.as_of_date,
       source: data.source,
@@ -51,14 +87,13 @@ export async function recordLiabilityBalance(
 
 export async function listLiabilityBalances(
   liabilityId: string,
-  userId: string
+  _scopeId: string
 ): Promise<Result<readonly LiabilityBalanceDto[]>> {
   try {
     const { data, error } = await supabase
       .from('liability_balances')
       .select('*')
       .eq('liability_id', liabilityId)
-      .eq('user_id', userId)
       .order('as_of_date', { ascending: false });
 
     if (error) {
@@ -67,8 +102,9 @@ export async function listLiabilityBalances(
 
     const balances: LiabilityBalanceDto[] = (data || []).map((b) => ({
       id: b.id,
+      householdId: b.household_id,
       liabilityId: b.liability_id,
-      userId: b.user_id,
+      userId: b.created_by || b.household_id,
       balanceCents: BigInt(Math.round(Number(b.balance_cents))),
       asOfDate: b.as_of_date,
       source: b.source,
@@ -86,12 +122,21 @@ export async function recordAssetValuation(
   params: RecordAssetValuationParams
 ): Promise<Result<AssetValuationDto>> {
   try {
+    const householdId = await resolveEntityHouseholdId(
+      params.householdId,
+      'assets',
+      params.assetId,
+      params.userId
+    );
+    const actorId = toValidUuidOrNull(params.userId);
+
     const { data, error } = await supabase
       .from('asset_valuations')
       .upsert(
         {
+          household_id: householdId,
           asset_id: params.assetId,
-          user_id: params.userId,
+          ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
           valuation_cents: Number(params.valuationCents),
           currency: params.currency || 'INR',
           as_of_date: params.asOfDate,
@@ -99,9 +144,9 @@ export async function recordAssetValuation(
           notes: params.notes || null,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: 'user_id, asset_id, as_of_date' }
+        { onConflict: 'asset_id, as_of_date' }
       )
-      .select()
+      .select('*')
       .single();
 
     if (error || !data) {
@@ -110,20 +155,21 @@ export async function recordAssetValuation(
       );
     }
 
-    // Also update holdings current_value_cents if this valuation is current/latest
     await supabase
       .from('holdings')
       .update({
         current_value_cents: Number(params.valuationCents),
+        ...(actorId ? { updated_by: actorId } : {}),
         updated_at: new Date().toISOString(),
       })
       .eq('asset_id', params.assetId)
-      .eq('user_id', params.userId);
+      .eq('household_id', householdId);
 
     return ok({
       id: data.id,
+      householdId: data.household_id,
       assetId: data.asset_id,
-      userId: data.user_id,
+      userId: data.created_by || data.household_id,
       valuationCents: BigInt(Math.round(Number(data.valuation_cents))),
       currency: data.currency,
       asOfDate: data.as_of_date,
@@ -138,14 +184,13 @@ export async function recordAssetValuation(
 
 export async function listAssetValuations(
   assetId: string,
-  userId: string
+  _scopeId: string
 ): Promise<Result<readonly AssetValuationDto[]>> {
   try {
     const { data, error } = await supabase
       .from('asset_valuations')
       .select('*')
       .eq('asset_id', assetId)
-      .eq('user_id', userId)
       .order('as_of_date', { ascending: false });
 
     if (error) {
@@ -154,8 +199,9 @@ export async function listAssetValuations(
 
     const valuations: AssetValuationDto[] = (data || []).map((v) => ({
       id: v.id,
+      householdId: v.household_id,
       assetId: v.asset_id,
-      userId: v.user_id,
+      userId: v.created_by || v.household_id,
       valuationCents: BigInt(Math.round(Number(v.valuation_cents))),
       currency: v.currency,
       asOfDate: v.as_of_date,
@@ -171,13 +217,18 @@ export async function listAssetValuations(
 }
 
 export async function listAssetLiabilityLinks(
-  userId: string
+  scopeId: string
 ): Promise<Result<readonly AssetLiabilityLinkDto[]>> {
   try {
+    const validHouseholdId = toValidUuidOrNull(scopeId);
+    if (!validHouseholdId) {
+      return ok([]);
+    }
+
     const { data, error } = await supabase
       .from('asset_liability_links')
       .select('*')
-      .eq('user_id', userId);
+      .eq('household_id', validHouseholdId);
 
     if (error) {
       return err(new Error(`Failed to list asset liability links: ${error.message}`));
@@ -185,7 +236,8 @@ export async function listAssetLiabilityLinks(
 
     const links: AssetLiabilityLinkDto[] = (data || []).map((l) => ({
       id: l.id,
-      userId: l.user_id,
+      householdId: l.household_id,
+      userId: l.created_by || l.household_id,
       assetId: l.asset_id,
       liabilityId: l.liability_id,
       linkType: l.link_type as any,
@@ -201,17 +253,27 @@ export async function listAssetLiabilityLinks(
 
 export async function linkAssetLiability(params: {
   userId: string;
+  householdId?: string;
   assetId: string;
   liabilityId: string;
   linkType?: any;
   ownershipSharePercentage?: number;
 }): Promise<Result<void>> {
   try {
+    const householdId = await resolveEntityHouseholdId(
+      params.householdId,
+      'assets',
+      params.assetId,
+      params.userId
+    );
+    const actorId = toValidUuidOrNull(params.userId);
+
     const { error } = await supabase.from('asset_liability_links').upsert(
       {
-        user_id: params.userId,
+        household_id: householdId,
         asset_id: params.assetId,
         liability_id: params.liabilityId,
+        ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
         link_type: params.linkType || 'mortgage',
         ownership_share_percentage: params.ownershipSharePercentage || 100,
       },
@@ -228,7 +290,7 @@ export async function linkAssetLiability(params: {
 }
 
 export async function unlinkAssetLiability(
-  userId: string,
+  _scopeId: string,
   assetId: string,
   liabilityId: string
 ): Promise<Result<void>> {
@@ -236,7 +298,6 @@ export async function unlinkAssetLiability(
     const { error } = await supabase
       .from('asset_liability_links')
       .delete()
-      .eq('user_id', userId)
       .eq('asset_id', assetId)
       .eq('liability_id', liabilityId);
 

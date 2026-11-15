@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { FamilyDistributionWidget } from '@/components/family/FamilyDistributionWidget';
 import { HouseholdSharingCard } from '@/components/settings/HouseholdSharingCard';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { Briefcase, Plus, Shield, SlidersHorizontal, Users } from 'lucide-react';
 
 interface FamilyMemberItem {
@@ -34,14 +35,26 @@ interface FamilyDematsTabProps {
  * registered family entities, connected demat/folio accounts, and Section 112A advisory.
  */
 export function FamilyDematsTab({ members, accounts, onOpenManageFamily }: FamilyDematsTabProps) {
+  const { activeHousehold, householdRole } = useHousehold();
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-xl bg-gradient-to-r from-slate-900 via-indigo-950/30 to-slate-900 border border-slate-800">
         <div>
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Users className="w-5 h-5 text-indigo-400" />
-            Family Members & Demat Folios
-          </h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Users className="w-5 h-5 text-indigo-400" />
+              Family Members & Demat Folios
+            </h2>
+            {activeHousehold && (
+              <Badge
+                variant="outline"
+                className="text-[11px] bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+              >
+                {activeHousehold.name} • {householdRole || activeHousehold.role}
+              </Badge>
+            )}
+          </div>
           <p className="text-sm text-slate-400 mt-1">
             Manage household legal entities (Individual PAN, HUF, Minor) and link Zerodha, Groww,
             Angel One, or CAMS accounts.

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useFamily } from '@/lib/family/family-context';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { FamilyMemberDto } from '@wealthnest/application';
-import { X, Users, Shield, Briefcase, Plus, Trash2 } from 'lucide-react';
+import { FamilyEntityType } from '@wealthnest/domain';
+import { X, Users, Shield, Briefcase, Plus, Trash2, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 import { ManageFamilyAccountsTab } from './ManageFamilyAccountsTab';
@@ -12,44 +14,61 @@ interface ManageFamilyModalProps {
 }
 
 const COLOR_PRESETS = [
-  '#3b82f6', // Blue
-  '#ec4899', // Pink
-  '#8b5cf6', // Purple
-  '#10b981', // Emerald
-  '#f59e0b', // Amber
-  '#06b6d4', // Cyan
-  '#6366f1', // Indigo
+  '#3b82f6',
+  '#ec4899',
+  '#8b5cf6',
+  '#10b981',
+  '#f59e0b',
+  '#06b6d4',
+  '#6366f1',
 ];
 
 export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
   const { members, accounts, createMember, deleteMember } = useFamily();
+  const { canEditFinancials, activeHousehold } = useHousehold();
 
   const [activeTab, setActiveTab] = useState<'members' | 'accounts'>('members');
   const [isAddingMember, setIsAddingMember] = useState(false);
 
-  // New member form state
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberRel, setNewMemberRel] = useState<FamilyMemberDto['relationship']>('spouse');
+  const [newMemberEntityType, setNewMemberEntityType] = useState<FamilyEntityType>('individual');
+  const [newMemberEmail, setNewMemberEmail] = useState('');
   const [newMemberPan, setNewMemberPan] = useState('');
   const [newMemberColor, setNewMemberColor] = useState('#ec4899');
   const [newMemberPrimary, setNewMemberPrimary] = useState(false);
 
   if (!isOpen) return null;
 
+  const handleRelationshipChange = (rel: FamilyMemberDto['relationship']) => {
+    setNewMemberRel(rel);
+    if (rel === 'huf') {
+      setNewMemberEntityType('huf');
+    } else if (rel === 'child' && newMemberEntityType === 'huf') {
+      setNewMemberEntityType('minor');
+    } else if (newMemberEntityType === 'huf') {
+      setNewMemberEntityType('individual');
+    }
+  };
+
   const handleCreateMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMemberName.trim()) return;
+    if (!newMemberName.trim() || !canEditFinancials) return;
 
     await createMember({
       name: newMemberName.trim(),
       relationship: newMemberRel,
+      entityType: newMemberEntityType,
+      email: newMemberEmail.trim() || undefined,
       panMasked: newMemberPan.trim().toUpperCase() || undefined,
       colorHex: newMemberColor,
       isPrimary: newMemberPrimary,
     });
 
     setNewMemberName('');
+    setNewMemberEmail('');
     setNewMemberPan('');
+    setNewMemberPrimary(false);
     setIsAddingMember(false);
   };
 
@@ -66,10 +85,11 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
             </div>
             <div className="min-w-0">
               <h2 id="manage-family-title" className="text-base font-semibold text-white">
-                Family Entities & Demat Accounts
+                Family Entities &amp; Demat Accounts
               </h2>
-              <p className="text-xs text-slate-400">
-                Organize holdings across family members, HUF entities, and broker folios
+              <p className="text-xs text-slate-400 truncate">
+                {activeHousehold?.name || 'Household'} — organize family members, HUF entities, and
+                broker folios
               </p>
             </div>
           </div>
@@ -107,7 +127,7 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
             }`}
           >
             <Briefcase className="w-4 h-4 shrink-0" />
-            <span>Demat & Folio Accounts ({accounts.length})</span>
+            <span>Demat &amp; Folio Accounts ({accounts.length})</span>
           </button>
         </div>
       }
@@ -126,7 +146,6 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
     >
       {activeTab === 'members' ? (
         <div className="space-y-4">
-          {/* Member List */}
           <div className="space-y-2">
             {members.map((member) => (
               <div
@@ -146,10 +165,25 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
                           Primary
                         </span>
                       )}
-                      {member.relationship === 'huf' && (
+                      {(member.entityType === 'huf' || member.relationship === 'huf') && (
                         <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-purple-900/60 text-purple-300 border border-purple-700/50 flex items-center gap-1">
                           <Shield className="w-3 h-3" />
-                          HUF Tax Entity
+                          HUF
+                        </span>
+                      )}
+                      {member.entityType === 'minor' && (
+                        <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-teal-900/60 text-teal-300 border border-teal-700/50">
+                          Minor
+                        </span>
+                      )}
+                      {member.linkedUserId ? (
+                        <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-emerald-900/50 text-emerald-300 border border-emerald-700/40 flex items-center gap-1">
+                          <Link2 className="w-2.5 h-2.5" />
+                          Login Linked
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                          Profile Only
                         </span>
                       )}
                     </div>
@@ -163,11 +197,17 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
                           </span>
                         </>
                       )}
+                      {member.email && (
+                        <>
+                          <span>•</span>
+                          <span className="text-slate-300">{member.email}</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                {!member.isPrimary && members.length > 1 && (
+                {canEditFinancials && !member.isPrimary && members.length > 1 && (
                   <button
                     type="button"
                     onClick={() => deleteMember(member.id)}
@@ -181,127 +221,155 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
             ))}
           </div>
 
-          {/* Add Member Form / Button */}
-          {isAddingMember ? (
-            <form
-              onSubmit={handleCreateMember}
-              className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-3"
-            >
-              <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                Add New Family Member / Entity
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
-                    Legal Entity / Member Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newMemberName}
-                    onChange={(e) => setNewMemberName(e.target.value)}
-                    placeholder="e.g. Parul Vaghela or Vaghela HUF"
-                    className="w-full text-xs bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
+          {canEditFinancials &&
+            (isAddingMember ? (
+              <form
+                onSubmit={handleCreateMember}
+                className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-3"
+              >
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  Add New Family Member / Entity
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
-                    Relationship / Entity Type
-                  </label>
-                  <select
-                    value={newMemberRel}
-                    onChange={(e) => setNewMemberRel(e.target.value as any)}
-                    className="w-full text-xs bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="spouse">Spouse</option>
-                    <option value="huf">HUF (Hindu Undivided Family)</option>
-                    <option value="child">Child (Minor / Adult)</option>
-                    <option value="parent">Parent / Senior Citizen</option>
-                    <option value="other">Other Entity</option>
-                  </select>
-                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">
+                      Legal Entity / Member Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={newMemberName}
+                      onChange={(e) => setNewMemberName(e.target.value)}
+                      placeholder="e.g. Parul Vaghela or Vaghela HUF"
+                      className="w-full text-xs bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
-                    PAN Card (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={10}
-                    value={newMemberPan}
-                    onChange={(e) => setNewMemberPan(e.target.value.toUpperCase())}
-                    placeholder="e.g. ABCDE1234F"
-                    className="w-full text-xs bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">
+                      Relationship
+                    </label>
+                    <select
+                      value={newMemberRel}
+                      onChange={(e) => handleRelationshipChange(e.target.value as any)}
+                      className="w-full text-xs bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="spouse">Spouse</option>
+                      <option value="huf">HUF (Hindu Undivided Family)</option>
+                      <option value="child">Child</option>
+                      <option value="parent">Parent / Senior Citizen</option>
+                      <option value="other">Other Entity</option>
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
-                    Display Color
-                  </label>
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    {COLOR_PRESETS.map((color) => (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => setNewMemberColor(color)}
-                        className="w-6 h-6 rounded-full border-2 transition-transform"
-                        style={{
-                          backgroundColor: color,
-                          borderColor: newMemberColor === color ? '#ffffff' : 'transparent',
-                          transform: newMemberColor === color ? 'scale(1.15)' : 'scale(1)',
-                        }}
-                      />
-                    ))}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">
+                      Entity Kind
+                    </label>
+                    <select
+                      value={newMemberEntityType}
+                      onChange={(e) => setNewMemberEntityType(e.target.value as FamilyEntityType)}
+                      className="w-full text-xs bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="individual">Individual (Adult)</option>
+                      <option value="minor">Minor</option>
+                      <option value="huf">HUF Entity</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">
+                      Email (Optional — for future login invite)
+                    </label>
+                    <input
+                      type="email"
+                      value={newMemberEmail}
+                      onChange={(e) => setNewMemberEmail(e.target.value)}
+                      placeholder="optional@family.com"
+                      className="w-full text-xs bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">
+                      PAN Card (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={10}
+                      value={newMemberPan}
+                      onChange={(e) => setNewMemberPan(e.target.value.toUpperCase())}
+                      placeholder="e.g. ABCDE1234F"
+                      className="w-full text-xs bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">
+                      Display Color
+                    </label>
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      {COLOR_PRESETS.map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setNewMemberColor(color)}
+                          className="w-6 h-6 rounded-full border-2 transition-transform"
+                          style={{
+                            backgroundColor: color,
+                            borderColor: newMemberColor === color ? '#ffffff' : 'transparent',
+                            transform: newMemberColor === color ? 'scale(1.15)' : 'scale(1)',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="sm:col-span-2 flex items-center gap-2 pt-1">
+                    <input
+                      type="checkbox"
+                      id="newMemberPrimaryCheck"
+                      checked={newMemberPrimary}
+                      onChange={(e) => setNewMemberPrimary(e.target.checked)}
+                      className="rounded border-slate-700 bg-slate-900 text-blue-500 focus:ring-blue-500 w-4 h-4"
+                    />
+                    <label htmlFor="newMemberPrimaryCheck" className="text-xs text-slate-300">
+                      Set as primary legal entity for unassigned folios
+                    </label>
                   </div>
                 </div>
-                <div className="sm:col-span-2 flex items-center gap-2 pt-1">
-                  <input
-                    type="checkbox"
-                    id="newMemberPrimaryCheck"
-                    checked={newMemberPrimary}
-                    onChange={(e) => setNewMemberPrimary(e.target.checked)}
-                    className="rounded border-slate-700 bg-slate-900 text-blue-500 focus:ring-blue-500 w-4 h-4"
-                  />
-                  <label htmlFor="newMemberPrimaryCheck" className="text-xs text-slate-300">
-                    Set as primary legal entity for unassigned folios
-                  </label>
-                </div>
-              </div>
 
-              <div className="flex justify-end gap-2 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsAddingMember(false)}
-                  className="text-xs border-slate-700"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="text-xs bg-blue-600 hover:bg-blue-500"
-                >
-                  Save Entity
-                </Button>
-              </div>
-            </form>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsAddingMember(true)}
-              className="w-full text-xs border-dashed border-slate-700 hover:border-slate-600 text-slate-300 py-2.5"
-            >
-              <Plus className="w-4 h-4 mr-1.5" />
-              Add Family Member or HUF Entity
-            </Button>
-          )}
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsAddingMember(false)}
+                    className="text-xs border-slate-700"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    className="text-xs bg-blue-600 hover:bg-blue-500"
+                  >
+                    Save Entity
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAddingMember(true)}
+                className="w-full text-xs border-dashed border-slate-700 hover:border-slate-600 text-slate-300 py-2.5"
+              >
+                <Plus className="w-4 h-4 mr-1.5" />
+                Add Family Member or HUF Entity
+              </Button>
+            ))}
         </div>
       ) : (
         <ManageFamilyAccountsTab />

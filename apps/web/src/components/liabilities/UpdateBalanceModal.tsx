@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { LiabilityDto } from '@wealthnest/application';
 import { useLiabilityRepository } from '@/lib/persistence/repository-context';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { Button } from '@/components/ui/Button';
 import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
@@ -31,14 +32,16 @@ export function UpdateBalanceModal({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { activeHouseholdId, canEditFinancials } = useHousehold();
   const liabilityRepo = useLiabilityRepository();
+  const scopeId = activeHouseholdId || userId;
 
   // Fetch historical balances for this liability
   const { data: balanceHistory, refetch: refetchHistory } = useQuery({
-    queryKey: ['liability-balances', liability?.id],
+    queryKey: ['liability-balances', liability?.id, scopeId],
     queryFn: async () => {
       if (!liability) return [];
-      const res = await liabilityRepo.listLiabilityBalances(liability.id, userId);
+      const res = await liabilityRepo.listLiabilityBalances(liability.id, scopeId);
       return res.success ? res.value : [];
     },
     enabled: isOpen && Boolean(liability),
@@ -60,6 +63,11 @@ export function UpdateBalanceModal({
     e.preventDefault();
     setErrorMsg(null);
 
+    if (!canEditFinancials) {
+      setErrorMsg('Viewers have read-only access and cannot record loan balances.');
+      return;
+    }
+
     const balance = parseFloat(balanceStr);
     if (isNaN(balance) || balance < 0) {
       setErrorMsg(`Please enter a valid outstanding balance (${currencySymbol}0 or greater).`);
@@ -76,6 +84,7 @@ export function UpdateBalanceModal({
       const res = await liabilityRepo.recordLiabilityBalance({
         liabilityId: liability.id,
         userId,
+        householdId: activeHouseholdId,
         balanceCents: BigInt(Math.round(balance * 100)),
         asOfDate,
         source,
@@ -134,7 +143,7 @@ export function UpdateBalanceModal({
           <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting} className="min-w-[120px]">
+          <Button type="submit" disabled={isSubmitting || !canEditFinancials} className="min-w-[120px]">
             {isSubmitting ? 'Recording...' : 'Record Balance'}
           </Button>
         </div>

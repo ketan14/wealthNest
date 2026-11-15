@@ -21,6 +21,7 @@ interface MarketSessionInfo {
 
 interface PortfolioHeaderProps {
   readonly isAuthenticated: boolean;
+  readonly canEditFinancials?: boolean;
   readonly marketSession: MarketSessionInfo;
   readonly isPolling: boolean;
   readonly onTogglePolling: () => void;
@@ -40,6 +41,7 @@ interface PortfolioHeaderProps {
  */
 export function PortfolioHeader({
   isAuthenticated,
+  canEditFinancials = true,
   marketSession,
   isPolling,
   onTogglePolling,
@@ -131,9 +133,13 @@ export function PortfolioHeader({
           <Button
             variant="outline"
             onClick={onOpenImportModal}
-            disabled={isSupportModeActive}
+            disabled={isSupportModeActive || !canEditFinancials}
             title={
-              isSupportModeActive ? 'Disabled in Support Impersonation Mode (Read-Only)' : undefined
+              isSupportModeActive
+                ? 'Disabled in Support Impersonation Mode (Read-Only)'
+                : !canEditFinancials
+                  ? 'View-only household role cannot import CAS holdings'
+                  : undefined
             }
             className="gap-2 shadow-sm border-primary/20 hover:bg-primary/5 text-foreground text-xs disabled:opacity-50"
           >
@@ -142,9 +148,13 @@ export function PortfolioHeader({
           </Button>
           <Button
             onClick={onOpenAddModal}
-            disabled={isSupportModeActive}
+            disabled={isSupportModeActive || !canEditFinancials}
             title={
-              isSupportModeActive ? 'Disabled in Support Impersonation Mode (Read-Only)' : undefined
+              isSupportModeActive
+                ? 'Disabled in Support Impersonation Mode (Read-Only)'
+                : !canEditFinancials
+                  ? 'View-only household role cannot add holdings'
+                  : undefined
             }
             className="gap-2 shadow-sm text-xs disabled:opacity-50"
           >

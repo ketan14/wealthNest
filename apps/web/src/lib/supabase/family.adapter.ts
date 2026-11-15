@@ -1,15 +1,20 @@
 import { Result, ok, err } from '@wealthnest/shared';
+import { FamilyEntityType, RecordVisibility } from '@wealthnest/domain';
 import {
   FamilyRepositoryPort,
   FamilyMemberDto,
   PortfolioAccountDto,
 } from '@wealthnest/application';
 import { supabase } from './client';
+import { toValidUuidOrNull } from './uuid-utils';
+import { resolveHouseholdIdForWrite } from './household-scope';
 
 export const DEFAULT_DEMO_MEMBERS: FamilyMemberDto[] = [
   {
     id: 'mem-self',
+    householdId: 'demo-household-vaghela',
     userId: 'demo-user-001',
+    entityType: 'individual',
     name: 'Ketan Vaghela',
     relationship: 'self',
     panMasked: 'ABCDE1234F',
@@ -19,7 +24,9 @@ export const DEFAULT_DEMO_MEMBERS: FamilyMemberDto[] = [
   },
   {
     id: 'mem-spouse',
+    householdId: 'demo-household-vaghela',
     userId: 'demo-user-001',
+    entityType: 'individual',
     name: 'Parul Vaghela',
     relationship: 'spouse',
     panMasked: 'BGTYU5678K',
@@ -29,7 +36,9 @@ export const DEFAULT_DEMO_MEMBERS: FamilyMemberDto[] = [
   },
   {
     id: 'mem-child',
+    householdId: 'demo-household-vaghela',
     userId: 'demo-user-001',
+    entityType: 'minor',
     name: 'Krisha Vaghela',
     relationship: 'child',
     panMasked: 'MINR90123C',
@@ -39,7 +48,9 @@ export const DEFAULT_DEMO_MEMBERS: FamilyMemberDto[] = [
   },
   {
     id: 'mem-huf',
+    householdId: 'demo-household-vaghela',
     userId: 'demo-user-001',
+    entityType: 'huf',
     name: 'Shamalbhai Vaghela HUF',
     relationship: 'huf',
     panMasked: 'AAACH9999H',
@@ -49,7 +60,9 @@ export const DEFAULT_DEMO_MEMBERS: FamilyMemberDto[] = [
   },
   {
     id: 'mem-mother',
+    householdId: 'demo-household-vaghela',
     userId: 'demo-user-001',
+    entityType: 'individual',
     name: 'Ramilaben Vaghela',
     relationship: 'parent',
     panMasked: 'PRTYK4321M',
@@ -62,8 +75,10 @@ export const DEFAULT_DEMO_MEMBERS: FamilyMemberDto[] = [
 export const DEFAULT_DEMO_ACCOUNTS: PortfolioAccountDto[] = [
   {
     id: 'acc-zerodha',
+    householdId: 'demo-household-vaghela',
     userId: 'demo-user-001',
     memberId: 'mem-self',
+    visibility: 'household_shared',
     accountName: 'Zerodha Kite',
     brokerName: 'Zerodha',
     depository: 'CDSL',
@@ -72,8 +87,10 @@ export const DEFAULT_DEMO_ACCOUNTS: PortfolioAccountDto[] = [
   },
   {
     id: 'acc-groww',
+    householdId: 'demo-household-vaghela',
     userId: 'demo-user-001',
     memberId: 'mem-spouse',
+    visibility: 'household_shared',
     accountName: 'Groww / BoB Direct Demat',
     brokerName: 'Groww',
     depository: 'CDSL',
@@ -82,8 +99,10 @@ export const DEFAULT_DEMO_ACCOUNTS: PortfolioAccountDto[] = [
   },
   {
     id: 'acc-icici',
+    householdId: 'demo-household-vaghela',
     userId: 'demo-user-001',
     memberId: 'mem-huf',
+    visibility: 'household_shared',
     accountName: 'ICICI Direct HUF',
     brokerName: 'ICICI Direct',
     depository: 'NSDL',
@@ -92,8 +111,10 @@ export const DEFAULT_DEMO_ACCOUNTS: PortfolioAccountDto[] = [
   },
   {
     id: 'acc-cams',
+    householdId: 'demo-household-vaghela',
     userId: 'demo-user-001',
     memberId: 'mem-child',
+    visibility: 'household_shared',
     accountName: 'CAMS / Parag Parikh Folio',
     brokerName: 'CAMS',
     depository: 'CAMS',
@@ -102,8 +123,10 @@ export const DEFAULT_DEMO_ACCOUNTS: PortfolioAccountDto[] = [
   },
   {
     id: 'acc-sbi-ppf',
+    householdId: 'demo-household-vaghela',
     userId: 'demo-user-001',
     memberId: 'mem-self',
+    visibility: 'household_shared',
     accountName: 'SBI PPF & Fixed Income',
     brokerName: 'SBI',
     depository: 'OTHER',
@@ -112,8 +135,10 @@ export const DEFAULT_DEMO_ACCOUNTS: PortfolioAccountDto[] = [
   },
   {
     id: 'acc-bob-fd',
+    householdId: 'demo-household-vaghela',
     userId: 'demo-user-001',
     memberId: 'mem-mother',
+    visibility: 'household_shared',
     accountName: 'Bank of Baroda Senior Citizen Deposit',
     brokerName: 'Bank of Baroda',
     depository: 'OTHER',
@@ -182,6 +207,43 @@ export const DEFAULT_DEMO_HOLDINGS_FAMILY = [
 const LOCAL_STORAGE_MEMBERS_KEY = 'wealthnest_family_members';
 const LOCAL_STORAGE_ACCOUNTS_KEY = 'wealthnest_family_accounts';
 
+function mapFamilyMemberRow(r: any): FamilyMemberDto {
+  return {
+    id: r.id,
+    householdId: r.household_id,
+    userId: r.linked_user_id || r.created_by || r.household_id,
+    linkedUserId: r.linked_user_id ?? undefined,
+    email: r.email ?? undefined,
+    entityType: (r.entity_type || 'individual') as FamilyEntityType,
+    name: r.name,
+    relationship: r.relationship,
+    panMasked: r.pan_masked ?? undefined,
+    colorHex: r.color_hex ?? '#3b82f6',
+    isPrimary: Boolean(r.is_primary),
+    notes: r.notes ?? undefined,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
+function mapPortfolioAccountRow(r: any): PortfolioAccountDto {
+  return {
+    id: r.id,
+    householdId: r.household_id,
+    userId: r.created_by || r.household_id,
+    memberId: r.member_id,
+    visibility: (r.visibility || 'household_shared') as RecordVisibility,
+    createdBy: r.created_by ?? undefined,
+    accountName: r.account_name,
+    brokerName: r.broker_name,
+    depository: r.depository,
+    accountNumberMasked: r.account_number_masked ?? undefined,
+    accountType: r.account_type,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
 export class SupabaseFamilyAdapter implements FamilyRepositoryPort {
   private getLocalMembers(): FamilyMemberDto[] {
     try {
@@ -219,72 +281,57 @@ export class SupabaseFamilyAdapter implements FamilyRepositoryPort {
     }
   }
 
-  async getMembers(userId: string): Promise<Result<readonly FamilyMemberDto[]>> {
+  async getMembersByHousehold(householdId: string): Promise<Result<readonly FamilyMemberDto[]>> {
     try {
-      if (!userId || userId.startsWith('demo-')) {
+      if (!householdId || householdId.startsWith('demo-')) {
         return ok(this.getLocalMembers());
+      }
+
+      const validHouseholdId = toValidUuidOrNull(householdId);
+      if (!validHouseholdId) {
+        return ok([]);
       }
 
       const { data, error } = await supabase
         .from('family_members')
         .select('*')
-        .eq('user_id', userId)
+        .eq('household_id', validHouseholdId)
         .order('is_primary', { ascending: false })
         .order('created_at', { ascending: true });
 
       if (error) {
-        return ok(this.getLocalMembers());
+        return err(new Error(`Failed to fetch family members: ${error.message}`));
       }
 
-      // if (!data || data.length === 0) {
-      //   // Return default self member if none exist in remote DB
-      //   return ok(this.getLocalMembers());
-      // }
-
-      const mapped: FamilyMemberDto[] = data.map((r) => ({
-        id: r.id,
-        userId: r.user_id,
-        name: r.name,
-        relationship: r.relationship,
-        panMasked: r.pan_masked ?? undefined,
-        colorHex: r.color_hex ?? '#3b82f6',
-        isPrimary: Boolean(r.is_primary),
-        notes: r.notes ?? undefined,
-        createdAt: r.created_at,
-        updatedAt: r.updated_at,
-      }));
-
-      return ok(mapped);
+      return ok((data || []).map(mapFamilyMemberRow));
     } catch (e: any) {
       return err(new Error(e?.message || 'Failed to fetch family members'));
     }
   }
 
+  async getMembers(scopeId: string): Promise<Result<readonly FamilyMemberDto[]>> {
+    return this.getMembersByHousehold(scopeId);
+  }
+
   async getMemberById(id: string): Promise<Result<FamilyMemberDto | null>> {
     try {
-      const local = this.getLocalMembers().find((m) => m.id === id);
-      if (local) return ok(local);
+      if (id.startsWith('mem-')) {
+        return ok(this.getLocalMembers().find((m) => m.id === id) || null);
+      }
+
+      const validId = toValidUuidOrNull(id);
+      if (!validId) return ok(null);
 
       const { data, error } = await supabase
         .from('family_members')
         .select('*')
-        .eq('id', id)
+        .eq('id', validId)
         .maybeSingle();
 
-      if (error || !data) return ok(null);
+      if (error) return err(new Error(error.message));
+      if (!data) return ok(null);
 
-      return ok({
-        id: data.id,
-        userId: data.user_id,
-        name: data.name,
-        relationship: data.relationship,
-        panMasked: data.pan_masked ?? undefined,
-        colorHex: data.color_hex ?? '#3b82f6',
-        isPrimary: Boolean(data.is_primary),
-        notes: data.notes ?? undefined,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-      });
+      return ok(mapFamilyMemberRow(data));
     } catch (e: any) {
       return err(new Error(e?.message || 'Failed to fetch family member'));
     }
@@ -292,33 +339,47 @@ export class SupabaseFamilyAdapter implements FamilyRepositoryPort {
 
   async saveMember(member: FamilyMemberDto): Promise<Result<void>> {
     try {
-      const current = this.getLocalMembers();
-      const existingIdx = current.findIndex((m) => m.id === member.id);
-      if (existingIdx >= 0) {
-        current[existingIdx] = member;
-      } else {
-        current.push(member);
-      }
-      this.saveLocalMembers(current);
+      const isDemo =
+        member.id.startsWith('mem-') ||
+        (member.householdId && member.householdId.startsWith('demo-')) ||
+        (!member.householdId && (!member.userId || member.userId.startsWith('demo-')));
 
-      if (!member.userId || member.userId.startsWith('demo-')) {
+      if (isDemo) {
+        const current = this.getLocalMembers();
+        const existingIdx = current.findIndex((m) => m.id === member.id);
+        if (existingIdx >= 0) {
+          current[existingIdx] = member;
+        } else {
+          current.push(member);
+        }
+        this.saveLocalMembers(current);
         return ok(undefined);
       }
 
+      const householdId = await resolveHouseholdIdForWrite(member.householdId, member.userId);
+      const actorId = toValidUuidOrNull(member.userId);
+      const existingId = toValidUuidOrNull(member.id);
+
       const { error } = await supabase.from('family_members').upsert({
-        id: member.id,
-        user_id: member.userId,
+        ...(existingId ? { id: existingId } : {}),
+        household_id: householdId,
+        entity_type:
+          member.entityType === 'huf' || member.entityType === 'minor'
+            ? member.entityType
+            : 'individual',
         name: member.name,
         relationship: member.relationship,
         pan_masked: member.panMasked ?? null,
+        email: member.email?.trim() || null,
         color_hex: member.colorHex,
         is_primary: member.isPrimary,
         notes: member.notes ?? null,
+        ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
         updated_at: new Date().toISOString(),
       });
 
       if (error) {
-        console.warn('Supabase family member save warning (falling back to local):', error.message);
+        return err(new Error(`Failed to save family member: ${error.message}`));
       }
 
       return ok(undefined);
@@ -329,80 +390,72 @@ export class SupabaseFamilyAdapter implements FamilyRepositoryPort {
 
   async deleteMember(id: string): Promise<Result<void>> {
     try {
-      const current = this.getLocalMembers().filter((m) => m.id !== id);
-      this.saveLocalMembers(current);
-
       if (id.startsWith('mem-')) {
+        const current = this.getLocalMembers().filter((m) => m.id !== id);
+        this.saveLocalMembers(current);
         return ok(undefined);
       }
 
-      await supabase.from('family_members').delete().eq('id', id);
+      const { error } = await supabase.from('family_members').delete().eq('id', id);
+      if (error) {
+        return err(new Error(`Failed to delete family member: ${error.message}`));
+      }
       return ok(undefined);
     } catch (e: any) {
       return err(new Error(e?.message || 'Failed to delete family member'));
     }
   }
 
-  async getAccounts(userId: string): Promise<Result<readonly PortfolioAccountDto[]>> {
+  async getAccountsByHousehold(householdId: string): Promise<Result<readonly PortfolioAccountDto[]>> {
     try {
-      if (!userId || userId.startsWith('demo-')) {
+      if (!householdId || householdId.startsWith('demo-')) {
         return ok(this.getLocalAccounts());
+      }
+
+      const validHouseholdId = toValidUuidOrNull(householdId);
+      if (!validHouseholdId) {
+        return ok([]);
       }
 
       const { data, error } = await supabase
         .from('portfolio_accounts')
         .select('*')
-        .eq('user_id', userId)
+        .eq('household_id', validHouseholdId)
         .order('created_at', { ascending: true });
 
-      if (error || !data || data.length === 0) {
-        return ok(this.getLocalAccounts());
+      if (error) {
+        return err(new Error(`Failed to fetch accounts: ${error.message}`));
       }
 
-      const mapped: PortfolioAccountDto[] = data.map((r) => ({
-        id: r.id,
-        userId: r.user_id,
-        memberId: r.member_id,
-        accountName: r.account_name,
-        brokerName: r.broker_name,
-        depository: r.depository,
-        accountNumberMasked: r.account_number_masked ?? undefined,
-        accountType: r.account_type,
-        createdAt: r.created_at,
-        updatedAt: r.updated_at,
-      }));
-
-      return ok(mapped);
+      return ok((data || []).map(mapPortfolioAccountRow));
     } catch (e: any) {
       return err(new Error(e?.message || 'Failed to fetch accounts'));
     }
   }
 
+  async getAccounts(scopeId: string): Promise<Result<readonly PortfolioAccountDto[]>> {
+    return this.getAccountsByHousehold(scopeId);
+  }
+
   async getAccountById(id: string): Promise<Result<PortfolioAccountDto | null>> {
     try {
-      const local = this.getLocalAccounts().find((a) => a.id === id);
-      if (local) return ok(local);
+      if (id.startsWith('acc-')) {
+        return ok(this.getLocalAccounts().find((a) => a.id === id) || null);
+      }
+
+      const validId = toValidUuidOrNull(id);
+      if (!validId) return ok(null);
 
       const { data, error } = await supabase
         .from('portfolio_accounts')
         .select('*')
-        .eq('id', id)
+        .eq('id', validId)
         .maybeSingle();
 
-      if (error || !data) return ok(null);
+      if (error) return err(new Error(error.message));
+      if (!data) return ok(null);
 
-      return ok({
-        id: data.id,
-        userId: data.user_id,
-        memberId: data.member_id,
-        accountName: data.account_name,
-        brokerName: data.broker_name,
-        depository: data.depository,
-        accountNumberMasked: data.account_number_masked ?? undefined,
-        accountType: data.account_type,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-      });
+      return ok(mapPortfolioAccountRow(data));
     } catch (e: any) {
       return err(new Error(e?.message || 'Failed to fetch account'));
     }
@@ -410,33 +463,43 @@ export class SupabaseFamilyAdapter implements FamilyRepositoryPort {
 
   async saveAccount(account: PortfolioAccountDto): Promise<Result<void>> {
     try {
-      const current = this.getLocalAccounts();
-      const existingIdx = current.findIndex((a) => a.id === account.id);
-      if (existingIdx >= 0) {
-        current[existingIdx] = account;
-      } else {
-        current.push(account);
-      }
-      this.saveLocalAccounts(current);
+      const isDemo =
+        account.id.startsWith('acc-') ||
+        (account.householdId && account.householdId.startsWith('demo-')) ||
+        (!account.householdId && (!account.userId || account.userId.startsWith('demo-')));
 
-      if (!account.userId || account.userId.startsWith('demo-')) {
+      if (isDemo) {
+        const current = this.getLocalAccounts();
+        const existingIdx = current.findIndex((a) => a.id === account.id);
+        if (existingIdx >= 0) {
+          current[existingIdx] = account;
+        } else {
+          current.push(account);
+        }
+        this.saveLocalAccounts(current);
         return ok(undefined);
       }
 
+      const householdId = await resolveHouseholdIdForWrite(account.householdId, account.userId);
+      const actorId = toValidUuidOrNull(account.createdBy || account.userId);
+      const existingId = toValidUuidOrNull(account.id);
+
       const { error } = await supabase.from('portfolio_accounts').upsert({
-        id: account.id,
-        user_id: account.userId,
+        ...(existingId ? { id: existingId } : {}),
+        household_id: householdId,
         member_id: account.memberId,
+        visibility: account.visibility ?? 'household_shared',
         account_name: account.accountName,
         broker_name: account.brokerName,
         depository: account.depository,
         account_number_masked: account.accountNumberMasked ?? null,
         account_type: account.accountType,
+        ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
         updated_at: new Date().toISOString(),
       });
 
       if (error) {
-        console.warn('Supabase account save warning (falling back to local):', error.message);
+        return err(new Error(`Failed to save account: ${error.message}`));
       }
 
       return ok(undefined);
@@ -447,14 +510,16 @@ export class SupabaseFamilyAdapter implements FamilyRepositoryPort {
 
   async deleteAccount(id: string): Promise<Result<void>> {
     try {
-      const current = this.getLocalAccounts().filter((a) => a.id !== id);
-      this.saveLocalAccounts(current);
-
       if (id.startsWith('acc-')) {
+        const current = this.getLocalAccounts().filter((a) => a.id !== id);
+        this.saveLocalAccounts(current);
         return ok(undefined);
       }
 
-      await supabase.from('portfolio_accounts').delete().eq('id', id);
+      const { error } = await supabase.from('portfolio_accounts').delete().eq('id', id);
+      if (error) {
+        return err(new Error(`Failed to delete account: ${error.message}`));
+      }
       return ok(undefined);
     } catch (e: any) {
       return err(new Error(e?.message || 'Failed to delete account'));

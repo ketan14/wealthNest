@@ -4,13 +4,16 @@ import {
   TransactionDetailDto,
   CreateTransactionParams,
 } from '@wealthnest/application';
-import { TransactionType } from '@wealthnest/domain';
+import { RecordVisibility, TransactionType } from '@wealthnest/domain';
 import { supabase } from './client';
 import { toValidUuidOrNull } from './uuid-utils';
+import { resolveHouseholdIdForWrite, syncRestrictedRecordGrants } from './household-scope';
 
 interface JoinedTransactionRow {
   id: string;
-  user_id: string;
+  household_id: string;
+  visibility: RecordVisibility;
+  created_by: string | null;
   asset_id: string | null;
   type: string;
   quantity: number | string | null;
@@ -30,14 +33,21 @@ interface JoinedTransactionRow {
 }
 
 export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
-  async listByUser(userId: string): Promise<Result<TransactionDetailDto[]>> {
+  async listByHousehold(householdId: string): Promise<Result<TransactionDetailDto[]>> {
     try {
+      const validHouseholdId = toValidUuidOrNull(householdId);
+      if (!validHouseholdId) {
+        return ok([]);
+      }
+
       const { data, error } = await supabase
         .from('transactions')
         .select(
           `
           id,
-          user_id,
+          household_id,
+          visibility,
+          created_by,
           asset_id,
           type,
           quantity,
@@ -56,7 +66,7 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
           )
         `
         )
-        .eq('user_id', userId)
+        .eq('household_id', validHouseholdId)
         .order('transaction_date', { ascending: false });
 
       if (error) {
@@ -66,7 +76,10 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
       const rows = (data || []) as unknown as JoinedTransactionRow[];
       const mapped: TransactionDetailDto[] = rows.map((row) => ({
         id: row.id,
-        userId: row.user_id,
+        householdId: row.household_id,
+        userId: row.created_by ?? row.household_id,
+        visibility: row.visibility,
+        createdBy: row.created_by ?? undefined,
         assetId: row.asset_id ?? undefined,
         assetName: row.assets?.name,
         assetTicker: row.assets?.ticker ?? undefined,
@@ -88,15 +101,24 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
     }
   }
 
+  async listByUser(scopeId: string): Promise<Result<TransactionDetailDto[]>> {
+    return this.listByHousehold(scopeId);
+  }
+
   async createTransaction(params: CreateTransactionParams): Promise<Result<TransactionDetailDto>> {
     try {
+      const householdId = await resolveHouseholdIdForWrite(params.householdId, params.userId);
+      const visibility: RecordVisibility = params.visibility ?? 'household_shared';
+      const actorId = toValidUuidOrNull(params.userId);
       const transactionDate = params.transactionDate || new Date().toISOString();
 
       const { data, error } = await supabase
         .from('transactions')
         .insert({
-          user_id: params.userId,
-          asset_id: params.assetId || null,
+          household_id: householdId,
+          visibility,
+          ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
+          asset_id: toValidUuidOrNull(params.assetId),
           type: params.type,
           quantity: params.quantity !== undefined ? params.quantity : null,
           amount_cents: params.amountCents,
@@ -110,11 +132,22 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
         .select('id, created_at, transaction_date')
         .single();
 
-      if (error) {
-        return err(new Error(`Failed to record transaction: ${error.message}`));
+      if (error || !data) {
+        return err(
+          new Error(`Failed to record transaction: ${error?.message || 'Unknown error'}`)
+        );
       }
 
-      // Fetch asset name/ticker if assetId was provided
+      if (visibility === 'restricted' && params.restrictedGranteeUserIds?.length) {
+        await syncRestrictedRecordGrants({
+          householdId,
+          recordType: 'transaction',
+          recordId: data.id,
+          visibility,
+          granteeUserIds: params.restrictedGranteeUserIds,
+        });
+      }
+
       let assetName: string | undefined;
       let assetTicker: string | undefined;
 
@@ -123,7 +156,7 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
           .from('assets')
           .select('name, ticker')
           .eq('id', params.assetId)
-          .single();
+          .maybeSingle();
 
         if (assetData) {
           assetName = assetData.name;
@@ -133,7 +166,10 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
 
       const created: TransactionDetailDto = {
         id: data.id,
-        userId: params.userId,
+        householdId,
+        userId: actorId ?? householdId,
+        visibility,
+        createdBy: actorId ?? undefined,
         assetId: params.assetId,
         assetName,
         assetTicker,
@@ -155,13 +191,9 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
     }
   }
 
-  async deleteTransaction(transactionId: string, userId: string): Promise<Result<void>> {
+  async deleteTransaction(transactionId: string, _scopeId: string): Promise<Result<void>> {
     try {
-      const { error } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', transactionId)
-        .eq('user_id', userId);
+      const { error } = await supabase.from('transactions').delete().eq('id', transactionId);
 
       if (error) {
         return err(new Error(error.message));

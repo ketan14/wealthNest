@@ -28,6 +28,7 @@ interface PortfolioHoldingsSectionProps {
   readonly onDismissDeleteError: () => void;
   readonly isLoadingDb: boolean;
   readonly isAuthenticated: boolean;
+  readonly canEditFinancials?: boolean;
   readonly isMobile: boolean;
   readonly activeHoldings: readonly HoldingDetailDto[];
   readonly filteredHoldings: readonly HoldingDetailDto[];
@@ -65,6 +66,7 @@ export function PortfolioHoldingsSection({
   onDismissDeleteError,
   isLoadingDb,
   isAuthenticated,
+  canEditFinancials = true,
   isMobile,
   activeHoldings,
   filteredHoldings,
@@ -228,7 +230,15 @@ export function PortfolioHoldingsSection({
                 : 'No positions matched your search criteria.'}
             </p>
             <div className="flex items-center justify-center gap-3 pt-2">
-              <Button size="sm" onClick={onOpenAddModal} className="gap-1.5">
+              <Button
+                size="sm"
+                onClick={onOpenAddModal}
+                disabled={!canEditFinancials}
+                title={
+                  !canEditFinancials ? 'View-only household role cannot add holdings' : undefined
+                }
+                className="gap-1.5"
+              >
                 <Plus className="w-4 h-4" />
                 Add Holding
               </Button>
@@ -236,12 +246,16 @@ export function PortfolioHoldingsSection({
                 size="sm"
                 variant="outline"
                 onClick={onOpenImportModal}
+                disabled={!canEditFinancials}
+                title={
+                  !canEditFinancials ? 'View-only household role cannot import CAS' : undefined
+                }
                 className="gap-1.5 text-xs font-mono"
               >
                 <FileSpreadsheet className="w-4 h-4 text-primary" />
                 Import CAS
               </Button>
-              {isAuthenticated && activeHoldings.length === 0 && (
+              {isAuthenticated && activeHoldings.length === 0 && canEditFinancials && (
                 <Button
                   size="sm"
                   variant="outline"

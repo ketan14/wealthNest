@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, Navigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { Button } from '@/components/ui/Button';
@@ -26,6 +26,12 @@ import {
 export function LoginPage() {
   const { user, isLoading: authLoading, isPasswordRecovery } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const inviteToken = (
+    searchParams.get('invite') ||
+    searchParams.get('household_invite') ||
+    ''
+  ).trim();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,8 +51,11 @@ export function LoginPage() {
     return <Navigate to="/reset-password" replace />;
   }
 
-  // If already authenticated, redirect to home page
+  // If already authenticated, redirect to invite acceptance or home page
   if (!authLoading && user) {
+    if (inviteToken) {
+      return <Navigate to={`/invite?token=${encodeURIComponent(inviteToken)}`} replace />;
+    }
     return <Navigate to="/" replace />;
   }
 
@@ -85,7 +94,10 @@ export function LoginPage() {
         throw error;
       }
 
-      navigate('/', { replace: true });
+      navigate(
+        inviteToken ? `/invite?token=${encodeURIComponent(inviteToken)}` : '/',
+        { replace: true }
+      );
     } catch (err: unknown) {
       let message = 'Invalid email or password. Please try again.';
       if (isNetworkFetchError(err)) {
@@ -348,7 +360,7 @@ export function LoginPage() {
               <p className="text-xs text-slate-400">
                 Don't have an account?{' '}
                 <Link
-                  to="/signup"
+                  to={inviteToken ? `/signup?invite=${encodeURIComponent(inviteToken)}` : '/signup'}
                   className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors"
                 >
                   Create an account

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, Navigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { Button } from '@/components/ui/Button';
@@ -27,11 +27,19 @@ import {
   MailCheck,
   CheckCircle2,
   ArrowRight,
+  Home,
 } from 'lucide-react';
 
 export function SignUpPage() {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const inviteToken = (
+    searchParams.get('invite') ||
+    searchParams.get('household_invite') ||
+    ''
+  ).trim();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -51,8 +59,10 @@ export function SignUpPage() {
 
   const backend = useAuthBackendConnection();
 
-  // If already authenticated, redirect to home page
   if (!authLoading && user) {
+    if (inviteToken) {
+      return <Navigate to={`/invite?token=${encodeURIComponent(inviteToken)}`} replace />;
+    }
     return <Navigate to="/" replace />;
   }
 
@@ -99,13 +109,20 @@ export function SignUpPage() {
 
     setSubmitting(true);
     try {
+      const emailRedirectTo =
+        inviteToken && typeof window !== 'undefined'
+          ? `${window.location.origin}/invite?token=${encodeURIComponent(inviteToken)}`
+          : undefined;
+
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
+          ...(emailRedirectTo ? { emailRedirectTo } : {}),
           data: {
             full_name: fullName.trim(),
             display_name: fullName.trim(),
+            ...(inviteToken ? { skip_default_household: true } : {}),
           },
         },
       });
@@ -114,13 +131,19 @@ export function SignUpPage() {
         throw error;
       }
 
-      // Check if session was granted immediately or email verification is required
       if (data?.session) {
-        navigate('/', { replace: true });
+        if (inviteToken) {
+          navigate(`/invite?token=${encodeURIComponent(inviteToken)}`, { replace: true });
+        } else {
+          navigate('/', { replace: true });
+        }
       } else if (data?.user) {
         setIsConfirmationRequired(true);
       } else {
-        navigate('/login', { replace: true });
+        navigate(
+          inviteToken ? `/login?invite=${encodeURIComponent(inviteToken)}` : '/login',
+          { replace: true }
+        );
       }
     } catch (err: unknown) {
       let message = 'Unable to register account. Please try again or contact support.';
@@ -142,16 +165,17 @@ export function SignUpPage() {
     }
   };
 
+  const loginLink = inviteToken
+    ? `/login?invite=${encodeURIComponent(inviteToken)}`
+    : '/login';
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col lg:flex-row relative selection:bg-emerald-500/30 selection:text-emerald-300">
-      {/* LEFT SECTION — BRANDING & VALUE PROPOSITION */}
       <AuthBrandingPanel />
 
-      {/* RIGHT SECTION — REGISTRATION FORM */}
       <div className="lg:w-1/2 flex items-center justify-center p-6 sm:p-12 lg:p-16 relative">
         <div className="max-w-md w-full">
           {isConfirmationRequired ? (
-            /* Email Confirmation Screen */
             <div className="bg-slate-900/80 border border-emerald-500/30 rounded-2xl p-8 backdrop-blur-xl shadow-2xl shadow-emerald-950/20 text-center animate-in fade-in zoom-in-95 duration-200">
               <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6 text-emerald-400 shadow-inner">
                 <MailCheck className="w-8 h-8" />
@@ -166,10 +190,14 @@ export function SignUpPage() {
               </p>
               <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-lg text-xs text-slate-400 mb-6 flex items-center gap-2 text-left">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Once confirmed, your profile and household are ready automatically.</span>
+                <span>
+                  {inviteToken
+                    ? 'Once confirmed, return to join the invited household workspace.'
+                    : 'Once confirmed, your profile and household are ready automatically.'}
+                </span>
               </div>
               <Link
-                to="/login"
+                to={loginLink}
                 className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-emerald-400 text-slate-950 font-semibold text-sm transition-all shadow-md w-full"
               >
                 Proceed to Sign In
@@ -177,7 +205,6 @@ export function SignUpPage() {
               </Link>
             </div>
           ) : (
-            /* Standalone Registration Form */
             <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-8 backdrop-blur-xl shadow-2xl">
               <div className="mb-6">
                 <h2 className="text-2xl font-bold text-white tracking-tight">
@@ -187,6 +214,19 @@ export function SignUpPage() {
                   Start organising your financial future.
                 </p>
               </div>
+
+              {inviteToken && (
+                <div className="mb-5 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 text-xs flex items-start gap-2.5">
+                  <Home className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-emerald-300">Household Invite Detected</p>
+                    <p className="mt-0.5 opacity-90">
+                      Sign up with the invited email address to link your login directly after
+                      verification.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {serverError && (
                 <div
@@ -212,40 +252,23 @@ export function SignUpPage() {
               )}
 
               <form onSubmit={handleSubmit} noValidate className="space-y-4">
-                {/* Full Name */}
                 <div>
-                  <label
-                    htmlFor="fullName"
-                    className="block text-xs font-medium text-slate-300 mb-1.5"
-                  >
+                  <label htmlFor="signup-full-name" className="block text-xs font-medium text-slate-300 mb-1.5">
                     Full Name
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
                       <User className="w-4 h-4" />
                     </div>
                     <input
-                      id="fullName"
-                      name="fullName"
+                      id="signup-full-name"
                       type="text"
-                      autoComplete="name"
-                      disabled={submitting}
+                      required
                       value={fullName}
-                      onChange={(e) => {
-                        setFullName(e.target.value);
-                        if (errors.fullName) {
-                          setErrors((prev) => {
-                            const updated = { ...prev };
-                            delete updated.fullName;
-                            return updated;
-                          });
-                        }
-                      }}
+                      onChange={(e) => setFullName(e.target.value)}
                       placeholder="e.g. Ketan Vaghela"
-                      className={`w-full h-10 pl-9 pr-3 rounded-lg bg-slate-950/60 border text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition-all ${
-                        errors.fullName
-                          ? 'border-rose-500/80 focus:ring-rose-500/30'
-                          : 'border-slate-800 focus:border-emerald-500 focus:ring-emerald-500/20'
+                      className={`w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all ${
+                        errors.fullName ? 'border-rose-500' : 'border-slate-800 hover:border-slate-700'
                       }`}
                     />
                   </div>
@@ -257,40 +280,23 @@ export function SignUpPage() {
                   )}
                 </div>
 
-                {/* Email Address */}
                 <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-xs font-medium text-slate-300 mb-1.5"
-                  >
+                  <label htmlFor="signup-email" className="block text-xs font-medium text-slate-300 mb-1.5">
                     Email Address
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
                       <Mail className="w-4 h-4" />
                     </div>
                     <input
-                      id="email"
-                      name="email"
+                      id="signup-email"
                       type="email"
-                      autoComplete="email"
-                      disabled={submitting}
+                      required
                       value={email}
-                      onChange={(e) => {
-                        setEmail(e.target.value);
-                        if (errors.email) {
-                          setErrors((prev) => {
-                            const updated = { ...prev };
-                            delete updated.email;
-                            return updated;
-                          });
-                        }
-                      }}
-                      placeholder="investor@wealthnest.local"
-                      className={`w-full h-10 pl-9 pr-3 rounded-lg bg-slate-950/60 border text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition-all ${
-                        errors.email
-                          ? 'border-rose-500/80 focus:ring-rose-500/30'
-                          : 'border-slate-800 focus:border-emerald-500 focus:ring-emerald-500/20'
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="investor@domain.com"
+                      className={`w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all ${
+                        errors.email ? 'border-rose-500' : 'border-slate-800 hover:border-slate-700'
                       }`}
                     />
                   </div>
@@ -302,40 +308,23 @@ export function SignUpPage() {
                   )}
                 </div>
 
-                {/* Password */}
                 <div>
-                  <label
-                    htmlFor="password"
-                    className="block text-xs font-medium text-slate-300 mb-1.5"
-                  >
+                  <label htmlFor="signup-password" className="block text-xs font-medium text-slate-300 mb-1.5">
                     Password
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
                       <Lock className="w-4 h-4" />
                     </div>
                     <input
-                      id="password"
-                      name="password"
+                      id="signup-password"
                       type={showPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      disabled={submitting}
+                      required
                       value={password}
-                      onChange={(e) => {
-                        setPassword(e.target.value);
-                        if (errors.password) {
-                          setErrors((prev) => {
-                            const updated = { ...prev };
-                            delete updated.password;
-                            return updated;
-                          });
-                        }
-                      }}
-                      placeholder={PASSWORD_POLICY_HINT}
-                      className={`w-full h-10 pl-9 pr-10 rounded-lg bg-slate-950/60 border text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition-all ${
-                        errors.password
-                          ? 'border-rose-500/80 focus:ring-rose-500/30'
-                          : 'border-slate-800 focus:border-emerald-500 focus:ring-emerald-500/20'
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Minimum 10 chars, mixed case + symbol"
+                      className={`w-full pl-10 pr-10 py-2.5 bg-slate-950/60 border rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all ${
+                        errors.password ? 'border-rose-500' : 'border-slate-800 hover:border-slate-700'
                       }`}
                     />
                     <button
@@ -348,6 +337,7 @@ export function SignUpPage() {
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                  <p className="text-[11px] text-slate-500 mt-1">{PASSWORD_POLICY_HINT}</p>
                   {errors.password && (
                     <p className="text-[11px] text-rose-400 mt-1 flex items-center gap-1 font-medium">
                       <AlertCircle className="w-3 h-3" />
@@ -356,56 +346,35 @@ export function SignUpPage() {
                   )}
                 </div>
 
-                {/* Confirm Password */}
                 <div>
-                  <label
-                    htmlFor="confirmPassword"
-                    className="block text-xs font-medium text-slate-300 mb-1.5"
-                  >
+                  <label htmlFor="signup-confirm-password" className="block text-xs font-medium text-slate-300 mb-1.5">
                     Confirm Password
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
                       <Lock className="w-4 h-4" />
                     </div>
                     <input
-                      id="confirmPassword"
-                      name="confirmPassword"
+                      id="signup-confirm-password"
                       type={showConfirmPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      disabled={submitting}
+                      required
                       value={confirmPassword}
-                      onChange={(e) => {
-                        setConfirmPassword(e.target.value);
-                        if (errors.confirmPassword) {
-                          setErrors((prev) => {
-                            const updated = { ...prev };
-                            delete updated.confirmPassword;
-                            return updated;
-                          });
-                        }
-                      }}
-                      placeholder="Repeat your password"
-                      className={`w-full h-10 pl-9 pr-10 rounded-lg bg-slate-950/60 border text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition-all ${
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Re-enter password"
+                      className={`w-full pl-10 pr-10 py-2.5 bg-slate-950/60 border rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all ${
                         errors.confirmPassword
-                          ? 'border-rose-500/80 focus:ring-rose-500/30'
-                          : 'border-slate-800 focus:border-emerald-500 focus:ring-emerald-500/20'
+                          ? 'border-rose-500'
+                          : 'border-slate-800 hover:border-slate-700'
                       }`}
                     />
                     <button
                       type="button"
                       data-testid="toggle-confirm-password-btn"
-                      aria-label={
-                        showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'
-                      }
+                      aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white transition-colors"
                     >
-                      {showConfirmPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                   {errors.confirmPassword && (
@@ -416,56 +385,26 @@ export function SignUpPage() {
                   )}
                 </div>
 
-                {/* Terms of Service & Privacy Policy Checkbox */}
-                <div className="pt-1">
-                  <div className="flex items-start gap-2.5">
+                <div>
+                  <label className="flex items-start gap-2.5 cursor-pointer group">
                     <input
-                      id="agreeTerms"
-                      name="agreeTerms"
                       type="checkbox"
-                      disabled={submitting}
                       checked={agreeTerms}
-                      onChange={(e) => {
-                        setAgreeTerms(e.target.checked);
-                        if (errors.agreeTerms) {
-                          setErrors((prev) => {
-                            const updated = { ...prev };
-                            delete updated.agreeTerms;
-                            return updated;
-                          });
-                        }
-                      }}
-                      className="mt-1 w-4 h-4 rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500/30 focus:ring-offset-0 cursor-pointer"
+                      onChange={(e) => setAgreeTerms(e.target.checked)}
+                      className="mt-0.5 rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500/40"
                     />
-                    <label
-                      htmlFor="agreeTerms"
-                      className="text-xs text-slate-400 leading-relaxed cursor-pointer select-none"
-                    >
-                      I agree to the{' '}
+                    <span className="text-xs text-slate-400 leading-relaxed group-hover:text-slate-300 transition-colors">
+                      I accept the{' '}
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setTermsModalOpen(true);
-                        }}
-                        className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 transition-colors font-medium"
+                        onClick={() => setTermsModalOpen(true)}
+                        className="text-emerald-400 hover:underline font-medium"
                       >
-                        Terms of Service
-                      </button>{' '}
-                      and{' '}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setTermsModalOpen(true);
-                        }}
-                        className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 transition-colors font-medium"
-                      >
-                        Privacy Policy
+                        Terms of Service &amp; Privacy Policy
                       </button>
                       .
-                    </label>
-                  </div>
+                    </span>
+                  </label>
                   {errors.agreeTerms && (
                     <p className="text-[11px] text-rose-400 mt-1 flex items-center gap-1 font-medium">
                       <AlertCircle className="w-3 h-3" />
@@ -474,7 +413,6 @@ export function SignUpPage() {
                   )}
                 </div>
 
-                {/* Submit Button */}
                 <div className="pt-2">
                   <Button
                     type="submit"
@@ -493,12 +431,11 @@ export function SignUpPage() {
                 </div>
               </form>
 
-              {/* Already have an account link */}
               <div className="mt-6 pt-5 border-t border-slate-800 text-center">
                 <p className="text-xs text-slate-400">
                   Already have an account?{' '}
                   <Link
-                    to="/login"
+                    to={loginLink}
                     className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors"
                   >
                     Sign in
@@ -506,7 +443,6 @@ export function SignUpPage() {
                 </p>
               </div>
 
-              {/* Active Server Connection Indicator & Pre-Auth Switcher */}
               <AuthBackendStatusBar
                 backend={backend}
                 onSwitched={() => {
@@ -519,7 +455,6 @@ export function SignUpPage() {
         </div>
       </div>
 
-      {/* TERMS & PRIVACY POLICY MODAL */}
       <TermsPrivacyModal isOpen={termsModalOpen} onClose={() => setTermsModalOpen(false)} />
     </div>
   );

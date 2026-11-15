@@ -7,12 +7,15 @@ import {
   AssetHistoricalInput,
   LiabilityHistoricalInput,
   AssetLiabilityLinkInput,
+  allocateBigIntByShares,
+  calculateMemberLiabilitySharePaise,
 } from '@wealthnest/domain';
 import { HoldingRepositoryPort } from '../ports/holding-repository.port.js';
 import { LiabilityRepositoryPort } from '../ports/liability-repository.port.js';
 
 export interface GetNetWorthParams {
   readonly userId: string;
+  readonly householdId?: string;
   readonly asOfDate?: string; // ISO YYYY-MM-DD, defaults to current date
   readonly currency?: CurrencyCode;
   readonly memberId?: string;
@@ -25,38 +28,48 @@ export class GetNetWorthSummaryUseCase {
   ) {}
 
   async execute(params: GetNetWorthParams): Promise<Result<NetWorthSummary>> {
-    const userId = params.userId;
+    const scopeId = params.householdId || params.userId;
     const targetCurrency = params.currency || 'INR';
     const asOfDate = params.asOfDate || new Date().toISOString().split('T')[0]!;
 
     // 1. Fetch current holdings
-    const holdingsResult = await this.holdingRepo.listDetailsByUser(userId);
+    const holdingsResult = await (params.householdId && this.holdingRepo.listDetailsByHousehold
+      ? this.holdingRepo.listDetailsByHousehold(params.householdId)
+      : this.holdingRepo.listDetailsByUser(params.userId));
     if (!holdingsResult.success) {
       return err(holdingsResult.error);
     }
 
-    const filteredHoldings =
-      params.memberId && params.memberId !== 'all'
-        ? holdingsResult.value.filter((h) => h.memberId === params.memberId)
-        : holdingsResult.value;
+    const memberFilter = params.memberId && params.memberId !== 'all' ? params.memberId : undefined;
+
+    const filteredHoldings = memberFilter
+      ? holdingsResult.value.filter(
+          (h) =>
+            h.memberId === memberFilter ||
+            Boolean(h.owners?.some((o) => o.familyMemberId === memberFilter))
+        )
+      : holdingsResult.value;
 
     // 2. Fetch liabilities
-    const liabilitiesResult = await this.liabilityRepo.listLiabilitiesByUser(userId);
+    const liabilitiesResult = await (params.householdId &&
+    this.liabilityRepo.listLiabilitiesByHousehold
+      ? this.liabilityRepo.listLiabilitiesByHousehold(params.householdId)
+      : this.liabilityRepo.listLiabilitiesByUser(params.userId));
     if (!liabilitiesResult.success) {
       return err(liabilitiesResult.error);
     }
 
-    const filteredLiabilities =
-      params.memberId && params.memberId !== 'all'
-        ? liabilitiesResult.value.filter(
-            (l) =>
-              l.memberId === params.memberId ||
-              (l.coBorrowerMemberIds && l.coBorrowerMemberIds.includes(params.memberId!))
-          )
-        : liabilitiesResult.value;
+    const filteredLiabilities = memberFilter
+      ? liabilitiesResult.value.filter(
+          (l) =>
+            l.memberId === memberFilter ||
+            Boolean(l.parties?.some((p) => p.familyMemberId === memberFilter)) ||
+            Boolean(l.coBorrowerMemberIds && l.coBorrowerMemberIds.includes(memberFilter))
+        )
+      : liabilitiesResult.value;
 
     // 3. Fetch asset-liability links
-    const linksResult = await this.liabilityRepo.listAssetLiabilityLinks(userId);
+    const linksResult = await this.liabilityRepo.listAssetLiabilityLinks(scopeId);
     const links: AssetLiabilityLinkInput[] = linksResult.success
       ? linksResult.value.map((l) => ({
           assetId: l.assetId,
@@ -66,22 +79,33 @@ export class GetNetWorthSummaryUseCase {
         }))
       : [];
 
-    // 4. Map assets to domain input with dated valuations
+    // 4. Map assets to domain input with dated valuations (respecting joint ownership splits on member filter)
     const assetsInput: AssetHistoricalInput[] = [];
     for (const h of filteredHoldings) {
       const holdingCurrency = (h.currency as CurrencyCode) || targetCurrency;
-      const currentVal = Money.fromCents(
-        BigInt(Math.round(Number(h.currentValueCents) || 0)),
-        holdingCurrency
-      );
+      const rawCurrentCents = BigInt(Math.round(Number(h.currentValueCents) || 0));
+      const scaleHoldingCents = (amount: bigint): bigint => {
+        if (!memberFilter || !h.owners || h.owners.length === 0) return amount;
+        const splits = allocateBigIntByShares(
+          amount,
+          h.owners.map((o) => ({
+            familyMemberId: o.familyMemberId,
+            sharePercentage: o.ownershipShare,
+            isPrimary: o.isPrimaryOwner,
+          }))
+        );
+        return splits.find((s) => s.familyMemberId === memberFilter)?.allocatedCents ?? 0n;
+      };
+
+      const currentVal = Money.fromCents(scaleHoldingCents(rawCurrentCents), holdingCurrency);
 
       // Fetch dated valuations for asset
-      const valuationsResult = await this.liabilityRepo.listAssetValuations(h.assetId, userId);
+      const valuationsResult = await this.liabilityRepo.listAssetValuations(h.assetId, scopeId);
       const datedValuations = valuationsResult.success
         ? valuationsResult.value.map((v) => ({
             asOfDate: v.asOfDate,
             value: Money.fromCents(
-              v.valuationCents,
+              scaleHoldingCents(v.valuationCents),
               (v.currency as CurrencyCode) || holdingCurrency
             ),
           }))
@@ -96,19 +120,35 @@ export class GetNetWorthSummaryUseCase {
       });
     }
 
-    // 5. Map liabilities to domain input with dated balances
+    // 5. Map liabilities to domain input with dated balances (respecting joint liability splits on member filter)
     const liabilitiesInput: LiabilityHistoricalInput[] = [];
     for (const l of filteredLiabilities) {
       const libCurrency = (l.currency as CurrencyCode) || targetCurrency;
-      const originalPrincipal = Money.fromCents(l.originalPrincipalCents, libCurrency);
-      const emiAmount = Money.fromCents(l.emiAmountCents, libCurrency);
+      const scaleLiabilityCents = (amount: bigint): bigint => {
+        if (!memberFilter) return amount;
+        if (l.parties && l.parties.length > 0) {
+          return calculateMemberLiabilitySharePaise({
+            outstandingBalanceCents: amount,
+            memberId: memberFilter,
+            primaryMemberId: l.memberId,
+            parties: l.parties,
+          });
+        }
+        return amount;
+      };
+
+      const originalPrincipal = Money.fromCents(
+        scaleLiabilityCents(l.originalPrincipalCents),
+        libCurrency
+      );
+      const emiAmount = Money.fromCents(scaleLiabilityCents(l.emiAmountCents), libCurrency);
 
       // Fetch dated balances for liability
-      const balancesResult = await this.liabilityRepo.listLiabilityBalances(l.id, userId);
+      const balancesResult = await this.liabilityRepo.listLiabilityBalances(l.id, scopeId);
       const datedBalances = balancesResult.success
         ? balancesResult.value.map((b) => ({
             asOfDate: b.asOfDate,
-            balance: Money.fromCents(b.balanceCents, libCurrency),
+            balance: Money.fromCents(scaleLiabilityCents(b.balanceCents), libCurrency),
           }))
         : [];
 
@@ -116,7 +156,7 @@ export class GetNetWorthSummaryUseCase {
       if (datedBalances.length === 0 && l.currentBalanceCents > 0n) {
         datedBalances.push({
           asOfDate: l.lastBalanceDate || l.startDate || asOfDate,
-          balance: Money.fromCents(l.currentBalanceCents, libCurrency),
+          balance: Money.fromCents(scaleLiabilityCents(l.currentBalanceCents), libCurrency),
         });
       }
 

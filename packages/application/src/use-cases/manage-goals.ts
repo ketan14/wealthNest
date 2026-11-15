@@ -17,6 +17,7 @@ import { HoldingRepositoryPort } from '../ports/holding-repository.port.js';
 
 export interface GetGoalsSummaryParams {
   readonly userId: string;
+  readonly householdId?: string;
   readonly monthlyExpensesCents?: number; // e.g. 5000000 for ₹50,000/mo
   readonly currency?: CurrencyCode;
   readonly memberId?: string;
@@ -115,14 +116,17 @@ export class GetGoalsSummaryUseCase {
   ) {}
 
   async execute(params: GetGoalsSummaryParams): Promise<Result<GoalsSummaryDto>> {
-    if (!params.userId || params.userId.trim().length === 0) {
-      return err(new Error('User ID is required.'));
+    const scopeId = params.householdId || params.userId;
+    if (!scopeId || scopeId.trim().length === 0) {
+      return err(new Error('Household or User ID is required.'));
     }
 
     const currency: CurrencyCode = params.currency || 'INR';
 
-    // 1. Fetch user goals
-    const goalsResult = await this.goalRepo.listGoalsByUser(params.userId);
+    // 1. Fetch goals
+    const goalsResult = await (params.householdId && this.goalRepo.listGoalsByHousehold
+      ? this.goalRepo.listGoalsByHousehold(params.householdId)
+      : this.goalRepo.listGoalsByUser(params.userId));
     if (!goalsResult.success) {
       return err(goalsResult.error);
     }
@@ -132,8 +136,10 @@ export class GetGoalsSummaryUseCase {
         ? goalsResult.value.filter((g) => g.memberId === params.memberId)
         : goalsResult.value;
 
-    // 2. Fetch user holdings to identify liquid cash and linked holdings values
-    const holdingsResult = await this.holdingRepo.listDetailsByUser(params.userId);
+    // 2. Fetch holdings to identify liquid cash and linked holdings values
+    const holdingsResult = await (params.householdId && this.holdingRepo.listDetailsByHousehold
+      ? this.holdingRepo.listDetailsByHousehold(params.householdId)
+      : this.holdingRepo.listDetailsByUser(params.userId));
     const holdings = holdingsResult.success ? holdingsResult.value : [];
 
     // Calculate total liquid cash for emergency runway

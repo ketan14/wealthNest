@@ -42,24 +42,36 @@ import {
   FolderLock,
 } from 'lucide-react';
 
+import { useHousehold } from '@/lib/supabase/household-context';
+
 export function HomePage() {
   const { user } = useAuth();
-  const userId = user?.id || 'demo-user';
-  const { holdingRepo, liabilityRepo, transactionRepo, documentVaultRepo } = useRepositories();
+  const { activeHouseholdId } = useHousehold();
+  const { holdingRepo, liabilityRepo, transactionRepo, documentVaultRepo, mode } = useRepositories();
   const { selectedMemberId, privacyRules } = useFamily();
   const { currencySymbol, preferences } = usePreferences();
   const { maskAmount } = usePrivacy();
   const locale = preferences.numberFormat || 'en-IN';
+  const isDemoMode = mode === 'supabase' && (!user?.id || user.id.startsWith('demo-'));
+  const scopeId = isDemoMode ? user?.id || 'demo-user' : activeHouseholdId || user?.id || '';
+  const effectiveHouseholdId = isDemoMode ? undefined : activeHouseholdId;
 
   // 1. Fetch Holdings for Portfolio & Asset Allocation
   const { data: holdings = [] } = useQuery<HoldingDetailDto[]>({
-    queryKey: ['holdings', userId, selectedMemberId, privacyRules],
+    queryKey: ['holdings', scopeId, selectedMemberId, privacyRules],
     queryFn: async () => {
-      const result = await holdingRepo.listDetailsByUser(userId);
+      if (!scopeId) return [];
+      const result = await (holdingRepo.listDetailsByHousehold
+        ? holdingRepo.listDetailsByHousehold(scopeId)
+        : holdingRepo.listDetailsByUser(scopeId));
       if (!result.success) return [];
       let list = result.value;
       if (selectedMemberId !== 'all') {
-        list = list.filter((h: HoldingDetailDto) => h.memberId === selectedMemberId);
+        list = list.filter(
+          (h: HoldingDetailDto) =>
+            h.memberId === selectedMemberId ||
+            h.owners?.some((o) => o.familyMemberId === selectedMemberId)
+        );
       }
       return filterRecordsByPrivacy(list, selectedMemberId, privacyRules);
     },
@@ -67,10 +79,14 @@ export function HomePage() {
 
   // 2. Fetch Net Worth Summary (Assets vs Liabilities)
   const { data: netWorthSummary } = useQuery<NetWorthSummary | null>({
-    queryKey: ['net-worth-summary', userId],
+    queryKey: ['net-worth-summary', scopeId, selectedMemberId],
     queryFn: async () => {
       const useCase = new GetNetWorthSummaryUseCase(holdingRepo, liabilityRepo);
-      const result = await useCase.execute({ userId });
+      const result = await useCase.execute({
+        userId: user?.id || scopeId || 'demo-user',
+        householdId: effectiveHouseholdId,
+        memberId: selectedMemberId,
+      });
       if (!result.success) return null;
       return result.value;
     },
@@ -78,10 +94,11 @@ export function HomePage() {
 
   // 3. Fetch Cashflow Summary (Inflows & Outflows)
   const { data: cashflowSummary } = useQuery<CashflowSummary | null>({
-    queryKey: ['cashflow-summary', userId],
+    queryKey: ['cashflow-summary', scopeId],
     queryFn: async () => {
+      if (!scopeId) return null;
       const useCase = new GetCashflowSummaryUseCase(transactionRepo);
-      const result = await useCase.execute(userId);
+      const result = await useCase.execute(scopeId);
       if (!result.success) return null;
       return result.value.summary;
     },
@@ -89,11 +106,11 @@ export function HomePage() {
 
   // 4. Fetch Document Vault Summary (for renewal & record counts)
   const { data: vaultSummary } = useQuery({
-    queryKey: ['vault-summary', userId],
+    queryKey: ['vault-summary', scopeId],
     queryFn: async () => {
-      if (!user) return null;
+      if (isDemoMode || !scopeId) return null;
       const useCase = new ManageDocumentVaultUseCase(documentVaultRepo);
-      const result = await useCase.listDocuments(user.id);
+      const result = await useCase.listDocuments(scopeId);
       if (!result.success) return null;
       return summarizeDocumentVault(result.value);
     },
@@ -101,15 +118,20 @@ export function HomePage() {
 
   // 5. Fetch Liabilities (for floating-rate reset & review alerts)
   const { data: liabilities = [] } = useQuery<readonly LiabilityDto[]>({
-    queryKey: ['liabilities', userId, selectedMemberId],
+    queryKey: ['liabilities', scopeId, selectedMemberId],
     queryFn: async () => {
-      const result = await liabilityRepo.listLiabilitiesByUser(userId);
+      if (!scopeId) return [];
+      const result = await (liabilityRepo.listLiabilitiesByHousehold
+        ? liabilityRepo.listLiabilitiesByHousehold(scopeId)
+        : liabilityRepo.listLiabilitiesByUser(scopeId));
       if (!result.success) return [];
       let list = result.value;
       if (selectedMemberId !== 'all') {
         list = list.filter(
           (l: LiabilityDto) =>
-            l.memberId === selectedMemberId || l.coBorrowerMemberIds?.includes(selectedMemberId)
+            l.memberId === selectedMemberId ||
+            l.parties?.some((p) => p.familyMemberId === selectedMemberId) ||
+            l.coBorrowerMemberIds?.includes(selectedMemberId)
         );
       }
       return list;

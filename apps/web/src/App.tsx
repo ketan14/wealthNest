@@ -9,6 +9,7 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import { SignUpPage } from '@/pages/SignUpPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
+import { InviteAcceptPage } from '@/pages/InviteAcceptPage';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 const PortfolioPage = lazy(() =>
@@ -76,6 +77,7 @@ function RouteLoadingFallback() {
 
 import { AuthProvider, useAuth } from '@/lib/supabase/auth-context';
 import { RepositoryProvider } from '@/lib/persistence/repository-context';
+import { HouseholdProvider } from '@/lib/supabase/household-context';
 import { AdminProvider } from '@/lib/admin/admin-context';
 import { SupportSessionProvider } from '@/lib/admin/support-session-context';
 import { PreferencesProvider } from '@/lib/preferences/preferences-context';
@@ -117,6 +119,7 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <RepositoryProvider>
+          <HouseholdProvider>
           <AdminProvider>
             <SupportSessionProvider>
               <PreferencesProvider>
@@ -126,10 +129,11 @@ export function App() {
                     <BrowserRouter>
                     <Suspense fallback={<RouteLoadingFallback />}>
                       <Routes>
-                        {/* Dedicated Authentication Routes */}
+                        {/* Dedicated Authentication & Invitation Routes */}
                         <Route path="/signup" element={<SignUpPage />} />
                         <Route path="/login" element={<LoginPage />} />
                         <Route path="/reset-password" element={<ResetPasswordPage />} />
+                        <Route path="/invite" element={<InviteAcceptPage />} />
 
                         {/* Investor App Shell (Authenticated) */}
                         <Route
@@ -171,6 +175,7 @@ export function App() {
               </PreferencesProvider>
             </SupportSessionProvider>
           </AdminProvider>
+          </HouseholdProvider>
         </RepositoryProvider>
       </AuthProvider>
     </QueryClientProvider>

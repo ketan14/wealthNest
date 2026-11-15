@@ -16,8 +16,13 @@ export interface PortfolioDataDto {
 export class GetPortfolioSummaryUseCase {
   constructor(private readonly holdingRepo: HoldingRepositoryPort) {}
 
-  async execute(userId: string, currency: CurrencyCode = 'INR'): Promise<Result<PortfolioDataDto>> {
-    const holdingsResult = await this.holdingRepo.listDetailsByUser(userId);
+  async execute(
+    scopeId: string,
+    currency: CurrencyCode = 'INR'
+  ): Promise<Result<PortfolioDataDto>> {
+    const holdingsResult = await (this.holdingRepo.listDetailsByHousehold
+      ? this.holdingRepo.listDetailsByHousehold(scopeId)
+      : this.holdingRepo.listDetailsByUser(scopeId));
 
     if (!holdingsResult.success) {
       return err(holdingsResult.error);

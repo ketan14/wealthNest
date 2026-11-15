@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useFamily } from '@/lib/family/family-context';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { PortfolioAccountDto } from '@wealthnest/application';
+import { RecordVisibility } from '@wealthnest/domain';
 import { Plus, Trash2, Building, Lock, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -24,10 +26,12 @@ const BROKER_OPTIONS = [
  * creating, and deleting demat/MF folio/bank accounts across family members.
  */
 export function ManageFamilyAccountsTab() {
+  const { canEditFinancials } = useHousehold();
   const {
     members,
     accounts,
     createAccount,
+    updateAccount,
     deleteAccount,
     getAccountVisibility,
     setAccountVisibility,
@@ -41,10 +45,12 @@ export function ManageFamilyAccountsTab() {
     useState<PortfolioAccountDto['depository']>('CDSL');
   const [newAccType, setNewAccType] = useState<PortfolioAccountDto['accountType']>('demat');
   const [newAccNumber, setNewAccNumber] = useState('');
+  const [newAccVisibility, setNewAccVisibility] =
+    useState<RecordVisibility>('household_shared');
 
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAccName.trim()) return;
+    if (!canEditFinancials || !newAccName.trim()) return;
 
     const defaultMemberId = newAccMemberId || members[0]?.id || 'mem-self';
     await createAccount({
@@ -54,10 +60,12 @@ export function ManageFamilyAccountsTab() {
       depository: newAccDepository,
       accountType: newAccType,
       accountNumberMasked: newAccNumber.trim() || undefined,
+      visibility: newAccVisibility,
     });
 
     setNewAccName('');
     setNewAccNumber('');
+    setNewAccVisibility('household_shared');
     setIsAddingAccount(false);
   };
 
@@ -101,36 +109,49 @@ export function ManageFamilyAccountsTab() {
               </div>
 
               <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const current = getAccountVisibility(acc.id);
-                    setAccountVisibility(
-                      acc.id,
-                      current === 'shared_family' ? 'owner_only' : 'shared_family'
-                    );
-                  }}
-                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border transition-colors ${
-                    getAccountVisibility(acc.id) === 'owner_only'
-                      ? 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25'
-                      : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
-                  }`}
-                  title="Toggle account visibility between Shared Family and Owner-Only"
-                >
-                  {getAccountVisibility(acc.id) === 'owner_only' ? (
-                    <>
-                      <Lock className="w-3 h-3" />
-                      Owner Only
-                    </>
-                  ) : (
-                    <>
-                      <Globe className="w-3 h-3" />
-                      Shared
-                    </>
-                  )}
-                </button>
+                {(() => {
+                  const isOwnerOnly =
+                    acc.visibility === 'owner_only' ||
+                    (!acc.visibility && getAccountVisibility(acc.id) === 'owner_only');
+                  return (
+                    <button
+                      type="button"
+                      disabled={!canEditFinancials}
+                      onClick={() => {
+                        if (!canEditFinancials) return;
+                        const nextIsPrivate = !isOwnerOnly;
+                        setAccountVisibility(
+                          acc.id,
+                          nextIsPrivate ? 'owner_only' : 'shared_family'
+                        );
+                        void updateAccount({
+                          ...acc,
+                          visibility: nextIsPrivate ? 'owner_only' : 'household_shared',
+                        });
+                      }}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border transition-colors disabled:opacity-50 ${
+                        isOwnerOnly
+                          ? 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25'
+                          : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
+                      }`}
+                      title="Toggle account visibility between Shared Household and Owner-Only"
+                    >
+                      {isOwnerOnly ? (
+                        <>
+                          <Lock className="w-3 h-3" />
+                          Owner Only
+                        </>
+                      ) : (
+                        <>
+                          <Globe className="w-3 h-3" />
+                          Shared
+                        </>
+                      )}
+                    </button>
+                  );
+                })()}
 
-                {accounts.length > 1 && (
+                {canEditFinancials && accounts.length > 1 && (
                   <button
                     type="button"
                     onClick={() => deleteAccount(acc.id)}
@@ -255,6 +276,24 @@ export function ManageFamilyAccountsTab() {
                 className="w-full text-xs bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-slate-400 mb-1">
+                Account Visibility
+              </label>
+              <select
+                value={newAccVisibility}
+                onChange={(e) => setNewAccVisibility(e.target.value as RecordVisibility)}
+                className="w-full text-xs bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="household_shared">
+                  Household Shared — Visible to active household members
+                </option>
+                <option value="owner_only">
+                  Owner Only — Private to account creator &amp; owner
+                </option>
+              </select>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
@@ -272,7 +311,7 @@ export function ManageFamilyAccountsTab() {
             </Button>
           </div>
         </form>
-      ) : (
+      ) : canEditFinancials ? (
         <Button
           type="button"
           variant="outline"
@@ -283,7 +322,7 @@ export function ManageFamilyAccountsTab() {
           <Plus className="w-4 h-4 mr-1.5" />
           Add Demat, MF Folio, or Bank Account
         </Button>
-      )}
+      ) : null}
     </div>
   );
 }

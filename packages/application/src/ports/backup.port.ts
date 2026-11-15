@@ -19,6 +19,10 @@ export interface PortfolioBackupData {
   readonly version: '1.0.0';
   readonly schema: 'wealthnest-portfolio-v1';
   readonly exportedAt: string;
+  readonly household?: {
+    readonly id: string;
+    readonly name?: string;
+  };
   readonly user: {
     readonly id: string;
     readonly email: string;
@@ -45,10 +49,11 @@ export interface BackupValidationResult {
 }
 
 export interface BackupPort {
-  createFullBackup(userId: string): Promise<Result<PortfolioBackupData>>;
+  createFullBackup(scopeId: string): Promise<Result<PortfolioBackupData>>;
   restoreFromBackup(
-    userId: string,
-    backup: PortfolioBackupData
+    scopeId: string,
+    backup: PortfolioBackupData,
+    options?: { readonly targetUserId?: string; readonly householdId?: string }
   ): Promise<
     Result<{
       readonly restoredHoldings: number;

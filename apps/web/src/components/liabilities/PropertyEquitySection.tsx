@@ -8,6 +8,7 @@ interface PropertyEquitySectionProps {
   readonly propertyEquities: readonly PropertyEquityDetail[];
   readonly currencySymbol: string;
   readonly locale: string;
+  readonly canEditFinancials?: boolean;
   readonly onUpdateAppraisal: (asset: { id: string; name: string; valuationCents: bigint }) => void;
 }
 
@@ -15,6 +16,7 @@ export function PropertyEquitySection({
   propertyEquities,
   currencySymbol,
   locale,
+  canEditFinancials = true,
   onUpdateAppraisal,
 }: PropertyEquitySectionProps) {
   if (propertyEquities.length === 0) return null;
@@ -155,6 +157,12 @@ export function PropertyEquitySection({
                   <Button
                     variant="secondary"
                     size="sm"
+                    disabled={!canEditFinancials}
+                    title={
+                      !canEditFinancials
+                        ? 'View-only household role cannot update appraisals'
+                        : undefined
+                    }
                     className="text-xs gap-1.5 h-8"
                     onClick={() =>
                       onUpdateAppraisal({

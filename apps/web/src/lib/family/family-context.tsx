@@ -15,6 +15,7 @@ import {
 } from '@wealthnest/domain';
 import { isOk } from '@wealthnest/shared';
 import { useAuth } from '../supabase/auth-context';
+import { useHousehold, DEMO_HOUSEHOLD_SUMMARY } from '../supabase/household-context';
 import {
   DEFAULT_DEMO_MEMBERS,
   DEFAULT_DEMO_ACCOUNTS,
@@ -37,6 +38,8 @@ interface FamilyContextType {
   createMember: (params: {
     name: string;
     relationship: FamilyMemberDto['relationship'];
+    email?: string;
+    entityType?: FamilyMemberDto['entityType'];
     panMasked?: string;
     colorHex?: string;
     isPrimary?: boolean;
@@ -51,6 +54,7 @@ interface FamilyContextType {
     depository?: PortfolioAccountDto['depository'];
     accountNumberMasked?: string;
     accountType?: PortfolioAccountDto['accountType'];
+    visibility?: PortfolioAccountDto['visibility'];
   }) => Promise<PortfolioAccountDto | null>;
   updateAccount: (account: PortfolioAccountDto) => Promise<void>;
   deleteAccount: (id: string) => Promise<void>;
@@ -88,10 +92,18 @@ const FamilyContext = createContext<FamilyContextType>({
 
 export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const { activeHouseholdId, isLoading: householdLoading } = useHousehold();
+  const { holdingRepo, familyRepo, mode } = useRepositories();
   const userId = user?.id || 'demo-user-001';
+  const isDemoUser = mode === 'supabase' && (!user?.id || user.id.startsWith('demo-'));
+  const scopeId = activeHouseholdId || (isDemoUser ? DEMO_HOUSEHOLD_SUMMARY.id : undefined);
 
-  const [members, setMembers] = useState<FamilyMemberDto[]>(DEFAULT_DEMO_MEMBERS);
-  const [accounts, setAccounts] = useState<PortfolioAccountDto[]>(DEFAULT_DEMO_ACCOUNTS);
+  const [members, setMembers] = useState<FamilyMemberDto[]>(() =>
+    isDemoUser ? DEFAULT_DEMO_MEMBERS : []
+  );
+  const [accounts, setAccounts] = useState<PortfolioAccountDto[]>(() =>
+    isDemoUser ? DEFAULT_DEMO_ACCOUNTS : []
+  );
   const [selectedMemberId, setSelectedMemberId] = useState<string | 'all'>('all');
   const [selectedAccountId, setSelectedAccountId] = useState<string | 'all'>('all');
   const [familySummary, setFamilySummary] = useState<FamilyPortfolioSummary | null>(null);
@@ -106,8 +118,6 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     }
   });
 
-  const { holdingRepo, familyRepo } = useRepositories();
-
   const getSummaryUseCase = useMemo(
     () => new GetFamilyPortfolioSummaryUseCase(familyRepo, holdingRepo),
     [familyRepo, holdingRepo]
@@ -121,27 +131,53 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     [familyRepo]
   );
 
+  // Reset active member/account filters when switching households to prevent cross-household stale selection
+  useEffect(() => {
+    setSelectedMemberId('all');
+    setSelectedAccountId('all');
+  }, [activeHouseholdId]);
+
   const refreshFamilyData = useCallback(async () => {
+    if (householdLoading) {
+      return;
+    }
+    if (!scopeId) {
+      setMembers([]);
+      setAccounts([]);
+      setFamilySummary(null);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       const [membersRes, accountsRes] = await Promise.all([
-        familyRepo.getMembers(userId),
-        familyRepo.getAccounts(userId),
+        familyRepo.getMembersByHousehold
+          ? familyRepo.getMembersByHousehold(scopeId)
+          : familyRepo.getMembers(scopeId),
+        familyRepo.getAccountsByHousehold
+          ? familyRepo.getAccountsByHousehold(scopeId)
+          : familyRepo.getAccounts(scopeId),
       ]);
 
-      let currentMembers = DEFAULT_DEMO_MEMBERS;
-      let currentAccounts = DEFAULT_DEMO_ACCOUNTS;
+      let currentMembers: FamilyMemberDto[] = isDemoUser ? DEFAULT_DEMO_MEMBERS : [];
+      let currentAccounts: PortfolioAccountDto[] = isDemoUser ? DEFAULT_DEMO_ACCOUNTS : [];
 
       if (isOk(membersRes)) {
         currentMembers = [...membersRes.value];
         setMembers(currentMembers);
+      } else if (!isDemoUser) {
+        setMembers([]);
       }
+
       if (isOk(accountsRes)) {
         currentAccounts = [...accountsRes.value];
         setAccounts(currentAccounts);
+      } else if (!isDemoUser) {
+        setAccounts([]);
       }
 
-      if (!userId || userId.startsWith('demo-')) {
+      if (isDemoUser) {
         const summary = calculateFamilyPortfolioSummary(
           currentMembers,
           currentAccounts,
@@ -149,9 +185,11 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         );
         setFamilySummary(summary);
       } else {
-        const summaryRes = await getSummaryUseCase.execute(userId);
+        const summaryRes = await getSummaryUseCase.execute(scopeId);
         if (isOk(summaryRes)) {
           setFamilySummary(summaryRes.value);
+        } else {
+          setFamilySummary(null);
         }
       }
     } catch (e) {
@@ -159,7 +197,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [userId, getSummaryUseCase]);
+  }, [familyRepo, getSummaryUseCase, householdLoading, isDemoUser, scopeId]);
 
   useEffect(() => {
     refreshFamilyData();
@@ -191,12 +229,18 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const createMember = async (params: {
     name: string;
     relationship: FamilyMemberDto['relationship'];
+    email?: string;
+    entityType?: FamilyMemberDto['entityType'];
     panMasked?: string;
     colorHex?: string;
     isPrimary?: boolean;
     notes?: string;
   }) => {
-    const res = await manageMembersUseCase.createMember({ ...params, userId });
+    const res = await manageMembersUseCase.createMember({
+      ...params,
+      userId,
+      householdId: scopeId,
+    });
     if (isOk(res)) {
       await refreshFamilyData();
       return res.value;
@@ -226,8 +270,13 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     depository?: PortfolioAccountDto['depository'];
     accountNumberMasked?: string;
     accountType?: PortfolioAccountDto['accountType'];
+    visibility?: PortfolioAccountDto['visibility'];
   }) => {
-    const res = await manageAccountsUseCase.createAccount({ ...params, userId });
+    const res = await manageAccountsUseCase.createAccount({
+      ...params,
+      userId,
+      householdId: scopeId,
+    });
     if (isOk(res)) {
       await refreshFamilyData();
       return res.value;

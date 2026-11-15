@@ -2,13 +2,16 @@ import { Brand } from '@wealthnest/shared';
 import { Money } from '../money/money.js';
 import { UserId } from './user.js';
 import { AssetId } from './asset.js';
+import type { HoldingOwnerShareInput, RecordVisibility } from '../household/household-types.js';
 
 export type HoldingId = Brand<string, 'HoldingId'>;
 
 export interface HoldingEntity {
   readonly id: HoldingId;
+  readonly householdId?: string;
   readonly userId: UserId;
   readonly assetId: AssetId;
+  readonly visibility?: RecordVisibility;
   readonly quantity: number;
   readonly unitCost: Money;
   readonly currentValue: Money;
@@ -21,4 +24,5 @@ export interface HoldingEntity {
   readonly source?: string;
   readonly memberId?: string;
   readonly accountId?: string;
+  readonly owners?: readonly HoldingOwnerShareInput[];
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLiabilityRepository } from '@/lib/persistence/repository-context';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { Button } from '@/components/ui/Button';
 import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
@@ -25,6 +26,7 @@ export function UpdateValuationModal({
   onSuccess,
 }: UpdateValuationModalProps) {
   const { currencySymbol } = usePreferences();
+  const { activeHouseholdId, canEditFinancials } = useHousehold();
   const liabilityRepo = useLiabilityRepository();
   const [valuationStr, setValuationStr] = useState('');
   const [asOfDate, setAsOfDate] = useState('');
@@ -49,6 +51,11 @@ export function UpdateValuationModal({
     e.preventDefault();
     setErrorMsg(null);
 
+    if (!canEditFinancials) {
+      setErrorMsg('Viewers have read-only access and cannot record valuations.');
+      return;
+    }
+
     const val = parseFloat(valuationStr);
     if (isNaN(val) || val < 0) {
       setErrorMsg(`Please enter a valid property valuation (${currencySymbol}0 or greater).`);
@@ -65,6 +72,7 @@ export function UpdateValuationModal({
       const res = await liabilityRepo.recordAssetValuation({
         assetId,
         userId,
+        householdId: activeHouseholdId,
         valuationCents: BigInt(Math.round(val * 100)),
         asOfDate,
         source,
@@ -120,7 +128,7 @@ export function UpdateValuationModal({
           <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting} className="min-w-[120px]">
+          <Button type="submit" disabled={isSubmitting || !canEditFinancials} className="min-w-[120px]">
             {isSubmitting ? 'Updating...' : 'Update Valuation'}
           </Button>
         </div>

@@ -1,4 +1,5 @@
 import { Result, err } from '@wealthnest/shared';
+import { validateOwnershipShares } from '@wealthnest/domain';
 import {
   HoldingRepositoryPort,
   HoldingDetailDto,
@@ -19,6 +20,19 @@ export class AddHoldingUseCase {
 
     if (params.unitCostCents < 0 || params.currentValueCents < 0) {
       return err(new Error('Holding valuation amounts cannot be negative.'));
+    }
+
+    if (params.ownerShares && params.ownerShares.length > 0) {
+      const shareCheck = validateOwnershipShares(
+        params.ownerShares.map((o) => ({
+          familyMemberId: o.familyMemberId,
+          sharePercentage: o.ownershipShare,
+          isPrimary: o.isPrimaryOwner,
+        }))
+      );
+      if (!shareCheck.valid) {
+        return err(new Error(shareCheck.error || 'Invalid holding ownership shares.'));
+      }
     }
 
     return this.holdingRepo.createHoldingWithAsset(params);

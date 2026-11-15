@@ -30,11 +30,13 @@ export class GetTaxHarvestingSummaryUseCase {
   constructor(private readonly holdingRepo: HoldingRepositoryPort) {}
 
   async execute(
-    userId: string,
+    scopeId: string,
     asOfDateStr: string = new Date().toISOString().slice(0, 10)
   ): Promise<Result<TaxHarvestingSummaryDto>> {
     try {
-      const holdingsRes = await this.holdingRepo.listDetailsByUser(userId);
+      const holdingsRes = await (this.holdingRepo.listDetailsByHousehold
+        ? this.holdingRepo.listDetailsByHousehold(scopeId)
+        : this.holdingRepo.listDetailsByUser(scopeId));
       const holdings = isOk(holdingsRes) ? holdingsRes.value : [];
 
       const rawInputs: RawHoldingTaxInput[] = holdings.map((h) => ({

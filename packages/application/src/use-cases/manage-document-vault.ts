@@ -9,15 +9,17 @@ import {
 export class ManageDocumentVaultUseCase {
   constructor(private readonly vaultRepo: DocumentVaultRepositoryPort) {}
 
-  async listDocuments(userId: string): Promise<Result<FamilyDocumentDto[]>> {
-    if (!userId || userId.trim().length === 0) {
-      return err(new Error('User ID is required to list vault documents.'));
+  async listDocuments(scopeId: string): Promise<Result<FamilyDocumentDto[]>> {
+    if (!scopeId || scopeId.trim().length === 0) {
+      return err(new Error('Household or User ID is required to list vault documents.'));
     }
-    return this.vaultRepo.listDocumentsByUser(userId);
+    return this.vaultRepo.listDocumentsByHousehold
+      ? this.vaultRepo.listDocumentsByHousehold(scopeId)
+      : this.vaultRepo.listDocumentsByUser(scopeId);
   }
 
   async uploadDocument(params: UploadFamilyDocumentParams): Promise<Result<FamilyDocumentDto>> {
-    if (!params.userId || params.userId.trim().length === 0) {
+    if ((!params.userId || params.userId.trim().length === 0) && !params.householdId) {
       return err(new Error('User ID is required to upload a document.'));
     }
 

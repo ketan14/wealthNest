@@ -13,6 +13,7 @@ interface DocumentVaultListProps {
   readonly nowMs: number;
   readonly thirtyDaysMs: number;
   readonly isSupportModeActive: boolean;
+  readonly canEditFinancials?: boolean;
   readonly onOpenUploadModal: () => void;
   readonly onDownload: (doc: FamilyDocumentDto) => void;
   readonly onRequestDelete: (doc: FamilyDocumentDto) => void;
@@ -28,6 +29,7 @@ export function DocumentVaultList({
   nowMs,
   thirtyDaysMs,
   isSupportModeActive,
+  canEditFinancials = true,
   onOpenUploadModal,
   onDownload,
   onRequestDelete,
@@ -52,7 +54,18 @@ export function DocumentVaultList({
             Upload PAN cards, HUF deeds, CAS statements, or insurance policies to keep your family
             records organized and protected.
           </p>
-          <Button onClick={onOpenUploadModal} disabled={isSupportModeActive} className="mt-2">
+          <Button
+            onClick={onOpenUploadModal}
+            disabled={isSupportModeActive || !canEditFinancials}
+            title={
+              isSupportModeActive
+                ? 'Disabled in Support Impersonation Mode (Read-Only)'
+                : !canEditFinancials
+                  ? 'View-only household role cannot upload documents'
+                  : undefined
+            }
+            className="mt-2"
+          >
             Upload First Document
           </Button>
         </CardContent>
@@ -134,7 +147,12 @@ export function DocumentVaultList({
                   <Button
                     size="sm"
                     variant="ghost"
-                    disabled={isSupportModeActive}
+                    disabled={isSupportModeActive || !canEditFinancials}
+                    title={
+                      !canEditFinancials
+                        ? 'View-only household role cannot delete documents'
+                        : undefined
+                    }
                     onClick={() => onRequestDelete(doc)}
                     aria-label={`Delete ${doc.title}`}
                     className="h-8 px-2 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"

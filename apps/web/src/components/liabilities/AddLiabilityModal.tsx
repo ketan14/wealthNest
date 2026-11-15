@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { LoanType, InterestType, LiabilityStatus } from '@wealthnest/domain';
+import {
+  LoanType,
+  InterestType,
+  LiabilityStatus,
+  LiabilityPartyShareInput,
+  RecordVisibility,
+  validateOwnershipShares,
+} from '@wealthnest/domain';
 import {
   LiabilityDto,
   CreateLiabilityParams,
@@ -8,10 +15,13 @@ import {
 } from '@wealthnest/application';
 import { useHoldingRepository } from '@/lib/persistence/repository-context';
 import { useFamily } from '@/lib/family/family-context';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
+import { VisibilityControl } from '@/components/household/VisibilityControl';
+import { JointOwnershipEditor } from '@/components/household/JointOwnershipEditor';
 import { Button } from '@/components/ui/Button';
 import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
-import { X, Landmark, AlertCircle, Building2, User, Users } from 'lucide-react';
+import { X, Landmark, AlertCircle, Building2, User } from 'lucide-react';
 import { LiabilityPrincipalInterestSection } from './LiabilityPrincipalInterestSection';
 
 interface AddLiabilityModalProps {
@@ -51,9 +61,15 @@ export function AddLiabilityModal({
   const isEditing = Boolean(liabilityToEdit);
 
   const { members, selectedMemberId } = useFamily();
+  const { activeHouseholdId, canEditFinancials } = useHousehold();
   const { currencySymbol } = usePreferences();
   const [memberId, setMemberId] = useState<string>('mem-self');
-  const [coBorrowerMemberIds, setCoBorrowerMemberIds] = useState<string[]>([]);
+  const [parties, setParties] = useState<LiabilityPartyShareInput[]>([
+    { familyMemberId: 'mem-self', partyRole: 'primary_borrower', liabilityShare: 100 },
+  ]);
+  const [isJointBorrowers, setIsJointBorrowers] = useState(false);
+  const [visibility, setVisibility] = useState<RecordVisibility>('household_shared');
+  const [restrictedGranteeUserIds, setRestrictedGranteeUserIds] = useState<string[]>([]);
   const [name, setName] = useState('');
   const [loanType, setLoanType] = useState<LoanType>('home_loan');
   const [lender, setLender] = useState('');
@@ -75,14 +91,18 @@ export function AddLiabilityModal({
 
   const holdingRepo = useHoldingRepository();
 
-  // Query user assets to allow linking collateral (especially Real Estate)
+  const scopeId = activeHouseholdId || userId;
+
+  // Query household assets to allow linking collateral (especially Real Estate)
   const { data: userHoldings } = useQuery({
-    queryKey: ['holdings-details', userId],
+    queryKey: ['holdings-details', scopeId],
     queryFn: async () => {
-      const res = await holdingRepo.listDetailsByUser(userId);
+      const res = await (holdingRepo.listDetailsByHousehold
+        ? holdingRepo.listDetailsByHousehold(scopeId)
+        : holdingRepo.listDetailsByUser(scopeId));
       return res.success ? res.value : [];
     },
-    enabled: isOpen && Boolean(userId),
+    enabled: isOpen && Boolean(scopeId),
   });
 
   useEffect(() => {
@@ -104,12 +124,25 @@ export function AddLiabilityModal({
       setStartDate(liabilityToEdit.startDate || '');
       setEndDate(liabilityToEdit.endDate || '');
       setLinkedAssetId(liabilityToEdit.linkedAssetId || '');
-      setMemberId(liabilityToEdit.memberId || 'mem-self');
-      setCoBorrowerMemberIds(
-        liabilityToEdit.coBorrowerMemberIds ? [...liabilityToEdit.coBorrowerMemberIds] : []
-      );
+      const editPrimaryId = liabilityToEdit.memberId || members[0]?.id || 'mem-self';
+      setMemberId(editPrimaryId);
+      setVisibility(liabilityToEdit.visibility || 'household_shared');
+      setRestrictedGranteeUserIds([]);
+      if (liabilityToEdit.parties && liabilityToEdit.parties.length > 0) {
+        setParties([...liabilityToEdit.parties]);
+        setIsJointBorrowers(liabilityToEdit.parties.length > 1);
+      } else {
+        setParties([
+          { familyMemberId: editPrimaryId, partyRole: 'primary_borrower', liabilityShare: 100 },
+        ]);
+        setIsJointBorrowers(false);
+      }
       setNotes(liabilityToEdit.notes || '');
     } else {
+      const defaultMemberId =
+        selectedMemberId && selectedMemberId !== 'all'
+          ? selectedMemberId
+          : members[0]?.id || 'mem-self';
       setName('');
       setLoanType('home_loan');
       setLender('');
@@ -124,18 +157,28 @@ export function AddLiabilityModal({
       setEndDate('');
       setStatus('active');
       setLinkedAssetId('');
-      setMemberId(selectedMemberId && selectedMemberId !== 'all' ? selectedMemberId : 'mem-self');
-      setCoBorrowerMemberIds([]);
+      setMemberId(defaultMemberId);
+      setParties([
+        { familyMemberId: defaultMemberId, partyRole: 'primary_borrower', liabilityShare: 100 },
+      ]);
+      setIsJointBorrowers(false);
+      setVisibility('household_shared');
+      setRestrictedGranteeUserIds([]);
       setNotes('');
     }
     setErrorMsg(null);
-  }, [liabilityToEdit, isOpen]);
+  }, [liabilityToEdit, isOpen, members, selectedMemberId]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+
+    if (!canEditFinancials) {
+      setErrorMsg('Viewers have read-only access and cannot create or edit liabilities.');
+      return;
+    }
 
     const origPrincipal = parseFloat(originalPrincipalStr);
     if (!name.trim()) {
@@ -157,6 +200,34 @@ export function AddLiabilityModal({
       return;
     }
 
+    const effectiveParties: LiabilityPartyShareInput[] =
+      isJointBorrowers && parties.length > 0
+        ? parties
+        : memberId
+          ? [{ familyMemberId: memberId, partyRole: 'primary_borrower', liabilityShare: 100 }]
+          : [];
+
+    if (effectiveParties.length > 0) {
+      const shareCheck = validateOwnershipShares(
+        effectiveParties.map((p) => ({
+          familyMemberId: p.familyMemberId,
+          sharePercentage: p.liabilityShare,
+        }))
+      );
+      if (!shareCheck.valid) {
+        setErrorMsg(shareCheck.error || 'Borrower shares must total 100%.');
+        return;
+      }
+    }
+
+    const resolvedPrimaryMemberId =
+      effectiveParties.find((p) => p.partyRole === 'primary_borrower')?.familyMemberId ||
+      effectiveParties[0]?.familyMemberId ||
+      memberId;
+    const resolvedCoBorrowers = effectiveParties
+      .filter((p) => p.familyMemberId !== resolvedPrimaryMemberId)
+      .map((p) => p.familyMemberId);
+
     const emiAmount = emiAmountStr ? parseFloat(emiAmountStr) : 0;
     const currentBalance = currentBalanceStr ? parseFloat(currentBalanceStr) : origPrincipal;
     const tenureMonths = tenureMonthsStr ? parseInt(tenureMonthsStr, 10) : undefined;
@@ -167,6 +238,8 @@ export function AddLiabilityModal({
         await onSave({
           id: liabilityToEdit.id,
           userId,
+          householdId: activeHouseholdId,
+          visibility,
           name: name.trim(),
           loanType,
           lender: lender.trim(),
@@ -177,13 +250,16 @@ export function AddLiabilityModal({
           emiAmountCents: BigInt(Math.round(emiAmount * 100)),
           status,
           linkedAssetId: linkedAssetId || null,
-          memberId: memberId || undefined,
-          coBorrowerMemberIds: coBorrowerMemberIds.length > 0 ? coBorrowerMemberIds : undefined,
+          memberId: resolvedPrimaryMemberId || undefined,
+          coBorrowerMemberIds: resolvedCoBorrowers.length > 0 ? resolvedCoBorrowers : undefined,
+          parties: effectiveParties.length > 0 ? effectiveParties : undefined,
           notes: notes.trim() || undefined,
         } as UpdateLiabilityParams);
       } else {
         await onSave({
           userId,
+          householdId: activeHouseholdId,
+          visibility,
           name: name.trim(),
           loanType,
           lender: lender.trim(),
@@ -199,8 +275,11 @@ export function AddLiabilityModal({
           endDate: endDate || undefined,
           status,
           linkedAssetId: linkedAssetId || undefined,
-          memberId: memberId || undefined,
-          coBorrowerMemberIds: coBorrowerMemberIds.length > 0 ? coBorrowerMemberIds : undefined,
+          memberId: resolvedPrimaryMemberId || undefined,
+          coBorrowerMemberIds: resolvedCoBorrowers.length > 0 ? resolvedCoBorrowers : undefined,
+          parties: effectiveParties.length > 0 ? effectiveParties : undefined,
+          restrictedGranteeUserIds:
+            visibility === 'restricted' ? restrictedGranteeUserIds : undefined,
           notes: notes.trim() || undefined,
         } as CreateLiabilityParams);
       }
@@ -250,7 +329,7 @@ export function AddLiabilityModal({
           <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting} className="min-w-[120px]">
+          <Button type="submit" disabled={isSubmitting || !canEditFinancials} className="min-w-[120px]">
             {isSubmitting ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Loan'}
           </Button>
         </div>
@@ -264,8 +343,8 @@ export function AddLiabilityModal({
       )}
 
       <div className="space-y-6">
-        {/* Primary Borrower & Co-Borrowers */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl border border-border/80 bg-accent/10">
+        {/* Primary Borrower & Joint Borrowers */}
+          <div className="space-y-3 p-4 rounded-xl border border-border/80 bg-accent/10">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-primary" />
@@ -273,7 +352,15 @@ export function AddLiabilityModal({
               </label>
               <select
                 value={memberId}
-                onChange={(e) => setMemberId(e.target.value)}
+                onChange={(e) => {
+                  const nextId = e.target.value;
+                  setMemberId(nextId);
+                  if (!isJointBorrowers) {
+                    setParties([
+                      { familyMemberId: nextId, partyRole: 'primary_borrower', liabilityShare: 100 },
+                    ]);
+                  }
+                }}
                 className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
                 {members.map((m) => (
@@ -284,43 +371,41 @@ export function AddLiabilityModal({
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5 text-primary" />
-                Joint Co-Borrowers (Optional)
-              </label>
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {members
-                  .filter((m) => m.id !== memberId)
-                  .map((m) => {
-                    const isCoBorrower = coBorrowerMemberIds.includes(m.id);
-                    return (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => {
-                          if (isCoBorrower) {
-                            setCoBorrowerMemberIds((prev) => prev.filter((id) => id !== m.id));
-                          } else {
-                            setCoBorrowerMemberIds((prev) => [...prev, m.id]);
-                          }
-                        }}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1.5 ${
-                          isCoBorrower
-                            ? 'bg-primary/10 border-primary text-primary font-semibold'
-                            : 'bg-background border-border/60 text-muted-foreground hover:border-border'
-                        }`}
-                      >
-                        <span
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: m.colorHex }}
-                        />
-                        {m.name}
-                      </button>
-                    );
-                  })}
+            {members.length > 1 && (
+              <div className="pt-2 border-t border-border/40 space-y-2">
+                <label className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isJointBorrowers}
+                    onChange={(e) => {
+                      const next = e.target.checked;
+                      setIsJointBorrowers(next);
+                      if (!next && memberId) {
+                        setParties([
+                          {
+                            familyMemberId: memberId,
+                            partyRole: 'primary_borrower',
+                            liabilityShare: 100,
+                          },
+                        ]);
+                      }
+                    }}
+                    className="rounded border-border accent-primary"
+                  />
+                  <span>Configure Joint Borrowers / Guarantors &amp; Share Split</span>
+                </label>
+
+                {isJointBorrowers && (
+                  <JointOwnershipEditor
+                    mode="liability"
+                    members={members}
+                    shares={parties}
+                    onChange={setParties}
+                    disabled={!canEditFinancials}
+                  />
+                )}
               </div>
-            </div>
+            )}
           </div>
 
           {/* Loan Title & Type */}
@@ -471,6 +556,15 @@ export function AddLiabilityModal({
               </select>
             </div>
           </div>
+
+          <VisibilityControl
+            visibility={visibility}
+            onChange={setVisibility}
+            granteeUserIds={restrictedGranteeUserIds}
+            onGranteeUserIdsChange={setRestrictedGranteeUserIds}
+            disabled={!canEditFinancials}
+            compact
+          />
 
           {/* Notes */}
           <div>

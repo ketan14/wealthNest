@@ -35,6 +35,7 @@ interface GoalMemberRef {
 interface GoalsGridSectionProps {
   readonly summary: GoalsSummary;
   readonly members: readonly GoalMemberRef[];
+  readonly canEditFinancials?: boolean;
   readonly onDeleteGoal: (goal: { id: string; name: string }) => void;
 }
 
@@ -42,7 +43,12 @@ interface GoalsGridSectionProps {
  * Renders the Active Financial Milestones grid with funded progress bars,
  * inflation-adjusted targets, and committed vs. required monthly SIP comparisons.
  */
-export function GoalsGridSection({ summary, members, onDeleteGoal }: GoalsGridSectionProps) {
+export function GoalsGridSection({
+  summary,
+  members,
+  canEditFinancials = true,
+  onDeleteGoal,
+}: GoalsGridSectionProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -135,8 +141,13 @@ export function GoalsGridSection({ summary, members, onDeleteGoal }: GoalsGridSe
 
                     <button
                       onClick={() => onDeleteGoal(goal)}
-                      className="p-1 rounded text-muted-foreground hover:text-rose-400 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
-                      title="Delete Goal"
+                      disabled={!canEditFinancials}
+                      className="p-1 rounded text-muted-foreground hover:text-rose-400 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={
+                        canEditFinancials
+                          ? 'Delete Goal'
+                          : 'View-only household role cannot delete goals'
+                      }
                       aria-label={`Delete goal ${goal.name}`}
                     >
                       <Trash2 className="w-4 h-4" />

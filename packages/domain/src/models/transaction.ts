@@ -2,6 +2,7 @@ import { Brand, ISODateString } from '@wealthnest/shared';
 import { Money } from '../money/money.js';
 import { UserId } from './user.js';
 import { AssetId } from './asset.js';
+import type { RecordVisibility } from '../household/household-types.js';
 
 export type TransactionId = Brand<string, 'TransactionId'>;
 
@@ -10,8 +11,10 @@ export type TransactionType =
 
 export interface TransactionEntity {
   readonly id: TransactionId;
+  readonly householdId?: string;
   readonly userId: UserId;
   readonly assetId?: AssetId;
+  readonly visibility?: RecordVisibility;
   readonly type: TransactionType;
   readonly quantity?: number;
   readonly amount: Money;

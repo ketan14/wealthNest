@@ -7,9 +7,10 @@ import {
   UpdateGoalParams,
   LinkHoldingToGoalParams,
 } from '@wealthnest/application';
-import { GoalCategory, GoalPriority } from '@wealthnest/domain';
+import { GoalCategory, GoalPriority, RecordVisibility } from '@wealthnest/domain';
 import { supabase } from './client';
 import { toValidUuidOrNull } from './uuid-utils';
+import { resolveHouseholdIdForWrite, syncRestrictedRecordGrants } from './household-scope';
 
 interface JoinedAllocationRow {
   goal_id: string;
@@ -27,7 +28,9 @@ interface JoinedAllocationRow {
 
 interface GoalRow {
   id: string;
-  user_id: string;
+  household_id: string;
+  visibility: RecordVisibility;
+  created_by: string | null;
   name: string;
   category: string;
   target_amount_cents: number | string;
@@ -44,14 +47,46 @@ interface GoalRow {
   updated_at: string;
 }
 
+function mapGoalRowToDto(
+  g: GoalRow,
+  linkedHoldings: readonly GoalHoldingLinkDto[]
+): GoalDetailDto {
+  return {
+    id: g.id,
+    householdId: g.household_id,
+    userId: g.created_by || g.household_id,
+    visibility: g.visibility,
+    createdBy: g.created_by ?? undefined,
+    name: g.name,
+    category: g.category as GoalCategory,
+    targetAmountCents: Number(g.target_amount_cents),
+    targetDate: g.target_date,
+    initialSavedCents: Number(g.initial_saved_cents),
+    monthlyContributionCents: Number(g.monthly_contribution_cents),
+    expectedReturnRate: Number(g.expected_return_rate),
+    inflationRate: Number(g.inflation_rate),
+    priority: g.priority as GoalPriority,
+    currency: g.currency || 'INR',
+    notes: g.notes ?? undefined,
+    memberId: g.member_id ?? undefined,
+    createdAt: g.created_at,
+    updatedAt: g.updated_at,
+    linkedHoldings,
+  };
+}
+
 export class SupabaseGoalAdapter implements GoalRepositoryPort {
-  async listGoalsByUser(userId: string): Promise<Result<GoalDetailDto[]>> {
+  async listGoalsByHousehold(householdId: string): Promise<Result<GoalDetailDto[]>> {
     try {
-      // 1. Fetch user goals
+      const validHouseholdId = toValidUuidOrNull(householdId);
+      if (!validHouseholdId) {
+        return ok([]);
+      }
+
       const { data: goalRows, error: goalError } = await supabase
         .from('goals')
         .select('*')
-        .eq('user_id', userId)
+        .eq('household_id', validHouseholdId)
         .order('target_date', { ascending: true });
 
       if (goalError) {
@@ -65,7 +100,6 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
       const goals = goalRows as GoalRow[];
       const goalIds = goals.map((g) => g.id);
 
-      // 2. Fetch linked holdings for these goals
       const { data: linkRows, error: linkError } = await supabase
         .from('goal_holding_allocations')
         .select(
@@ -89,12 +123,10 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
         return err(new Error(linkError.message));
       }
 
-      // Group links by goal_id
       const linksByGoal = new Map<string, GoalHoldingLinkDto[]>();
       const rawLinks = (linkRows || []) as unknown as JoinedAllocationRow[];
 
       for (const row of rawLinks) {
-        const goalId = row.goal_id;
         const holdingVal = Number(row.holdings?.current_value_cents || 0);
         const allocPct = Number(row.allocation_percentage);
         const effectiveValCents = Math.round((holdingVal * allocPct) / 100);
@@ -107,31 +139,14 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
           currentValueCents: effectiveValCents,
         };
 
-        const existing = linksByGoal.get(goalId) || [];
+        const existing = linksByGoal.get(row.goal_id) || [];
         existing.push(linkDto);
-        linksByGoal.set(goalId, existing);
+        linksByGoal.set(row.goal_id, existing);
       }
 
-      // Map to GoalDetailDto
-      const dtos: GoalDetailDto[] = goals.map((g) => ({
-        id: g.id,
-        userId: g.user_id,
-        name: g.name,
-        category: g.category as GoalCategory,
-        targetAmountCents: Number(g.target_amount_cents),
-        targetDate: g.target_date,
-        initialSavedCents: Number(g.initial_saved_cents),
-        monthlyContributionCents: Number(g.monthly_contribution_cents),
-        expectedReturnRate: Number(g.expected_return_rate),
-        inflationRate: Number(g.inflation_rate),
-        priority: g.priority as GoalPriority,
-        currency: g.currency || 'INR',
-        notes: g.notes ?? undefined,
-        memberId: g.member_id ?? undefined,
-        createdAt: g.created_at,
-        updatedAt: g.updated_at,
-        linkedHoldings: linksByGoal.get(g.id) || [],
-      }));
+      const dtos: GoalDetailDto[] = goals.map((g) =>
+        mapGoalRowToDto(g, linksByGoal.get(g.id) || [])
+      );
 
       return ok(dtos);
     } catch (e) {
@@ -139,12 +154,22 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
     }
   }
 
+  async listGoalsByUser(scopeId: string): Promise<Result<GoalDetailDto[]>> {
+    return this.listGoalsByHousehold(scopeId);
+  }
+
   async createGoal(params: CreateGoalParams): Promise<Result<GoalDetailDto>> {
     try {
+      const householdId = await resolveHouseholdIdForWrite(params.householdId, params.userId);
+      const visibility: RecordVisibility = params.visibility ?? 'household_shared';
+      const actorId = toValidUuidOrNull(params.userId);
+
       const { data, error } = await supabase
         .from('goals')
         .insert({
-          user_id: params.userId,
+          household_id: householdId,
+          visibility,
+          ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
           name: params.name,
           category: params.category,
           target_amount_cents: params.targetAmountCents,
@@ -158,35 +183,24 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
           notes: params.notes || null,
           member_id: toValidUuidOrNull(params.memberId),
         })
-        .select()
+        .select('*')
         .single();
 
-      if (error) {
-        return err(new Error(`Failed to create goal: ${error.message}`));
+      if (error || !data) {
+        return err(new Error(`Failed to create goal: ${error?.message || 'Unknown error'}`));
       }
 
-      const row = data as GoalRow;
-      const dto: GoalDetailDto = {
-        id: row.id,
-        userId: row.user_id,
-        name: row.name,
-        category: row.category as GoalCategory,
-        targetAmountCents: Number(row.target_amount_cents),
-        targetDate: row.target_date,
-        initialSavedCents: Number(row.initial_saved_cents),
-        monthlyContributionCents: Number(row.monthly_contribution_cents),
-        expectedReturnRate: Number(row.expected_return_rate),
-        inflationRate: Number(row.inflation_rate),
-        priority: row.priority as GoalPriority,
-        currency: row.currency || 'INR',
-        notes: row.notes ?? undefined,
-        memberId: row.member_id ?? undefined,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        linkedHoldings: [],
-      };
+      if (visibility === 'restricted' && params.restrictedGranteeUserIds?.length) {
+        await syncRestrictedRecordGrants({
+          householdId,
+          recordType: 'goal',
+          recordId: data.id,
+          visibility,
+          granteeUserIds: params.restrictedGranteeUserIds,
+        });
+      }
 
-      return ok(dto);
+      return ok(mapGoalRowToDto(data as GoalRow, []));
     } catch (e) {
       return err(e instanceof Error ? e : new Error(String(e)));
     }
@@ -194,7 +208,9 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
 
   async updateGoal(params: UpdateGoalParams): Promise<Result<GoalDetailDto>> {
     try {
+      const actorId = toValidUuidOrNull(params.userId);
       const updates: Record<string, any> = {
+        ...(actorId ? { updated_by: actorId } : {}),
         updated_at: new Date().toISOString(),
       };
 
@@ -213,53 +229,28 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
       if (params.priority !== undefined) updates.priority = params.priority;
       if (params.notes !== undefined) updates.notes = params.notes;
       if (params.memberId !== undefined) updates.member_id = toValidUuidOrNull(params.memberId);
+      if (params.visibility !== undefined) updates.visibility = params.visibility;
 
       const { data, error } = await supabase
         .from('goals')
         .update(updates)
         .eq('id', params.goalId)
-        .eq('user_id', params.userId)
-        .select()
+        .select('*')
         .single();
 
-      if (error) {
-        return err(new Error(`Failed to update goal: ${error.message}`));
+      if (error || !data) {
+        return err(new Error(`Failed to update goal: ${error?.message || 'Unknown error'}`));
       }
 
-      const row = data as GoalRow;
-      const dto: GoalDetailDto = {
-        id: row.id,
-        userId: row.user_id,
-        name: row.name,
-        category: row.category as GoalCategory,
-        targetAmountCents: Number(row.target_amount_cents),
-        targetDate: row.target_date,
-        initialSavedCents: Number(row.initial_saved_cents),
-        monthlyContributionCents: Number(row.monthly_contribution_cents),
-        expectedReturnRate: Number(row.expected_return_rate),
-        inflationRate: Number(row.inflation_rate),
-        priority: row.priority as GoalPriority,
-        currency: row.currency || 'INR',
-        notes: row.notes ?? undefined,
-        memberId: row.member_id ?? undefined,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        linkedHoldings: [],
-      };
-
-      return ok(dto);
+      return ok(mapGoalRowToDto(data as GoalRow, []));
     } catch (e) {
       return err(e instanceof Error ? e : new Error(String(e)));
     }
   }
 
-  async deleteGoal(goalId: string, userId: string): Promise<Result<void>> {
+  async deleteGoal(goalId: string, _scopeId: string): Promise<Result<void>> {
     try {
-      const { error } = await supabase
-        .from('goals')
-        .delete()
-        .eq('id', goalId)
-        .eq('user_id', userId);
+      const { error } = await supabase.from('goals').delete().eq('id', goalId);
 
       if (error) {
         return err(new Error(error.message));
@@ -273,11 +264,26 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
 
   async linkHoldingToGoal(params: LinkHoldingToGoalParams): Promise<Result<void>> {
     try {
+      let householdId = toValidUuidOrNull(params.householdId);
+      if (!householdId) {
+        const { data: goalRow } = await supabase
+          .from('goals')
+          .select('household_id')
+          .eq('id', params.goalId)
+          .maybeSingle();
+        householdId = goalRow?.household_id ?? null;
+      }
+      if (!householdId) {
+        householdId = await resolveHouseholdIdForWrite(undefined, params.userId);
+      }
+
+      const actorId = toValidUuidOrNull(params.userId);
       const { error } = await supabase.from('goal_holding_allocations').upsert(
         {
+          household_id: householdId,
           goal_id: params.goalId,
           holding_id: params.holdingId,
-          user_id: params.userId,
+          ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
           allocation_percentage: params.allocationPercentage,
         },
         { onConflict: 'goal_id,holding_id' }
@@ -296,15 +302,14 @@ export class SupabaseGoalAdapter implements GoalRepositoryPort {
   async unlinkHoldingFromGoal(
     goalId: string,
     holdingId: string,
-    userId: string
+    _scopeId: string
   ): Promise<Result<void>> {
     try {
       const { error } = await supabase
         .from('goal_holding_allocations')
         .delete()
         .eq('goal_id', goalId)
-        .eq('holding_id', holdingId)
-        .eq('user_id', userId);
+        .eq('holding_id', holdingId);
 
       if (error) {
         return err(new Error(error.message));

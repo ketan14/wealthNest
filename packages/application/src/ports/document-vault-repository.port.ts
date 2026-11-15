@@ -1,10 +1,12 @@
 import { Result } from '@wealthnest/shared';
-import { DocumentCategory, FamilyDocument } from '@wealthnest/domain';
+import { DocumentCategory, FamilyDocument, RecordVisibility } from '@wealthnest/domain';
 
 export type FamilyDocumentDto = FamilyDocument;
 
 export interface UploadFamilyDocumentParams {
   readonly userId: string;
+  readonly householdId?: string;
+  readonly visibility?: RecordVisibility;
   readonly memberId?: string;
   readonly title: string;
   readonly category: DocumentCategory;
@@ -16,15 +18,17 @@ export interface UploadFamilyDocumentParams {
   readonly expiryDate?: string;
   readonly notes?: string;
   readonly isEncrypted?: boolean;
+  readonly restrictedGranteeUserIds?: readonly string[];
 }
 
 export interface DocumentVaultRepositoryPort {
-  listDocumentsByUser(userId: string): Promise<Result<FamilyDocumentDto[]>>;
+  listDocumentsByUser(scopeId: string): Promise<Result<FamilyDocumentDto[]>>;
+  listDocumentsByHousehold?(householdId: string): Promise<Result<FamilyDocumentDto[]>>;
   uploadDocument(params: UploadFamilyDocumentParams): Promise<Result<FamilyDocumentDto>>;
   getDocumentDownloadUrl(
     documentId: string,
     storagePath: string,
-    userId: string
+    scopeId: string
   ): Promise<Result<string>>;
-  deleteDocument(documentId: string, storagePath: string, userId: string): Promise<Result<void>>;
+  deleteDocument(documentId: string, storagePath: string, scopeId: string): Promise<Result<void>>;
 }

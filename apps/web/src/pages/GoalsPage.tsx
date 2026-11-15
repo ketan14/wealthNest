@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/supabase/auth-context';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { useRepositories } from '@/lib/persistence/repository-context';
 import {
   GoalDetailDto,
@@ -33,13 +34,18 @@ import { Plus } from 'lucide-react';
 
 export function GoalsPage() {
   const { user } = useAuth();
-  const userId = user?.id || '';
+  const { activeHouseholdId, canEditFinancials } = useHousehold();
   const queryClient = useQueryClient();
   const { members, selectedMemberId } = useFamily();
   const { isSupportModeActive } = useSupportSession();
-  const { goalRepo, holdingRepo } = useRepositories();
+  const { goalRepo, holdingRepo, mode } = useRepositories();
   const { currencySymbol, preferences } = usePreferences();
   const locale = preferences.numberFormat || 'en-IN';
+
+  const isDemoMode = mode === 'supabase' && (!user?.id || user.id.startsWith('demo-'));
+  const hasLiveBackend = !isDemoMode && Boolean(activeHouseholdId || user?.id);
+  const scopeId = activeHouseholdId || user?.id || '';
+  const effectiveUserId = user?.id || scopeId;
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
@@ -47,19 +53,20 @@ export function GoalsPage() {
   const [monthlyExpenseRupees, setMonthlyExpenseRupees] = useState<number>(65000);
   const [demoGoalsState, setDemoGoalsState] = useState<GoalDetailDto[]>(DEMO_GOALS);
 
-  // 1. Query Goals from DB (or fallback to demoGoalsState)
+  // 1. Query Goals from DB (or fallback to demoGoalsState ONLY in demo preview)
   const { data: dbGoals } = useQuery<GoalDetailDto[]>({
-    queryKey: ['user-goals', userId],
+    queryKey: ['user-goals', scopeId || 'demo'],
     queryFn: async () => {
-      if (!userId) return DEMO_GOALS;
-      const res = await goalRepo.listGoalsByUser(userId);
-      if (!res.success || res.value.length === 0) return DEMO_GOALS;
-      return res.value;
+      if (!hasLiveBackend || !scopeId) return DEMO_GOALS;
+      const res = await (goalRepo.listGoalsByHousehold
+        ? goalRepo.listGoalsByHousehold(scopeId)
+        : goalRepo.listGoalsByUser(scopeId));
+      return res.success ? res.value : [];
     },
     enabled: true,
   });
 
-  const activeGoalsList: GoalDetailDto[] = userId ? dbGoals || DEMO_GOALS : demoGoalsState;
+  const activeGoalsList: GoalDetailDto[] = hasLiveBackend ? dbGoals || [] : demoGoalsState;
 
   // Filter goals by selected family member entity
   const filteredGoalsList = useMemo(() => {
@@ -67,12 +74,14 @@ export function GoalsPage() {
     return activeGoalsList.filter((g) => g.memberId === selectedMemberId);
   }, [activeGoalsList, selectedMemberId]);
 
-  // 2. Query user holdings (to get liquid cash)
+  // 2. Query household holdings (to get liquid cash)
   const { data: dbHoldings } = useQuery<HoldingDetailDto[]>({
-    queryKey: ['goals-holdings', userId],
+    queryKey: ['goals-holdings', scopeId || 'demo'],
     queryFn: async () => {
-      if (!userId) return [];
-      const res = await holdingRepo.listDetailsByUser(userId);
+      if (!hasLiveBackend || !scopeId) return [];
+      const res = await (holdingRepo.listDetailsByHousehold
+        ? holdingRepo.listDetailsByHousehold(scopeId)
+        : holdingRepo.listDetailsByUser(scopeId));
       return res.success ? res.value : [];
     },
     enabled: true,
@@ -81,10 +90,14 @@ export function GoalsPage() {
   // 3. Compute goals summary synchronously
   const summary: GoalsSummary = useMemo(() => {
     let liquidCashCents = 40000000n; // ₹4 Lakh default demo liquid cash
-    if (userId && dbHoldings) {
+    if (hasLiveBackend && dbHoldings) {
       const targetHoldings =
         selectedMemberId && selectedMemberId !== 'all'
-          ? dbHoldings.filter((h) => h.memberId === selectedMemberId)
+          ? dbHoldings.filter(
+              (h) =>
+                h.memberId === selectedMemberId ||
+                h.owners?.some((o) => o.familyMemberId === selectedMemberId)
+            )
           : dbHoldings;
 
       const liquidClasses = new Set(['cash', 'cash_and_bank', 'liquid_funds', 'mutual_fund']);
@@ -129,14 +142,21 @@ export function GoalsPage() {
     const expensesMoney = Money.fromDecimal(monthlyExpenseRupees, 'INR');
 
     return calculateGoalsSummary(domainGoals, liquidMoney, expensesMoney, 'INR');
-  }, [filteredGoalsList, userId, dbHoldings, monthlyExpenseRupees, selectedMemberId]);
+  }, [filteredGoalsList, hasLiveBackend, dbHoldings, monthlyExpenseRupees, selectedMemberId]);
 
   // Create Goal Mutation
   const createMutation = useMutation({
     mutationFn: async (params: Omit<CreateGoalParams, 'userId'>) => {
-      if (userId) {
+      if (hasLiveBackend) {
+        if (!canEditFinancials) {
+          throw new Error('View-only household role cannot create financial goals.');
+        }
         const useCase = new CreateGoalUseCase(goalRepo);
-        const res = await useCase.execute({ ...params, userId });
+        const res = await useCase.execute({
+          ...params,
+          userId: effectiveUserId || 'local-user',
+          householdId: params.householdId ?? (activeHouseholdId || undefined),
+        });
         if (!res.success) throw res.error;
         return res.value;
       } else {
@@ -144,6 +164,8 @@ export function GoalsPage() {
         const newGoal: GoalDetailDto = {
           id: `demo-g-${Date.now()}`,
           userId: 'demo-user',
+          householdId: activeHouseholdId || 'demo-household-vaghela',
+          visibility: params.visibility ?? 'household_shared',
           name: params.name,
           category: params.category,
           targetAmountCents: params.targetAmountCents,
@@ -155,6 +177,7 @@ export function GoalsPage() {
           priority: params.priority || 'medium',
           currency: 'INR',
           notes: params.notes,
+          memberId: params.memberId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           linkedHoldings: [],
@@ -172,9 +195,12 @@ export function GoalsPage() {
   // Delete Goal Mutation
   const deleteMutation = useMutation({
     mutationFn: async (goalId: string) => {
-      if (userId) {
+      if (!goalId.startsWith('demo-') && hasLiveBackend) {
+        if (!canEditFinancials) {
+          throw new Error('View-only household role cannot delete financial goals.');
+        }
         const useCase = new DeleteGoalUseCase(goalRepo);
-        const res = await useCase.execute(goalId, userId);
+        const res = await useCase.execute(goalId, scopeId || effectiveUserId);
         if (!res.success) throw res.error;
       } else {
         setDemoGoalsState((prev) => prev.filter((g) => g.id !== goalId));
@@ -194,7 +220,7 @@ export function GoalsPage() {
             <Badge variant="outline" className="text-[11px] font-mono border-border/80 whitespace-nowrap">
               India First (₹ INR)
             </Badge>
-            {!userId && (
+            {!hasLiveBackend && (
               <Badge
                 variant="secondary"
                 className="text-[11px] bg-blue-500/10 text-blue-400 border-blue-500/20 whitespace-nowrap"
@@ -214,10 +240,16 @@ export function GoalsPage() {
         {/* Action Button */}
         <div className="flex items-center gap-2">
           <Button
-            onClick={() => setIsAddModalOpen(true)}
-            disabled={isSupportModeActive}
+            onClick={() => {
+              if (canEditFinancials && !isSupportModeActive) setIsAddModalOpen(true);
+            }}
+            disabled={isSupportModeActive || !canEditFinancials}
             title={
-              isSupportModeActive ? 'Disabled in Support Impersonation Mode (Read-Only)' : undefined
+              isSupportModeActive
+                ? 'Disabled in Support Impersonation Mode (Read-Only)'
+                : !canEditFinancials
+                  ? 'View-only household role cannot create financial goals'
+                  : undefined
             }
             className="gap-2 shadow-md disabled:opacity-50"
           >
@@ -241,7 +273,14 @@ export function GoalsPage() {
         onMonthlyExpenseChange={setMonthlyExpenseRupees}
       />
 
-      <GoalsGridSection summary={summary} members={members} onDeleteGoal={setGoalToDelete} />
+      <GoalsGridSection
+        summary={summary}
+        members={members}
+        canEditFinancials={canEditFinancials}
+        onDeleteGoal={(goal) => {
+          if (canEditFinancials && !isSupportModeActive) setGoalToDelete(goal);
+        }}
+      />
 
       {/* Goal Milestone Projection Curve & Step-Up SIP Simulator */}
       <GoalProjectionCard goals={filteredGoalsList} />

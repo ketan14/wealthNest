@@ -1,4 +1,43 @@
+import type { RecordVisibility } from '../household/household-types.js';
+
 export type AccountVisibilityScope = 'shared_family' | 'owner_only';
+
+export interface RecordVisibilityEvaluationParams {
+  readonly visibility: RecordVisibility | undefined;
+  readonly viewerUserId: string | undefined;
+  readonly creatorUserId?: string;
+  readonly ownerLinkedUserIds?: readonly string[];
+  readonly explicitGrantUserIds?: readonly string[];
+}
+
+/**
+ * Canonical client-side evaluator mirroring PostgreSQL `can_access_household_record`:
+ * - `'household_shared'` (or omitted): accessible to all active household members.
+ * - `'owner_only'`: accessible ONLY to the creator or a user linked to one of the owners
+ *   (NOT automatically visible to household admins or primary_owner).
+ * - `'restricted'`: accessible to creator, owners, or explicitly granted users.
+ */
+export function isRecordVisibleToHouseholdUser(
+  params: RecordVisibilityEvaluationParams
+): boolean {
+  const vis: RecordVisibility = params.visibility ?? 'household_shared';
+  if (vis === 'household_shared') {
+    return true;
+  }
+  if (!params.viewerUserId) {
+    return false;
+  }
+  if (params.creatorUserId && params.creatorUserId === params.viewerUserId) {
+    return true;
+  }
+  if (params.ownerLinkedUserIds?.includes(params.viewerUserId)) {
+    return true;
+  }
+  if (vis === 'restricted' && params.explicitGrantUserIds?.includes(params.viewerUserId)) {
+    return true;
+  }
+  return false;
+}
 
 export interface HouseholdPrivacySummary {
   readonly totalAccounts: number;

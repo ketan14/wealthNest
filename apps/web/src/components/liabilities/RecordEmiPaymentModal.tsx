@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { LiabilityDto } from '@wealthnest/application';
 import { useLiabilityRepository } from '@/lib/persistence/repository-context';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { Button } from '@/components/ui/Button';
 import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
@@ -33,6 +34,7 @@ export function RecordEmiPaymentModal({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { activeHouseholdId, canEditFinancials } = useHousehold();
   const liabilityRepo = useLiabilityRepository();
 
   useEffect(() => {
@@ -65,6 +67,11 @@ export function RecordEmiPaymentModal({
     e.preventDefault();
     if (!calculation) return;
 
+    if (!canEditFinancials) {
+      setErrorMsg('Viewers have read-only access and cannot record EMI payments.');
+      return;
+    }
+
     setErrorMsg(null);
     setIsSubmitting(true);
 
@@ -74,6 +81,7 @@ export function RecordEmiPaymentModal({
       const balanceRes = await liabilityRepo.recordLiabilityBalance({
         liabilityId: liability.id,
         userId,
+        householdId: activeHouseholdId,
         balanceCents: newBalanceCents,
         asOfDate: paymentDate,
         source: 'emi_bifurcation',
@@ -143,7 +151,7 @@ export function RecordEmiPaymentModal({
           <Button
             type="submit"
             size="sm"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !canEditFinancials}
             className="min-w-[130px] bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold"
           >
             {isSubmitting ? 'Recording...' : 'Record Payment'}

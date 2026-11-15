@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { UpdatePasswordForm } from '@/components/auth/UpdatePasswordForm';
 import { useAuth } from '@/lib/supabase/auth-context';
+import { useHousehold } from '@/lib/supabase/household-context';
 import { User, CheckCircle2, Key, KeyRound, Sparkles } from 'lucide-react';
 
 interface ProfileSecurityTabProps {
@@ -33,6 +34,7 @@ export function ProfileSecurityTab({
   onSignOut,
 }: ProfileSecurityTabProps) {
   const { user } = useAuth();
+  const { activeHousehold, householdRole } = useHousehold();
   const canChangePassword = Boolean(user);
 
   return (
@@ -122,8 +124,8 @@ export function ProfileSecurityTab({
                   </Badge>
                 </div>
                 <div className="text-xs text-slate-400">
-                  Multi-tenant PostgreSQL policies guarantee that only your user UUID can access
-                  holdings and logs.
+                  Household &amp; Privacy PostgreSQL policies enforce active membership and
+                  owner-only / restricted record visibility server-side.
                 </div>
               </div>
               <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
@@ -190,6 +192,22 @@ export function ProfileSecurityTab({
             </div>
 
             <div className="space-y-2 pt-2 border-t border-slate-800 text-xs text-slate-300">
+              {activeHousehold && (
+                <>
+                  <div className="flex justify-between py-1 gap-2">
+                    <span className="text-slate-400">Active Household</span>
+                    <span className="font-medium text-emerald-300 truncate">
+                      {activeHousehold.name}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-slate-400">Household Role</span>
+                    <span className="font-mono text-indigo-300">
+                      {householdRole || activeHousehold.role}
+                    </span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between py-1">
                 <span className="text-slate-400">Environment</span>
                 <span className="font-mono text-emerald-400">Localhost / Docker</span>

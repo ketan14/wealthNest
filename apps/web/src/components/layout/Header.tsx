@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/supabase/auth-context';
 import { usePrivacy } from '@/lib/preferences/privacy-context';
 import { connectionManager } from '@/lib/services/connection-manager';
 import { ServerConfig } from '@/lib/config/server-config';
+import { HouseholdSwitcher } from '@/components/household/HouseholdSwitcher';
 import {
   Globe,
   User,
@@ -95,6 +96,7 @@ export function Header({ onOpenCommandPalette }: HeaderProps) {
           Environment:
         </span>
         <div className="hidden sm:block">{renderEnvironmentBadge()}</div>
+        <HouseholdSwitcher />
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">

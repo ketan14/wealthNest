@@ -4,6 +4,7 @@ import { ValidateAndParseBackupUseCase } from './validate-and-parse-backup.js';
 
 export interface RestorePortfolioParams {
   readonly targetUserId: string;
+  readonly householdId?: string;
   readonly backupData: PortfolioBackupData;
   readonly mode?: 'atomic_replace' | 'atomic_merge';
 }
@@ -54,7 +55,13 @@ export class RestorePortfolioFromBackupUseCase {
 
     // 2. Perform atomic restore via BackupPort with rollback guarantee
     try {
-      const restoreResult = await this.backupPort.restoreFromBackup(targetUserId, backupData);
+      const scopeId = params.householdId || targetUserId;
+      const restoreResult = params.householdId
+        ? await this.backupPort.restoreFromBackup(scopeId, backupData, {
+            targetUserId,
+            householdId: params.householdId,
+          })
+        : await this.backupPort.restoreFromBackup(scopeId, backupData);
       if (!restoreResult.success) {
         return err(
           new Error(`Atomic restore failed and was rolled back: ${restoreResult.error.message}`)

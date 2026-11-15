@@ -17,15 +17,21 @@ export class GetFamilyPortfolioSummaryUseCase {
     private readonly holdingRepo: HoldingRepositoryPort
   ) {}
 
-  async execute(userId: string): Promise<Result<FamilyPortfolioSummary>> {
+  async execute(scopeId: string): Promise<Result<FamilyPortfolioSummary>> {
     try {
-      const membersResult = await this.familyRepo.getMembers(userId);
+      const membersResult = await (this.familyRepo.getMembersByHousehold
+        ? this.familyRepo.getMembersByHousehold(scopeId)
+        : this.familyRepo.getMembers(scopeId));
       if (!isOk(membersResult)) return err(membersResult.error);
 
-      const accountsResult = await this.familyRepo.getAccounts(userId);
+      const accountsResult = await (this.familyRepo.getAccountsByHousehold
+        ? this.familyRepo.getAccountsByHousehold(scopeId)
+        : this.familyRepo.getAccounts(scopeId));
       if (!isOk(accountsResult)) return err(accountsResult.error);
 
-      const holdingsResult = await this.holdingRepo.listDetailsByUser(userId);
+      const holdingsResult = await (this.holdingRepo.listDetailsByHousehold
+        ? this.holdingRepo.listDetailsByHousehold(scopeId)
+        : this.holdingRepo.listDetailsByUser(scopeId));
       if (!isOk(holdingsResult)) return err(holdingsResult.error);
 
       const members = membersResult.value;
@@ -38,6 +44,7 @@ export class GetFamilyPortfolioSummaryUseCase {
           id: h.holdingId,
           memberId: h.memberId,
           accountId: h.accountId,
+          owners: h.owners,
           currentValuePaise: BigInt(h.currentValueCents),
           costBasisPaise: BigInt(Math.round(h.quantity * h.unitCostCents)),
           holdingPeriodDays: isLongTerm ? 400 : 180,
@@ -58,6 +65,9 @@ export class ManageFamilyMembersUseCase {
 
   async createMember(params: {
     userId: string;
+    householdId?: string;
+    email?: string;
+    entityType?: FamilyMemberDto['entityType'];
     name: string;
     relationship: FamilyMemberDto['relationship'];
     panMasked?: string;
@@ -76,7 +86,11 @@ export class ManageFamilyMembersUseCase {
           : `mem-${Date.now()}`;
       const member: FamilyMemberDto = {
         id,
+        householdId: params.householdId,
         userId: params.userId,
+        email: params.email?.trim().toLowerCase() || undefined,
+        entityType:
+          params.entityType || (params.relationship === 'huf' ? 'huf' : 'individual'),
         name: params.name.trim(),
         relationship: params.relationship,
         panMasked: params.panMasked?.toUpperCase().trim(),
@@ -113,6 +127,8 @@ export class ManagePortfolioAccountsUseCase {
 
   async createAccount(params: {
     userId: string;
+    householdId?: string;
+    visibility?: PortfolioAccountDto['visibility'];
     memberId: string;
     accountName: string;
     brokerName: string;
@@ -131,6 +147,9 @@ export class ManagePortfolioAccountsUseCase {
           : `acc-${Date.now()}`;
       const account: PortfolioAccountDto = {
         id,
+        householdId: params.householdId,
+        visibility: params.visibility || 'household_shared',
+        createdBy: params.userId,
         userId: params.userId,
         memberId: params.memberId,
         accountName: params.accountName.trim(),

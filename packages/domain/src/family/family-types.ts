@@ -1,3 +1,5 @@
+import type { FamilyEntityType, RecordVisibility } from '../household/household-types.js';
+
 export type FamilyRelationship = 'self' | 'spouse' | 'huf' | 'child' | 'parent' | 'other';
 
 export type DepositoryType = 'CDSL' | 'NSDL' | 'CAMS' | 'KFINTECH' | 'RBI' | 'OTHER';
@@ -7,7 +9,11 @@ export type AccountType =
 
 export interface FamilyMember {
   readonly id: string;
+  readonly householdId?: string;
   readonly userId: string;
+  readonly linkedUserId?: string;
+  readonly email?: string;
+  readonly entityType?: FamilyEntityType;
   readonly name: string;
   readonly relationship: FamilyRelationship;
   readonly panMasked?: string;
@@ -20,8 +26,10 @@ export interface FamilyMember {
 
 export interface PortfolioAccount {
   readonly id: string;
+  readonly householdId?: string;
   readonly userId: string;
   readonly memberId: string;
+  readonly visibility?: RecordVisibility;
   readonly accountName: string;
   readonly brokerName: string;
   readonly depository: DepositoryType;

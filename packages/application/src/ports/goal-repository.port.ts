@@ -1,5 +1,5 @@
 import { Result } from '@wealthnest/shared';
-import { GoalCategory, GoalPriority } from '@wealthnest/domain';
+import { GoalCategory, GoalPriority, RecordVisibility } from '@wealthnest/domain';
 
 export interface GoalHoldingLinkDto {
   readonly holdingId: string;
@@ -11,7 +11,10 @@ export interface GoalHoldingLinkDto {
 
 export interface GoalDetailDto {
   readonly id: string;
+  readonly householdId?: string;
   readonly userId: string;
+  readonly visibility?: RecordVisibility;
+  readonly createdBy?: string;
   readonly name: string;
   readonly category: GoalCategory;
   readonly targetAmountCents: number;
@@ -31,6 +34,8 @@ export interface GoalDetailDto {
 
 export interface CreateGoalParams {
   readonly userId: string;
+  readonly householdId?: string;
+  readonly visibility?: RecordVisibility;
   readonly name: string;
   readonly category: GoalCategory;
   readonly targetAmountCents: number;
@@ -43,11 +48,14 @@ export interface CreateGoalParams {
   readonly currency?: string;
   readonly notes?: string;
   readonly memberId?: string;
+  readonly restrictedGranteeUserIds?: readonly string[];
 }
 
 export interface UpdateGoalParams {
   readonly goalId: string;
   readonly userId: string;
+  readonly householdId?: string;
+  readonly visibility?: RecordVisibility;
   readonly name?: string;
   readonly category?: GoalCategory;
   readonly targetAmountCents?: number;
@@ -65,14 +73,16 @@ export interface LinkHoldingToGoalParams {
   readonly goalId: string;
   readonly holdingId: string;
   readonly userId: string;
+  readonly householdId?: string;
   readonly allocationPercentage: number;
 }
 
 export interface GoalRepositoryPort {
-  listGoalsByUser(userId: string): Promise<Result<GoalDetailDto[]>>;
+  listGoalsByUser(scopeId: string): Promise<Result<GoalDetailDto[]>>;
+  listGoalsByHousehold?(householdId: string): Promise<Result<GoalDetailDto[]>>;
   createGoal(params: CreateGoalParams): Promise<Result<GoalDetailDto>>;
   updateGoal(params: UpdateGoalParams): Promise<Result<GoalDetailDto>>;
-  deleteGoal(goalId: string, userId: string): Promise<Result<void>>;
+  deleteGoal(goalId: string, scopeId: string): Promise<Result<void>>;
   linkHoldingToGoal(params: LinkHoldingToGoalParams): Promise<Result<void>>;
-  unlinkHoldingFromGoal(goalId: string, holdingId: string, userId: string): Promise<Result<void>>;
+  unlinkHoldingFromGoal(goalId: string, holdingId: string, scopeId: string): Promise<Result<void>>;
 }

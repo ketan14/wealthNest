@@ -2,6 +2,7 @@ import type { ChangeEvent, MouseEvent, RefObject } from 'react';
 import { ParsedBackupPreview } from '@wealthnest/application';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { useHousehold } from '@/lib/supabase/household-context';
 import {
   AlertCircle,
   CheckCircle2,
@@ -45,6 +46,8 @@ export function DataPortabilityTab({
   isRestoring,
   restoreSuccess,
 }: DataPortabilityTabProps) {
+  const { canEditFinancials } = useHousehold();
+
   return (
     <div className="space-y-6">
       {exportSuccessMessage && (
@@ -222,10 +225,14 @@ export function DataPortabilityTab({
 
                 <Button
                   onClick={onExecuteRestore}
-                  disabled={isRestoring}
+                  disabled={isRestoring || !canEditFinancials}
                   className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs mt-2"
                 >
-                  {isRestoring ? 'Restoring Portfolio...' : 'Confirm & Restore Portfolio'}
+                  {!canEditFinancials
+                    ? 'Viewer Role — Read-Only Access'
+                    : isRestoring
+                      ? 'Restoring Portfolio...'
+                      : 'Confirm & Restore Portfolio'}
                 </Button>
               </div>
             )}

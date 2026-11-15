@@ -1,14 +1,21 @@
 import { Result, ok, err } from '@wealthnest/shared';
 import { CasImportRepositoryPort, ConfirmCasImportParams } from '@wealthnest/application';
-import { ImportSummaryResult } from '@wealthnest/domain';
+import { ImportSummaryResult, RecordVisibility } from '@wealthnest/domain';
 import { supabase } from './client';
 import { toValidUuidOrNull } from './uuid-utils';
+import { resolveHouseholdIdForWrite } from './household-scope';
 
 export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
   async upsertHoldingsFromCas(
     params: ConfirmCasImportParams
   ): Promise<Result<ImportSummaryResult>> {
     try {
+      const householdId = await resolveHouseholdIdForWrite(params.householdId, params.userId);
+      const visibility: RecordVisibility = params.visibility ?? 'household_shared';
+      const actorId = toValidUuidOrNull(params.userId);
+      const validMemberId = toValidUuidOrNull(params.memberId);
+      const validAccountId = toValidUuidOrNull(params.accountId);
+
       let imported = 0;
       let updated = 0;
       let failed = 0;
@@ -19,20 +26,18 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
 
       for (const item of params.items) {
         try {
-          // 1. Check if asset already exists for user (match by ISIN first, then fallback to name)
           let existingAssetId: string | null = null;
 
           if (item.isin) {
             const { data: assetByIsin } = await supabase
               .from('assets')
               .select('id')
-              .eq('user_id', params.userId)
+              .eq('household_id', householdId)
               .eq('isin', item.isin)
               .maybeSingle();
 
             if (assetByIsin) {
               existingAssetId = assetByIsin.id;
-              // Ensure security name, ticker, and AMC are attached/updated on the existing asset
               await supabase
                 .from('assets')
                 .update({
@@ -40,6 +45,7 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
                   ...(item.ticker ? { ticker: item.ticker } : {}),
                   ...(item.amcName ? { amc_name: item.amcName } : {}),
                   ...(item.instrumentType ? { instrument_type: item.instrumentType } : {}),
+                  ...(actorId ? { updated_by: actorId } : {}),
                   updated_at: new Date().toISOString(),
                 })
                 .eq('id', existingAssetId);
@@ -50,13 +56,12 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
             const { data: assetByName } = await supabase
               .from('assets')
               .select('id')
-              .eq('user_id', params.userId)
+              .eq('household_id', householdId)
               .ilike('name', item.name)
               .maybeSingle();
 
             if (assetByName) {
               existingAssetId = assetByName.id;
-              // Ensure security name, ISIN, ticker, and AMC are attached/updated on the existing asset
               await supabase
                 .from('assets')
                 .update({
@@ -65,19 +70,21 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
                   ...(item.ticker ? { ticker: item.ticker } : {}),
                   ...(item.amcName ? { amc_name: item.amcName } : {}),
                   ...(item.instrumentType ? { instrument_type: item.instrumentType } : {}),
+                  ...(actorId ? { updated_by: actorId } : {}),
                   updated_at: new Date().toISOString(),
                 })
                 .eq('id', existingAssetId);
             }
           }
 
-          // 2. If asset does not exist, create asset record
           if (!existingAssetId) {
-            let assetClassToUse = item.assetClassId;
+            const assetClassToUse = item.assetClassId;
             let { data: newAsset, error: assetErr } = await supabase
               .from('assets')
               .insert({
-                user_id: params.userId,
+                household_id: householdId,
+                visibility,
+                ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
                 name: item.name,
                 ticker: item.ticker || null,
                 isin: item.isin || null,
@@ -91,7 +98,6 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
               .select('id')
               .single();
 
-            // Resilient fallback: If custom asset_class_id foreign key constraint fails, fallback to 'equity'
             if (assetErr && assetClassToUse !== 'equity') {
               console.warn(
                 `Asset class '${assetClassToUse}' rejected by database for ${item.name}, falling back to 'equity'`
@@ -99,7 +105,9 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
               const retryRes = await supabase
                 .from('assets')
                 .insert({
-                  user_id: params.userId,
+                  household_id: householdId,
+                  visibility,
+                  ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
                   name: item.name,
                   ticker: item.ticker || null,
                   isin: item.isin || null,
@@ -123,12 +131,23 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
             existingAssetId = newAsset.id;
           }
 
-          // 3. Check if holding already exists for this asset AND specific folio / demat account
           let holdingQuery = supabase
             .from('holdings')
             .select('id, unit_cost_cents, cost_basis_verified')
-            .eq('user_id', params.userId)
+            .eq('household_id', householdId)
             .eq('asset_id', existingAssetId);
+
+          if (validMemberId) {
+            holdingQuery = holdingQuery.eq('member_id', validMemberId);
+          } else {
+            holdingQuery = holdingQuery.is('member_id', null);
+          }
+
+          if (validAccountId) {
+            holdingQuery = holdingQuery.eq('account_id', validAccountId);
+          } else {
+            holdingQuery = holdingQuery.is('account_id', null);
+          }
 
           if (item.folioNumber) {
             holdingQuery = holdingQuery.eq('folio_number', item.folioNumber);
@@ -147,7 +166,6 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
           const isMutualFund = item.assetClassId === 'mutual_fund';
 
           if (existingHolding) {
-            // Update existing holding (idempotent statement refresh, preserving historical valuations if verified)
             const shouldPreserveUnitCost =
               existingHolding.cost_basis_verified && !item.costBasisVerified;
 
@@ -162,8 +180,9 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
                 cost_basis_verified: Boolean(
                   item.costBasisVerified || existingHolding.cost_basis_verified
                 ),
-                ...(params.memberId ? { member_id: params.memberId } : {}),
-                ...(params.accountId ? { account_id: params.accountId } : {}),
+                ...(validMemberId ? { member_id: validMemberId } : {}),
+                ...(validAccountId ? { account_id: validAccountId } : {}),
+                ...(actorId ? { updated_by: actorId } : {}),
                 updated_at: new Date().toISOString(),
               })
               .eq('id', existingHolding.id);
@@ -180,27 +199,45 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
               }
             }
           } else {
-            // Insert new holding position
-            const { error: insertErr } = await supabase.from('holdings').insert({
-              user_id: params.userId,
-              asset_id: existingAssetId,
-              quantity: item.quantity,
-              unit_cost_cents: item.unitCostCents,
-              current_value_cents: item.currentValueCents,
-              demat_account_id: item.dematAccountId || null,
-              folio_number: item.folioNumber || null,
-              amc_name: item.amcName || null,
-              scheme_plan: item.schemePlan || null,
-              cost_basis_verified: Boolean(item.costBasisVerified),
-              source: 'cas_import',
-              member_id: toValidUuidOrNull(params.memberId),
-              account_id: toValidUuidOrNull(params.accountId),
-            });
+            const { data: insertedHolding, error: insertErr } = await supabase
+              .from('holdings')
+              .insert({
+                household_id: householdId,
+                visibility,
+                ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
+                asset_id: existingAssetId,
+                quantity: item.quantity,
+                unit_cost_cents: item.unitCostCents,
+                current_value_cents: item.currentValueCents,
+                demat_account_id: item.dematAccountId || null,
+                folio_number: item.folioNumber || null,
+                amc_name: item.amcName || null,
+                scheme_plan: item.schemePlan || null,
+                cost_basis_verified: Boolean(item.costBasisVerified),
+                source: 'cas_import',
+                member_id: validMemberId,
+                account_id: validAccountId,
+              })
+              .select('id')
+              .single();
 
-            if (insertErr) {
+            if (insertErr || !insertedHolding) {
               console.error(`Failed to insert holding ${item.name}:`, insertErr);
               failed++;
             } else {
+              if (validMemberId) {
+                await supabase.rpc('set_holding_owners', {
+                  p_holding_id: insertedHolding.id,
+                  p_owners: [
+                    {
+                      family_member_id: validMemberId,
+                      ownership_share: 100,
+                      is_primary_owner: true,
+                    },
+                  ],
+                });
+              }
+
               imported++;
               if (isMutualFund) {
                 mutualFundsImported++;
@@ -209,24 +246,22 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
               }
             }
           }
-        } catch (err) {
-          console.error(`Exception while importing holding ${item.name}:`, err);
+        } catch (errEx) {
+          console.error(`Exception while importing holding ${item.name}:`, errEx);
           failed++;
         }
       }
 
-      // 3.5. Import transactions if provided
       let transactionsImported = 0;
       if (params.transactions && params.transactions.length > 0) {
         for (const tx of params.transactions) {
           try {
-            // Find or create asset for transaction
             let assetId: string | null = null;
             if (tx.isin) {
               const { data: assetByIsin } = await supabase
                 .from('assets')
                 .select('id')
-                .eq('user_id', params.userId)
+                .eq('household_id', householdId)
                 .eq('isin', tx.isin)
                 .maybeSingle();
 
@@ -239,7 +274,7 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
               const { data: assetByName } = await supabase
                 .from('assets')
                 .select('id')
-                .eq('user_id', params.userId)
+                .eq('household_id', householdId)
                 .ilike('name', tx.schemeName)
                 .maybeSingle();
 
@@ -252,7 +287,9 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
               let { data: newAsset, error: assetErr } = await supabase
                 .from('assets')
                 .insert({
-                  user_id: params.userId,
+                  household_id: householdId,
+                  visibility,
+                  ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
                   name: tx.schemeName,
                   ticker: tx.ticker || null,
                   isin: tx.isin || null,
@@ -266,7 +303,9 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
                 const retry = await supabase
                   .from('assets')
                   .insert({
-                    user_id: params.userId,
+                    household_id: householdId,
+                    visibility,
+                    ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
                     name: tx.schemeName,
                     ticker: tx.ticker || null,
                     isin: tx.isin || null,
@@ -284,11 +323,10 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
             }
 
             if (assetId) {
-              // Deduplicate check: avoid double inserting exact same transaction
               const { data: existingTx } = await supabase
                 .from('transactions')
                 .select('id')
-                .eq('user_id', params.userId)
+                .eq('household_id', householdId)
                 .eq('asset_id', assetId)
                 .eq('transaction_date', tx.date)
                 .eq('amount_cents', tx.amountCents)
@@ -297,7 +335,9 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
 
               if (!existingTx) {
                 const { error: txErr } = await supabase.from('transactions').insert({
-                  user_id: params.userId,
+                  household_id: householdId,
+                  visibility,
+                  ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
                   asset_id: assetId,
                   type: tx.type,
                   quantity: tx.units ?? null,
@@ -305,8 +345,8 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
                   currency: tx.currency || 'INR',
                   transaction_date: tx.date,
                   notes: tx.description || null,
-                  member_id: toValidUuidOrNull(params.memberId),
-                  account_id: toValidUuidOrNull(params.accountId),
+                  member_id: validMemberId,
+                  account_id: validAccountId,
                 });
 
                 if (!txErr) {
@@ -320,13 +360,15 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
         }
       }
 
-      // 4. Create audit entry in import_batches table
       let batchId = `batch-${Date.now()}`;
       try {
         const { data: batchData } = await supabase
           .from('import_batches')
           .insert({
-            user_id: params.userId,
+            household_id: householdId,
+            member_id: validMemberId,
+            visibility,
+            ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
             provider: params.provider,
             statement_date: params.statementDate,
             total_records: params.items.length + (params.transactions?.length || 0),
@@ -343,7 +385,7 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
           batchId = batchData.id;
         }
       } catch {
-        // Non-blocking if audit batch insert encounters issues
+        // Non-blocking audit batch insert
       }
 
       return ok({

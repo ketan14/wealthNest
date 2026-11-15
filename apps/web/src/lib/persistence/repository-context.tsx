@@ -9,6 +9,7 @@ import {
   BackupPort,
   CasImportRepositoryPort,
   DocumentVaultRepositoryPort,
+  HouseholdRepositoryPort,
   SqliteDatabase,
   SqliteHoldingAdapter,
   SqliteTransactionAdapter,
@@ -19,6 +20,7 @@ import {
   SqliteBackupAdapter,
   SqliteCasImportAdapter,
   SqliteDocumentVaultAdapter,
+  SqliteHouseholdAdapter,
 } from '@wealthnest/application';
 
 import { SupabaseHoldingAdapter } from '../supabase/holding.adapter';
@@ -30,6 +32,7 @@ import { SupabaseAssetClassAdapter } from '../supabase/asset-class.adapter';
 import { SupabaseBackupAdapter } from '../supabase/backup.adapter';
 import { SupabaseCasImportAdapter } from '../supabase/cas-import.adapter';
 import { SupabaseDocumentVaultAdapter } from '../supabase/document-vault.adapter';
+import { SupabaseHouseholdAdapter } from '../supabase/household.adapter';
 import { TauriSqliteAdapter } from '../tauri/tauri-sqlite-adapter';
 
 export interface RepositoryBundle {
@@ -42,6 +45,7 @@ export interface RepositoryBundle {
   readonly backupRepo: BackupPort;
   readonly casImportRepo: CasImportRepositoryPort;
   readonly documentVaultRepo: DocumentVaultRepositoryPort;
+  readonly householdRepo: HouseholdRepositoryPort;
   readonly mode: 'supabase' | 'sqlite';
 }
 
@@ -55,6 +59,7 @@ export const defaultSupabaseBundle: RepositoryBundle = {
   backupRepo: new SupabaseBackupAdapter(),
   casImportRepo: new SupabaseCasImportAdapter(),
   documentVaultRepo: new SupabaseDocumentVaultAdapter(),
+  householdRepo: new SupabaseHouseholdAdapter(),
   mode: 'supabase',
 };
 
@@ -82,6 +87,7 @@ export function createSqliteRepositoryBundle(db?: SqliteDatabase): RepositoryBun
   );
   const casImportRepo = new SqliteCasImportAdapter(sqliteDb);
   const documentVaultRepo = new SqliteDocumentVaultAdapter(sqliteDb);
+  const householdRepo = new SqliteHouseholdAdapter(sqliteDb);
 
   return {
     holdingRepo,
@@ -93,6 +99,7 @@ export function createSqliteRepositoryBundle(db?: SqliteDatabase): RepositoryBun
     backupRepo,
     casImportRepo,
     documentVaultRepo,
+    householdRepo,
     mode: 'sqlite',
   };
 }
@@ -166,4 +173,8 @@ export function useCasImportRepository(): CasImportRepositoryPort {
 
 export function useDocumentVaultRepository(): DocumentVaultRepositoryPort {
   return useRepositories().documentVaultRepo;
+}
+
+export function useHouseholdRepository(): HouseholdRepositoryPort {
+  return useRepositories().householdRepo;
 }

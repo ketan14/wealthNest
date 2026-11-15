@@ -1,5 +1,6 @@
 import { CurrencyCode } from '../money/currency.js';
 import { Money } from '../money/money.js';
+import type { RecordVisibility } from '../household/household-types.js';
 
 export type GoalCategory =
   | 'emergency_fund'
@@ -24,7 +25,9 @@ export interface GoalHoldingLink {
 
 export interface GoalDefinition {
   readonly id: string;
+  readonly householdId?: string;
   readonly userId: string;
+  readonly visibility?: RecordVisibility;
   readonly name: string;
   readonly category: GoalCategory;
   readonly targetAmount: Money;

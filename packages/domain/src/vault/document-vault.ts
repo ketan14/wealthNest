@@ -1,3 +1,5 @@
+import type { RecordVisibility } from '../household/household-types.js';
+
 export type DocumentCategory =
   | 'identity_pan'
   | 'property_deed'
@@ -69,7 +71,10 @@ export const ALLOWED_VAULT_MIME_TYPES: readonly string[] = [
 
 export interface FamilyDocument {
   readonly id: string;
+  readonly householdId?: string;
   readonly userId: string;
+  readonly visibility?: RecordVisibility;
+  readonly createdBy?: string;
   readonly memberId?: string;
   readonly title: string;
   readonly category: DocumentCategory;
@@ -141,21 +146,21 @@ export function validateDocumentUpload(
 
 /**
  * Builds the canonical RLS-enforced storage path:
- * <owner_user_id>/<document_id>/<sanitized_file_name>
+ * <household_id>/<document_id>/<sanitized_file_name>
  */
 export function buildVaultStoragePath(
-  userId: string,
+  householdId: string,
   documentId: string,
   fileName: string
 ): string {
-  const safeUserId = userId.trim().replace(/[^a-zA-Z0-9_-]/g, '');
+  const safeHouseholdId = householdId.trim().replace(/[^a-zA-Z0-9_-]/g, '');
   const safeDocId = documentId.trim().replace(/[^a-zA-Z0-9_-]/g, '');
   const safeFileName = fileName
     .trim()
     .replace(/[/\\]/g, '_')
     .replace(/[^a-zA-Z0-9._-]/g, '_');
 
-  return `${safeUserId}/${safeDocId}/${safeFileName || 'document.pdf'}`;
+  return `${safeHouseholdId}/${safeDocId}/${safeFileName || 'document.pdf'}`;
 }
 
 export interface DocumentVaultSummary {

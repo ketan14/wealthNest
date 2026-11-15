@@ -1,4 +1,5 @@
 import { Result, ok, err } from '@wealthnest/shared';
+import { validateOwnershipShares } from '@wealthnest/domain';
 import {
   LiabilityRepositoryPort,
   CreateLiabilityParams,
@@ -29,6 +30,19 @@ export class CreateLiabilityUseCase {
       return err(new Error('Interest rate cannot be negative.'));
     }
 
+    if (params.parties && params.parties.length > 0) {
+      const shareCheck = validateOwnershipShares(
+        params.parties.map((p) => ({
+          familyMemberId: p.familyMemberId,
+          sharePercentage: p.liabilityShare,
+          isPrimary: p.partyRole === 'primary_borrower',
+        }))
+      );
+      if (!shareCheck.valid) {
+        return err(new Error(shareCheck.error || 'Invalid liability borrower share allocation.'));
+      }
+    }
+
     const created = await this.liabilityRepo.createLiability(params);
     if (!created.success) {
       return err(created.error);
@@ -37,10 +51,12 @@ export class CreateLiabilityUseCase {
     // If an initial balance was provided, record initial balance record
     const initialBalance = params.initialBalanceCents ?? params.originalPrincipalCents;
     const asOfDate = params.startDate || new Date().toISOString().split('T')[0]!;
+    const resolvedHouseholdId = created.value.householdId || params.householdId;
 
     await this.liabilityRepo.recordLiabilityBalance({
       liabilityId: created.value.id,
       userId: params.userId,
+      householdId: resolvedHouseholdId,
       balanceCents: initialBalance,
       asOfDate,
       source: 'initial_loan_origination',
@@ -51,6 +67,7 @@ export class CreateLiabilityUseCase {
     if (params.linkedAssetId) {
       await this.liabilityRepo.linkAssetLiability({
         userId: params.userId,
+        householdId: resolvedHouseholdId,
         assetId: params.linkedAssetId,
         liabilityId: created.value.id,
         linkType: params.loanType === 'home_loan' ? 'mortgage' : 'collateral',

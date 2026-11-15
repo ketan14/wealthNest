@@ -15,6 +15,7 @@ interface TransactionAuditLogCardProps {
   readonly isLoadingDb: boolean;
   readonly isMobile: boolean;
   readonly hasUser: boolean;
+  readonly canEditFinancials?: boolean;
   readonly activeTransactionsCount: number;
   readonly filteredTransactions: readonly TransactionDetailDto[];
   readonly categoryFilter: TransactionCategoryFilter;
@@ -74,6 +75,7 @@ export function TransactionAuditLogCard({
   isLoadingDb,
   isMobile,
   hasUser,
+  canEditFinancials = true,
   activeTransactionsCount,
   filteredTransactions,
   categoryFilter,
@@ -148,11 +150,21 @@ export function TransactionAuditLogCard({
                 : 'No transactions matched the selected filter criteria.'}
             </p>
             <div className="flex items-center justify-center gap-3 pt-2">
-              <Button size="sm" onClick={onOpenRecordModal} className="gap-1.5">
+              <Button
+                size="sm"
+                onClick={onOpenRecordModal}
+                disabled={!canEditFinancials}
+                title={
+                  !canEditFinancials
+                    ? 'View-only household role cannot record transactions'
+                    : undefined
+                }
+                className="gap-1.5"
+              >
                 <Plus className="w-4 h-4" />
                 Record Transaction
               </Button>
-              {hasUser && activeTransactionsCount === 0 && (
+              {hasUser && activeTransactionsCount === 0 && canEditFinancials && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -306,8 +318,13 @@ export function TransactionAuditLogCard({
                       <td className="py-3.5 px-4 text-center">
                         <button
                           onClick={() => onDeleteRequest(tx)}
-                          title="Delete Transaction"
-                          className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center mx-auto"
+                          disabled={!canEditFinancials}
+                          title={
+                            canEditFinancials
+                              ? 'Delete Transaction'
+                              : 'View-only household role cannot delete transactions'
+                          }
+                          className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center mx-auto disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
