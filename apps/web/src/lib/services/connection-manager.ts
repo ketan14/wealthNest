@@ -243,11 +243,12 @@ export class ConnectionManager {
    */
   public async switchServer(
     newConfig: Partial<ServerConfig>,
-    options?: { testFirst?: boolean }
+    options?: { testFirst?: boolean; userSelected?: boolean }
   ): Promise<ConnectionTestResult> {
     const updated: ServerConfig = {
       ...this.currentConfig,
       ...newConfig,
+      userSelected: options?.userSelected ?? newConfig.userSelected ?? true,
     };
 
     if (isSecretApiKey(updated.supabaseAnonKey)) {
@@ -269,8 +270,7 @@ export class ConnectionManager {
 
     const previousUrl = buildSupabaseUrl(this.currentConfig);
     const nextUrl = buildSupabaseUrl(updated);
-    const isHttpsOrigin =
-      typeof window !== 'undefined' && window.location?.protocol === 'https:';
+    const isHttpsOrigin = typeof window !== 'undefined' && window.location?.protocol === 'https:';
 
     if (isHttpsOrigin && nextUrl.startsWith('http://')) {
       return {

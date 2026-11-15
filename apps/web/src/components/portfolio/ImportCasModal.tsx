@@ -9,10 +9,7 @@ import {
 } from '@wealthnest/application';
 import { ImportSummaryResult, RecordVisibility } from '@wealthnest/domain';
 import { PdfJsTextExtractorAdapter } from '@/lib/pdf/pdfjs-extractor.adapter';
-import {
-  validateCsvTextBounds,
-  validateFinancialImportFile,
-} from '@/lib/validation/import-file';
+import { validateCsvTextBounds, validateFinancialImportFile } from '@/lib/validation/import-file';
 import { useCasImportRepository } from '@/lib/persistence/repository-context';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { useHousehold } from '@/lib/supabase/household-context';
@@ -415,11 +412,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
           onFileChange={(selectedFile) => {
             setFile(selectedFile);
             setError(null);
-            if (
-              selectedFile &&
-              selectedFile.name.endsWith('.csv') &&
-              importSource === 'cas_pdf'
-            ) {
+            if (selectedFile && selectedFile.name.endsWith('.csv') && importSource === 'cas_pdf') {
               setImportSource('zerodha_csv');
             }
           }}
@@ -434,14 +427,15 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
 
       {/* Wizard Step 2: Verification & Preview Grid */}
       {step === 'preview' && previewData && (
-        <div className="space-y-3">
-          <VisibilityControl
-            visibility={visibility}
-            onChange={(v) => setVisibility(v === 'restricted' ? 'owner_only' : v)}
-            disabled={!canEditFinancials}
-            compact
-          />
-          <CasPreviewStep
+        <CasPreviewStep
+          visibilityControl={
+            <VisibilityControl
+              visibility={visibility}
+              onChange={(v) => setVisibility(v === 'restricted' ? 'owner_only' : v)}
+              disabled={!canEditFinancials}
+              compact
+            />
+          }
           previewData={previewData}
           members={members}
           accounts={accounts}
@@ -477,7 +471,6 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
           onClose={handleClose}
           onConfirm={() => confirmMutation.mutate()}
         />
-        </div>
       )}
 
       {/* Wizard Step 3: Import Summary */}

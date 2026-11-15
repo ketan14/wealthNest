@@ -158,5 +158,65 @@ describe('Phase 10: ServerConfig & LAN Validation Suite', () => {
       expect(reset.host).toBe('192.168.1.105');
       expect(loadServerConfig().mode).toBe('lan');
     });
+
+    it('defaults Android runtime to configured QA remote backend and upgrades stale LAN/local caches', () => {
+      const androidRuntime = {
+        isTestEnv: false,
+        isTauriRuntime: true,
+        isMobileClient: true,
+        isHttpsOrigin: false,
+        defaultSupabaseUrl: 'https://qa-env.supabase.co',
+        defaultSupabaseAnonKey: 'sb_publishable_qa_key',
+      };
+
+      const fresh = loadServerConfig(androidRuntime);
+      expect(fresh.mode).toBe('remote');
+      expect(buildSupabaseUrl(fresh)).toBe('https://qa-env.supabase.co');
+      expect(fresh.supabaseAnonKey).toBe('sb_publishable_qa_key');
+
+      // Stale saved LAN config from older APK (even with lastConnectedAt set) heals to QA remote
+      saveServerConfig({
+        version: 1,
+        mode: 'lan',
+        host: '192.168.1.105',
+        frontendPort: 30000,
+        supabasePort: 54321,
+        supabaseAnonKey: 'demo-key',
+        lastConnectedAt: '2026-11-10T10:00:00Z',
+      });
+      const upgradedLan = loadServerConfig(androidRuntime);
+      expect(upgradedLan.mode).toBe('remote');
+      expect(buildSupabaseUrl(upgradedLan)).toBe('https://qa-env.supabase.co');
+      expect(upgradedLan.supabaseAnonKey).toBe('sb_publishable_qa_key');
+
+      // Stale saved local config also heals to QA remote on Android
+      saveServerConfig({
+        version: 1,
+        mode: 'local',
+        host: '127.0.0.1',
+        frontendPort: 30000,
+        supabasePort: 54321,
+        supabaseAnonKey: 'demo-key',
+      });
+      const upgradedLocal = loadServerConfig(androidRuntime);
+      expect(upgradedLocal.mode).toBe('remote');
+      expect(buildSupabaseUrl(upgradedLocal)).toBe('https://qa-env.supabase.co');
+      expect(upgradedLocal.supabaseAnonKey).toBe('sb_publishable_qa_key');
+
+      // Explicit user selection in Connection Settings / Modal is preserved
+      saveServerConfig({
+        version: 1,
+        mode: 'lan',
+        host: '192.168.1.142',
+        frontendPort: 30000,
+        supabasePort: 54321,
+        supabaseAnonKey: 'custom-local-key',
+        userSelected: true,
+      });
+      const explicitLan = loadServerConfig(androidRuntime);
+      expect(explicitLan.mode).toBe('lan');
+      expect(buildSupabaseUrl(explicitLan)).toBe('http://192.168.1.142:54321');
+      expect(explicitLan.userSelected).toBe(true);
+    });
   });
 });

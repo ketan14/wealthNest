@@ -2,7 +2,7 @@
  * WealthNest — Centralized Server & Connection Configuration
  * Supports Local Development, LAN Development (Wi-Fi), and Remote / Production.
  */
-import { isTauri } from '../tauri/tauri-runtime';
+import { isTauri, isTauriMobile, isMobileUserAgent } from '../tauri/tauri-runtime';
 
 export type ConnectionMode = 'local' | 'lan' | 'remote';
 
@@ -15,6 +15,17 @@ export interface ServerConfig {
   customSupabaseUrl?: string;
   supabaseAnonKey: string;
   lastConnectedAt?: string;
+  /** True when the user explicitly chose this endpoint in Connection Settings / Modal. */
+  userSelected?: boolean;
+}
+
+export interface ServerConfigRuntimeContext {
+  isTestEnv?: boolean;
+  isTauriRuntime?: boolean;
+  isMobileClient?: boolean;
+  isHttpsOrigin?: boolean;
+  defaultSupabaseUrl?: string;
+  defaultSupabaseAnonKey?: string;
 }
 
 export const SERVER_CONFIG_STORAGE_KEY = 'wealthnest_server_config_v1';
@@ -180,18 +191,33 @@ export function buildFrontendUrl(config: ServerConfig): string {
  * Safely loads server connection configuration from persistent storage (localStorage),
  * falling back to default configuration when absent or invalid.
  */
-export function loadServerConfig(): ServerConfig {
+export function loadServerConfig(runtime?: ServerConfigRuntimeContext): ServerConfig {
+  const effectiveIsTest = runtime?.isTestEnv ?? isTestEnv;
+  const remoteUrl =
+    runtime?.defaultSupabaseUrl !== undefined ? runtime.defaultSupabaseUrl : DEFAULT_SUPABASE_URL;
+  const remoteAnonKey = runtime?.defaultSupabaseAnonKey ?? DEFAULT_SUPABASE_ANON_KEY;
+  const hasRemoteBackend = Boolean(remoteUrl && isValidHttpUrl(remoteUrl));
+
+  const runtimeDefaultConfig: ServerConfig = {
+    version: 1,
+    mode: !effectiveIsTest && hasRemoteBackend ? 'remote' : 'lan',
+    host: DEFAULT_LAN_HOST,
+    frontendPort: DEFAULT_FRONTEND_PORT,
+    supabasePort: DEFAULT_SUPABASE_PORT,
+    customSupabaseUrl: !effectiveIsTest && hasRemoteBackend ? remoteUrl : undefined,
+    supabaseAnonKey: remoteAnonKey,
+  };
+
   if (typeof window === 'undefined' || !window.localStorage) {
-    return { ...DEFAULT_SERVER_CONFIG };
+    return { ...runtimeDefaultConfig };
   }
 
   try {
     const raw = window.localStorage.getItem(SERVER_CONFIG_STORAGE_KEY);
-    if (!raw) return { ...DEFAULT_SERVER_CONFIG };
+    if (!raw) return { ...runtimeDefaultConfig };
 
     const parsed = JSON.parse(raw);
     if (parsed && parsed.version === 1) {
-      const isTest = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
       let mode: ConnectionMode =
         parsed.mode === 'lan' || parsed.mode === 'remote' ? parsed.mode : 'local';
       let customUrl =
@@ -200,31 +226,66 @@ export function loadServerConfig(): ServerConfig {
           : undefined;
       const rawSavedKey =
         typeof parsed.supabaseAnonKey === 'string' ? parsed.supabaseAnonKey.trim() : '';
+      const userSelected = parsed.userSelected === true;
+
+      const isHttpsOrigin =
+        runtime?.isHttpsOrigin ??
+        (typeof window !== 'undefined' && window.location?.protocol === 'https:');
+      const isTauriRuntime = runtime?.isTauriRuntime ?? isTauri();
+      const isMobileClient = runtime?.isMobileClient ?? (isTauriMobile() || isMobileUserAgent());
 
       const shouldUpgradeToRemoteOnHttps =
-        !isTest &&
-        typeof window !== 'undefined' &&
-        window.location.protocol === 'https:' &&
+        !effectiveIsTest &&
+        isHttpsOrigin &&
         mode !== 'remote' &&
-        Boolean(customUrl || hasConfiguredRemoteBackend());
+        Boolean(customUrl || hasRemoteBackend);
 
       const isStalePlaceholderLanConfig =
         mode === 'lan' &&
         parsed.host === DEFAULT_LAN_HOST &&
         (!parsed.lastConnectedAt || rawSavedKey === LOCAL_DEMO_ANON_KEY);
 
-      const shouldUpgradeToRemoteOnTauri =
-        !isTest && isTauri() && hasConfiguredRemoteBackend() && isStalePlaceholderLanConfig;
+      const shouldUpgradeToRemoteOnTauriDesktop =
+        !effectiveIsTest &&
+        isTauriRuntime &&
+        !isMobileClient &&
+        hasRemoteBackend &&
+        isStalePlaceholderLanConfig;
 
-      if (shouldUpgradeToRemoteOnHttps || shouldUpgradeToRemoteOnTauri) {
+      // On Android / mobile WebViews, default any legacy or non-explicitly-chosen LAN/local
+      // configuration (or remote config still missing URL / using demo key) to the QA backend.
+      const shouldUpgradeToRemoteOnMobile =
+        !effectiveIsTest &&
+        isMobileClient &&
+        hasRemoteBackend &&
+        !userSelected &&
+        (mode !== 'remote' ||
+          !customUrl ||
+          rawSavedKey === '' ||
+          rawSavedKey === LOCAL_DEMO_ANON_KEY);
+
+      const shouldFillMissingRemoteDefault =
+        !effectiveIsTest && mode === 'remote' && !customUrl && hasRemoteBackend;
+
+      const isUpgradingToRemote =
+        shouldUpgradeToRemoteOnHttps ||
+        shouldUpgradeToRemoteOnTauriDesktop ||
+        shouldUpgradeToRemoteOnMobile ||
+        shouldFillMissingRemoteDefault;
+
+      if (isUpgradingToRemote) {
+        if (parsed.mode !== 'remote' && hasRemoteBackend) {
+          customUrl = remoteUrl;
+        } else {
+          customUrl = customUrl || remoteUrl;
+        }
         mode = 'remote';
-        customUrl = customUrl || DEFAULT_SUPABASE_URL;
       }
 
       const shouldUpgradeDemoKey =
-        (shouldUpgradeToRemoteOnHttps || shouldUpgradeToRemoteOnTauri) &&
-        (!rawSavedKey || rawSavedKey === LOCAL_DEMO_ANON_KEY) &&
-        DEFAULT_SUPABASE_ANON_KEY !== LOCAL_DEMO_ANON_KEY;
+        isUpgradingToRemote &&
+        remoteAnonKey !== LOCAL_DEMO_ANON_KEY &&
+        (parsed.mode !== 'remote' || !rawSavedKey || rawSavedKey === LOCAL_DEMO_ANON_KEY);
 
       return {
         version: 1,
@@ -237,18 +298,17 @@ export function loadServerConfig(): ServerConfig {
           ? parsed.supabasePort
           : DEFAULT_SUPABASE_PORT,
         customSupabaseUrl: customUrl,
-        supabaseAnonKey: shouldUpgradeDemoKey
-          ? DEFAULT_SUPABASE_ANON_KEY
-          : rawSavedKey || DEFAULT_SUPABASE_ANON_KEY,
+        supabaseAnonKey: shouldUpgradeDemoKey ? remoteAnonKey : rawSavedKey || remoteAnonKey,
         lastConnectedAt:
           typeof parsed.lastConnectedAt === 'string' ? parsed.lastConnectedAt : undefined,
+        ...(userSelected ? { userSelected: true } : {}),
       };
     }
   } catch {
     // Ignore corrupted local storage
   }
 
-  return { ...DEFAULT_SERVER_CONFIG };
+  return { ...runtimeDefaultConfig };
 }
 
 /**

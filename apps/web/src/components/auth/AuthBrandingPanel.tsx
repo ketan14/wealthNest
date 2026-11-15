@@ -3,7 +3,10 @@ import { ShieldCheck, TrendingUp, Landmark, Users } from 'lucide-react';
 
 export function AuthBrandingPanel() {
   return (
-    <div className="lg:w-1/2 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950/40 p-8 sm:p-12 lg:p-16 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800/60 relative overflow-hidden">
+    <div
+      data-testid="auth-branding-panel"
+      className="order-2 lg:order-1 lg:w-1/2 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950/40 p-6 sm:p-10 lg:p-16 flex flex-col justify-between border-t lg:border-t-0 lg:border-r border-slate-800/60 relative overflow-hidden"
+    >
       {/* Subtle decorative glow accents */}
       <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />

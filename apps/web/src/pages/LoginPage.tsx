@@ -3,6 +3,7 @@ import { Link, useNavigate, Navigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { Button } from '@/components/ui/Button';
+import { AuthSplitLayout } from '@/components/auth/AuthSplitLayout';
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
 import {
   useAuthBackendConnection,
@@ -94,10 +95,9 @@ export function LoginPage() {
         throw error;
       }
 
-      navigate(
-        inviteToken ? `/invite?token=${encodeURIComponent(inviteToken)}` : '/',
-        { replace: true }
-      );
+      navigate(inviteToken ? `/invite?token=${encodeURIComponent(inviteToken)}` : '/', {
+        replace: true,
+      });
     } catch (err: unknown) {
       let message = 'Invalid email or password. Please try again.';
       if (isNetworkFetchError(err)) {
@@ -119,273 +119,268 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col lg:flex-row relative selection:bg-emerald-500/30 selection:text-emerald-300">
-      {/* LEFT SECTION — BRANDING & VALUE PROPOSITION */}
-      <div className="lg:w-1/2 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950/40 p-8 sm:p-12 lg:p-16 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800/60 relative overflow-hidden">
-        {/* Subtle decorative glow accents */}
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+    <AuthSplitLayout
+      branding={
+        <div
+          data-testid="auth-branding-panel"
+          className="order-2 lg:order-1 lg:w-1/2 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950/40 p-6 sm:p-10 lg:p-16 flex flex-col justify-between border-t lg:border-t-0 lg:border-r border-slate-800/60 relative overflow-hidden"
+        >
+          {/* Subtle decorative glow accents */}
+          <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Brand header */}
-        <div className="relative z-10">
-          <Link to="/" className="inline-flex items-center gap-3 group">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform duration-200">
-              <ShieldCheck className="w-7 h-7 text-slate-950" />
-            </div>
-            <div>
-              <span className="font-bold text-xl tracking-tight text-white flex items-center gap-2">
-                WealthNest
-                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
-                  v0.1.0-alpha
+          {/* Brand header */}
+          <div className="relative z-10">
+            <Link to="/" className="inline-flex items-center gap-3 group">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform duration-200">
+                <ShieldCheck className="w-7 h-7 text-slate-950" />
+              </div>
+              <div>
+                <span className="font-bold text-xl tracking-tight text-white flex items-center gap-2">
+                  WealthNest
+                  <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+                    v0.1.0-alpha
+                  </span>
                 </span>
-              </span>
-              <p className="text-xs text-slate-400">Family Wealth & Asset Management</p>
-            </div>
-          </Link>
-        </div>
+                <p className="text-xs text-slate-400">Family Wealth & Asset Management</p>
+              </div>
+            </Link>
+          </div>
 
-        {/* Central Hero pitch */}
-        <div className="my-12 lg:my-auto relative z-10 max-w-lg">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
-            Welcome back to WealthNest.
-          </h1>
-          <p className="text-base sm:text-lg text-slate-300 mb-8 leading-relaxed">
-            Access your encrypted wealth portfolio, track real-time valuations, and manage family
-            finances securely.
+          {/* Central Hero pitch */}
+          <div className="my-12 lg:my-auto relative z-10 max-w-lg">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
+              Welcome back to WealthNest.
+            </h1>
+            <p className="text-base sm:text-lg text-slate-300 mb-8 leading-relaxed">
+              Access your encrypted wealth portfolio, track real-time valuations, and manage family
+              finances securely.
+            </p>
+
+            {/* Quick highlights */}
+            <div className="space-y-4">
+              <div className="flex items-start gap-4 p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-sm">
+                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-white">
+                    Consolidated Family Portfolio
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Track Zerodha Kite, Groww, and CAS statements in one place with zero
+                    floating-point drift.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4 p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-sm">
+                <div className="w-9 h-9 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 shrink-0 mt-0.5">
+                  <Landmark className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-white">Smart Debt & Amortization</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Prepayment simulations, interest savings calculations, and loan repayment
+                    timelines.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Security & Precision footer note */}
+          <div className="relative z-10 pt-4 border-t border-slate-800/60 flex items-center gap-3 text-xs text-slate-400">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>PostgreSQL Row Level Security &bull; Clean Architecture Monorepo</span>
+          </div>
+        </div>
+      }
+      overlays={
+        <ForgotPasswordModal
+          isOpen={forgotModalOpen}
+          initialEmail={email}
+          onClose={() => setForgotModalOpen(false)}
+        />
+      }
+    >
+      <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-white tracking-tight">Sign in to your account</h2>
+          <p className="text-sm text-slate-400 mt-1">
+            Enter your credentials to access your dashboard.
           </p>
+        </div>
 
-          {/* Quick highlights */}
-          <div className="space-y-4">
-            <div className="flex items-start gap-4 p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-sm">
-              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-sm font-semibold text-white">Consolidated Family Portfolio</h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Track Zerodha Kite, Groww, and CAS statements in one place with zero
-                  floating-point drift.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4 p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-sm">
-              <div className="w-9 h-9 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 shrink-0 mt-0.5">
-                <Landmark className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-sm font-semibold text-white">Smart Debt & Amortization</h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Prepayment simulations, interest savings calculations, and loan repayment
-                  timelines.
-                </p>
-              </div>
+        {serverError && (
+          <div
+            role="alert"
+            className="mb-5 p-3 rounded-xl bg-destructive/15 border border-destructive/30 text-destructive text-xs flex items-start gap-2.5 animate-in fade-in"
+          >
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold">Authentication Failed</p>
+              <p className="mt-0.5 text-rose-300/90 leading-relaxed">{serverError}</p>
+              {isUnreachableError && (
+                <AuthBackendRecoveryActions
+                  backend={backend}
+                  onErrorClear={() => {
+                    setServerError(null);
+                    setIsUnreachableError(false);
+                  }}
+                  onError={(msg) => setServerError(msg)}
+                />
+              )}
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Security & Precision footer note */}
-        <div className="relative z-10 pt-4 border-t border-slate-800/60 flex items-center gap-3 text-xs text-slate-400">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>PostgreSQL Row Level Security &bull; Clean Architecture Monorepo</span>
-        </div>
-      </div>
-
-      {/* RIGHT SECTION — SIGN IN FORM */}
-      <div className="lg:w-1/2 flex items-center justify-center p-6 sm:p-12 lg:p-16 relative">
-        <div className="max-w-md w-full">
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-8 backdrop-blur-xl shadow-2xl">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-white tracking-tight">
-                Sign in to your account
-              </h2>
-              <p className="text-sm text-slate-400 mt-1">
-                Enter your credentials to access your dashboard.
-              </p>
-            </div>
-
-            {serverError && (
-              <div
-                role="alert"
-                className="mb-5 p-3 rounded-xl bg-destructive/15 border border-destructive/30 text-destructive text-xs flex items-start gap-2.5 animate-in fade-in"
-              >
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-semibold">Authentication Failed</p>
-                  <p className="mt-0.5 text-rose-300/90 leading-relaxed">{serverError}</p>
-                  {isUnreachableError && (
-                    <AuthBackendRecoveryActions
-                      backend={backend}
-                      onErrorClear={() => {
-                        setServerError(null);
-                        setIsUnreachableError(false);
-                      }}
-                      onError={(msg) => setServerError(msg)}
-                    />
-                  )}
-                </div>
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
+          {/* Email Address */}
+          <div>
+            <label htmlFor="loginEmail" className="block text-xs font-medium text-slate-300 mb-1.5">
+              Email Address
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                <Mail className="w-4 h-4" />
               </div>
+              <input
+                id="loginEmail"
+                name="email"
+                type="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                disabled={submitting}
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (errors.email) {
+                    setErrors((prev) => {
+                      const updated = { ...prev };
+                      delete updated.email;
+                      return updated;
+                    });
+                  }
+                }}
+                placeholder="investor@wealthnest.local"
+                className={`w-full h-10 pl-9 pr-3 rounded-lg bg-slate-950/60 border text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition-all ${
+                  errors.email
+                    ? 'border-rose-500/80 focus:ring-rose-500/30'
+                    : 'border-slate-800 focus:border-emerald-500 focus:ring-emerald-500/20'
+                }`}
+              />
+            </div>
+            {errors.email && (
+              <p className="text-[11px] text-rose-400 mt-1 flex items-center gap-1 font-medium">
+                <AlertCircle className="w-3 h-3" />
+                {errors.email}
+              </p>
             )}
-
-            <form onSubmit={handleSubmit} noValidate className="space-y-4">
-              {/* Email Address */}
-              <div>
-                <label
-                  htmlFor="loginEmail"
-                  className="block text-xs font-medium text-slate-300 mb-1.5"
-                >
-                  Email Address
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                    <Mail className="w-4 h-4" />
-                  </div>
-                  <input
-                    id="loginEmail"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    disabled={submitting}
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (errors.email) {
-                        setErrors((prev) => {
-                          const updated = { ...prev };
-                          delete updated.email;
-                          return updated;
-                        });
-                      }
-                    }}
-                    placeholder="investor@wealthnest.local"
-                    className={`w-full h-10 pl-9 pr-3 rounded-lg bg-slate-950/60 border text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition-all ${
-                      errors.email
-                        ? 'border-rose-500/80 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-emerald-500 focus:ring-emerald-500/20'
-                    }`}
-                  />
-                </div>
-                {errors.email && (
-                  <p className="text-[11px] text-rose-400 mt-1 flex items-center gap-1 font-medium">
-                    <AlertCircle className="w-3 h-3" />
-                    {errors.email}
-                  </p>
-                )}
-              </div>
-
-              {/* Password */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label
-                    htmlFor="loginPassword"
-                    className="block text-xs font-medium text-slate-300"
-                  >
-                    Password
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setForgotModalOpen(true)}
-                    className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                    <Lock className="w-4 h-4" />
-                  </div>
-                  <input
-                    id="loginPassword"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    disabled={submitting}
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      if (errors.password) {
-                        setErrors((prev) => {
-                          const updated = { ...prev };
-                          delete updated.password;
-                          return updated;
-                        });
-                      }
-                    }}
-                    placeholder="••••••••"
-                    className={`w-full h-10 pl-9 pr-10 rounded-lg bg-slate-950/60 border text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition-all ${
-                      errors.password
-                        ? 'border-rose-500/80 focus:ring-rose-500/30'
-                        : 'border-slate-800 focus:border-emerald-500 focus:ring-emerald-500/20'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    data-testid="toggle-login-password-btn"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="text-[11px] text-rose-400 mt-1 flex items-center gap-1 font-medium">
-                    <AlertCircle className="w-3 h-3" />
-                    {errors.password}
-                  </p>
-                )}
-              </div>
-
-              {/* Submit Button */}
-              <div className="pt-2">
-                <Button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full h-11 bg-primary hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
-                >
-                  {submitting ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Signing In...
-                    </span>
-                  ) : (
-                    'Sign In'
-                  )}
-                </Button>
-              </div>
-            </form>
-
-            {/* Link to Sign Up */}
-            <div className="mt-6 pt-5 border-t border-slate-800 text-center">
-              <p className="text-xs text-slate-400">
-                Don't have an account?{' '}
-                <Link
-                  to={inviteToken ? `/signup?invite=${encodeURIComponent(inviteToken)}` : '/signup'}
-                  className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors"
-                >
-                  Create an account
-                </Link>
-              </p>
-            </div>
-
-            {/* Active Server Connection Indicator & Pre-Auth Switcher */}
-            <AuthBackendStatusBar
-              backend={backend}
-              onSwitched={() => {
-                setServerError(null);
-                setIsUnreachableError(false);
-              }}
-            />
           </div>
-        </div>
-      </div>
 
-      {/* FORGOT PASSWORD MODAL */}
-      <ForgotPasswordModal
-        isOpen={forgotModalOpen}
-        initialEmail={email}
-        onClose={() => setForgotModalOpen(false)}
-      />
-    </div>
+          {/* Password */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label htmlFor="loginPassword" className="block text-xs font-medium text-slate-300">
+                Password
+              </label>
+              <button
+                type="button"
+                onClick={() => setForgotModalOpen(true)}
+                className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+              >
+                Forgot Password?
+              </button>
+            </div>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                <Lock className="w-4 h-4" />
+              </div>
+              <input
+                id="loginPassword"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                disabled={submitting}
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (errors.password) {
+                    setErrors((prev) => {
+                      const updated = { ...prev };
+                      delete updated.password;
+                      return updated;
+                    });
+                  }
+                }}
+                placeholder="••••••••"
+                className={`w-full h-10 pl-9 pr-10 rounded-lg bg-slate-950/60 border text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition-all ${
+                  errors.password
+                    ? 'border-rose-500/80 focus:ring-rose-500/30'
+                    : 'border-slate-800 focus:border-emerald-500 focus:ring-emerald-500/20'
+                }`}
+              />
+              <button
+                type="button"
+                data-testid="toggle-login-password-btn"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            {errors.password && (
+              <p className="text-[11px] text-rose-400 mt-1 flex items-center gap-1 font-medium">
+                <AlertCircle className="w-3 h-3" />
+                {errors.password}
+              </p>
+            )}
+          </div>
+
+          {/* Submit Button */}
+          <div className="pt-2">
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="w-full h-11 bg-primary hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+            >
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Signing In...
+                </span>
+              ) : (
+                'Sign In'
+              )}
+            </Button>
+          </div>
+        </form>
+
+        {/* Link to Sign Up */}
+        <div className="mt-6 pt-5 border-t border-slate-800 text-center">
+          <p className="text-xs text-slate-400">
+            Don't have an account?{' '}
+            <Link
+              to={inviteToken ? `/signup?invite=${encodeURIComponent(inviteToken)}` : '/signup'}
+              className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors"
+            >
+              Create an account
+            </Link>
+          </p>
+        </div>
+
+        {/* Active Server Connection Indicator & Pre-Auth Switcher */}
+        <AuthBackendStatusBar
+          backend={backend}
+          onSwitched={() => {
+            setServerError(null);
+            setIsUnreachableError(false);
+          }}
+        />
+      </div>
+    </AuthSplitLayout>
   );
 }

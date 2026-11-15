@@ -21,20 +21,74 @@ echo "Project Root : $PROJECT_ROOT"
 echo "Build Mode   : $MODE"
 echo "=================================================="
 
+configure_qa_env() {
+  local allow_lan="${ALLOW_LAN_FALLBACK:-false}"
+
+  if [ -z "${VITE_SUPABASE_URL:-}" ] && [ -f "$PROJECT_ROOT/.env" ]; then
+    echo "ℹ️  Loading QA backend configuration from .env..."
+    set -a
+    # shellcheck disable=SC1091
+    source "$PROJECT_ROOT/.env"
+    set +a
+  fi
+
+  export VITE_APP_ENV="${VITE_APP_ENV:-qa}"
+
+  if [ "$allow_lan" = "true" ]; then
+    echo "⚠️  ALLOW_LAN_FALLBACK=true: skipping remote QA Supabase URL check."
+    return 0
+  fi
+
+  local effective_key="${VITE_SUPABASE_PUBLISHABLE_KEY:-${VITE_SUPABASE_ANON_KEY:-}}"
+  if [ -z "${VITE_SUPABASE_URL:-}" ] || [ -z "$effective_key" ]; then
+    echo "❌ Error: Android QA builds require VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (or VITE_SUPABASE_ANON_KEY)."
+    echo "👉 Configure them in repo root .env or environment variables (or set ALLOW_LAN_FALLBACK=true for LAN-only builds)."
+    exit 1
+  fi
+
+  case "${VITE_SUPABASE_URL}" in
+    http://localhost*|http://127.0.0.1*|https://localhost*|https://127.0.0.1*)
+      echo "❌ Error: VITE_SUPABASE_URL ($VITE_SUPABASE_URL) points to localhost, which fails on Android devices."
+      echo "👉 Set VITE_SUPABASE_URL in .env to your QA Cloud Supabase URL (https://<project-ref>.supabase.co)."
+      exit 1
+      ;;
+    http://*)
+      echo "⚠️  Warning: VITE_SUPABASE_URL uses plain http:// ($VITE_SUPABASE_URL) instead of https:// QA Supabase."
+      ;;
+  esac
+
+  echo "✅ Android QA Env : VITE_APP_ENV=${VITE_APP_ENV}"
+  echo "✅ Default Backend: ${VITE_SUPABASE_URL}"
+}
+
 build_via_docker() {
+  configure_qa_env
   echo ""
   echo "--- [1/2] Building Android Builder Docker Image ($IMAGE_NAME) ---"
   docker build -t "$IMAGE_NAME" -f "$PROJECT_ROOT/infra/docker/Dockerfile.android" "$PROJECT_ROOT"
 
+  local docker_env_args=(-e "VITE_APP_ENV=${VITE_APP_ENV:-qa}")
+  if [ -n "${VITE_SUPABASE_URL:-}" ]; then
+    docker_env_args+=(-e "VITE_SUPABASE_URL=${VITE_SUPABASE_URL}")
+  fi
+  if [ -n "${VITE_SUPABASE_ANON_KEY:-}" ]; then
+    docker_env_args+=(-e "VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}")
+  fi
+  if [ -n "${VITE_SUPABASE_PUBLISHABLE_KEY:-}" ]; then
+    docker_env_args+=(-e "VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY}")
+  fi
+
   echo ""
   echo "--- [2/2] Compiling Frontend & Native Android APK/AAB inside Docker ---"
   docker run --rm \
+    "${docker_env_args[@]}" \
     -v "$PROJECT_ROOT":/app \
     -w /app \
     "$IMAGE_NAME"
 }
 
 build_via_local_host() {
+  configure_qa_env
   echo ""
   echo "--- [1/4] Validating Local Host Android Toolchain ---"
 

@@ -461,7 +461,9 @@ describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
       fireEvent.change(confirmInput, { target: { value: 'different' } });
       fireEvent.click(submitBtn);
 
-      expect(await screen.findByText(/Password must be at least 12 characters/i)).toBeInTheDocument();
+      expect(
+        await screen.findByText(/Password must be at least 12 characters/i)
+      ).toBeInTheDocument();
       expect(screen.getByText(/Passwords do not match/i)).toBeInTheDocument();
       expect(supabase.auth.updateUser).not.toHaveBeenCalled();
 
@@ -607,6 +609,26 @@ describe('Dedicated Authentication Pages (SignUpPage & LoginPage)', () => {
         isHttps: false,
       });
       expect(desktopMsg).toContain('127.0.0.1');
+    });
+
+    it('renders auth pages inside a dedicated vertical scroll container with mobile-first form order', () => {
+      for (const route of ['/login', '/signup', '/reset-password']) {
+        const { unmount } = renderWithProviders(<></>, route);
+        const scrollContainer = screen.getByTestId('auth-scroll-container');
+        const formPanel = screen.getByTestId('auth-form-panel');
+        const brandingPanel = screen.getByTestId('auth-branding-panel');
+
+        expect(scrollContainer).toHaveClass('h-dvh', 'overflow-y-auto', 'overscroll-y-contain');
+        expect(scrollContainer.firstElementChild).toHaveClass(
+          'min-h-full',
+          'flex',
+          'flex-col',
+          'lg:flex-row'
+        );
+        expect(formPanel).toHaveClass('order-1', 'lg:order-2');
+        expect(brandingPanel).toHaveClass('order-2', 'lg:order-1');
+        unmount();
+      }
     });
   });
 });

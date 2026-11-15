@@ -154,6 +154,20 @@ describe('Phase 18A: Responsive Modal Scrollability & Pinned Footers', () => {
   });
 
   describe('Priority 0: ImportCasModal + CasPreviewStep with 55 Equities', () => {
+    function assertConstrainedFlexChain(scrollBody: HTMLElement, dialogPanel: HTMLElement) {
+      let current = scrollBody.parentElement;
+      let reachedPanel = false;
+      while (current) {
+        if (current === dialogPanel) {
+          reachedPanel = true;
+          break;
+        }
+        expect(current).toHaveClass('flex-1', 'min-h-0', 'flex', 'flex-col', 'overflow-hidden');
+        current = current.parentElement;
+      }
+      expect(reachedPanel).toBe(true);
+    }
+
     it('keeps Confirm & Import pinned outside the scrollable preview body for 55 parsed rows and completes import', async () => {
       const handleClose = vi.fn();
       const handleSuccess = vi.fn();
@@ -190,8 +204,10 @@ describe('Phase 18A: Responsive Modal Scrollability & Pinned Footers', () => {
       const scrollBody = screen.getByTestId('cas-preview-scroll-body');
       const actionsFooter = screen.getByTestId('cas-preview-actions-footer');
 
-      // Critical layout invariant: scroll body scrolls independently and never wraps actions footer
+      // Critical layout invariant: every flex ancestor up to dialogPanel preserves min-h-0
+      assertConstrainedFlexChain(scrollBody, dialogPanel);
       expect(scrollBody).toHaveClass('flex-1', 'min-h-0', 'overflow-y-auto', 'overscroll-contain');
+      expect(scrollBody.contains(screen.getByText(/Record Visibility & Privacy/i))).toBe(true);
       expect(actionsFooter).toHaveClass('shrink-0', 'flex-wrap');
       expect(scrollBody.contains(actionsFooter)).toBe(false);
 
@@ -219,6 +235,28 @@ describe('Phase 18A: Responsive Modal Scrollability & Pinned Footers', () => {
 
       const viewPortfolioBtn = screen.getByRole('button', { name: /View Updated Portfolio/i });
       expect(viewPortfolioBtn.parentElement).toHaveClass('shrink-0');
+    });
+
+    it('keeps NSDL CAS preview scrollable with VisibilityControl inside scroll body and unbroken flex ancestors', async () => {
+      renderWithAppProviders(<ImportCasModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />);
+
+      const dialogPanel = screen.getByTestId('import-cas-modal').firstElementChild as HTMLElement;
+      expect(dialogPanel).toHaveClass('max-h-[90dvh]', 'flex', 'flex-col', 'overflow-hidden');
+
+      fireEvent.click(screen.getByRole('button', { name: /Load Sample NSDL CAS/i }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('cas-preview-scroll-body')).toBeInTheDocument();
+      });
+
+      const scrollBody = screen.getByTestId('cas-preview-scroll-body');
+      const actionsFooter = screen.getByTestId('cas-preview-actions-footer');
+
+      assertConstrainedFlexChain(scrollBody, dialogPanel);
+      expect(scrollBody).toHaveClass('flex-1', 'min-h-0', 'overflow-y-auto', 'overscroll-contain');
+      expect(scrollBody.contains(screen.getByText(/Record Visibility & Privacy/i))).toBe(true);
+      expect(actionsFooter).toHaveClass('shrink-0', 'flex-wrap');
+      expect(scrollBody.contains(actionsFooter)).toBe(false);
     });
   });
 
@@ -272,9 +310,7 @@ describe('Phase 18A: Responsive Modal Scrollability & Pinned Footers', () => {
 
     it('renders AddHoldingModal with form-wrapped scrollable fields and pinned Save Position button', async () => {
       const onSubmit = vi.fn().mockResolvedValue(undefined);
-      renderWithAppProviders(
-        <AddHoldingModal isOpen onClose={vi.fn()} onSubmit={onSubmit} />
-      );
+      renderWithAppProviders(<AddHoldingModal isOpen onClose={vi.fn()} onSubmit={onSubmit} />);
 
       const saveBtn = screen.getByRole('button', { name: /Save Position/i });
       const footerWrapper = saveBtn.parentElement?.parentElement as HTMLElement;

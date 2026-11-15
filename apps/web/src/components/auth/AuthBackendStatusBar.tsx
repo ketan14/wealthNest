@@ -27,7 +27,13 @@ export function isNetworkFetchError(err: unknown): boolean {
 
 export function shouldAutoHealLanConfig(config: ServerConfig, isHttps: boolean): boolean {
   if (!hasConfiguredRemoteBackend()) return false;
-  if (isHttps && config.mode === 'lan') return true;
+  if (isHttps && config.mode !== 'remote') return true;
+
+  const isMobileRuntime = isTauriMobile() || isMobileUserAgent();
+  if (isMobileRuntime && config.mode !== 'remote' && !config.userSelected) {
+    return true;
+  }
+
   if (
     isTauri() &&
     config.mode === 'lan' &&
@@ -92,11 +98,14 @@ export function useAuthBackendConnection(): AuthBackendConnectionState {
       };
     }
 
-    const res = await connectionManager.switchServer({
-      mode: 'remote',
-      customSupabaseUrl: DEFAULT_SUPABASE_URL,
-      supabaseAnonKey: DEFAULT_SUPABASE_ANON_KEY,
-    });
+    const res = await connectionManager.switchServer(
+      {
+        mode: 'remote',
+        customSupabaseUrl: DEFAULT_SUPABASE_URL,
+        supabaseAnonKey: DEFAULT_SUPABASE_ANON_KEY,
+      },
+      { userSelected: false }
+    );
     if (!res.success) {
       return { ok: false, error: res.message };
     }
@@ -165,7 +174,8 @@ export function AuthBackendRecoveryActions({
   onError,
 }: AuthBackendRecoveryActionsProps) {
   const showCloudQuickSwitch = backend.hasConfiguredRemote && backend.activeMode !== 'remote';
-  const showLocalQuickSwitch = !backend.isHttps && !backend.isMobile && backend.activeMode !== 'local';
+  const showLocalQuickSwitch =
+    !backend.isHttps && !backend.isMobile && backend.activeMode !== 'local';
 
   return (
     <div className="mt-2.5 flex flex-wrap items-center gap-2">

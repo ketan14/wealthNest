@@ -168,6 +168,8 @@ jobs:
         run: npm run type-check
 
       - name: Build & Sign Android APK via scripts/build-android.sh
+        env:
+          ALLOW_LAN_FALLBACK: ${{ inputs.allow_lan_fallback }}
         run: bash ./scripts/build-android.sh local
 
       - name: Upload Signed Android (.apk & .aab) Artifacts
