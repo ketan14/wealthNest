@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 import {
   Search,
   LayoutDashboard,
@@ -181,20 +181,18 @@ export function CommandPaletteModal({ isOpen, onClose }: CommandPaletteModalProp
     }
   };
 
-  const modalContent = (
-    <div
+  return (
+    <ResponsiveModalShell
+      portal
+      variant="top"
       role="dialog"
-      aria-modal="true"
-      aria-label="Global Command Palette"
-      data-testid="command-palette-modal"
-      onClick={onClose}
-      className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-sm flex items-start justify-center pt-[15vh] p-4"
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={handleKeyDown}
-        className="w-full max-w-lg rounded-2xl bg-slate-900 border border-slate-700/80 shadow-2xl overflow-hidden"
-      >
+      ariaLabel="Global Command Palette"
+      testId="command-palette-modal"
+      backdropClassName="z-[9999]"
+      panelClassName="max-w-lg bg-slate-900 border-slate-700/80"
+      onBackdropClick={onClose}
+      onPanelKeyDown={handleKeyDown}
+      header={
         <div className="flex items-center gap-2.5 px-4 py-3 border-b border-slate-800">
           <Search className="w-4 h-4 text-slate-400 shrink-0" />
           <input
@@ -210,53 +208,51 @@ export function CommandPaletteModal({ isOpen, onClose }: CommandPaletteModalProp
             type="button"
             onClick={onClose}
             aria-label="Close command palette"
-            className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800"
+            className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
-
-        <div className="max-h-80 overflow-y-auto p-2 space-y-1">
-          {filtered.length === 0 ? (
-            <div className="p-6 text-center text-xs text-slate-500">
-              No matching pages or actions found.
-            </div>
-          ) : (
-            filtered.map((item, idx) => {
-              const Icon = item.icon;
-              const isSelected = idx === activeIndex;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => handleSelect(item)}
-                  onMouseEnter={() => setActiveIndex(idx)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-sm transition-colors ${
-                    isSelected
-                      ? 'bg-emerald-500/15 text-emerald-300'
-                      : 'text-slate-300 hover:bg-slate-800/70'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <span className="truncate font-medium">{item.label}</span>
-                  </div>
-                  <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800 text-slate-400 shrink-0">
-                    {item.category}
-                  </span>
-                </button>
-              );
-            })
-          )}
-        </div>
-
+      }
+      bodyClassName="sm:max-h-80 p-2 space-y-1"
+      footer={
         <div className="px-4 py-2 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between text-[11px] text-slate-500">
           <span>↑↓ Navigate · ↵ Open · Esc Close</span>
           <span>Ctrl+K / ⌘K</span>
         </div>
-      </div>
-    </div>
+      }
+    >
+      {filtered.length === 0 ? (
+        <div className="p-6 text-center text-xs text-slate-500">
+          No matching pages or actions found.
+        </div>
+      ) : (
+        filtered.map((item, idx) => {
+          const Icon = item.icon;
+          const isSelected = idx === activeIndex;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => handleSelect(item)}
+              onMouseEnter={() => setActiveIndex(idx)}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-sm transition-colors ${
+                isSelected
+                  ? 'bg-emerald-500/15 text-emerald-300'
+                  : 'text-slate-300 hover:bg-slate-800/70'
+              }`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Icon className="w-4 h-4 shrink-0" />
+                <span className="truncate font-medium">{item.label}</span>
+              </div>
+              <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800 text-slate-400 shrink-0">
+                {item.category}
+              </span>
+            </button>
+          );
+        })
+      )}
+    </ResponsiveModalShell>
   );
-
-  return createPortal(modalContent, document.body);
 }

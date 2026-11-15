@@ -23,6 +23,7 @@ import {
   hasConfiguredRemoteBackend,
 } from '@/lib/config/server-config';
 import { connectionManager, ConnectionTestResult } from '@/lib/services/connection-manager';
+import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 import { Button } from '@/components/ui/Button';
 import { ServerModeSelector } from '@/components/settings/ServerModeSelector';
 
@@ -143,16 +144,16 @@ export function BackendConnectionModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+    <ResponsiveModalShell
       role="dialog"
-      aria-modal="true"
-      aria-labelledby="backend-config-title"
-    >
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden animate-in fade-in zoom-in-95">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <Server className="w-5 h-5 text-emerald-400" />
+      ariaLabelledBy="backend-config-title"
+      backdropClassName="bg-slate-950/80"
+      panelClassName="max-w-lg bg-slate-900 border-slate-800 animate-in fade-in zoom-in-95"
+      formProps={{ onSubmit: handleSave }}
+      header={
+        <div className="flex items-center justify-between px-4 py-3.5 sm:px-6 sm:py-4 border-b border-slate-800">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Server className="w-5 h-5 text-emerald-400 shrink-0" />
             <h3 id="backend-config-title" className="font-bold text-white text-base">
               Configure Backend Server
             </h3>
@@ -161,14 +162,61 @@ export function BackendConnectionModal({
             type="button"
             aria-label="Close backend configuration"
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+            className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
+      }
+      bodyClassName="p-4 sm:p-6 space-y-5"
+      footer={
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-6 border-t border-slate-800 bg-slate-900">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleTest}
+            disabled={isTesting || !isFormValid}
+            className="border-slate-700 text-slate-200 gap-1.5"
+          >
+            {isTesting ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Radio className="w-3.5 h-3.5 text-emerald-400" />
+            )}
+            Test Connection
+          </Button>
 
-        <form onSubmit={handleSave} className="p-6 overflow-y-auto flex-1 space-y-5">
-          <ServerModeSelector mode={draftConfig.mode} onModeChange={handleModeChange} />
+          <div className="flex items-center gap-2 ml-auto">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              className="border-slate-700 text-slate-300"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isSaving || !isFormValid}
+              className="bg-primary hover:bg-emerald-400 text-slate-950 font-bold"
+            >
+              {isSaving ? (
+                <span className="flex items-center gap-1.5">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Connecting...
+                </span>
+              ) : (
+                'Save & Connect'
+              )}
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <ServerModeSelector mode={draftConfig.mode} onModeChange={handleModeChange} />
 
           {isHttpBlockedOnHttps && (
             <div className="p-3 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2">
@@ -377,53 +425,6 @@ export function BackendConnectionModal({
               <span>{saveError}</span>
             </div>
           )}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleTest}
-              disabled={isTesting || !isFormValid}
-              className="border-slate-700 text-slate-200 gap-1.5"
-            >
-              {isTesting ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Radio className="w-3.5 h-3.5 text-emerald-400" />
-              )}
-              Test Connection
-            </Button>
-
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={onClose}
-                className="border-slate-700 text-slate-300"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={isSaving || !isFormValid}
-                className="bg-primary hover:bg-emerald-400 text-slate-950 font-bold"
-              >
-                {isSaving ? (
-                  <span className="flex items-center gap-1.5">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Connecting...
-                  </span>
-                ) : (
-                  'Save & Connect'
-                )}
-              </Button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
+    </ResponsiveModalShell>
   );
 }

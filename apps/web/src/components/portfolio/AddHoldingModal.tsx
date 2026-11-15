@@ -4,6 +4,7 @@ import { AssetClassDefinition } from '@wealthnest/domain';
 import { ListAssetClassesUseCase } from '@wealthnest/application';
 import { useAssetClassRepository } from '@/lib/persistence/repository-context';
 import { Button } from '@/components/ui/Button';
+import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 import { X, Plus, AlertCircle, Loader2, Users, Briefcase } from 'lucide-react';
 import { useFamily } from '@/lib/family/family-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
@@ -192,16 +193,20 @@ export function AddHoldingModal({
   const isMutualFund = assetClassId === 'mutual_fund';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border/80 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+    <ResponsiveModalShell
+      role="dialog"
+      ariaLabelledBy="add-holding-modal-title"
+      backdropClassName="bg-black/70"
+      panelClassName="max-w-lg bg-card border-border"
+      formProps={{ onSubmit: handleSubmit }}
+      header={
+        <div className="flex items-center justify-between gap-2 px-4 py-3.5 sm:px-6 sm:py-4 border-b border-border/80">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
               <Plus className="w-4 h-4" />
             </div>
-            <div>
-              <h3 className="text-base font-semibold text-foreground">
+            <div className="min-w-0">
+              <h3 id="add-holding-modal-title" className="text-base font-semibold text-foreground">
                 {isEquity
                   ? 'Add Direct Equity / Stock'
                   : isMutualFund
@@ -218,16 +223,35 @@ export function AddHoldingModal({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            aria-label="Close modal"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="space-y-4 p-6 overflow-y-auto flex-1">
-          {error && (
+      }
+      bodyClassName="space-y-4 p-4 sm:p-6"
+      footer={
+        <div className="flex items-center justify-end gap-3 px-4 py-3 sm:px-6 border-t border-border/80 bg-card">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onClose}
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" size="sm" disabled={isLoading} className="gap-2">
+            {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            Save Position
+          </Button>
+        </div>
+      }
+    >
+      {error && (
             <div className="p-3 rounded-lg bg-destructive/15 text-destructive border border-destructive/30 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
@@ -399,25 +423,6 @@ export function AddHoldingModal({
               calculation drift.
             </p>
           </div>
-
-          {/* Action buttons */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-border/80">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onClose}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" disabled={isLoading} className="gap-2">
-              {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Save Position
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+    </ResponsiveModalShell>
   );
 }

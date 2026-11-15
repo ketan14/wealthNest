@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { X, Building2 } from 'lucide-react';
 import { PropertyType, RealEstatePropertyInput } from '@wealthnest/domain';
 import { Button } from '@/components/ui/Button';
+import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 
 export interface PropertyMetricsOverride {
   propertyType: PropertyType;
@@ -74,24 +74,22 @@ export function PropertyMetricsModal({
     onClose();
   };
 
-  const modalContent = (
-    <div
+  return (
+    <ResponsiveModalShell
+      portal
       role="dialog"
-      aria-modal="true"
-      aria-labelledby="property-metrics-modal-title"
-      onClick={onClose}
-      className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden"
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+      ariaLabelledBy="property-metrics-modal-title"
+      onBackdropClick={onClose}
+      backdropClassName="z-[9999] bg-black/80"
+      panelClassName="max-w-lg bg-slate-900 border-slate-800"
+      formProps={{ onSubmit: handleSubmit }}
+      header={
+        <div className="flex items-center justify-between gap-2 px-4 py-3.5 sm:px-6 sm:py-4 border-b border-slate-800">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 shrink-0">
               <Building2 className="w-4 h-4" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h2 id="property-metrics-modal-title" className="text-base font-semibold text-white">
                 Property Rental & Cost Details
               </h2>
@@ -102,14 +100,23 @@ export function PropertyMetricsModal({
             type="button"
             onClick={onClose}
             aria-label="Close modal"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      }
+      bodyClassName="p-4 sm:p-6 space-y-4"
+      footer={
+        <div className="flex items-center justify-end gap-2.5 px-4 py-3 sm:px-6 border-t border-slate-800 bg-slate-900">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit">Save Metrics</Button>
+        </div>
+      }
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label
                 htmlFor="prop-type"
@@ -236,17 +243,6 @@ export function PropertyMetricsModal({
               />
             </div>
           </div>
-
-          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-800">
-            <Button type="button" variant="ghost" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit">Save Metrics</Button>
-          </div>
-        </form>
-      </div>
-    </div>
+    </ResponsiveModalShell>
   );
-
-  return createPortal(modalContent, document.body);
 }

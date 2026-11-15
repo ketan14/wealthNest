@@ -10,6 +10,7 @@ import { useHoldingRepository } from '@/lib/persistence/repository-context';
 import { useFamily } from '@/lib/family/family-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { Button } from '@/components/ui/Button';
+import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 import { X, Landmark, AlertCircle, Building2, User, Users } from 'lucide-react';
 import { LiabilityPrincipalInterestSection } from './LiabilityPrincipalInterestSection';
 
@@ -212,16 +213,20 @@ export function AddLiabilityModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl flex flex-col max-h-[90dvh] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 md:px-8 border-b border-border shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+    <ResponsiveModalShell
+      role="dialog"
+      ariaLabelledBy="add-liability-title"
+      backdropClassName="bg-black/70"
+      panelClassName="max-w-2xl bg-card border-border"
+      formProps={{ onSubmit: handleSubmit }}
+      header={
+        <div className="flex items-center justify-between gap-2 px-4 py-3.5 sm:px-6 sm:py-4 md:px-8 border-b border-border">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
               <Landmark className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-xl font-bold tracking-tight text-foreground">
+            <div className="min-w-0">
+              <h2 id="add-liability-title" className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
                 {isEditing ? 'Edit Loan / Liability' : 'Add New Loan / Liability'}
               </h2>
               <p className="text-xs text-muted-foreground">
@@ -230,23 +235,36 @@ export function AddLiabilityModal({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label="Close modal"
+            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
+      }
+      bodyClassName="p-4 sm:p-6 md:p-8 space-y-6"
+      footer={
+        <div className="flex items-center justify-end gap-3 px-4 py-3 sm:px-6 md:px-8 border-t border-border bg-card">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting} className="min-w-[120px]">
+            {isSubmitting ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Loan'}
+          </Button>
+        </div>
+      }
+    >
+      {errorMsg && (
+        <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
 
-        <div className="p-6 md:p-8 overflow-y-auto flex-1">
-          {errorMsg && (
-            <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Primary Borrower & Co-Borrowers */}
+      <div className="space-y-6">
+        {/* Primary Borrower & Co-Borrowers */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl border border-border/80 bg-accent/10">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1.5">
@@ -467,19 +485,7 @@ export function AddLiabilityModal({
               className="w-full px-3.5 py-2 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors resize-none"
             />
           </div>
-
-          {/* Footer buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-            <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting} className="min-w-[120px]">
-              {isSubmitting ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Loan'}
-            </Button>
-          </div>
-        </form>
-        </div>
       </div>
-    </div>
+    </ResponsiveModalShell>
   );
 }

@@ -103,3 +103,9 @@ Viewport: Mobile (< 640px)        Viewport: Tablet (640px - 1024px)     Viewport
 | `apps/web/src/__tests__/ResponsiveSvgChart.test.tsx` | 1 test | PASSED | SVG chart container adapts to screen width with zero `min-w-[600px]` overflow |
 | `apps/web/src/__tests__/ConfirmActionModal.test.tsx` | 4 tests | PASSED | Accessible non-blocking modal replaces `window.confirm`, handles confirm, cancel, and disabled loading states |
 | **Total Test Suite** | **316 passed** | **100% GREEN** | 0 failures across 61 test files |
+
+---
+
+### Follow-Up Modal Scrollability Coverage (Phase 18A)
+
+All **23** modal dialogs, drawers, and multi-step CAS preview screens are verified under [Phase 18A: Responsive Modals, Bottom Sheets & CAS Preview Scrollability Verification](./phase-18a-modal-scrollability-verification.md) and automated via `apps/web/src/__tests__/ResponsiveModalScrollability.test.tsx`.

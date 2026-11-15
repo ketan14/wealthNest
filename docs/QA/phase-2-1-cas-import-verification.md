@@ -191,6 +191,12 @@ docker exec wealthnest-web-dev npm run build
 
 ---
 
+### TC-2.1-08: Mobile Portrait & High-Volume (50+ Row) Preview Scrollability
+- **Objective**: Verify that when 50+ equities, mutual funds, or transactions are parsed on mobile or short landscape viewports (`360×780`, `360×480`), the **`Confirm & Import (...)`** action button stays permanently pinned and clickable.
+- **Full Popup Verification Checklist**: See [Phase 18A: Responsive Modals & CAS Preview Scrollability](./phase-18a-modal-scrollability-verification.md#4-priority-0-manual-qa-cas-import-wizard-50-dynamic-holdings).
+
+---
+
 ## 5. Signoff Matrix
 
 | Verification Aspect | Tester | Result | Notes |

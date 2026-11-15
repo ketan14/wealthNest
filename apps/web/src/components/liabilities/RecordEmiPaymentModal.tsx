@@ -3,6 +3,7 @@ import { LiabilityDto } from '@wealthnest/application';
 import { useLiabilityRepository } from '@/lib/persistence/repository-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { Button } from '@/components/ui/Button';
+import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 import { Badge } from '@/components/ui/Badge';
 import { Money, bifurcateLoanPayment } from '@wealthnest/domain';
 import { X, Landmark, AlertCircle, Sparkles } from 'lucide-react';
@@ -95,21 +96,21 @@ export function RecordEmiPaymentModal({
   };
 
   return (
-    <div
+    <ResponsiveModalShell
       role="dialog"
-      aria-modal="true"
-      aria-labelledby="record-emi-title"
-      data-testid="record-emi-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-    >
-      <div className="w-full max-w-lg bg-card border border-border rounded-2xl shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
+      ariaLabelledBy="record-emi-title"
+      testId="record-emi-modal"
+      backdropClassName="bg-black/70"
+      panelClassName="max-w-lg bg-card border-border"
+      formProps={{ onSubmit: handleSubmit }}
+      header={
+        <div className="flex items-center justify-between gap-2 px-4 py-3.5 sm:px-6 sm:py-4 border-b border-border">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 shrink-0">
               <Landmark className="w-5 h-5" />
             </div>
-            <div>
-              <h2 id="record-emi-title" className="text-lg font-bold text-foreground">
+            <div className="min-w-0">
+              <h2 id="record-emi-title" className="text-base sm:text-lg font-bold text-foreground">
                 Record EMI Payment & Interest Split
               </h2>
               <p className="text-xs text-muted-foreground">
@@ -118,15 +119,39 @@ export function RecordEmiPaymentModal({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label="Close modal"
+            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4 p-6 overflow-y-auto flex-1">
-          {errorMsg && (
+      }
+      bodyClassName="space-y-4 p-4 sm:p-6"
+      footer={
+        <div className="flex items-center justify-end gap-3 px-4 py-3 sm:px-6 border-t border-border bg-card">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            size="sm"
+            disabled={isSubmitting}
+            className="min-w-[130px] bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold"
+          >
+            {isSubmitting ? 'Recording...' : 'Record Payment'}
+          </Button>
+        </div>
+      }
+    >
+      {errorMsg && (
             <div className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{errorMsg}</span>
@@ -232,28 +257,6 @@ export function RecordEmiPaymentModal({
               </p>
             </div>
           )}
-
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={isSubmitting}
-              className="min-w-[130px] bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold"
-            >
-              {isSubmitting ? 'Recording...' : 'Record Payment'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+    </ResponsiveModalShell>
   );
 }

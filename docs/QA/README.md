@@ -25,6 +25,7 @@ This directory contains formal, executable Quality Assurance (QA) test suites, v
 | [Phase 9.1: Local-First Persistence & Repository Decoupling](./phase-9-1-local-persistence-decoupling-verification.md) | Phase 9.1 | Local SQLite schema (12 tables), composite foreign keys, RepositoryProvider dependency injection, in-memory SQLite parity testing, and atomic backup/restore. | ✅ Verified |
 | [Phase 9.2: Mobile Responsive UI & Touch Ergonomics](./phase-9-2-mobile-responsive-touch-verification.md) | Phase 9.2 | Adaptive navigation (bottom tab bar on mobile, sidebar on desktop), responsive cards for holdings/transactions, touch targets $\ge 44\text{px}$, responsive SVG trajectory chart, and non-blocking modals. | ✅ Verified |
 | [Phase 10: Cross-Platform Desktop & Mobile Runtime](./phase-10-desktop-mobile-runtime-verification.md) | Phase 10 | Tauri 2 native compilation, desktop packaging (.deb, .msi, .dmg), mobile runtimes (.apk, .ipa), native file dialogs, and OS sandbox persistence. | ✅ Verified |
+| [Phase 18A: Responsive Modals & CAS Preview Scrollability](./phase-18a-modal-scrollability-verification.md) | Phase 18A | Standardized `ResponsiveModalShell`, pinned sticky action footers across all 23 modals/sheets, and mobile/short-viewport CAS 50+ holding preview verification. | 🧪 Automated / Manual QA Pending |
 
 ---
 

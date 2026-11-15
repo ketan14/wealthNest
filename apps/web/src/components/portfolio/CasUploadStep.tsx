@@ -57,16 +57,17 @@ export function CasUploadStep({
   const hasLowercase = Boolean(password && password !== password.toUpperCase());
 
   return (
-    <div className="space-y-4 pt-4 overflow-y-auto">
-      {error && (
-        <div className="p-3 rounded-lg bg-destructive/15 text-destructive border border-destructive/30 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden pt-3 sm:pt-4">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-4 pr-0.5">
+        {error && (
+          <div className="p-3 rounded-lg bg-destructive/15 text-destructive border border-destructive/30 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
-      {/* Import Source Selector */}
-      <div className="flex items-center gap-2 p-1 bg-secondary/50 rounded-xl border border-border/80">
+        {/* Import Source Selector */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 sm:gap-2 p-1 bg-secondary/50 rounded-xl border border-border/80">
         <button
           type="button"
           onClick={() => onSelectSource('cas_pdf')}
@@ -314,10 +315,11 @@ export function CasUploadStep({
             Load Sample Groww Orders CSV (Orders History)
           </Button>
         </div>
+        </div>
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-end gap-3 pt-3 border-t border-border/80">
+      <div className="shrink-0 flex items-center justify-end gap-3 pt-3 mt-3 border-t border-border/80">
         <Button variant="outline" size="sm" onClick={onClose}>
           Cancel
         </Button>

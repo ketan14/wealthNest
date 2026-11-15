@@ -18,6 +18,7 @@ import {
   PASSWORD_POLICY_HINT,
   validatePasswordComplexity,
 } from '../../lib/validation/password';
+import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 
 interface AdminUserProvisionModalProps {
   isOpen: boolean;
@@ -163,13 +164,21 @@ export function AdminUserProvisionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden animate-in fade-in zoom-in-95">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
-          <div className="flex items-center gap-2.5">
+    <ResponsiveModalShell
+      role="dialog"
+      ariaLabelledBy="admin-provision-title"
+      backdropClassName="bg-slate-950/80"
+      panelClassName="max-w-lg bg-slate-900 border-slate-800 animate-in fade-in zoom-in-95"
+      formProps={
+        createdCredentials
+          ? undefined
+          : { onSubmit: modalMode === 'create' ? handleCreateUser : handleInviteUser }
+      }
+      header={
+        <div className="flex items-center justify-between gap-2 px-4 py-3.5 sm:px-6 sm:py-4 border-b border-slate-800">
+          <div className="flex items-center gap-2.5 min-w-0">
             <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                 modalMode === 'create'
                   ? 'bg-emerald-500/10 text-emerald-400'
                   : 'bg-cyan-500/10 text-cyan-400'
@@ -181,8 +190,8 @@ export function AdminUserProvisionModal({
                 <Mail className="w-4 h-4" />
               )}
             </div>
-            <div>
-              <h3 className="font-semibold text-white text-base">
+            <div className="min-w-0">
+              <h3 id="admin-provision-title" className="font-semibold text-white text-base">
                 {modalMode === 'create' ? 'Create Investor Account' : 'Invite New Investor'}
               </h3>
               <p className="text-[11px] text-slate-400">
@@ -193,114 +202,144 @@ export function AdminUserProvisionModal({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="text-slate-500 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+            aria-label="Close modal"
+            className="text-slate-500 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
-
-        <div className="p-6 overflow-y-auto flex-1">
-        {/* Success View: Display Created Credentials */}
-        {createdCredentials ? (
-          <div className="mt-5 space-y-4">
-            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>Account Provisioned Successfully!</span>
-              </div>
-              <p className="text-[11px] text-slate-300 leading-relaxed">
-                The account is active and ready. Copy these credentials to share with the user:
-              </p>
-
-              <div className="mt-3 p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-xs font-mono space-y-1.5 select-all">
-                <div>
-                  <span className="text-slate-500">Email:</span>{' '}
-                  <span className="text-white font-medium">{createdCredentials.email}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500">Password:</span>{' '}
-                  <span className="text-emerald-400 font-semibold">
-                    {createdCredentials.password}
-                  </span>
-                </div>
-                {createdCredentials.role && (
-                  <div>
-                    <span className="text-slate-500">Role:</span>{' '}
-                    <span className="text-cyan-400">{createdCredentials.role}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="pt-2 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={handleCopyCredentials}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition-colors"
-              >
-                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? 'Copied to Clipboard!' : 'Copy Credentials'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCreatedCredentials(null);
-                  onClose();
-                }}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors"
-              >
-                Done
-              </button>
-            </div>
+      }
+      bodyClassName="p-4 sm:p-6"
+      footer={
+        createdCredentials ? (
+          <div className="px-4 py-3 sm:px-6 border-t border-slate-800 flex flex-wrap items-center justify-end gap-3 bg-slate-900">
+            <button
+              type="button"
+              onClick={handleCopyCredentials}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition-colors min-h-[36px]"
+            >
+              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copied ? 'Copied to Clipboard!' : 'Copy Credentials'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCreatedCredentials(null);
+                onClose();
+              }}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors min-h-[36px]"
+            >
+              Done
+            </button>
           </div>
         ) : (
-          <>
-            {/* Mode Selector Tabs */}
-            <div className="flex items-center gap-2 mt-4 p-1 rounded-xl bg-slate-950 border border-slate-800">
-              <button
-                type="button"
-                onClick={() => {
-                  setModalMode('create');
-                  setModalError(null);
-                }}
-                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-2 ${
-                  modalMode === 'create'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <UserPlus className="w-3.5 h-3.5" />
-                <span>Direct Create (with Password)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setModalMode('invite');
-                  setModalError(null);
-                }}
-                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-2 ${
-                  modalMode === 'invite'
-                    ? 'bg-cyan-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Mail className="w-3.5 h-3.5" />
-                <span>Send Invite Link</span>
-              </button>
-            </div>
-
-            {modalError && (
-              <div className="mt-3 p-3 rounded-xl bg-destructive/15 border border-destructive/30 text-destructive text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{modalError}</span>
-              </div>
-            )}
-
-            <form
-              onSubmit={modalMode === 'create' ? handleCreateUser : handleInviteUser}
-              className="mt-4 space-y-3.5"
+          <div className="px-4 py-3 sm:px-6 border-t border-slate-800 flex items-center justify-end gap-3 bg-slate-900">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium min-h-[36px]"
             >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`px-4 py-2 rounded-xl text-white text-xs font-semibold shadow-md disabled:opacity-50 transition-colors min-h-[36px] ${
+                modalMode === 'create'
+                  ? 'bg-emerald-600 hover:bg-emerald-500'
+                  : 'bg-cyan-600 hover:bg-cyan-500'
+              }`}
+            >
+              {isSubmitting
+                ? modalMode === 'create'
+                  ? 'Creating...'
+                  : 'Inviting...'
+                : modalMode === 'create'
+                  ? 'Create Account'
+                  : 'Send Invitation'}
+            </button>
+          </div>
+        )
+      }
+    >
+      {/* Success View: Display Created Credentials */}
+      {createdCredentials ? (
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 space-y-2">
+            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>Account Provisioned Successfully!</span>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              The account is active and ready. Copy these credentials to share with the user:
+            </p>
+
+            <div className="mt-3 p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-xs font-mono space-y-1.5 select-all break-all">
+              <div>
+                <span className="text-slate-500">Email:</span>{' '}
+                <span className="text-white font-medium">{createdCredentials.email}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Password:</span>{' '}
+                <span className="text-emerald-400 font-semibold">
+                  {createdCredentials.password}
+                </span>
+              </div>
+              {createdCredentials.role && (
+                <div>
+                  <span className="text-slate-500">Role:</span>{' '}
+                  <span className="text-cyan-400">{createdCredentials.role}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Mode Selector Tabs */}
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 p-1 rounded-xl bg-slate-950 border border-slate-800">
+            <button
+              type="button"
+              onClick={() => {
+                setModalMode('create');
+                setModalError(null);
+              }}
+              className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-2 ${
+                modalMode === 'create'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <UserPlus className="w-3.5 h-3.5 shrink-0" />
+              <span>Direct Create (with Password)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setModalMode('invite');
+                setModalError(null);
+              }}
+              className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-2 ${
+                modalMode === 'invite'
+                  ? 'bg-cyan-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Mail className="w-3.5 h-3.5 shrink-0" />
+              <span>Send Invite Link</span>
+            </button>
+          </div>
+
+          {modalError && (
+            <div className="mt-3 p-3 rounded-xl bg-destructive/15 border border-destructive/30 text-destructive text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{modalError}</span>
+            </div>
+          )}
+
+          <div className="mt-4 space-y-3.5">
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1">
                   Email Address <span className="text-emerald-400">*</span>
@@ -385,38 +424,9 @@ export function AdminUserProvisionModal({
                   </select>
                 </div>
               )}
-
-              <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className={`px-4 py-2 rounded-xl text-white text-xs font-semibold shadow-md disabled:opacity-50 transition-colors ${
-                    modalMode === 'create'
-                      ? 'bg-emerald-600 hover:bg-emerald-500'
-                      : 'bg-cyan-600 hover:bg-cyan-500'
-                  }`}
-                >
-                  {isSubmitting
-                    ? modalMode === 'create'
-                      ? 'Creating...'
-                      : 'Inviting...'
-                    : modalMode === 'create'
-                      ? 'Create Account'
-                      : 'Send Invitation'}
-                </button>
-              </div>
-            </form>
-          </>
-        )}
-        </div>
-      </div>
-    </div>
+          </div>
+        </>
+      )}
+    </ResponsiveModalShell>
   );
 }

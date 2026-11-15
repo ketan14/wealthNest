@@ -65,11 +65,11 @@ Observed defect in NSDL / CDSL / CAMS CAS import preview on mobile viewports: th
 - [CasUploadStep.tsx](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/components/portfolio/CasUploadStep.tsx#L60): Step wrapper has `overflow-y-auto` but lacks `flex-1 min-h-0`.
 
 **Phase 18A.1 Tasks:**
-- [ ] Update `ImportCasModal.tsx` shell to `max-h-[90dvh] flex flex-col overflow-hidden`, tighten mobile padding (`p-4 sm:p-6`), and mark the Header wrapper `shrink-0`.
-- [ ] Refactor `CasPreviewStep.tsx` layout so metadata/warnings/selectors + preview table share a single clean outer vertical scroll region (`flex-1 min-h-0 overflow-y-auto overscroll-contain`) on compact/mobile viewports (or make upper metadata compact/collapsible), and pin the Actions footer outside the scrollable region with `shrink-0`.
-- [ ] Make the `CasPreviewStep.tsx` footer responsive (`flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 pt-3 border-t shrink-0`), and format the primary submit label so it wraps cleanly or displays concise summary counts on `< 640px` screens.
-- [ ] Replace `min-h-[300px]` in `CasPreviewTables.tsx` (lines 87, 210, 331) with `min-h-[140px] sm:min-h-[220px]` (or let the unified step body scroll), and wrap wide preview tables in `overflow-x-auto` with mobile-friendly column widths.
-- [ ] Add `flex-1 min-h-0 overflow-y-auto` to `CasSummaryStep.tsx` (line 15) and `flex-1 min-h-0` to `CasUploadStep.tsx` (line 60).
+- [x] Update `ImportCasModal.tsx` shell to `max-h-[90dvh] flex flex-col overflow-hidden`, tighten mobile padding (`p-4 sm:p-6`), and mark the Header wrapper `shrink-0`.
+- [x] Refactor `CasPreviewStep.tsx` layout so metadata/warnings/selectors + preview table share a single clean outer vertical scroll region (`flex-1 min-h-0 overflow-y-auto overscroll-contain`) on compact/mobile viewports (or make upper metadata compact/collapsible), and pin the Actions footer outside the scrollable region with `shrink-0`.
+- [x] Make the `CasPreviewStep.tsx` footer responsive (`flex-wrap`, single DOM nodes ordered with `order-1 sm:order-3` full-width primary CTA on mobile + `sm:ml-auto` alignment on desktop) so the primary submit label wraps cleanly on `< 640px` screens.
+- [x] Replace `min-h-[300px]` in `CasPreviewTables.tsx` with `min-h-[160px] max-h-[50dvh] sm:max-h-[420px] overflow-auto overscroll-contain`, and set `min-w-[600px]` on wide preview tables so columns scroll horizontally instead of collapsing.
+- [x] Add `flex-1 min-h-0 overflow-y-auto overscroll-contain` + pinned `shrink-0` footers in `CasSummaryStep.tsx` and `CasUploadStep.tsx`.
 
 ---
 
@@ -105,14 +105,15 @@ All 15 Group C modals already enforce `max-h-[90dvh] flex flex-col overflow-hidd
 - **Admin**: `AdminUserProvisionModal.tsx` (#L167, #L203), `AdminUserStatusModal.tsx` (#L79, #L92), `ViewAsUserModal.tsx` (#L61, #L84)
 
 **Phase 18A.4 Tasks:**
-- [ ] Introduce a shared UI wrapper (e.g., `ResponsiveModalShell` in `apps/web/src/components/ui/`) enforcing:
-  - Backdrop with `fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 overscroll-contain`
-  - Panel with `max-h-[90dvh] w-full flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)]`
-  - Slots for `header` (`shrink-0`), `children` body (`flex-1 min-h-0 overflow-y-auto overscroll-contain`), and optional `footer` (`shrink-0`) so primary CTAs remain anchored and tappable on short viewports and when Android keyboards open.
-- [ ] Migrate Group A, Group B, and Group C modals onto the shared shell where appropriate, and keep Group C body classes consistent with `min-h-0 overscroll-contain`.
+- [x] Introduce a shared UI wrapper ([`ResponsiveModalShell.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/components/ui/ResponsiveModalShell.tsx)) enforcing:
+  - Backdrop with `fixed inset-0 z-50 flex justify-center overscroll-contain` (`center`, `sheet`, and `top` presets with `env(safe-area-inset-bottom)` clearance)
+  - Panel with `max-h-[90dvh] w-full flex flex-col overflow-hidden` (`82dvh` for `top`)
+  - Slots for `header`/`subHeader` (`shrink-0`), `children` body (`flex-1 min-h-0 overflow-y-auto overscroll-contain` or flex `scrollableBody={false}`), `formProps` wrapper spanning body + footer, and optional `footer` (`shrink-0`) so primary CTAs remain anchored and tappable on short viewports and when Android keyboards open.
+- [x] Migrate all 23 Group A, Group B, Group C, and CAS overlays onto `<ResponsiveModalShell>` and verify via automated JSDOM regression suite (`ResponsiveModalScrollability.test.tsx`).
 
 ### 3.5 Phase 18A Verification Gate
-- Verify all modified modals in browser/Playwright across:
+- **Automated JSDOM Gate**: Verified in [`ResponsiveModalScrollability.test.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/__tests__/ResponsiveModalScrollability.test.tsx).
+- **Manual Browser / Device QA Checklist**: Documented in [`phase-18a-modal-scrollability-verification.md`](file:///home/ketan/projects/Krisha/wealthNest/docs/QA/phase-18a-modal-scrollability-verification.md) for testing across:
   - **Mobile portrait (`360x780`, `390x844`)**: `ImportCasModal` reaches and clicks `Confirm & Import (...)` with 50+ equities; all Group A/B/C primary buttons stay visible without horizontal page overflow.
   - **Mobile short / soft-keyboard height (`360x480`)**: Body scrolls independently while sticky header and footer stay within `90dvh`.
   - **Desktop (`1280x800`)**: No visual regressions in centered dialog alignment or table ergonomics.

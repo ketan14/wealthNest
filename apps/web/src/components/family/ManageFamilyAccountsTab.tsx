@@ -70,20 +70,20 @@ export function ManageFamilyAccountsTab() {
           return (
             <div
               key={acc.id}
-              className="flex items-center justify-between p-3 rounded-xl bg-slate-800/40 border border-slate-700/60 hover:border-slate-600 transition-all"
+              className="flex items-center justify-between gap-2 p-3 rounded-xl bg-slate-800/40 border border-slate-700/60 hover:border-slate-600 transition-all"
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 shrink-0">
                   <Building className="w-4 h-4" />
                 </div>
-                <div>
-                  <div className="text-sm font-semibold text-slate-100 flex items-center gap-2">
-                    {acc.accountName}
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-slate-100 flex flex-wrap items-center gap-2">
+                    <span>{acc.accountName}</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700 shrink-0">
                       {acc.depository}
                     </span>
                   </div>
-                  <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
+                  <div className="text-xs text-slate-400 flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
                     <span className="font-medium text-blue-400">{acc.brokerName}</span>
                     <span>•</span>
                     <span>

@@ -16,6 +16,7 @@ import {
 import { useCasImportRepository } from '@/lib/persistence/repository-context';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { Badge } from '@/components/ui/Badge';
+import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 import { X, FileSpreadsheet } from 'lucide-react';
 import { useFamily } from '@/lib/family/family-context';
 import {
@@ -347,112 +348,124 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl rounded-2xl border border-border bg-card p-6 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-border/80">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+    <ResponsiveModalShell
+      role="dialog"
+      ariaLabelledBy="import-cas-modal-title"
+      testId="import-cas-modal"
+      scrollableBody={false}
+      panelClassName="max-w-4xl p-4 sm:p-6 bg-card border-border"
+      header={
+        <div className="flex items-start sm:items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-border/80">
+          <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
               <FileSpreadsheet className="w-5 h-5" />
             </div>
-            <div>
-              <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
-                Import Investments from NSDL / CDSL / CAMS CAS
-                <Badge variant="default" className="text-[10px] bg-primary/15 text-primary">
+            <div className="min-w-0">
+              <h3
+                id="import-cas-modal-title"
+                className="text-sm sm:text-base font-semibold text-foreground flex flex-wrap items-center gap-2"
+              >
+                <span>Import Investments from NSDL / CDSL / CAMS CAS</span>
+                <Badge
+                  variant="default"
+                  className="text-[10px] bg-primary/15 text-primary shrink-0 whitespace-nowrap"
+                >
                   Phase 2.1 & CAMS
                 </Badge>
               </h3>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Automated ingestion of Demat shares, CAMS / KFintech mutual fund folios, and SGBs
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={handleClose}
-            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            aria-label="Close modal"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
+      }
+    >
+      {/* Wizard Step 1: Upload & Password */}
+      {step === 'upload' && (
+        <CasUploadStep
+          importSource={importSource}
+          file={file}
+          password={password}
+          error={error}
+          isParsing={parseMutation.isPending}
+          onSelectSource={(source) => {
+            setImportSource(source);
+            setFile(null);
+            setError(null);
+          }}
+          onFileChange={(selectedFile) => {
+            setFile(selectedFile);
+            setError(null);
+            if (
+              selectedFile &&
+              selectedFile.name.endsWith('.csv') &&
+              importSource === 'cas_pdf'
+            ) {
+              setImportSource('zerodha_csv');
+            }
+          }}
+          onPasswordChange={setPassword}
+          onClearError={() => setError(null)}
+          onParse={() => parseMutation.mutate()}
+          onLoadSampleFixture={handleLoadSampleFixture}
+          onParseBrokerCsvText={handleParseBrokerCsvText}
+          onClose={handleClose}
+        />
+      )}
 
-        {/* Wizard Step 1: Upload & Password */}
-        {step === 'upload' && (
-          <CasUploadStep
-            importSource={importSource}
-            file={file}
-            password={password}
-            error={error}
-            isParsing={parseMutation.isPending}
-            onSelectSource={(source) => {
-              setImportSource(source);
-              setFile(null);
-              setError(null);
-            }}
-            onFileChange={(selectedFile) => {
-              setFile(selectedFile);
-              setError(null);
-              if (
-                selectedFile &&
-                selectedFile.name.endsWith('.csv') &&
-                importSource === 'cas_pdf'
-              ) {
-                setImportSource('zerodha_csv');
-              }
-            }}
-            onPasswordChange={setPassword}
-            onClearError={() => setError(null)}
-            onParse={() => parseMutation.mutate()}
-            onLoadSampleFixture={handleLoadSampleFixture}
-            onParseBrokerCsvText={handleParseBrokerCsvText}
-            onClose={handleClose}
-          />
-        )}
+      {/* Wizard Step 2: Verification & Preview Grid */}
+      {step === 'preview' && previewData && (
+        <CasPreviewStep
+          previewData={previewData}
+          members={members}
+          accounts={accounts}
+          relevantAccounts={relevantAccounts}
+          importMemberId={importMemberId}
+          importAccountId={importAccountId}
+          activeTab={activeTab}
+          equities={equities}
+          selectedEquities={selectedEquities}
+          equitiesSelectedValueCents={equitiesSelectedValueCents}
+          equitiesTotalValueCents={equitiesTotalValueCents}
+          mutualFunds={mutualFunds}
+          selectedMutualFunds={selectedMutualFunds}
+          mfSelectedValueCents={mfSelectedValueCents}
+          mfTotalValueCents={mfTotalValueCents}
+          mfFolioCountsByIsin={mfFolioCountsByIsin}
+          transactions={transactions}
+          selectedCount={selectedCount}
+          selectedTransactionsCount={selectedTransactionsCount}
+          isConfirmPending={confirmMutation.isPending}
+          onMemberChange={(memberId, firstAccountId) => {
+            setImportMemberId(memberId);
+            setImportAccountId(firstAccountId);
+          }}
+          onAccountChange={setImportAccountId}
+          onTabChange={setActiveTab}
+          onToggleItem={handleToggleItem}
+          onSelectAllEquities={handleSelectAllEquities}
+          onSelectAllMutualFunds={handleSelectAllMutualFunds}
+          onToggleTransaction={handleToggleTransaction}
+          onSelectAllTransactions={handleSelectAllTransactions}
+          onBack={() => setStep('upload')}
+          onClose={handleClose}
+          onConfirm={() => confirmMutation.mutate()}
+        />
+      )}
 
-        {/* Wizard Step 2: Verification & Preview Grid */}
-        {step === 'preview' && previewData && (
-          <CasPreviewStep
-            previewData={previewData}
-            members={members}
-            accounts={accounts}
-            relevantAccounts={relevantAccounts}
-            importMemberId={importMemberId}
-            importAccountId={importAccountId}
-            activeTab={activeTab}
-            equities={equities}
-            selectedEquities={selectedEquities}
-            equitiesSelectedValueCents={equitiesSelectedValueCents}
-            equitiesTotalValueCents={equitiesTotalValueCents}
-            mutualFunds={mutualFunds}
-            selectedMutualFunds={selectedMutualFunds}
-            mfSelectedValueCents={mfSelectedValueCents}
-            mfTotalValueCents={mfTotalValueCents}
-            mfFolioCountsByIsin={mfFolioCountsByIsin}
-            transactions={transactions}
-            selectedCount={selectedCount}
-            selectedTransactionsCount={selectedTransactionsCount}
-            isConfirmPending={confirmMutation.isPending}
-            onMemberChange={(memberId, firstAccountId) => {
-              setImportMemberId(memberId);
-              setImportAccountId(firstAccountId);
-            }}
-            onAccountChange={setImportAccountId}
-            onTabChange={setActiveTab}
-            onToggleItem={handleToggleItem}
-            onSelectAllEquities={handleSelectAllEquities}
-            onSelectAllMutualFunds={handleSelectAllMutualFunds}
-            onToggleTransaction={handleToggleTransaction}
-            onSelectAllTransactions={handleSelectAllTransactions}
-            onBack={() => setStep('upload')}
-            onClose={handleClose}
-            onConfirm={() => confirmMutation.mutate()}
-          />
-        )}
-
-        {/* Wizard Step 3: Import Summary */}
-        {step === 'summary' && importSummary && (
-          <CasSummaryStep importSummary={importSummary} onClose={handleClose} />
-        )}
-      </div>
-    </div>
+      {/* Wizard Step 3: Import Summary */}
+      {step === 'summary' && importSummary && (
+        <CasSummaryStep importSummary={importSummary} onClose={handleClose} />
+      )}
+    </ResponsiveModalShell>
   );
 }

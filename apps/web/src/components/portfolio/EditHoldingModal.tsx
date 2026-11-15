@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HoldingDetailDto } from '@wealthnest/application';
 import { Button } from '@/components/ui/Button';
+import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { X, AlertCircle } from 'lucide-react';
 
@@ -99,13 +100,17 @@ export function EditHoldingModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border/80 shrink-0">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-base font-semibold text-foreground">
+    <ResponsiveModalShell
+      role="dialog"
+      ariaLabelledBy="edit-holding-modal-title"
+      backdropClassName="bg-background/80"
+      panelClassName="max-w-lg bg-card border-border"
+      formProps={{ onSubmit: handleSubmit }}
+      header={
+        <div className="flex items-center justify-between gap-2 px-4 py-3.5 sm:px-6 sm:py-4 border-b border-border/80">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 id="edit-holding-modal-title" className="text-base font-semibold text-foreground">
                 {isAppraisalAsset ? 'Update Appraisal Valuation' : 'Edit Holding & Valuation'}
               </h3>
               <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-primary/10 text-primary border border-primary/20">
@@ -117,15 +122,40 @@ export function EditHoldingModal({
             </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            aria-label="Close modal"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4 p-6 overflow-y-auto flex-1">
-          {error && (
+      }
+      bodyClassName="space-y-4 p-4 sm:p-6"
+      footer={
+        <div className="flex items-center justify-end gap-2.5 px-4 py-3 sm:px-6 border-t border-border/80 bg-card">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onClose}
+            disabled={isLoading}
+            className="text-xs"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            size="sm"
+            disabled={isLoading}
+            className="text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+          >
+            {isLoading ? 'Updating...' : 'Save Updated Valuation'}
+          </Button>
+        </div>
+      }
+    >
+      {error && (
             <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
@@ -250,30 +280,6 @@ export function EditHoldingModal({
               </div>
             </div>
           )}
-
-          {/* Footer Controls */}
-          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border/80">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onClose}
-              disabled={isLoading}
-              className="text-xs"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={isLoading}
-              className="text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
-            >
-              {isLoading ? 'Updating...' : 'Save Updated Valuation'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+    </ResponsiveModalShell>
   );
 }

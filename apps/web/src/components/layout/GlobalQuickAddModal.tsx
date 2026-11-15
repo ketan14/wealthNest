@@ -13,6 +13,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 
 interface QuickActionItem {
   id: string;
@@ -117,22 +118,18 @@ export function GlobalQuickAddModal({ isOpen, onClose }: { isOpen: boolean; onCl
   ];
 
   return (
-    <div
+    <ResponsiveModalShell
+      variant="sheet"
       role="dialog"
-      aria-modal="true"
-      aria-labelledby="quick-add-title"
-      data-testid="global-quick-add-modal"
-      onClick={onClose}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-200"
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full sm:max-w-md bg-card border border-border sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in slide-in-from-bottom duration-250"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border/80 bg-secondary/30">
+      ariaLabelledBy="quick-add-title"
+      testId="global-quick-add-modal"
+      backdropClassName="bg-black/70"
+      panelClassName="sm:max-w-md bg-card border-border animate-in slide-in-from-bottom duration-250"
+      onBackdropClick={onClose}
+      header={
+        <div className="flex items-center justify-between px-4 py-3.5 sm:px-5 sm:py-4 border-b border-border/80 bg-secondary/30">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/15 border border-primary/25 flex items-center justify-center text-primary">
+            <div className="w-8 h-8 rounded-lg bg-primary/15 border border-primary/25 flex items-center justify-center text-primary shrink-0">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
@@ -143,53 +140,52 @@ export function GlobalQuickAddModal({ isOpen, onClose }: { isOpen: boolean; onCl
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             aria-label="Close"
-            className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        {/* Action List */}
-        <div className="p-4 space-y-2.5 overflow-y-auto">
-          {actions.map((act) => {
-            const Icon = act.icon;
-            return (
-              <button
-                key={act.id}
-                onClick={act.action}
-                data-testid={`quick-action-${act.id}`}
-                className="w-full flex items-center justify-between p-3.5 rounded-xl border border-border/70 bg-card/60 hover:bg-secondary/50 hover:border-border transition-all text-left group active:scale-[0.99]"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div
-                    className={cn(
-                      'w-10 h-10 rounded-lg flex items-center justify-center border shrink-0',
-                      act.bgColor,
-                      act.color
-                    )}
-                  >
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                      {act.title}
-                    </h3>
-                    <p className="text-xs text-muted-foreground line-clamp-1">{act.description}</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground/60 group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Footer info */}
+      }
+      bodyClassName="p-4 space-y-2.5"
+      footer={
         <div className="px-5 py-3 border-t border-border/60 bg-secondary/20 text-center text-[11px] text-muted-foreground">
           WealthNest India-First Family Finance
         </div>
-      </div>
-    </div>
+      }
+    >
+      {actions.map((act) => {
+        const Icon = act.icon;
+        return (
+          <button
+            key={act.id}
+            onClick={act.action}
+            data-testid={`quick-action-${act.id}`}
+            className="w-full flex items-center justify-between p-3.5 rounded-xl border border-border/70 bg-card/60 hover:bg-secondary/50 hover:border-border transition-all text-left group active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div
+                className={cn(
+                  'w-10 h-10 rounded-lg flex items-center justify-center border shrink-0',
+                  act.bgColor,
+                  act.color
+                )}
+              >
+                <Icon className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                  {act.title}
+                </h3>
+                <p className="text-xs text-muted-foreground line-clamp-1">{act.description}</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground/60 group-hover:text-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
+          </button>
+        );
+      })}
+    </ResponsiveModalShell>
   );
 }

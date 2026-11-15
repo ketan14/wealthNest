@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { X, Upload, FileText, AlertCircle } from 'lucide-react';
 import {
   DOCUMENT_CATEGORIES,
@@ -11,6 +10,7 @@ import {
 } from '@wealthnest/domain';
 import { FamilyMemberDto } from '@wealthnest/application';
 import { Button } from '@/components/ui/Button';
+import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 import { validateVaultFileBlobSignature } from '@/lib/validation/import-file';
 
 export interface UploadDocumentFormData {
@@ -125,24 +125,22 @@ export function UploadDocumentModal({
     }
   };
 
-  const modalContent = (
-    <div
+  return (
+    <ResponsiveModalShell
+      portal
       role="dialog"
-      aria-modal="true"
-      aria-labelledby="upload-doc-modal-title"
-      onClick={onClose}
-      className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden"
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+      ariaLabelledBy="upload-doc-modal-title"
+      onBackdropClick={onClose}
+      backdropClassName="z-[9999] bg-black/80"
+      panelClassName="max-w-lg bg-slate-900 border-slate-800"
+      formProps={{ onSubmit: handleSubmit }}
+      header={
+        <div className="flex items-center justify-between gap-2 px-4 py-3.5 sm:px-6 sm:py-4 border-b border-slate-800">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 shrink-0">
               <Upload className="w-4 h-4" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h2 id="upload-doc-modal-title" className="text-base font-semibold text-white">
                 Upload to Family Vault
               </h2>
@@ -155,14 +153,25 @@ export function UploadDocumentModal({
             type="button"
             onClick={onClose}
             aria-label="Close modal"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
-          {error && (
+      }
+      bodyClassName="p-4 sm:p-6 space-y-4"
+      footer={
+        <div className="flex items-center justify-end gap-2.5 px-4 py-3 sm:px-6 border-t border-slate-800 bg-slate-900">
+          <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Uploading...' : 'Save to Vault'}
+          </Button>
+        </div>
+      }
+    >
+      {error && (
             <div className="flex items-start gap-2.5 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{error}</span>
@@ -305,19 +314,6 @@ export function UploadDocumentModal({
               className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none"
             />
           </div>
-
-          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-800">
-            <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Uploading...' : 'Save to Vault'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+    </ResponsiveModalShell>
   );
-
-  return createPortal(modalContent, document.body);
 }

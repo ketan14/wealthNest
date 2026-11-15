@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLiabilityRepository } from '@/lib/persistence/repository-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { Button } from '@/components/ui/Button';
+import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 import { X, Building2, AlertCircle } from 'lucide-react';
 
 interface UpdateValuationModalProps {
@@ -84,31 +85,48 @@ export function UpdateValuationModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 md:px-8 border-b border-border shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
+    <ResponsiveModalShell
+      role="dialog"
+      ariaLabelledBy="update-valuation-title"
+      backdropClassName="bg-black/70"
+      panelClassName="max-w-lg bg-card border-border"
+      formProps={{ onSubmit: handleSubmit }}
+      header={
+        <div className="flex items-center justify-between gap-2 px-4 py-3.5 sm:px-6 sm:py-4 md:px-8 border-b border-border">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
               <Building2 className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-xl font-bold tracking-tight text-foreground">
+            <div className="min-w-0">
+              <h2 id="update-valuation-title" className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
                 Update Property Appraisal
               </h2>
               <p className="text-xs text-muted-foreground">{assetName}</p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label="Close modal"
+            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4 p-6 md:p-8 overflow-y-auto flex-1">
-          {errorMsg && (
+      }
+      bodyClassName="space-y-4 p-4 sm:p-6 md:p-8"
+      footer={
+        <div className="flex items-center justify-end gap-3 px-4 py-3 sm:px-6 md:px-8 border-t border-border bg-card">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting} className="min-w-[120px]">
+            {isSubmitting ? 'Updating...' : 'Update Valuation'}
+          </Button>
+        </div>
+      }
+    >
+      {errorMsg && (
             <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-start gap-3">
               <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
               <span>{errorMsg}</span>
@@ -173,17 +191,6 @@ export function UpdateValuationModal({
               className="w-full px-3.5 py-2 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
             />
           </div>
-
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-            <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting} className="min-w-[120px]">
-              {isSubmitting ? 'Updating...' : 'Update Valuation'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+    </ResponsiveModalShell>
   );
 }

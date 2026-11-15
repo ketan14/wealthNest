@@ -12,7 +12,8 @@ export function CasSummaryStep({ importSummary, onClose }: CasSummaryStepProps) 
     importSummary.failed > 0 && importSummary.imported === 0 && importSummary.updated === 0;
 
   return (
-    <div className="space-y-6 pt-6 text-center">
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden pt-4 sm:pt-6">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-6 text-center pr-0.5">
       <div
         className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto ${
           hasCompleteFailure
@@ -91,10 +92,11 @@ export function CasSummaryStep({ importSummary, onClose }: CasSummaryStepProps) 
             </p>
           </div>
         )}
+        </div>
       </div>
 
-      <div className="pt-2">
-        <Button onClick={onClose} className="gap-2">
+      <div className="shrink-0 pt-4 mt-2 border-t border-border/80 flex justify-center">
+        <Button onClick={onClose} className="gap-2 w-full sm:w-auto">
           View Updated Portfolio
           <ArrowRight className="w-4 h-4" />
         </Button>

@@ -85,8 +85,12 @@ export function CasPreviewStep({
   onConfirm,
 }: CasPreviewStepProps) {
   return (
-    <div className="space-y-4 pt-4 flex-1 flex flex-col min-h-0 overflow-hidden">
-      {/* Statement Metadata Summary */}
+    <div className="pt-3 sm:pt-4 flex-1 min-h-0 flex flex-col overflow-hidden">
+      <div
+        data-testid="cas-preview-scroll-body"
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3 sm:space-y-4 pr-0.5"
+      >
+        {/* Statement Metadata Summary */}
       <div className="p-3 rounded-xl bg-secondary/40 border border-border/60 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Provider:</span>
@@ -192,7 +196,7 @@ export function CasPreviewStep({
       </div>
 
       {/* Tab Navigation: Direct Equities, Mutual Funds, Historical Transactions */}
-      <div className="flex items-center gap-2 border-b border-border/80 pb-2">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border/80 pb-2">
         <button
           type="button"
           onClick={() => onTabChange('equities')}
@@ -260,29 +264,38 @@ export function CasPreviewStep({
         onToggleTransaction={onToggleTransaction}
         onSelectAllTransactions={onSelectAllTransactions}
       />
+      </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-3 border-t border-border/80">
-        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5 text-xs">
+      <div
+        data-testid="cas-preview-actions-footer"
+        className="shrink-0 flex flex-wrap items-center justify-between gap-2 pt-3 mt-3 border-t border-border/80"
+      >
+        <Button variant="ghost" size="sm" onClick={onBack} className="order-2 sm:order-1 gap-1.5 text-xs">
           <RotateCcw className="w-3.5 h-3.5" />
           Back to Upload
         </Button>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            size="sm"
-            disabled={(selectedCount === 0 && selectedTransactionsCount === 0) || isConfirmPending}
-            onClick={onConfirm}
-            className="gap-2"
-          >
-            {isConfirmPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onClose}
+          className="order-3 sm:order-2 sm:ml-auto"
+        >
+          Cancel
+        </Button>
+        <Button
+          size="sm"
+          disabled={(selectedCount === 0 && selectedTransactionsCount === 0) || isConfirmPending}
+          onClick={onConfirm}
+          className="order-1 sm:order-3 w-full sm:w-auto h-auto min-h-[36px] py-2 gap-2 whitespace-normal text-center leading-snug"
+        >
+          {isConfirmPending && <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />}
+          <span>
             Confirm & Import ({selectedEquities.length} Equities, {selectedMutualFunds.length}{' '}
             Mutual Funds
             {selectedTransactionsCount > 0 ? `, ${selectedTransactionsCount} txs` : ''})
-          </Button>
-        </div>
+          </span>
+        </Button>
       </div>
     </div>
   );

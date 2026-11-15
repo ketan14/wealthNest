@@ -4,6 +4,7 @@ import { LiabilityDto } from '@wealthnest/application';
 import { useLiabilityRepository } from '@/lib/persistence/repository-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { Button } from '@/components/ui/Button';
+import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 import { X, History, AlertCircle, ArrowDownCircle } from 'lucide-react';
 
 interface UpdateBalanceModalProps {
@@ -96,16 +97,20 @@ export function UpdateBalanceModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-xl flex flex-col max-h-[90dvh] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 md:px-8 border-b border-border shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+    <ResponsiveModalShell
+      role="dialog"
+      ariaLabelledBy="update-balance-title"
+      backdropClassName="bg-black/70"
+      panelClassName="max-w-xl bg-card border-border"
+      formProps={{ onSubmit: handleSubmit }}
+      header={
+        <div className="flex items-center justify-between gap-2 px-4 py-3.5 sm:px-6 sm:py-4 md:px-8 border-b border-border">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
               <ArrowDownCircle className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-xl font-bold tracking-tight text-foreground">
+            <div className="min-w-0">
+              <h2 id="update-balance-title" className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
                 Update Loan Balance
               </h2>
               <p className="text-xs text-muted-foreground">
@@ -114,23 +119,36 @@ export function UpdateBalanceModal({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label="Close modal"
+            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
+      }
+      bodyClassName="p-4 sm:p-6 md:p-8 space-y-4"
+      footer={
+        <div className="flex items-center justify-end gap-3 px-4 py-3 sm:px-6 md:px-8 border-t border-border bg-card">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting} className="min-w-[120px]">
+            {isSubmitting ? 'Recording...' : 'Record Balance'}
+          </Button>
+        </div>
+      }
+    >
+      {errorMsg && (
+        <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
 
-        <div className="p-6 md:p-8 overflow-y-auto flex-1">
-          {errorMsg && (
-            <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="p-3.5 rounded-xl bg-accent/40 border border-border/80 text-xs text-muted-foreground space-y-1">
+      <div className="space-y-4">
+        <div className="p-3.5 rounded-xl bg-accent/40 border border-border/80 text-xs text-muted-foreground space-y-1">
             <div className="flex justify-between">
               <span>Original Sanctioned:</span>
               <span className="font-mono font-medium text-foreground">
@@ -218,7 +236,7 @@ export function UpdateBalanceModal({
                 <History className="w-3.5 h-3.5" />
                 <span>Recorded Balance History ({balanceHistory.length})</span>
               </div>
-              <div className="max-h-36 overflow-y-auto rounded-xl border border-border/80 divide-y divide-border/60 text-xs font-mono">
+              <div className="max-h-36 overflow-y-auto overscroll-contain rounded-xl border border-border/80 divide-y divide-border/60 text-xs font-mono">
                 {balanceHistory.map((b) => (
                   <div
                     key={b.id}
@@ -244,19 +262,7 @@ export function UpdateBalanceModal({
               </div>
             </div>
           )}
-
-          {/* Footer buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-            <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting} className="min-w-[120px]">
-              {isSubmitting ? 'Recording...' : 'Record Balance'}
-            </Button>
-          </div>
-        </form>
-        </div>
       </div>
-    </div>
+    </ResponsiveModalShell>
   );
 }

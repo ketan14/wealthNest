@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { FileText, Filter, ChevronLeft, ChevronRight, Eye, X, Lock } from 'lucide-react';
 
 import { AdminHeader } from '../../components/admin/AdminHeader';
+import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 import { adminAdapter } from '../../lib/supabase/admin.adapter';
 import { AdminAuditLogEntry } from '@wealthnest/domain';
 
@@ -200,65 +201,73 @@ export function AdminAuditLogsPage() {
 
       {/* Payload Modal */}
       {activeLog && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-purple-400" />
-                <h3 className="font-semibold text-white text-base">
+        <ResponsiveModalShell
+          role="dialog"
+          ariaLabelledBy="audit-payload-title"
+          backdropClassName="bg-slate-950/80"
+          panelClassName="max-w-xl bg-slate-900 border-slate-800 animate-in fade-in zoom-in-95"
+          onBackdropClick={() => setActiveLog(null)}
+          header={
+            <div className="flex items-center justify-between gap-2 px-4 py-3.5 sm:px-6 sm:py-4 border-b border-slate-800">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText className="w-4 h-4 text-purple-400 shrink-0" />
+                <h3 id="audit-payload-title" className="font-semibold text-white text-sm sm:text-base truncate">
                   Audit Event Payload ({activeLog.action})
                 </h3>
               </div>
               <button
+                type="button"
                 onClick={() => setActiveLog(null)}
-                className="text-slate-500 hover:text-white"
+                aria-label="Close payload modal"
+                className="text-slate-500 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-
-            <div className="mt-4 space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800">
-                <div>
-                  <span className="text-slate-500">Event ID:</span>{' '}
-                  <span className="font-mono text-slate-300 text-[10px]">{activeLog.id}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500">Outcome:</span>{' '}
-                  <span className="font-semibold uppercase text-emerald-400">
-                    {activeLog.outcome}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500">Actor:</span>{' '}
-                  <span className="text-slate-300">{activeLog.actorName}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500">Target:</span>{' '}
-                  <span className="text-slate-300">{activeLog.targetName}</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                  Sanitized Metadata JSON
-                </label>
-                <pre className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-emerald-400 font-mono text-[11px] overflow-x-auto max-h-60">
-                  {JSON.stringify(activeLog.safeMetadata, null, 2)}
-                </pre>
-              </div>
-            </div>
-
-            <div className="mt-5 pt-3 border-t border-slate-800 text-right">
+          }
+          bodyClassName="p-4 sm:p-6 space-y-3 text-xs"
+          footer={
+            <div className="px-4 py-3 sm:px-6 border-t border-slate-800 flex justify-end">
               <button
+                type="button"
                 onClick={() => setActiveLog(null)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium min-h-[36px]"
               >
                 Close
               </button>
             </div>
+          }
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800">
+            <div className="break-all">
+              <span className="text-slate-500">Event ID:</span>{' '}
+              <span className="font-mono text-slate-300 text-[10px]">{activeLog.id}</span>
+            </div>
+            <div>
+              <span className="text-slate-500">Outcome:</span>{' '}
+              <span className="font-semibold uppercase text-emerald-400">
+                {activeLog.outcome}
+              </span>
+            </div>
+            <div>
+              <span className="text-slate-500">Actor:</span>{' '}
+              <span className="text-slate-300">{activeLog.actorName}</span>
+            </div>
+            <div>
+              <span className="text-slate-500">Target:</span>{' '}
+              <span className="text-slate-300">{activeLog.targetName}</span>
+            </div>
           </div>
-        </div>
+
+          <div>
+            <label className="block text-[11px] font-medium text-slate-400 mb-1">
+              Sanitized Metadata JSON
+            </label>
+            <pre className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-emerald-400 font-mono text-[11px] overflow-auto max-h-60">
+              {JSON.stringify(activeLog.safeMetadata, null, 2)}
+            </pre>
+          </div>
+        </ResponsiveModalShell>
       )}
     </div>
   );

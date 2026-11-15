@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useAdmin } from '@/lib/admin/admin-context';
 import { GlobalQuickAddModal } from './GlobalQuickAddModal';
+import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 
 export function BottomNavigationBar() {
   const { isAnyAdmin } = useAdmin();
@@ -234,15 +235,14 @@ export function BottomNavigationBar() {
 
       {/* Mobile "More Modules" Slide-up Sheet */}
       {isMoreOpen && (
-        <div
-          className="md:hidden fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-end"
-          onClick={() => setIsMoreOpen(false)}
-        >
-          <div
-            className="w-full bg-card border-t border-border rounded-t-2xl p-5 shadow-2xl space-y-4"
-            style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom, 0px))' }}
-            onClick={(e) => e.stopPropagation()}
-          >
+        <ResponsiveModalShell
+          variant="sheet"
+          role="dialog"
+          ariaLabel="All Modules"
+          backdropClassName="md:hidden bg-background/80"
+          panelClassName="max-w-none bg-card border-x-0 border-b-0 border-t border-border p-5 space-y-4 max-h-[85dvh] sm:max-w-none"
+          onBackdropClick={() => setIsMoreOpen(false)}
+          header={
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-foreground">All Modules</h3>
               <button
@@ -254,33 +254,35 @@ export function BottomNavigationBar() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-2.5">
-              {[
-                { to: '/real-estate', label: 'Real Estate', icon: Building2 },
-                { to: '/analytics', label: 'Analytics', icon: TrendingUp },
-                { to: '/goals', label: 'Goals & Targets', icon: Target },
-                { to: '/documents', label: 'Documents Vault', icon: FolderLock },
-              ].map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setIsMoreOpen(false)}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-3 p-3 rounded-xl border text-xs font-medium transition-colors',
-                      isActive
-                        ? 'bg-primary/15 border-primary/30 text-primary'
-                        : 'bg-secondary/40 border-border/60 text-foreground hover:bg-accent'
-                    )
-                  }
-                >
-                  <item.icon className="w-4 h-4 shrink-0" />
-                  <span className="truncate">{item.label}</span>
-                </NavLink>
-              ))}
-            </div>
+          }
+          bodyClassName="pr-0.5"
+        >
+          <div className="grid grid-cols-2 gap-2.5">
+            {[
+              { to: '/real-estate', label: 'Real Estate', icon: Building2 },
+              { to: '/analytics', label: 'Analytics', icon: TrendingUp },
+              { to: '/goals', label: 'Goals & Targets', icon: Target },
+              { to: '/documents', label: 'Documents Vault', icon: FolderLock },
+            ].map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={() => setIsMoreOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 p-3 rounded-xl border text-xs font-medium transition-colors',
+                    isActive
+                      ? 'bg-primary/15 border-primary/30 text-primary'
+                      : 'bg-secondary/40 border-border/60 text-foreground hover:bg-accent'
+                  )
+                }
+              >
+                <item.icon className="w-4 h-4 shrink-0" />
+                <span className="truncate">{item.label}</span>
+              </NavLink>
+            ))}
           </div>
-        </div>
+        </ResponsiveModalShell>
       )}
 
       {/* Global Quick Add Action Sheet / Modal */}

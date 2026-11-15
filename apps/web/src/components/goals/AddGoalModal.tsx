@@ -5,6 +5,7 @@ import { useFamily } from '@/lib/family/family-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 import {
   X,
   Target,
@@ -182,32 +183,51 @@ export function AddGoalModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-card border border-border/80 rounded-2xl w-full max-w-xl shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="p-5 border-b border-border/70 flex items-center justify-between bg-accent/20 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+    <ResponsiveModalShell
+      role="dialog"
+      ariaLabelledBy="add-goal-modal-title"
+      backdropClassName="bg-background/80"
+      panelClassName="max-w-xl bg-card border-border/80 animate-in fade-in zoom-in-95 duration-200"
+      formProps={{ onSubmit: handleSubmit }}
+      header={
+        <div className="p-4 sm:p-5 border-b border-border/70 flex items-center justify-between gap-2 bg-accent/20">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
               <Target className="w-5 h-5" />
             </div>
-            <div>
-              <h3 className="font-bold text-lg text-foreground">Create Financial Goal</h3>
+            <div className="min-w-0">
+              <h3 id="add-goal-modal-title" className="font-bold text-base sm:text-lg text-foreground">
+                Create Financial Goal
+              </h3>
               <p className="text-xs text-muted-foreground">
                 Target corpus math, inflation adjustments & SIP planning
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            aria-label="Close modal"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1">
-          {error && (
+      }
+      bodyClassName="p-4 sm:p-6 space-y-5"
+      footer={
+        <div className="flex items-center justify-end gap-3 px-4 py-3 sm:px-6 border-t border-border/60 bg-card">
+          <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting} className="gap-2 shadow-md">
+            <Target className="w-4 h-4" />
+            {isSubmitting ? 'Creating Goal...' : 'Save Financial Goal'}
+          </Button>
+        </div>
+      }
+    >
+      {error && (
             <div className="p-3 text-xs bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-lg">
               {error}
             </div>
@@ -444,20 +464,7 @@ export function AddGoalModal({
               className="w-full px-3.5 py-2.5 bg-background border border-border/80 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-border/60">
-            <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting} className="gap-2 shadow-md">
-              <Target className="w-4 h-4" />
-              {isSubmitting ? 'Creating Goal...' : 'Save Financial Goal'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+    </ResponsiveModalShell>
   );
 }
 export default AddGoalModal;

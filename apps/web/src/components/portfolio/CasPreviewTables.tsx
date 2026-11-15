@@ -43,8 +43,8 @@ export function CasPreviewTables({
   if (activeTab === 'equities') {
     return (
       <>
-        <div className="flex items-center justify-between text-xs bg-blue-500/5 p-2 rounded-lg border border-blue-500/20">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs bg-blue-500/5 p-2.5 rounded-lg border border-blue-500/20">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="text-muted-foreground">
               Found <span className="text-foreground font-semibold">{equities.length}</span> stocks
               & ETFs (<span className="text-blue-400 font-semibold">{selectedEquities.length}</span>{' '}
@@ -84,8 +84,8 @@ export function CasPreviewTables({
           </div>
         </div>
 
-        <div className="min-h-[300px] max-h-[460px] flex-1 overflow-y-auto border border-border/80 rounded-xl shadow-inner">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="min-h-[160px] max-h-[50dvh] sm:max-h-[420px] overflow-auto overscroll-contain border border-border/80 rounded-xl shadow-inner">
+          <table className="min-w-[600px] w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-border bg-secondary/60 text-muted-foreground sticky top-0 backdrop-blur-md z-10">
                 <th className="py-2.5 px-3 w-10 text-center">Import</th>
@@ -165,8 +165,8 @@ export function CasPreviewTables({
   if (activeTab === 'mutual_funds') {
     return (
       <>
-        <div className="flex items-center justify-between text-xs bg-cyan-500/5 p-2 rounded-lg border border-cyan-500/20">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs bg-cyan-500/5 p-2.5 rounded-lg border border-cyan-500/20">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="text-muted-foreground">
               Found <span className="text-foreground font-semibold">{mutualFunds.length}</span>{' '}
               mutual fund folios (
@@ -207,8 +207,8 @@ export function CasPreviewTables({
           </div>
         </div>
 
-        <div className="min-h-[300px] max-h-[460px] flex-1 overflow-y-auto border border-border/80 rounded-xl shadow-inner">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="min-h-[160px] max-h-[50dvh] sm:max-h-[420px] overflow-auto overscroll-contain border border-border/80 rounded-xl shadow-inner">
+          <table className="min-w-[600px] w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-border bg-secondary/60 text-muted-foreground sticky top-0 backdrop-blur-md z-10">
                 <th className="py-2.5 px-3 w-10 text-center">Import</th>
@@ -302,7 +302,7 @@ export function CasPreviewTables({
 
   return (
     <>
-      <div className="flex items-center justify-between text-xs bg-emerald-500/5 p-2 rounded-lg border border-emerald-500/20">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs bg-emerald-500/5 p-2.5 rounded-lg border border-emerald-500/20">
         <span className="text-muted-foreground">
           Found <span className="text-foreground font-semibold">{transactions.length}</span>{' '}
           historical transactions (
@@ -328,8 +328,8 @@ export function CasPreviewTables({
         </div>
       </div>
 
-      <div className="min-h-[300px] max-h-[460px] flex-1 overflow-y-auto border border-border/80 rounded-xl shadow-inner">
-        <table className="w-full text-left text-xs border-collapse">
+      <div className="min-h-[160px] max-h-[50dvh] sm:max-h-[420px] overflow-auto overscroll-contain border border-border/80 rounded-xl shadow-inner">
+        <table className="min-w-[600px] w-full text-left text-xs border-collapse">
           <thead>
             <tr className="border-b border-border bg-secondary/60 text-muted-foreground sticky top-0 backdrop-blur-md z-10">
               <th className="py-2.5 px-3 w-10 text-center">Import</th>

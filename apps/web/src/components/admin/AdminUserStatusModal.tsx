@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ShieldAlert, AlertCircle, X } from 'lucide-react';
 import { AdminUserSummary, UserAccessStatus, validateStatusChange } from '@wealthnest/domain';
 import { adminAdapter } from '../../lib/supabase/admin.adapter';
+import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 
 interface AdminUserStatusModalProps {
   user: AdminUserSummary | null;
@@ -75,22 +76,53 @@ export function AdminUserStatusModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden animate-in fade-in zoom-in-95">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+    <ResponsiveModalShell
+      role="dialog"
+      ariaLabelledBy="admin-status-title"
+      backdropClassName="bg-slate-950/80"
+      panelClassName="max-w-lg bg-slate-900 border-slate-800 animate-in fade-in zoom-in-95"
+      formProps={{ onSubmit: handleApplyStatusChange }}
+      header={
+        <div className="flex items-center justify-between gap-2 px-4 py-3.5 sm:px-6 sm:py-4 border-b border-slate-800">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
               <ShieldAlert className="w-4 h-4" />
             </div>
-            <h3 className="font-semibold text-white text-base">Change Account Lifecycle Status</h3>
+            <h3 id="admin-status-title" className="font-semibold text-white text-base">
+              Change Account Lifecycle Status
+            </h3>
           </div>
-          <button onClick={onClose} className="text-slate-500 hover:text-white">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close modal"
+            className="text-slate-500 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors shrink-0"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
-
-        <form onSubmit={handleApplyStatusChange} className="p-6 space-y-4 overflow-y-auto flex-1">
-          {modalError && (
+      }
+      bodyClassName="p-4 sm:p-6 space-y-4"
+      footer={
+        <div className="px-4 py-3 sm:px-6 border-t border-slate-800 flex items-center justify-end gap-3 bg-slate-900">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium min-h-[36px]"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-md disabled:opacity-50 min-h-[36px]"
+          >
+            {isSubmitting ? 'Updating...' : 'Confirm Status Change'}
+          </button>
+        </div>
+      }
+    >
+      {modalError && (
             <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
               <span>{modalError}</span>
@@ -156,25 +188,6 @@ export function AdminUserStatusModal({
               className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-500"
             />
           </div>
-
-          <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-md disabled:opacity-50"
-            >
-              {isSubmitting ? 'Updating...' : 'Confirm Status Change'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    </ResponsiveModalShell>
   );
 }
