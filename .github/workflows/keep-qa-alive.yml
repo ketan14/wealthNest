@@ -14,26 +14,59 @@ jobs:
     steps:
       - name: Ping PostgREST Health Check
         env:
-          SUPABASE_QA_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          SUPABASE_QA_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          SUPABASE_QA_URL: ${{ secrets.VITE_SUPABASE_URL || vars.VITE_SUPABASE_URL }}
+          SUPABASE_QA_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_QA_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || vars.VITE_SUPABASE_ANON_KEY }}
         run: |
-          if [ -z "$SUPABASE_QA_URL" ] || [ -z "$SUPABASE_QA_KEY" ]; then
-            echo "ℹ️  Notice: VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY secrets not set in GitHub repository settings."
-            echo "👉 To enable automated keep-alive, add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY under Settings -> Secrets and variables -> Actions."
+          SUPABASE_QA_URL="$(printf '%s' "${SUPABASE_QA_URL:-}" | tr -d '[:space:]')"
+          SUPABASE_QA_URL="${SUPABASE_QA_URL%/}"
+          SUPABASE_QA_PUBLISHABLE_KEY="$(printf '%s' "${SUPABASE_QA_PUBLISHABLE_KEY:-}" | tr -d '[:space:]')"
+          SUPABASE_QA_ANON_KEY="$(printf '%s' "${SUPABASE_QA_ANON_KEY:-}" | tr -d '[:space:]')"
+
+          if [ -z "$SUPABASE_QA_URL" ] || { [ -z "$SUPABASE_QA_PUBLISHABLE_KEY" ] && [ -z "$SUPABASE_QA_ANON_KEY" ]; }; then
+            echo "ℹ️  Notice: VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY / VITE_SUPABASE_ANON_KEY secrets not set in GitHub repository settings."
+            echo "👉 To enable automated keep-alive, add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (or VITE_SUPABASE_ANON_KEY) under Settings -> Secrets and variables -> Actions."
             exit 0
           fi
 
-          echo "Pinging Supabase QA instance: $SUPABASE_QA_URL"
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "apikey: $SUPABASE_QA_KEY" \
-            -H "Authorization: Bearer $SUPABASE_QA_KEY" \
-            "$SUPABASE_QA_URL/rest/v1/asset_classes?select=id&limit=1")
+          RESP_FILE="$(mktemp)"
+          trap 'rm -f "$RESP_FILE"' EXIT
 
-          echo "Response HTTP Status: $HTTP_STATUS"
-          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then
+          ping_endpoint() {
+            local key="$1"
+            local label="$2"
+            local headers=(-H "apikey: $key")
+
+            # Publishable keys (sb_publishable_...) are non-JWTs and fail with 401 if sent in Authorization: Bearer.
+            if [[ "$key" =~ ^[^.[:space:]]+\.[^.[:space:]]+\.[^.[:space:]]+$ ]]; then
+              headers+=(-H "Authorization: Bearer $key")
+            fi
+
+            local status
+            status="$(curl -sS -o "$RESP_FILE" -w "%{http_code}" \
+              "${headers[@]}" \
+              "$SUPABASE_QA_URL/rest/v1/asset_classes?select=id&limit=1")" || return 1
+
+            echo "Response HTTP Status ($label): $status"
+            [ "$status" -ge 200 ] && [ "$status" -lt 400 ]
+          }
+
+          echo "Pinging Supabase QA instance: $SUPABASE_QA_URL"
+          if [ -n "$SUPABASE_QA_PUBLISHABLE_KEY" ] && ping_endpoint "$SUPABASE_QA_PUBLISHABLE_KEY" "publishable key"; then
             echo "✅ Supabase QA database is warm, healthy, and active."
-          else
-            echo "⚠️ Warning: Received unexpected HTTP status $HTTP_STATUS from QA endpoint."
-            exit 1
+            exit 0
           fi
+
+          if [ -n "$SUPABASE_QA_ANON_KEY" ] && [ "$SUPABASE_QA_ANON_KEY" != "$SUPABASE_QA_PUBLISHABLE_KEY" ]; then
+            if ping_endpoint "$SUPABASE_QA_ANON_KEY" "anon key"; then
+              echo "✅ Supabase QA database is warm, healthy, and active."
+              exit 0
+            fi
+          fi
+
+          echo "⚠️ Warning: Received non-2xx/3xx response from QA endpoint."
+          if [ -s "$RESP_FILE" ]; then
+            echo "Error payload: $(cat "$RESP_FILE")"
+          fi
+          exit 1
 
