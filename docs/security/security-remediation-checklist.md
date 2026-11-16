@@ -2,7 +2,7 @@
 
 **Derived From:** [wealthnest-security-audit.md](file:///home/ketan/projects/Krisha/wealthNest/docs/security/wealthnest-security-audit.md)  
 **Target:** `/home/ketan/projects/Krisha/wealthNest`  
-**Status:** Repo Fixes Implemented — Pending `supabase db push`, `supabase functions deploy admin-create-user`, `supabase test db`, & Live Cloud Checks
+**Status:** Repo Fixes, CI Verification (`security-checks.yml` #17), QA DB Migrations (`000000`–`000024` on `jdgucgsvvxcpxbeubqpi`), QA Keep-Alive Ping (`keep-qa-alive.yml` #14), & QA Multi-Household Seed Verified — Remaining: Live `pg_policies` Inspection (`DB-07`) & Production Deployment
 
 ---
 
@@ -66,9 +66,9 @@
 - [x] **P2-3: Remove Hardcoded QA Supabase URL & Publishable Key Fallbacks** *(Verified in repo)*
   - **Files:** `apps/web/src/pages/LoginPage.tsx:40-53`, `apps/web/src/lib/config/server-config.ts`, `.github/workflows/build-installers.yml`
 
-- [~] **P2-4: Add Automated Database RLS / pgTAP Regression Tests** *(35 assertions + `.github/workflows/security-checks.yml` added; live execution via `supabase test db` pending Docker/Postgres)*
-  - **Files:** `supabase/tests/01_rls_and_household_isolation.sql`, `supabase/tests/02_admin_rbac_and_audit_immutability.sql`, `.github/workflows/security-checks.yml`
-  - **Action:** Run `supabase start && supabase test db` locally or trigger the `security-checks.yml` workflow to verify all 35 assertions pass against live Postgres.
+- [x] **P2-4: Add Automated Database RLS / pgTAP Regression Tests** *(Verified in CI: `security-checks.yml` #17 on `3d15dc1` & local Postgres — 72 assertions across 3 suites)*
+  - **Files:** `supabase/tests/01_rls_and_household_isolation.sql`, `supabase/tests/02_admin_rbac_and_audit_immutability.sql`, `supabase/tests/03_household_ownership_privacy_and_invitations.sql`, `.github/workflows/security-checks.yml`
+  - **Verify:** `Supabase pgTAP RLS & RBAC Tests (TST-02)` passed in GitHub Actions Run #17 (`3d15dc1`, `1m 26s`).
 
 - [x] **P2-5: Move Admin User Provisioning to a Server-Side Edge Function** *(Verified in repo; automated via `supabase-migration.yml`)*
   - **Files:** `supabase/functions/admin-create-user/index.ts`, `apps/web/src/lib/supabase/admin.adapter.ts`, `.github/workflows/supabase-migration.yml`
@@ -83,7 +83,7 @@
 ## P3 — Low-Severity & Manual Verification Tasks
 
 - [x] **P3-1:** Cache & deduplicate `GoTrueClient` instances with host+key-scoped `storageKey`s and block `https:` -> `http://` downgrades in `ConnectionManager` (`apps/web/src/lib/services/connection-manager.ts`, `supabase/config.toml` refresh rotation; verified by `ConnectionManager.test.ts`).
-- [~] **P3-2:** Run `npm audit --omit=dev --audit-level=high` in a networked environment (automated in `.github/workflows/security-checks.yml`; blocked in offline sandbox).
-- [~] **P3-3:** Apply migration `20260101000019_household_membership_write_rls.sql` via `supabase db push` and verify `households` and `household_members` write RLS policies in live Supabase (`pg_policies`). *(SQL migration & 4 `HH-03` pgTAP assertions created in `01_rls_and_household_isolation.sql`)*
+- [x] **P3-2:** Run `npm audit --omit=dev --audit-level=high` in a networked environment (verified passing in CI `.github/workflows/security-checks.yml` Run #17 on `3d15dc1` — `Type-Check, Unit Tests & Dependency Audit`, `1m 43s`).
+- [~] **P3-3:** Migrations (`000019`–`000024`) confirmed applied on linked QA (`jdgucgsvvxcpxbeubqpi`: `npx supabase db push` -> `Remote database is up to date`); verify `households`, `household_members`, and financial write RLS policies in live `pg_policies` (`DB-07`) + apply to production when provisioned.
 - [~] **P3-4:** Nginx edge rate limiting (`limit_req_zone`), `[auth.rate_limit]`, and `admin-create-user` Postgres-backed sliding-window throttling (`10/min`, `30/15m`, HTTP `429`) added in `infra/docker/nginx-prod.conf`, `supabase/config.toml`, and `supabase/functions/admin-create-user/index.ts`; verify live Supabase Cloud Dashboard Auth rate limiting and breached-password settings.
 

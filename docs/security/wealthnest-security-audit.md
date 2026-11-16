@@ -204,7 +204,7 @@ Browser / Tauri WebView (React 18 SPA)
 
 | Check ID | Control | Status | Evidence & Finding |
 | --- | --- | --- | --- |
-| PKG-01 | `npm audit` Vulnerability Scan | **REQUIRES MANUAL VERIFICATION** | `npm audit --omit=dev --json` failed in the offline sandbox (`getaddrinfo EAI_AGAIN registry.npmjs.org`). Automated via `.github/workflows/security-checks.yml` (`npm audit --omit=dev --audit-level=high`), pending networked CI/local run. |
+| PKG-01 | `npm audit` Vulnerability Scan | **PASS** | Verified in CI via `.github/workflows/security-checks.yml` Run #17 on `3d15dc1` (`Type-Check, Unit Tests & Dependency Audit` passed in `1m 43s`, covering `npm audit --omit=dev --audit-level=high`). |
 | PKG-02 | Lockfile & Engine Constraints | **PASS** | Root `package.json` pins `node >= 20.0.0`, `npm >= 10.0.0`, and dependencies (`@supabase/supabase-js ^2.49.1`, `pdfjs-dist ^4.10.38`, `react ^18.3.1`, `vite ^6.2.0`) are modern. |
 
 ---
@@ -214,7 +214,7 @@ Browser / Tauri WebView (React 18 SPA)
 | Check ID | Control | Status | Evidence & Finding |
 | --- | --- | --- | --- |
 | TST-01 | Monorepo Unit Test Suite | **PASS** | Re-verified after code remediation: `@wealthnest/domain` (**30 files, 171 tests**), `@wealthnest/application` (**24 files, 99 tests**), `@wealthnest/shared` (**1 file, 2 tests**), `@wealthnest/web` (**36 files, 159 tests**) — **91 files, 431 tests passed** (including `SecurityHardening.test.ts`, `ProfileSecurityTab.test.tsx`, `AdminPortal.test.tsx`, `ConnectionManager.test.ts`, `SupportImpersonation.test.tsx`, `AuthPages.test.tsx`, `App.test.tsx`, `backup-security-sqlite.test.ts`, `sqlite-isolation.test.ts`, `admin-invariants.test.ts`). |
-| TST-02 | Database pgTAP / Live RLS Integration Tests | **PARTIAL** | Added pgTAP suites in `supabase/tests/01_rls_and_household_isolation.sql` (21 tests) and `02_admin_rbac_and_audit_immutability.sql` (14 tests) — **35 assertions total**, plus `.github/workflows/security-checks.yml` (`supabase start && supabase test db`). Execution against Postgres could not run in this Docker-free sandbox (`connect ECONNREFUSED 127.0.0.1:54322`) and **REQUIRES MANUAL VERIFICATION**. |
+| TST-02 | Database pgTAP / Live RLS Integration Tests | **PASS** | Verified in CI via `.github/workflows/security-checks.yml` Run #17 on `3d15dc1` (`Supabase pgTAP RLS & RBAC Tests (TST-02)` passed in `1m 26s`) and local Postgres across `01_rls_and_household_isolation.sql` (26 assertions), `02_admin_rbac_and_audit_immutability.sql` (14 assertions), and `03_household_ownership_privacy_and_invitations.sql` (32 assertions) — **72 assertions total**. |
 | TST-03 | Live E2E / DAST Penetration Verification | **REQUIRES MANUAL VERIFICATION** | No live browser E2E against a running Supabase instance was executed in the offline sandbox. |
 
 ---
@@ -236,7 +236,7 @@ Browser / Tauri WebView (React 18 SPA)
 | **MEDIUM** | DB-05a | **RESOLVED** | Added `ALTER FUNCTION public.handle_new_user() SET search_path = public;` | `20260101000017_security_hardening_rls_and_grants.sql` |
 | **MEDIUM** | ADM-04 | **RESOLVED** | Propagates RPC errors in all non-test runtimes; local simulation fallback restricted to test mode | `apps/web/src/lib/supabase/support-session.adapter.ts:48-55` |
 | **MEDIUM** | KEY-02 | **RESOLVED** | Removed hardcoded QA Supabase URL & publishable key fallbacks | `apps/web/src/pages/LoginPage.tsx`, `server-config.ts`, `build-installers.yml` |
-| **MEDIUM** | TST-02 | **MITIGATED (PARTIAL)** | Added 35 pgTAP assertions across 2 SQL test files + `.github/workflows/security-checks.yml`; live execution (`supabase test db`) pending Docker/Supabase | `supabase/tests/01_rls_and_household_isolation.sql`, `02_admin_rbac_and_audit_immutability.sql`, `.github/workflows/security-checks.yml` |
+| **MEDIUM** | TST-02 | **RESOLVED** | Verified 72 pgTAP assertions across 3 SQL test files in `.github/workflows/security-checks.yml` Run #17 on `3d15dc1` (`Supabase pgTAP RLS & RBAC Tests` passed) | `supabase/tests/01_rls_and_household_isolation.sql`, `02_admin_rbac_and_audit_immutability.sql`, `03_household_ownership_privacy_and_invitations.sql`, `.github/workflows/security-checks.yml` |
 | **CRITICAL** | ADM-02 / NULL-RPC | **RESOLVED** | Fixed SQL three-valued `NULL !=` / `NULL NOT IN` role bypasses in `admin_set_user_status`, `admin_manage_role`, and `admin_start_support_session` | `20260101000018_fix_admin_rpc_null_role_checks.sql` |
 | **LOW** | AUTH-06 / FE-03 | **RESOLVED** | Cached/deduplicated `SupabaseClient` instances with host+key-scoped `storageKey`s, blocked `https:` -> `http://` downgrades, and enabled `enable_refresh_token_rotation` in `config.toml` | `apps/web/src/lib/services/connection-manager.ts`, `supabase/config.toml` |
 
@@ -244,8 +244,8 @@ Browser / Tauri WebView (React 18 SPA)
 
 ## 18. Checks Requiring Manual Verification (Outside Repo / Offline Sandbox)
 
-1. Run `.github/workflows/security-checks.yml` (or locally with network + Docker): `npm audit --omit=dev --audit-level=high` (`PKG-01`) and `supabase start && supabase test db` to execute all 35 pgTAP assertions (`TST-02`).
-2. Push migrations `000017`, `000018`, `000019` (`supabase db push`) and deploy `admin-create-user` (`supabase functions deploy admin-create-user`, triggered automatically on `main` push by `.github/workflows/supabase-migration.yml`), then inspect live `pg_policies` / `pg_proc` on staging & production (`DB-07`) and confirm `supabase/seed_qa.sql` has **not** been executed there.
+1. *(Completed — Verified in CI)* `.github/workflows/security-checks.yml` Run #17 on `3d15dc1` passed both `Type-Check, Unit Tests & Dependency Audit` (`PKG-01`) and `Supabase pgTAP RLS & RBAC Tests (TST-02)`.
+2. *(QA Migrations, Seed & Keep-Alive Verified)* Confirmed via `npx supabase db push` on linked QA project (`jdgucgsvvxcpxbeubqpi`) that remote migrations `000000`–`000024` are up to date (pushed by `.github/workflows/supabase-migration.yml` #18), `.github/workflows/keep-qa-alive.yml` Run #14 (`3d15dc1`) passed cleanly in `4s`, and `seed_qa.sql` / `seed_qa_multi_household_matrix()` seeded QA households cleanly. Still confirm `admin-create-user` `ALLOWED_ORIGINS`, inspect live `pg_policies` / `pg_proc` on QA & production (`DB-07`), deploy to production when provisioned, and ensure `supabase/seed_qa.sql` is **not** executed in production.
 3. Verify Supabase Cloud Dashboard Auth settings: breached-password/HIBP protection, email confirmations, live rate limits, and refresh token reuse detection (`AUTH-01`, `AUTH-02`, `AUTH-05`, `AUTH-08`).
 4. Verify upstream TLS termination in front of Docker/Nginx (`DEP-01`) and confirm Tauri SQLite disk-encryption expectations for desktop/mobile builds (`DEP-05`).
 5. Execute live end-to-end penetration tests against a running Supabase instance covering cross-household RLS, viewer write restrictions, Edge Function provisioning, and signed storage URLs (`TST-03`).
