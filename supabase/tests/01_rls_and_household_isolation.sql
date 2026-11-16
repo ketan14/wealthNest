@@ -2,7 +2,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
-SELECT plan(24);
+SELECT plan(26);
 
 -- 1-8: Verify RLS is enabled on sensitive financial, ownership, governance, and vault tables
 SELECT ok(
@@ -92,6 +92,14 @@ VALUES (
 SET LOCAL ROLE anon;
 SELECT set_config('request.jwt.claims', '{}', true);
 
+SELECT ok(
+  has_table_privilege('anon', 'public.asset_classes', 'SELECT'),
+  'anon holds SELECT privilege on public.asset_classes'
+);
+SELECT ok(
+  NOT has_table_privilege('anon', 'public.asset_classes', 'INSERT'),
+  'anon does not hold INSERT privilege on public.asset_classes'
+);
 SELECT lives_ok(
   $$SELECT count(*) FROM public.asset_classes$$,
   'anon can read public.asset_classes taxonomy for health checks'
