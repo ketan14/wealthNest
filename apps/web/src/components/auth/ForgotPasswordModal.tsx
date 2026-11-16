@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { KeyRound, X, CheckCircle2, ShieldAlert, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
+import { resolveAppRedirectUrl } from '@/lib/config/app-redirect-url';
 import { Button } from '@/components/ui/Button';
 import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 
@@ -37,8 +38,9 @@ export function ForgotPasswordModal({ isOpen, initialEmail, onClose }: ForgotPas
 
     setForgotSubmitting(true);
     try {
+      const redirectTo = resolveAppRedirectUrl('/reset-password');
       const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo,
       });
       if (error) throw error;
 

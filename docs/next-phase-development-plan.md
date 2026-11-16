@@ -163,7 +163,7 @@ Follows **Phase 18A Part 2** and closes remaining cloud deployment, plaintext st
 
 ### 4.2 Promoted Household Collaboration & RLS Alignment *(Handled in Phase 18A Part 2 — §3.6)*
 - Promoted to **Phase 18A Part 2 (§3.6)** above: household-scoped RLS on `loan_payments`, `asset_liability_links`, and `import_batches` (plus cross-household `asset_liability_links` prevention), removal of client `.eq('user_id', userId)` adapter filters, DB-backed `household_invitations` replacing [`HouseholdSharingCard.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/components/settings/HouseholdSharingCard.tsx) demo state, and moving `wealthnest_family_privacy_rules` into server-enforced record `visibility` (`household_shared` | `owner_only` | `restricted`).
-- [ ] Verify in `Phase 18B` that `HouseholdSharingCard.tsx` and invite links resolve Android App Link HTTPS `redirectTo` targets (`https://app.wealthnest.in/invite/...`) alongside [`ForgotPasswordModal.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/components/auth/ForgotPasswordModal.tsx#L55-L149).
+- [x] Verify in `Phase 18B` that `HouseholdSharingCard.tsx` and invite links resolve Android App Link HTTPS `redirectTo` targets (`https://app.wealthnest.in/invite/...`) alongside [`ForgotPasswordModal.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/components/auth/ForgotPasswordModal.tsx#L55-L149).
 
 ### 4.3 Plaintext Token / PII Cleanup & Auth Hygiene
 - [ ] Strip unencrypted defaults and PII storage in `localStorage` across:
@@ -172,8 +172,8 @@ Follows **Phase 18A Part 2** and closes remaining cloud deployment, plaintext st
   - `SupabaseFamilyAdapter` (`panMasked` stored in plaintext)
   - `PreferencesContext`
   - `TauriSqliteAdapter` (`LOCAL_SQLITE_STORAGE_KEY`)
-- [ ] Remove silent `DEMO_ADMIN_USERS` `catch` fallbacks from `SupabaseAdminAdapter` (`admin.adapter.ts`) and `support-session.adapter.ts` outside explicit mock/test environments so authorization/RPC failures fail closed with explicit re-auth or error UI (`AUTH-08`).
-- [ ] Update [ForgotPasswordModal.tsx](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/components/auth/ForgotPasswordModal.tsx#L55-L149) and `HouseholdSharingCard.tsx` to resolve verified Android App Link HTTPS `redirectTo` targets (`https://app.wealthnest.in/auth/reset-password`, `/auth/callback`, `/invite/...`) rather than relying on `${window.location.origin}` inside WebView (`capacitor://localhost` / `https://tauri.localhost` / `http://localhost`), avoiding unverified custom-scheme hijacking (`AUTH-04`).
+- [x] Remove silent `DEMO_ADMIN_USERS` `catch` fallbacks from `SupabaseAdminAdapter` (`admin.adapter.ts`) and `support-session.adapter.ts` outside explicit mock/test environments so authorization/RPC failures fail closed with explicit re-auth or error UI (`AUTH-08`).
+- [x] Update [ForgotPasswordModal.tsx](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/components/auth/ForgotPasswordModal.tsx#L55-L149) and `HouseholdSharingCard.tsx` to resolve verified Android App Link HTTPS `redirectTo` targets (`https://app.wealthnest.in/auth/reset-password`, `/auth/callback`, `/invite/...`) rather than relying on `${window.location.origin}` inside WebView (`capacitor://localhost` / `https://tauri.localhost` / `http://localhost`), avoiding unverified custom-scheme hijacking (`AUTH-04`).
 
 ### 4.4 Pre-RPC Financial & Adapter Bug Fixes
 - [ ] Fix `DeleteTransactionUseCase`: remove direct `.delete()` against `transactions` (which fails because `transactions` has no `DELETE` RLS policy) and route corrections through an immutable offsetting/reversal flow (completed atomically via `correct_transaction_atomic` in Phase 18D, `FIN-03`).

@@ -12,6 +12,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { PlatformRole } from '@wealthnest/domain';
+import { resolveAppRedirectUrl } from '../../lib/config/app-redirect-url';
 import { adminAdapter } from '../../lib/supabase/admin.adapter';
 import {
   generateStrongPassword,
@@ -73,7 +74,7 @@ export function AdminUserProvisionModal({
     if (!createdCredentials) return;
     const text = [
       'WealthNest Account Credentials:',
-      `Login URL: ${window.location.origin}/login`,
+      `Login URL: ${resolveAppRedirectUrl('/login')}`,
       `Email: ${createdCredentials.email}`,
       `Password: ${createdCredentials.password}`,
       createdCredentials.role ? `Role: ${createdCredentials.role}` : null,

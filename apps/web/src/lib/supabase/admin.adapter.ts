@@ -10,10 +10,13 @@ import {
   AdminAuditLogEntry,
 } from '@wealthnest/domain';
 import { AdminRepositoryPort, AdminAuditLogPort } from '@wealthnest/application';
+import { resolveAppRedirectUrl } from '../config/app-redirect-url';
 import { supabase } from './client';
 import { DEMO_ADMIN_USERS, DEMO_HOUSEHOLDS, demoAuditLogsStore } from './admin-demo-data';
 
 export { DEMO_ADMIN_USERS, DEMO_HOUSEHOLDS };
+
+const isTestEnv = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
 
 export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogPort {
   async listUsers(params: AdminPaginationParams): Promise<PaginatedResult<AdminUserSummary>> {
@@ -50,8 +53,12 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
         limit: params.limit,
         totalPages: Math.ceil(Number(data.total || users.length) / params.limit) || 1,
       };
-    } catch {
-      // Fallback to local demo data
+    } catch (err: unknown) {
+      if (!isTestEnv) {
+        throw err instanceof Error ? err : new Error(String(err));
+      }
+
+      // Fallback to local demo data for test runners
       let filtered = [...DEMO_ADMIN_USERS];
       if (params.search) {
         const query = params.search.toLowerCase();
@@ -123,7 +130,11 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
           createdAt: a.created_at,
         })),
       };
-    } catch {
+    } catch (err: unknown) {
+      if (!isTestEnv) {
+        throw err instanceof Error ? err : new Error(String(err));
+      }
+
       const defaultUser = DEMO_ADMIN_USERS[0]!;
       const user = DEMO_ADMIN_USERS.find((u) => u.id === userId) || defaultUser;
 
@@ -170,7 +181,11 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
 
       if (error) throw error;
     } catch (err: any) {
-      // In demo mode or fallback, update local memory state
+      if (!isTestEnv) {
+        throw err instanceof Error ? err : new Error(String(err));
+      }
+
+      // In demo mode or fallback, update local memory state for test runners
       const target = DEMO_ADMIN_USERS.find((u) => u.id === targetUserId);
       if (target) {
         target.status = status;
@@ -197,6 +212,10 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
 
       if (error) throw error;
     } catch (err: any) {
+      if (!isTestEnv) {
+        throw err instanceof Error ? err : new Error(String(err));
+      }
+
       const target = DEMO_ADMIN_USERS.find((u) => u.id === targetUserId);
       if (target) {
         target.platformRole = action === 'grant' ? role : undefined;
@@ -307,7 +326,7 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
     if (user) {
       try {
         await supabase.auth.resetPasswordForEmail(user.email, {
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: resolveAppRedirectUrl('/reset-password'),
         });
       } catch {
         // Fallback for tests / demo
@@ -329,7 +348,11 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
         totalHouseholds: Number(data.total_households || 0),
         totalAuditEvents: Number(data.total_audit_events || 0),
       };
-    } catch {
+    } catch (err: unknown) {
+      if (!isTestEnv) {
+        throw err instanceof Error ? err : new Error(String(err));
+      }
+
       return {
         totalUsers: DEMO_ADMIN_USERS.length,
         activeUsers: DEMO_ADMIN_USERS.filter((u) => u.status === 'active').length,
@@ -368,7 +391,11 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
         limit: params.limit,
         totalPages: Math.ceil(Number(data.total || items.length) / params.limit) || 1,
       };
-    } catch {
+    } catch (err: unknown) {
+      if (!isTestEnv) {
+        throw err instanceof Error ? err : new Error(String(err));
+      }
+
       return {
         items: DEMO_HOUSEHOLDS,
         total: DEMO_HOUSEHOLDS.length,
@@ -389,7 +416,10 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
 
       if (error) throw error;
       return count || 1;
-    } catch {
+    } catch (err: unknown) {
+      if (!isTestEnv) {
+        throw err instanceof Error ? err : new Error(String(err));
+      }
       return DEMO_ADMIN_USERS.filter((u) => u.platformRole === 'super_admin').length || 1;
     }
   }
@@ -455,7 +485,11 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
         limit: params.limit,
         totalPages: Math.ceil(Number(data.total || items.length) / params.limit) || 1,
       };
-    } catch {
+    } catch (err: unknown) {
+      if (!isTestEnv) {
+        throw err instanceof Error ? err : new Error(String(err));
+      }
+
       let filtered = [...demoAuditLogsStore];
       if (params.action) {
         filtered = filtered.filter((l) => l.action === params.action);

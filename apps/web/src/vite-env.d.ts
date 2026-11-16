@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_APP_ENV?: string;
   readonly VITE_DEV_PORT?: string;
   readonly VITE_APP_HOST?: string;
+  readonly VITE_APP_URL?: string;
+  readonly VITE_PUBLIC_APP_URL?: string;
   readonly VITE_SUPABASE_URL?: string;
   readonly VITE_SUPABASE_ANON_KEY?: string;
 }

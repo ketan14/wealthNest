@@ -20,6 +20,7 @@ import {
   UserX,
 } from 'lucide-react';
 import { isOk } from '@wealthnest/shared';
+import { resolveAppRedirectUrl } from '@/lib/config/app-redirect-url';
 import {
   HouseholdAccessMember,
   HouseholdAuditLogEntry,
@@ -208,8 +209,7 @@ export function HouseholdSharingCard() {
       return;
     }
 
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const inviteUrl = `${origin}/invite?token=${encodeURIComponent(res.value.inviteToken)}`;
+    const inviteUrl = resolveAppRedirectUrl(`/invite?token=${encodeURIComponent(res.value.inviteToken)}`);
     setLatestInviteUrl(inviteUrl);
     setInviteEmail('');
     setInviteFamilyMemberId('');

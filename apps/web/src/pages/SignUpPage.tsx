@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, Navigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/supabase/auth-context';
+import { resolveAppRedirectUrl } from '@/lib/config/app-redirect-url';
 import { Button } from '@/components/ui/Button';
 import { AuthBrandingPanel } from '@/components/auth/AuthBrandingPanel';
 import { AuthSplitLayout } from '@/components/auth/AuthSplitLayout';
@@ -107,10 +108,9 @@ export function SignUpPage() {
 
     setSubmitting(true);
     try {
-      const emailRedirectTo =
-        inviteToken && typeof window !== 'undefined'
-          ? `${window.location.origin}/invite?token=${encodeURIComponent(inviteToken)}`
-          : undefined;
+      const emailRedirectTo = inviteToken
+        ? resolveAppRedirectUrl(`/invite?token=${encodeURIComponent(inviteToken)}`)
+        : undefined;
 
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
