@@ -252,9 +252,9 @@ To evolve WealthNest cleanly without breaking working financial math or desktop 
    - Implemented `allocatePaiseByShares` (deterministic largest-remainder `BigInt` distribution) in `@wealthnest/domain` for joint `holding_owners` and `liability_parties` across net worth, family breakdowns, and Section 112A LTCG tax harvesting.
    - Wired `VisibilityControl`, `JointOwnershipEditor`, and `canEditFinancials` viewer guards across all 8 financial pages, modals, and Settings UI.
 
-8. **[ ] Phase 8 — Regression, QA Seed Rebuild & Snapshot Sync**
+8. **[x] Phase 8 — Regression, QA Seed Rebuild & Snapshot Sync**
    - **[x]** Rebuilt [`seed_qa.sql`](file:///home/ketan/projects/Krisha/wealthNest/supabase/seed_qa.sql) with Option A multi-user/multi-household fixtures (`seed_qa_multi_household_matrix`, updated `seed_qa_primary_household` & `seed_qa_secondary_user`) and executed Vitest + `tsc` + pgTAP regression suites ([`HouseholdAccessControl.test.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/__tests__/HouseholdAccessControl.test.tsx)).
-   - **[ ]** Remaining doc/snapshot follow-ups before release tag: regenerate [`full_schema.sql`](file:///home/ketan/projects/Krisha/wealthNest/supabase/full_schema.sql) and publish `docs/architecture/household-permission-matrix.md`, `docs/security/household-rls-security-review.md`, and `docs/testing/household-access-control-test-plan.md`.
+   - **[x]** Remaining doc/snapshot follow-ups before release tag: regenerate [`full_schema.sql`](file:///home/ketan/projects/Krisha/wealthNest/supabase/full_schema.sql) and publish `docs/architecture/household-permission-matrix.md`, `docs/security/household-rls-security-review.md`, and `docs/testing/household-access-control-test-plan.md`.
 
 ---
 
