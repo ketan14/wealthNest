@@ -1,7 +1,7 @@
 # Phase 18A: Responsive Modals, Bottom Sheets & CAS Preview Scrollability Verification
 
 **Test Target Architecture**: All **23** modal dialogs, overlay pickers, and mobile bottom sheets standardized onto [`ResponsiveModalShell.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/components/ui/ResponsiveModalShell.tsx), plus the 4 child steps of [`ImportCasModal.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/components/portfolio/ImportCasModal.tsx).  
-**Primary Automation Suite**: [`ResponsiveModalScrollability.test.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/__tests__/ResponsiveModalScrollability.test.tsx) (`8` tests)
+**Primary Automation Suite**: [`ResponsiveModalScrollability.test.tsx`](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/__tests__/ResponsiveModalScrollability.test.tsx) (`9` tests)
 
 ---
 
@@ -121,8 +121,8 @@ For every form below, open at **`360 × 780`** and **`360 × 480`**, scroll from
 
 | Area Verified | Viewport(s) Tested | Result | Tester / Notes |
 | :--- | :--- | :---: | :--- |
-| Automated Regression Suite (`ResponsiveModalScrollability.test.tsx`) | JSDOM | ✅ PASS | 8/8 structural & 55-row CAS preview tests passing |
-| Priority 0: `ImportCasModal` (50+ Equities + MF + Transactions) | Mobile + Keyboard + Desktop | ⏳ Pending QA | Verify real CDSL/NSDL PDF + CSV `Confirm & Import (...)` tap |
-| Group A Overlays (4 modals/sheets) | Mobile + Keyboard + Desktop | ⏳ Pending QA | Verify Command Palette, More Modules, Confirm, Audit Logs |
-| Group B Dialogs (3 modals) | Mobile + Keyboard + Desktop | ⏳ Pending QA | Verify Manage Family tabs/add form, Quick Add, Terms & Privacy |
-| Group C Forms (15 modals) | Mobile + Keyboard + Desktop | ⏳ Pending QA | Verify all forms scroll and submit via pinned footer CTA |
+| Automated Regression Suite (`ResponsiveModalScrollability.test.tsx`) | JSDOM | ✅ PASS | 9/9 structural, 55-row CSV & NSDL CAS preview scroll tests passing |
+| Priority 0: `ImportCasModal` (50+ Equities + MF + Transactions) | Multi-device (Mobile + Desktop) | ✅ PASS | Signed off 2026-11-16 after APK rebuild (`4739627`+); CAS preview scrolls cleanly across tested devices |
+| Group A Overlays (4 modals/sheets) | Multi-device (Mobile + Desktop) | ✅ PASS | Signed off 2026-11-16; Command Palette, More Modules, Confirm, Audit Logs scrolling verified across devices |
+| Group B Dialogs (3 modals) | Multi-device (Mobile + Desktop) | ✅ PASS | Signed off 2026-11-16; Manage Family, Quick Add, Terms & Privacy scrolling verified across devices |
+| Group C Forms (15 modals) | Multi-device (Mobile + Desktop) | ✅ PASS | Signed off 2026-11-16; forms & pinned footer CTAs scroll properly across tested devices |

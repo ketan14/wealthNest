@@ -157,8 +157,8 @@ Follows **Phase 18A Part 2** and closes remaining cloud deployment, plaintext st
 
 ### 4.1 Complete Pending Security Checklist Cloud Actions
 - [~] Apply pending & Phase 18A security/household migrations (`000017`–`000024`) via `supabase db push` ([security-remediation-checklist.md](file:///home/ketan/projects/Krisha/wealthNest/docs/security/security-remediation-checklist.md)). *(Linked QA `jdgucgsvvxcpxbeubqpi` confirmed up to date via `npx supabase db push`, `keep-qa-alive.yml` Run #14 passed, and `seed_qa.sql` / `seed_qa_multi_household_matrix()` seeded QA cleanly; future Production deploy remains.)*
-- [ ] Deploy Edge Function `admin-create-user` with verified `ALLOWED_ORIGINS` (check Run #18 notice if `ALLOWED_ORIGINS` secret is unset).
-- [x] Execute `supabase start && supabase test db` / `.github/workflows/security-checks.yml` to pass all pgTAP assertions & `npm audit` (`P2-4`, `P3-2`, `TST-02` — verified passing in Run #17 on `3d15dc1`; live remote `pg_policies` check `P3-3` still pending).
+- [x] Deploy Edge Function `admin-create-user` with verified `ALLOWED_ORIGINS` *(Confirmed on QA `jdgucgsvvxcpxbeubqpi` 2026-11-16: `https://evil.example.com` rejected with HTTP `403` and `access-control-allow-origin: https://wealthnest.vaghela-ketan.workers.dev`; keep synced for future Production deploy).*
+- [x] Execute `supabase start && supabase test db` / `.github/workflows/security-checks.yml` to pass all pgTAP assertions & `npm audit` (`P2-4`, `P3-2`, `TST-02` — verified in Run #17 on `3d15dc1`, plus live QA `pg_policies` inspection `DB-07` / `P3-3` confirmed on `jdgucgsvvxcpxbeubqpi`).
 - [ ] Verify live Supabase Cloud Auth settings: HIBP breached-password check, `[auth.rate_limit]`, SMTP confirmation delivery (`P1-4`, `P3-4`), and TLS termination (`P1-5`).
 
 ### 4.2 Promoted Household Collaboration & RLS Alignment *(Handled in Phase 18A Part 2 — §3.6)*
