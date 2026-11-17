@@ -9,6 +9,19 @@ import { supabase } from './client';
 import { toValidUuidOrNull } from './uuid-utils';
 import { resolveHouseholdIdForWrite } from './household-scope';
 
+/**
+ * Masks a 10-character Indian PAN string (e.g. ABCDE1234F -> ABCDE****F)
+ * to ensure that unmasked PANs are never cached in browser localStorage.
+ */
+export function maskPanString(pan?: string): string | undefined {
+  if (!pan) return undefined;
+  const cleaned = pan.trim().toUpperCase();
+  if (cleaned.length === 10 && !cleaned.includes('*')) {
+    return `${cleaned.substring(0, 5)}****${cleaned.substring(9)}`;
+  }
+  return cleaned;
+}
+
 export const DEFAULT_DEMO_MEMBERS: FamilyMemberDto[] = [
   {
     id: 'mem-self',
@@ -17,7 +30,7 @@ export const DEFAULT_DEMO_MEMBERS: FamilyMemberDto[] = [
     entityType: 'individual',
     name: 'Ketan Vaghela',
     relationship: 'self',
-    panMasked: 'ABCDE1234F',
+    panMasked: 'ABCDE****F',
     colorHex: '#3b82f6',
     isPrimary: true,
     notes: 'Age 38 — Freelance Contractor (ex-MNC), Primary Demats & Equity Portfolio',
@@ -29,7 +42,7 @@ export const DEFAULT_DEMO_MEMBERS: FamilyMemberDto[] = [
     entityType: 'individual',
     name: 'Parul Vaghela',
     relationship: 'spouse',
-    panMasked: 'BGTYU5678K',
+    panMasked: 'BGTYU****K',
     colorHex: '#ec4899',
     isPrimary: false,
     notes: 'Age 35 — Clerk at Bank of Baroda, Direct Mutual Funds & Demat',
@@ -41,7 +54,7 @@ export const DEFAULT_DEMO_MEMBERS: FamilyMemberDto[] = [
     entityType: 'minor',
     name: 'Krisha Vaghela',
     relationship: 'child',
-    panMasked: 'MINR90123C',
+    panMasked: 'MINR9****C',
     colorHex: '#10b981',
     isPrimary: false,
     notes: 'Age 6 (1st Standard) — Long-term Higher Education Compounding & Sukanya/MF Fund',
@@ -53,7 +66,7 @@ export const DEFAULT_DEMO_MEMBERS: FamilyMemberDto[] = [
     entityType: 'huf',
     name: 'Shamalbhai Vaghela HUF',
     relationship: 'huf',
-    panMasked: 'AAACH9999H',
+    panMasked: 'AAACH****H',
     colorHex: '#8b5cf6',
     isPrimary: false,
     notes: 'Karta: Shamalbhai (Age 68, Retired Govt) — Section 112A ₹1.25L Annual LTCG Tax Shield',
@@ -65,7 +78,7 @@ export const DEFAULT_DEMO_MEMBERS: FamilyMemberDto[] = [
     entityType: 'individual',
     name: 'Ramilaben Vaghela',
     relationship: 'parent',
-    panMasked: 'PRTYK4321M',
+    panMasked: 'PRTYK****M',
     colorHex: '#f59e0b',
     isPrimary: false,
     notes: 'Age 61 (Housewife) — Senior Citizen FDs & Sovereign Gold Bonds',
@@ -257,7 +270,12 @@ export class SupabaseFamilyAdapter implements FamilyRepositoryPort {
 
   private saveLocalMembers(members: FamilyMemberDto[]): void {
     try {
-      localStorage.setItem(LOCAL_STORAGE_MEMBERS_KEY, JSON.stringify(members));
+      // Ensure all PANs are masked before writing to localStorage
+      const sanitized = members.map((m) => ({
+        ...m,
+        panMasked: maskPanString(m.panMasked),
+      }));
+      localStorage.setItem(LOCAL_STORAGE_MEMBERS_KEY, JSON.stringify(sanitized));
     } catch {
       // ignore
     }
