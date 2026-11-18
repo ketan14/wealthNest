@@ -33,11 +33,15 @@
     "tauri:build": "tauri build",
     "desktop:docker": "bash scripts/build-desktop-docker.sh",
     "icons:generate": "python3 scripts/generate-icons.py",
+    "cap": "cap",
+    "cap:sync": "npm run build && cap sync android",
+    "cap:open": "cap open android",
     "android:init": "tauri android init",
     "android:build": "bash scripts/build-android.sh local",
     "android:docker": "bash scripts/build-android.sh docker"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
     "prettier": "^3.5.2",
     "supabase": "^2.15.8",
     "typescript": "^5.8.2"
@@ -45,5 +49,9 @@
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
+  },
+  "dependencies": {
+    "@aparajita/capacitor-secure-storage": "8.0.1",
+    "@capacitor/app": "8.1.2"
   }
 }

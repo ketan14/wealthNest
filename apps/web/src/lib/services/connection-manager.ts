@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { capacitorSecureStorage } from './secure-storage';
 import {
   ServerConfig,
   buildSupabaseUrl,
@@ -96,6 +97,7 @@ export class ConnectionManager {
     const client = createClient(url, config.supabaseAnonKey, {
       auth: {
         storageKey: this.buildStorageKey(url, config.supabaseAnonKey),
+        storage: capacitorSecureStorage,
         persistSession: true,
         autoRefreshToken: true,
       },

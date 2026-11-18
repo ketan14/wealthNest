@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+      WealthNest Mobile Security (NET-01, NET-02):
+      Strictly prohibit cleartext HTTP traffic across all domains.
+      All API communication must use TLS 1.2+ HTTPS.
+    -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
