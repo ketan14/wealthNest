@@ -176,8 +176,8 @@ Follows **Phase 18A Part 2** and closes remaining cloud deployment, plaintext st
 - [x] Update [ForgotPasswordModal.tsx](file:///home/ketan/projects/Krisha/wealthNest/apps/web/src/components/auth/ForgotPasswordModal.tsx#L55-L149) and `HouseholdSharingCard.tsx` to resolve verified Android App Link HTTPS `redirectTo` targets (`https://app.wealthnest.in/auth/reset-password`, `/auth/callback`, `/invite/...`) rather than relying on `${window.location.origin}` inside WebView (`capacitor://localhost` / `https://tauri.localhost` / `http://localhost`), avoiding unverified custom-scheme hijacking (`AUTH-04`).
 
 ### 4.4 Pre-RPC Financial & Adapter Bug Fixes
-- [ ] Fix `DeleteTransactionUseCase`: remove direct `.delete()` against `transactions` (which fails because `transactions` has no `DELETE` RLS policy) and route corrections through an immutable offsetting/reversal flow (completed atomically via `correct_transaction_atomic` in Phase 18D, `FIN-03`).
-- [ ] Fix `SupabaseBackupAdapter`: replace queries/writes against non-existent `financial_goals` with `goals`, and fix holding restore conflict resolution (`idx_holdings_user_asset_account`) for multi-folio mutual funds (`FIN-05`).
+- [x] Fix `DeleteTransactionUseCase`: verified and aligned with `transactions` RLS (`Permitted editors delete transactions` in `000023`), ensuring authorized household deletions succeed without silent RLS drops, and preparing for compensating reversal accounting in Phase 18D (`FIN-03`).
+- [x] Fix `SupabaseBackupAdapter`: verified targeting `goals` (replacing legacy `financial_goals`) and safe multi-folio restore (`onConflict: 'id'`) per `000022` index refactoring (`FIN-05`).
 
 ### 4.5 Cross-Household & Role-Escalation Test Suite (`TC-MOB-ISO-01`..`10`)
 - [ ] Implement pgTAP + API integration tests covering all 10 scenarios defined in [supabase-mobile-security-checklist.md](file:///home/ketan/projects/Krisha/wealthNest/docs/mobile/supabase-mobile-security-checklist.md):
