@@ -24,6 +24,7 @@ import { GoalProjectionCard } from '@/components/goals/GoalProjectionCard';
 import { GoalsKpiSection } from '@/components/goals/GoalsKpiSection';
 import { GoalsGridSection } from '@/components/goals/GoalsGridSection';
 import { DEMO_GOALS } from '@/components/goals/goals-demo-data';
+import { shouldAllowDemoData } from '@/lib/config/mobile-runtime';
 import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
 import { useFamily } from '@/lib/family/family-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
@@ -51,13 +52,17 @@ export function GoalsPage() {
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState<{ id: string; name: string } | null>(null);
   const [monthlyExpenseRupees, setMonthlyExpenseRupees] = useState<number>(65000);
-  const [demoGoalsState, setDemoGoalsState] = useState<GoalDetailDto[]>(DEMO_GOALS);
+  const [demoGoalsState, setDemoGoalsState] = useState<GoalDetailDto[]>(
+    shouldAllowDemoData(isDemoMode) ? DEMO_GOALS : []
+  );
 
-  // 1. Query Goals from DB (or fallback to demoGoalsState ONLY in demo preview)
+  // 1. Query Goals from DB (or fallback to demoGoalsState ONLY in demo preview on web)
   const { data: dbGoals } = useQuery<GoalDetailDto[]>({
     queryKey: ['user-goals', scopeId || 'demo'],
     queryFn: async () => {
-      if (!hasLiveBackend || !scopeId) return DEMO_GOALS;
+      if (!hasLiveBackend || !scopeId) {
+        return shouldAllowDemoData(isDemoMode) ? DEMO_GOALS : [];
+      }
       const res = await (goalRepo.listGoalsByHousehold
         ? goalRepo.listGoalsByHousehold(scopeId)
         : goalRepo.listGoalsByUser(scopeId));

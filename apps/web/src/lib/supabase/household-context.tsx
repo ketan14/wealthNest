@@ -20,6 +20,7 @@ import { useAuth } from './auth-context';
 import { useRepositories } from '../persistence/repository-context';
 import { toValidUuidOrNull } from './uuid-utils';
 import { clearCachedDefaultHousehold } from './household-scope';
+import { shouldAllowDemoData } from '../config/mobile-runtime';
 
 const ACTIVE_HOUSEHOLD_STORAGE_PREFIX = 'wealthnest_active_household_';
 
@@ -98,11 +99,14 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   queryClientRef.current = queryClient;
 
   const userId = user?.id || 'demo-user-001';
+  const isDemoOrUnauthInitial = !user?.id || user.id.startsWith('demo-');
+  const allowDemoInitial = shouldAllowDemoData(isDemoOrUnauthInitial);
+
   const [households, setHouseholds] = useState<readonly HouseholdSummary[]>(() =>
-    !user?.id || user.id.startsWith('demo-') ? [DEMO_HOUSEHOLD_SUMMARY] : []
+    allowDemoInitial ? [DEMO_HOUSEHOLD_SUMMARY] : []
   );
   const [activeHouseholdId, setActiveHouseholdId] = useState<string | undefined>(() =>
-    !user?.id || user.id.startsWith('demo-') ? DEMO_HOUSEHOLD_SUMMARY.id : undefined
+    allowDemoInitial ? DEMO_HOUSEHOLD_SUMMARY.id : undefined
   );
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,8 +144,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
 
       const isDemoOrUnauth = !user?.id || user.id.startsWith('demo-');
       if (isDemoOrUnauth && mode === 'supabase') {
-        setHouseholds([DEMO_HOUSEHOLD_SUMMARY]);
-        setActiveHouseholdId(DEMO_HOUSEHOLD_SUMMARY.id);
+        const allowDemo = shouldAllowDemoData(true);
+        setHouseholds(allowDemo ? [DEMO_HOUSEHOLD_SUMMARY] : []);
+        setActiveHouseholdId(allowDemo ? DEMO_HOUSEHOLD_SUMMARY.id : undefined);
         setError(null);
         setIsLoading(false);
         return;

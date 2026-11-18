@@ -25,6 +25,7 @@ import {
 } from '@/components/portfolio/PortfolioHoldingsSection';
 import { PortfolioModals } from '@/components/portfolio/PortfolioModals';
 import { DEMO_HOLDINGS } from '@/components/portfolio/portfolio-demo-data';
+import { shouldAllowDemoData } from '@/lib/config/mobile-runtime';
 import {
   buildDemoHolding,
   buildDemoImportedHoldings,
@@ -77,8 +78,10 @@ export function PortfolioPage() {
     setHoldingToDelete(h);
   };
 
-  // Local state for interactive demo mode when not logged in
-  const [localDemoHoldings, setLocalDemoHoldings] = useState<HoldingDetailDto[]>(DEMO_HOLDINGS);
+  // Local state for interactive demo mode when not logged in (disabled on Android / native mobile)
+  const [localDemoHoldings, setLocalDemoHoldings] = useState<HoldingDetailDto[]>(
+    shouldAllowDemoData(isDemoMode) ? DEMO_HOLDINGS : []
+  );
 
   const holdingAdapter = useHoldingRepository();
   const liabilityAdapter = useLiabilityRepository();
@@ -150,8 +153,8 @@ export function PortfolioPage() {
     if (hasLiveBackend) {
       return dbPortfolioData ? [...dbPortfolioData.holdings] : [];
     }
-    return localDemoHoldings;
-  }, [isSupportModeActive, supportData, hasLiveBackend, dbPortfolioData, localDemoHoldings]);
+    return shouldAllowDemoData(isDemoMode) ? localDemoHoldings : [];
+  }, [isSupportModeActive, supportData, hasLiveBackend, dbPortfolioData, localDemoHoldings, isDemoMode]);
 
   // Active holdings filtered by Family Member / Legal Entity, Demat Account & Privacy Rules
   const activeHoldings: HoldingDetailDto[] = useMemo(() => {

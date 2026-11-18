@@ -22,6 +22,7 @@ import {
   DEFAULT_DEMO_HOLDINGS_FAMILY,
 } from '../supabase/family.adapter';
 import { useRepositories } from '../persistence/repository-context';
+import { shouldAllowDemoData } from '../config/mobile-runtime';
 
 interface FamilyContextType {
   members: FamilyMemberDto[];
@@ -96,13 +97,14 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const { holdingRepo, familyRepo, mode } = useRepositories();
   const userId = user?.id || 'demo-user-001';
   const isDemoUser = mode === 'supabase' && (!user?.id || user.id.startsWith('demo-'));
-  const scopeId = activeHouseholdId || (isDemoUser ? DEMO_HOUSEHOLD_SUMMARY.id : undefined);
+  const allowDemo = shouldAllowDemoData(isDemoUser);
+  const scopeId = activeHouseholdId || (allowDemo ? DEMO_HOUSEHOLD_SUMMARY.id : undefined);
 
   const [members, setMembers] = useState<FamilyMemberDto[]>(() =>
-    isDemoUser ? DEFAULT_DEMO_MEMBERS : []
+    allowDemo ? DEFAULT_DEMO_MEMBERS : []
   );
   const [accounts, setAccounts] = useState<PortfolioAccountDto[]>(() =>
-    isDemoUser ? DEFAULT_DEMO_ACCOUNTS : []
+    allowDemo ? DEFAULT_DEMO_ACCOUNTS : []
   );
   const [selectedMemberId, setSelectedMemberId] = useState<string | 'all'>('all');
   const [selectedAccountId, setSelectedAccountId] = useState<string | 'all'>('all');
@@ -160,13 +162,13 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
           : familyRepo.getAccounts(scopeId),
       ]);
 
-      let currentMembers: FamilyMemberDto[] = isDemoUser ? DEFAULT_DEMO_MEMBERS : [];
-      let currentAccounts: PortfolioAccountDto[] = isDemoUser ? DEFAULT_DEMO_ACCOUNTS : [];
+      let currentMembers: FamilyMemberDto[] = allowDemo ? DEFAULT_DEMO_MEMBERS : [];
+      let currentAccounts: PortfolioAccountDto[] = allowDemo ? DEFAULT_DEMO_ACCOUNTS : [];
 
       if (isOk(membersRes)) {
         currentMembers = [...membersRes.value];
         setMembers(currentMembers);
-      } else if (!isDemoUser) {
+      } else if (!allowDemo) {
         setMembers([]);
       }
 

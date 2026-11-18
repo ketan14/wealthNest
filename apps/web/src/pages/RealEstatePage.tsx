@@ -22,6 +22,7 @@ import {
   PropertyMetricsOverride,
 } from '@/components/real-estate/PropertyMetricsModal';
 import { RealEstatePropertyList } from '@/components/real-estate/RealEstatePropertyList';
+import { shouldAllowDemoData } from '@/lib/config/mobile-runtime';
 
 const STORAGE_KEY_PREFIX = 'wealthnest_real_estate_overrides_v1_';
 
@@ -180,7 +181,7 @@ export function RealEstatePage() {
     setOverrides(loadOverrides(effectiveUserId));
 
     if (isDemoMode || !scopeId) {
-      setBaseProperties(isDemoMode ? DEMO_PROPERTIES : []);
+      setBaseProperties(shouldAllowDemoData(isDemoMode) ? DEMO_PROPERTIES : []);
       setHoldingOwnersMap({});
       setIsLoading(false);
       return;

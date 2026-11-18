@@ -28,6 +28,7 @@ import { BenchmarkAndRebalanceSection } from '@/components/analytics/BenchmarkAn
 import { TaxHarvestingIntelligenceCard } from '@/components/analytics/TaxHarvestingIntelligenceCard';
 import { AlertTriangle, Users } from 'lucide-react';
 import { useFamily } from '@/lib/family/family-context';
+import { shouldAllowDemoData } from '@/lib/config/mobile-runtime';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
@@ -184,11 +185,13 @@ export function AnalyticsPage() {
   // Allocation strategy model state
   const [modelType, setModelType] = useState<AllocationModelType>('balanced');
 
-  // 1. Query holdings (Household backend or demo fallback)
+  // 1. Query holdings (Household backend or demo fallback on web only)
   const { data: rawHoldings = [] } = useQuery<HoldingDetailDto[]>({
     queryKey: ['portfolio-holdings', hasLiveBackend ? scopeId : 'demo'],
     queryFn: async () => {
-      if (!hasLiveBackend || !scopeId) return DEMO_HOLDINGS;
+      if (!hasLiveBackend || !scopeId) {
+        return shouldAllowDemoData(isDemoMode) ? DEMO_HOLDINGS : [];
+      }
       const res = await (holdingRepo.listDetailsByHousehold
         ? holdingRepo.listDetailsByHousehold(scopeId)
         : holdingRepo.listDetailsByUser(scopeId));
@@ -219,7 +222,9 @@ export function AnalyticsPage() {
   const { data: rawTransactions = [] } = useQuery<TransactionDetailDto[]>({
     queryKey: ['transactions-list', hasLiveBackend ? scopeId : 'demo'],
     queryFn: async () => {
-      if (!hasLiveBackend || !scopeId) return DEMO_TRANSACTIONS;
+      if (!hasLiveBackend || !scopeId) {
+        return shouldAllowDemoData(isDemoMode) ? DEMO_TRANSACTIONS : [];
+      }
       const res = await (transactionRepo.listByHousehold
         ? transactionRepo.listByHousehold(scopeId)
         : transactionRepo.listByUser(scopeId));

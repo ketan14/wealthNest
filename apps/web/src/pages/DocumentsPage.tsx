@@ -35,6 +35,7 @@ import {
   UploadDocumentFormData,
 } from '@/components/vault/UploadDocumentModal';
 import { DEMO_DOCUMENTS } from '@/components/vault/documents-demo-data';
+import { shouldAllowDemoData } from '@/lib/config/mobile-runtime';
 import { DocumentVaultList } from '@/components/vault/DocumentVaultList';
 
 export function DocumentsPage() {
@@ -70,7 +71,7 @@ export function DocumentsPage() {
     setErrorMessage(null);
 
     if (!hasLiveBackend || !scopeId) {
-      setDocuments(isDemoMode ? DEMO_DOCUMENTS : []);
+      setDocuments(shouldAllowDemoData(isDemoMode) ? DEMO_DOCUMENTS : []);
       setIsLoading(false);
       return;
     }

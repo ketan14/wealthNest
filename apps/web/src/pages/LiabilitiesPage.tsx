@@ -21,6 +21,7 @@ import { LoanPrepaymentSimulatorCard } from '@/components/liabilities/LoanPrepay
 import { PropertyEquitySection } from '@/components/liabilities/PropertyEquitySection';
 import { LoanPortfolioSection } from '@/components/liabilities/LoanPortfolioSection';
 import { DEMO_LIABILITIES } from '@/components/liabilities/liabilities-demo-data';
+import { shouldAllowDemoData } from '@/lib/config/mobile-runtime';
 import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -64,9 +65,9 @@ export function LiabilitiesPage() {
   // Filter state
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'closed'>('active');
 
-  // Local state for demo liabilities when logged out or when previewing sample loans
+  // Local state for demo liabilities when logged out or when previewing sample loans (disabled on Android / native mobile)
   const [localDemoLiabilities, setLocalDemoLiabilities] =
-    useState<LiabilityDto[]>(DEMO_LIABILITIES);
+    useState<LiabilityDto[]>(shouldAllowDemoData(isDemoMode) ? DEMO_LIABILITIES : []);
 
   const { liabilityRepo, holdingRepo } = useRepositories();
 
@@ -197,7 +198,11 @@ export function LiabilitiesPage() {
         updatedAt: item.startDate,
       }));
     }
-    const base: readonly LiabilityDto[] = hasLiveBackend ? liabilities : localDemoLiabilities;
+    const base: readonly LiabilityDto[] = hasLiveBackend
+      ? liabilities
+      : shouldAllowDemoData(isDemoMode)
+        ? localDemoLiabilities
+        : [];
     if (!selectedMemberId || selectedMemberId === 'all') return base;
     return base.filter(
       (l) =>

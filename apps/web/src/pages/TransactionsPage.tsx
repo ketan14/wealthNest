@@ -30,6 +30,7 @@ import { RecurringRulesCard } from '@/components/transactions/RecurringRulesCard
 import { CashflowSummarySection } from '@/components/transactions/CashflowSummarySection';
 import { TransactionAuditLogCard } from '@/components/transactions/TransactionAuditLogCard';
 import { DEMO_TRANSACTIONS } from '@/components/transactions/transactions-demo-data';
+import { shouldAllowDemoData } from '@/lib/config/mobile-runtime';
 import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
 import { useIsMobile } from '@/lib/hooks/use-is-mobile';
 import { ArrowUpRight, Plus, Sparkles } from 'lucide-react';
@@ -58,9 +59,9 @@ export function TransactionsPage() {
   const hasLiveBackend = !isDemoMode && Boolean(activeHouseholdId || user?.id);
   const scopeId = activeHouseholdId || user?.id || '';
 
-  // Local state for interactive demo mode when not logged in
+  // Local state for interactive demo mode when not logged in (disabled on Android / native mobile)
   const [localDemoTransactions, setLocalDemoTransactions] =
-    useState<TransactionDetailDto[]>(DEMO_TRANSACTIONS);
+    useState<TransactionDetailDto[]>(shouldAllowDemoData(isDemoMode) ? DEMO_TRANSACTIONS : []);
   const [txToDelete, setTxToDelete] = useState<TransactionDetailDto | null>(null);
   const isMobile = useIsMobile();
 
@@ -113,8 +114,8 @@ export function TransactionsPage() {
     if (hasLiveBackend) {
       return Array.isArray(dbCashflowData?.transactions) ? [...dbCashflowData.transactions] : [];
     }
-    return localDemoTransactions;
-  }, [hasLiveBackend, dbCashflowData, localDemoTransactions]);
+    return shouldAllowDemoData(isDemoMode) ? localDemoTransactions : [];
+  }, [hasLiveBackend, dbCashflowData, localDemoTransactions, isDemoMode]);
 
   // Active transactions filtered by Family Member / Entity, Demat Account & Privacy Rules
   const activeTransactions: TransactionDetailDto[] = useMemo(() => {
