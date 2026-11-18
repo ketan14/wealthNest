@@ -158,6 +158,22 @@ export interface LiabilityRepositoryPort {
   recordLiabilityBalance(
     params: RecordLiabilityBalanceParams
   ): Promise<Result<LiabilityBalanceDto>>;
+  recordEmiPaymentAtomic?(params: {
+    readonly liabilityId: string;
+    readonly paymentDate: string;
+    readonly totalAmountCents: bigint;
+    readonly principalCents: bigint;
+    readonly interestCents: bigint;
+    readonly extraPaymentCents?: bigint;
+    readonly newBalanceCents?: bigint;
+    readonly notes?: string;
+  }): Promise<Result<{
+    readonly success: boolean;
+    readonly paymentId: string;
+    readonly balanceId: string;
+    readonly remainingBalanceCents: bigint;
+    readonly status: string;
+  }>>;
   listLiabilityBalances(
     liabilityId: string,
     scopeId: string

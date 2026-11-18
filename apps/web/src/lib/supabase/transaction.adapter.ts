@@ -112,6 +112,63 @@ export class SupabaseTransactionAdapter implements TransactionRepositoryPort {
       const actorId = toValidUuidOrNull(params.userId);
       const transactionDate = params.transactionDate || new Date().toISOString();
 
+      // Attempt atomic execution via record_transaction_atomic RPC (FIN-02)
+      const validAssetId = toValidUuidOrNull(params.assetId);
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('record_transaction_atomic', {
+        p_household_id: householdId,
+        p_type: params.type,
+        p_amount_cents: params.amountCents,
+        p_transaction_date: transactionDate,
+        p_asset_id: validAssetId,
+        p_quantity: params.quantity !== undefined ? params.quantity : null,
+        p_currency: params.currency || 'INR',
+        p_member_id: toValidUuidOrNull(params.memberId),
+        p_account_id: toValidUuidOrNull(params.accountId),
+        p_destination_account_id: toValidUuidOrNull(params.destinationAccountId),
+        p_notes: params.notes || null,
+        p_visibility: visibility,
+      });
+
+      if (!rpcErr && rpcData?.success) {
+        let assetName: string | undefined;
+        let assetTicker: string | undefined;
+
+        if (params.assetId) {
+          const { data: assetData } = await supabase
+            .from('assets')
+            .select('name, ticker')
+            .eq('id', params.assetId)
+            .maybeSingle();
+
+          if (assetData) {
+            assetName = assetData.name;
+            assetTicker = assetData.ticker ?? undefined;
+          }
+        }
+
+        return ok({
+          id: rpcData.transaction_id,
+          householdId,
+          userId: actorId ?? householdId,
+          visibility,
+          createdBy: actorId ?? undefined,
+          assetId: params.assetId,
+          assetName,
+          assetTicker,
+          type: params.type,
+          quantity: params.quantity,
+          amountCents: params.amountCents,
+          currency: params.currency || 'INR',
+          transactionDate,
+          notes: params.notes,
+          memberId: params.memberId,
+          accountId: params.accountId,
+          destinationAccountId: params.destinationAccountId,
+          createdAt: transactionDate,
+        });
+      }
+
+      // Fallback to standard insert if RPC fails or not matched
       const { data, error } = await supabase
         .from('transactions')
         .insert({

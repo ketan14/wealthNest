@@ -76,22 +76,42 @@ export function RecordEmiPaymentModal({
     setIsSubmitting(true);
 
     try {
-      // 1. Record the updated principal balance
       const newBalanceCents = calculation.remainingBalance.cents;
-      const balanceRes = await liabilityRepo.recordLiabilityBalance({
-        liabilityId: liability.id,
-        userId,
-        householdId: activeHouseholdId,
-        balanceCents: newBalanceCents,
-        asOfDate: paymentDate,
-        source: 'emi_bifurcation',
-        notes: notes.trim()
-          ? `${notes.trim()} | EMI Bifurcation (Principal: ${currencySymbol}${calculation.principalPart.toDecimal().toLocaleString(locale)}, Interest: ${currencySymbol}${calculation.interestPart.toDecimal().toLocaleString(locale)})`
-          : `EMI Payment (Principal: ${currencySymbol}${calculation.principalPart.toDecimal().toLocaleString(locale)}, Interest: ${currencySymbol}${calculation.interestPart.toDecimal().toLocaleString(locale)})`,
-      });
+      const formattedNotes = notes.trim()
+        ? `${notes.trim()} | EMI Bifurcation (Principal: ${currencySymbol}${calculation.principalPart.toDecimal().toLocaleString(locale)}, Interest: ${currencySymbol}${calculation.interestPart.toDecimal().toLocaleString(locale)})`
+        : `EMI Payment (Principal: ${currencySymbol}${calculation.principalPart.toDecimal().toLocaleString(locale)}, Interest: ${currencySymbol}${calculation.interestPart.toDecimal().toLocaleString(locale)})`;
 
-      if (!balanceRes.success) {
-        throw new Error(balanceRes.error?.message || 'Failed to record updated loan balance');
+      // If atomic RPC method is available on repository adapter, use it for transactional integrity
+      if (liabilityRepo.recordEmiPaymentAtomic) {
+        const atomicRes = await liabilityRepo.recordEmiPaymentAtomic({
+          liabilityId: liability.id,
+          paymentDate,
+          totalAmountCents: calculation.totalPayment.cents,
+          principalCents: calculation.principalPart.cents,
+          interestCents: calculation.interestPart.cents,
+          extraPaymentCents: calculation.extraPayment.cents,
+          newBalanceCents,
+          notes: formattedNotes,
+        });
+
+        if (!atomicRes.success) {
+          throw new Error(atomicRes.error?.message || 'Failed to record atomic EMI payment');
+        }
+      } else {
+        // Fallback for local/offline SQLite adapter
+        const balanceRes = await liabilityRepo.recordLiabilityBalance({
+          liabilityId: liability.id,
+          userId,
+          householdId: activeHouseholdId,
+          balanceCents: newBalanceCents,
+          asOfDate: paymentDate,
+          source: 'emi_bifurcation',
+          notes: formattedNotes,
+        });
+
+        if (!balanceRes.success) {
+          throw new Error(balanceRes.error?.message || 'Failed to record updated loan balance');
+        }
       }
 
       onSuccess();

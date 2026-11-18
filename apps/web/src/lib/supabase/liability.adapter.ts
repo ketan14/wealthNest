@@ -506,6 +506,55 @@ export class SupabaseLiabilityAdapter implements LiabilityRepositoryPort {
     return recordLiabilityBalanceOp(params);
   }
 
+  async recordEmiPaymentAtomic(params: {
+    readonly liabilityId: string;
+    readonly paymentDate: string;
+    readonly totalAmountCents: bigint;
+    readonly principalCents: bigint;
+    readonly interestCents: bigint;
+    readonly extraPaymentCents?: bigint;
+    readonly newBalanceCents?: bigint;
+    readonly notes?: string;
+  }): Promise<
+    Result<{
+      readonly success: boolean;
+      readonly paymentId: string;
+      readonly balanceId: string;
+      readonly remainingBalanceCents: bigint;
+      readonly status: string;
+    }>
+  > {
+    try {
+      const { data, error } = await supabase.rpc('record_emi_payment_atomic', {
+        p_liability_id: params.liabilityId,
+        p_payment_date: params.paymentDate,
+        p_total_amount_cents: Number(params.totalAmountCents),
+        p_principal_cents: Number(params.principalCents),
+        p_interest_cents: Number(params.interestCents),
+        p_extra_payment_cents: Number(params.extraPaymentCents || 0n),
+        p_new_balance_cents:
+          params.newBalanceCents !== undefined ? Number(params.newBalanceCents) : null,
+        p_notes: params.notes || null,
+      });
+
+      if (error || !data) {
+        return err(
+          new Error(`Failed to record atomic EMI payment: ${error?.message || 'Unknown error'}`)
+        );
+      }
+
+      return ok({
+        success: Boolean(data.success),
+        paymentId: data.payment_id,
+        balanceId: data.balance_id,
+        remainingBalanceCents: BigInt(data.remaining_balance_cents ?? 0),
+        status: data.status,
+      });
+    } catch (e: any) {
+      return err(e instanceof Error ? e : new Error(String(e)));
+    }
+  }
+
   async listLiabilityBalances(
     liabilityId: string,
     scopeId: string

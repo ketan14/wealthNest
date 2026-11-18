@@ -122,6 +122,37 @@ export async function recordAssetValuation(
   params: RecordAssetValuationParams
 ): Promise<Result<AssetValuationDto>> {
   try {
+    const validAssetId = toValidUuidOrNull(params.assetId);
+
+    // Call atomic RPC function record_asset_valuation_atomic (FIN-06)
+    if (validAssetId) {
+      const { data: rpcData, error: rpcErr } = await supabase.rpc(
+        'record_asset_valuation_atomic',
+        {
+          p_asset_id: validAssetId,
+          p_valuation_cents: Number(params.valuationCents),
+          p_as_of_date: params.asOfDate,
+          p_source: params.source || 'manual_appraisal',
+          p_notes: params.notes || null,
+        }
+      );
+
+      if (!rpcErr && rpcData?.success) {
+        return ok({
+          id: rpcData.valuation_id,
+          householdId: params.householdId || '',
+          assetId: validAssetId,
+          userId: params.userId,
+          valuationCents: params.valuationCents,
+          currency: params.currency || 'INR',
+          asOfDate: params.asOfDate,
+          source: params.source || 'manual_appraisal',
+          notes: params.notes,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    }
+
     const householdId = await resolveEntityHouseholdId(
       params.householdId,
       'assets',
