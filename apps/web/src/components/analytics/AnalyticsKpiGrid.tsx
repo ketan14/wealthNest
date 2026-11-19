@@ -1,7 +1,9 @@
-import { Award, TrendingUp, Scale, ShieldCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Award, TrendingUp, Scale, ShieldCheck, ChevronRight } from 'lucide-react';
 import { PortfolioAnalyticsSummary } from '@wealthnest/domain';
-import { Card, CardContent, CardHeader } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { formatInr } from '@/utils/formatInr';
 
 interface AnalyticsKpiGridProps {
   analytics: PortfolioAnalyticsSummary;
@@ -17,112 +19,116 @@ export function AnalyticsKpiGrid({
   cagrDisplay,
 }: AnalyticsKpiGridProps) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {/* Card 1: XIRR */}
-      <Card className="border-border/80 bg-card/60 backdrop-blur-md relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-semibold uppercase tracking-wider">Portfolio XIRR</span>
-            <Award className="w-4 h-4 text-emerald-400" />
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+      {/* Card 1: XIRR -> /portfolio */}
+      <Link to="/portfolio" className="block group focus:outline-none">
+        <Card className="h-full border-border/80 bg-card/60 backdrop-blur-md p-3 sm:p-4 group-hover:border-emerald-500/40 transition-colors">
+          <div className="flex items-center justify-between text-muted-foreground text-[10px] sm:text-xs uppercase font-semibold">
+            <span className="truncate">Portfolio XIRR</span>
+            <div className="flex items-center gap-1 shrink-0">
+              <Award className="w-3.5 h-3.5 text-emerald-400" />
+              <ChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold tracking-tight text-emerald-400 font-mono">
+          <div className="flex items-baseline gap-1.5 pt-1 sm:pt-1.5 flex-wrap">
+            <span className="text-lg sm:text-2xl font-extrabold tracking-tight text-emerald-400 font-mono">
               {analytics.xirr !== null && analytics.xirr >= 0 ? `+${xirrDisplay}` : xirrDisplay}
             </span>
-            <Badge variant="outline" className="text-[10px] text-emerald-400 border-emerald-500/30">
+            <span className="hidden sm:inline text-[10px] text-emerald-400 font-medium">
               Annualized
-            </Badge>
+            </span>
           </div>
-          <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <span>{analytics.isOutperforming ? 'Outperforming' : 'Tracking'} Nifty 50 by</span>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
+            {analytics.isOutperforming ? 'Beating' : 'vs'} Nifty:{' '}
             <span
               className={`font-semibold font-mono ${analytics.isOutperforming ? 'text-emerald-400' : 'text-amber-400'}`}
             >
-              {alphaDisplay} Alpha
+              {alphaDisplay}
             </span>
           </p>
-        </CardContent>
-      </Card>
+        </Card>
+      </Link>
 
-      {/* Card 2: Absolute Gain & CAGR */}
-      <Card className="border-border/80 bg-card/60 backdrop-blur-md relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-semibold uppercase tracking-wider">
-              Total Return & CAGR
-            </span>
-            <TrendingUp className="w-4 h-4 text-blue-400" />
+      {/* Card 2: Absolute Gain & CAGR -> /portfolio */}
+      <Link to="/portfolio" className="block group focus:outline-none">
+        <Card className="h-full border-border/80 bg-card/60 backdrop-blur-md p-3 sm:p-4 group-hover:border-blue-500/40 transition-colors">
+          <div className="flex items-center justify-between text-muted-foreground text-[10px] sm:text-xs uppercase font-semibold">
+            <span className="truncate">Total Return &amp; CAGR</span>
+            <div className="flex items-center gap-1 shrink-0">
+              <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
+              <ChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold tracking-tight text-foreground font-mono">
+          <div className="flex items-baseline gap-1.5 pt-1 sm:pt-1.5 flex-wrap">
+            <span className="text-lg sm:text-2xl font-extrabold tracking-tight text-foreground font-mono">
               +{analytics.returnPercentage.toFixed(2)}%
             </span>
-            <span className="text-xs text-muted-foreground font-mono">(CAGR {cagrDisplay})</span>
-          </div>
-          <p className="text-xs text-muted-foreground flex items-center gap-1.5 font-mono">
-            <span className="text-emerald-400 font-semibold">
-              +{analytics.absoluteGain.formatIndianCompact()}
+            <span className="text-[10px] sm:text-xs text-muted-foreground font-mono">
+              ({cagrDisplay})
             </span>
-            <span>net capital gain</span>
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Card 3: Alpha vs Nifty 50 TRI */}
-      <Card className="border-border/80 bg-card/60 backdrop-blur-md relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl pointer-events-none" />
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-semibold uppercase tracking-wider">Benchmark Alpha</span>
-            <Scale className="w-4 h-4 text-purple-400" />
           </div>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex items-baseline gap-2">
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate font-mono">
             <span
-              className={`text-3xl font-extrabold tracking-tight font-mono ${
+              className={`font-semibold ${
+                analytics.absoluteGain.cents >= 0n ? 'text-emerald-400' : 'text-rose-400'
+              }`}
+            >
+              {formatInr(analytics.absoluteGain.toDecimal(), {
+                compact: true,
+                showSign: true,
+              })}
+            </span>{' '}
+            <span className="font-sans">net gain</span>
+          </p>
+        </Card>
+      </Link>
+
+      {/* Card 3: Alpha vs Nifty 50 TRI -> /transactions */}
+      <Link to="/transactions" className="block group focus:outline-none">
+        <Card className="h-full border-border/80 bg-card/60 backdrop-blur-md p-3 sm:p-4 group-hover:border-purple-500/40 transition-colors">
+          <div className="flex items-center justify-between text-muted-foreground text-[10px] sm:text-xs uppercase font-semibold">
+            <span className="truncate">Benchmark Alpha</span>
+            <div className="flex items-center gap-1 shrink-0">
+              <Scale className="w-3.5 h-3.5 text-purple-400" />
+              <ChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5 pt-1 sm:pt-1.5 flex-wrap">
+            <span
+              className={`text-lg sm:text-2xl font-extrabold tracking-tight font-mono ${
                 analytics.isOutperforming ? 'text-emerald-400' : 'text-amber-400'
               }`}
             >
               {alphaDisplay}
             </span>
-            <Badge variant="outline" className="text-[10px] text-purple-400 border-purple-500/30">
-              vs Nifty 50 TRI
-            </Badge>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Nifty 50 5Y CAGR:{' '}
-            <span className="font-semibold text-foreground font-mono">14.20%</span>
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Card 4: Diversification Score */}
-      <Card className="border-border/80 bg-card/60 backdrop-blur-md relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-semibold uppercase tracking-wider">
-              Diversification Score
+            <span className="hidden sm:inline text-[10px] text-purple-300 font-medium">
+              vs Nifty 50
             </span>
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
           </div>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold tracking-tight text-foreground font-mono">
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
+            Nifty 5Y CAGR: <span className="font-semibold text-foreground font-mono">14.2%</span>
+          </p>
+        </Card>
+      </Link>
+
+      {/* Card 4: Diversification Score -> /portfolio */}
+      <Link to="/portfolio" className="block group focus:outline-none">
+        <Card className="h-full border-border/80 bg-card/60 backdrop-blur-md p-3 sm:p-4 group-hover:border-emerald-500/40 transition-colors">
+          <div className="flex items-center justify-between text-muted-foreground text-[10px] sm:text-xs uppercase font-semibold">
+            <span className="truncate">Diversification Score</span>
+            <div className="flex items-center gap-1 shrink-0">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <ChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5 pt-1 sm:pt-1.5 flex-wrap">
+            <span className="text-lg sm:text-2xl font-extrabold tracking-tight text-foreground font-mono">
               {analytics.concentration.diversificationScore}
             </span>
-            <span className="text-xs text-muted-foreground">/ 100</span>
+            <span className="text-[10px] sm:text-xs text-muted-foreground">/100</span>
             <Badge
               variant="outline"
-              className={`text-[10px] uppercase font-bold ${
+              className={`text-[9px] sm:text-[10px] uppercase font-bold px-1.5 py-0 ${
                 analytics.concentration.riskLevel === 'low'
                   ? 'text-emerald-400 border-emerald-500/30'
                   : analytics.concentration.riskLevel === 'moderate'
@@ -133,15 +139,12 @@ export function AnalyticsKpiGrid({
               {analytics.concentration.riskLevel} Risk
             </Badge>
           </div>
-          <p className="text-xs text-muted-foreground truncate">
-            Top Asset:{' '}
-            <span className="font-semibold text-foreground">
-              {analytics.concentration.topAssetName}
-            </span>{' '}
-            ({analytics.concentration.topAssetWeight.toFixed(1)}%)
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
+            Top: <span className="font-semibold text-foreground">{analytics.concentration.topAssetName}</span> (
+            {analytics.concentration.topAssetWeight.toFixed(0)}%)
           </p>
-        </CardContent>
-      </Card>
+        </Card>
+      </Link>
     </div>
   );
 }

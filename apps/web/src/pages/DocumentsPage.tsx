@@ -28,7 +28,6 @@ import {
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
-import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 import {
   UploadDocumentModal,
@@ -42,7 +41,7 @@ export function DocumentsPage() {
   const { user } = useAuth();
   const { activeHouseholdId, canEditFinancials } = useHousehold();
   const { mode } = useRepositories();
-  const { members, selectedMemberId } = useFamily();
+  const { members, selectedMemberId, setSelectedMemberId } = useFamily();
   const { isSupportModeActive } = useSupportSession();
   const vaultRepo = useDocumentVaultRepository();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -248,26 +247,25 @@ export function DocumentsPage() {
   const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
 
   return (
-    <div className="space-y-6 pb-20 md:pb-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <FolderLock className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">
-                Family Document Vault
-              </h1>
-              <p className="text-sm text-slate-400">
-                Encrypted household records — PAN, HUF deeds, CAS statements, insurance & property
-              </p>
-            </div>
+    <div className="space-y-4 sm:space-y-5 pb-20 md:pb-8">
+      {/* Compact Header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="hidden sm:flex p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+            <FolderLock className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">
+              Family Document Vault
+            </h1>
+            <p className="hidden sm:block text-xs text-slate-400">
+              Encrypted household records — PAN, HUF deeds, CAS statements &amp; property
+            </p>
           </div>
         </div>
 
         <Button
+          size="sm"
           onClick={() => {
             if (canEditFinancials && !isSupportModeActive) setIsUploadModalOpen(true);
           }}
@@ -279,22 +277,69 @@ export function DocumentsPage() {
                 ? 'View-only household role cannot upload documents'
                 : undefined
           }
-          className="flex items-center gap-2 self-start sm:self-auto"
+          className="h-8 px-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs gap-1.5 shrink-0 shadow-sm"
         >
-          <Upload className="w-4 h-4" />
-          Upload Document
+          <Upload className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>Upload Document</span>
         </Button>
       </div>
 
-      {/* Family Filter Bar */}
-      <FamilyFilterBar
-        onOpenManageModal={() => setIsManageFamilyOpen(true)}
-        showAccountSelector={false}
-      />
+      {/* Compact Single-Row "MY FAMILY" Chip Strip */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-xs text-muted-foreground sm:hidden">
+          <span className="font-semibold uppercase tracking-wider text-slate-400 text-[11px]">
+            My Family
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsManageFamilyOpen(true)}
+            className="text-[10px] text-primary hover:underline"
+          >
+            Manage
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+          <button
+            type="button"
+            onClick={() => setSelectedMemberId('all')}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
+              selectedMemberId === 'all'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
+            }`}
+          >
+            All Members
+          </button>
+
+          {members.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setSelectedMemberId(m.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
+                selectedMemberId === m.id
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
+              }`}
+            >
+              {m.name}
+            </button>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => setIsManageFamilyOpen(true)}
+            className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs text-muted-foreground hover:text-foreground bg-secondary/40 hover:bg-secondary border border-border/60 whitespace-nowrap shrink-0"
+          >
+            <span>+ Manage</span>
+          </button>
+        </div>
+      </div>
 
       {/* Banners */}
       {errorMessage && (
-        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm flex items-center justify-between">
+        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center justify-between">
           <span>{errorMessage}</span>
           <button onClick={() => setErrorMessage(null)} className="text-xs underline ml-4">
             Dismiss
@@ -303,7 +348,7 @@ export function DocumentsPage() {
       )}
 
       {statusMessage && (
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm flex items-center justify-between">
+        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center justify-between">
           <span>{statusMessage}</span>
           <button onClick={() => setStatusMessage(null)} className="text-xs underline ml-4">
             Dismiss
@@ -311,105 +356,115 @@ export function DocumentsPage() {
         </div>
       )}
 
-      {/* KPI Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-              <span>Vault Documents</span>
-              <FileText className="w-4 h-4 text-emerald-400" />
+      {/* Compact 2x2 KPI Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        <Card className="border-border/80 bg-card/60">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between text-slate-400 text-[11px] sm:text-xs mb-1">
+              <span className="truncate">Vault Documents</span>
+              <FileText className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             </div>
-            <div className="text-2xl font-bold text-white">{summary.totalDocuments}</div>
-            <p className="text-xs text-slate-500 mt-1">
-              {selectedMemberId.toLowerCase() === 'all'
-                ? 'Across all household members'
-                : 'For selected member'}
+            <div className="text-lg sm:text-2xl font-bold text-white">{summary.totalDocuments}</div>
+            <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 truncate">
+              {selectedMemberId.toLowerCase() === 'all' ? 'All members' : 'Selected member'}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-              <span>Storage Used</span>
-              <HardDrive className="w-4 h-4 text-cyan-400" />
+        <Card className="border-border/80 bg-card/60">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between text-slate-400 text-[11px] sm:text-xs mb-1">
+              <span className="truncate">Storage Used</span>
+              <HardDrive className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
             </div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-lg sm:text-2xl font-bold text-white truncate">
               {formatFileSize(summary.totalSizeBytes)}
             </div>
-            <p className="text-xs text-slate-500 mt-1">Private household bucket</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-              <span>Expiring / Renewals</span>
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
-            </div>
-            <div className="text-2xl font-bold text-white">
-              {summary.expiringSoonCount + summary.expiredCount}
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              {summary.expiredCount} expired · {summary.expiringSoonCount} due within 30d
+            <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 truncate">
+              Private bucket
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-              <span>Access Policy</span>
-              <ShieldCheck className="w-4 h-4 text-indigo-400" />
+        <Card className="border-border/80 bg-card/60">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between text-slate-400 text-[11px] sm:text-xs mb-1">
+              <span className="truncate">Expiring / Renewals</span>
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             </div>
-            <div className="text-2xl font-bold text-white">Household RLS</div>
-            <p className="text-xs text-slate-500 mt-1">Signed URLs · 20 MB limit</p>
+            <div className="text-lg sm:text-2xl font-bold text-white">
+              {summary.expiringSoonCount + summary.expiredCount}
+            </div>
+            <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 truncate">
+              {summary.expiredCount} expired · {summary.expiringSoonCount} due 30d
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/80 bg-card/60">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between text-slate-400 text-[11px] sm:text-xs mb-1">
+              <span className="truncate">Access Policy</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            </div>
+            <div className="text-base sm:text-xl font-bold text-white whitespace-nowrap truncate">
+              Household RLS
+            </div>
+            <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 truncate">
+              Signed URLs · 20 MB
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search & Category Filters */}
-      <div className="space-y-3">
+      {/* Compact Search & Single-Row Horizontal Category Strip */}
+      <div className="space-y-2.5">
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by document title, filename, member, or notes..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            placeholder="Search documents, filenames, member..."
+            className="w-full h-9 pl-9 pr-3 rounded-xl bg-slate-900 border border-slate-800 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
           />
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setSelectedCategory('ALL')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
-              selectedCategory === 'ALL'
-                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
-                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-            }`}
-          >
-            All ({summary.totalDocuments})
-          </button>
-          {DOCUMENT_CATEGORIES.map((cat) => {
-            const count = summary.countsByCategory[cat.id] || 0;
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
-                  selectedCategory === cat.id
-                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
-                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-                }`}
-              >
-                {cat.label} ({count})
-              </button>
-            );
-          })}
+        <div className="relative -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pr-6 sm:pr-0 py-0.5">
+            <button
+              type="button"
+              onClick={() => setSelectedCategory('ALL')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border whitespace-nowrap shrink-0 ${
+                selectedCategory === 'ALL'
+                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+              }`}
+            >
+              All ({summary.totalDocuments})
+            </button>
+            {DOCUMENT_CATEGORIES.map((cat) => {
+              const count = summary.countsByCategory[cat.id] || 0;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border whitespace-nowrap shrink-0 ${
+                    selectedCategory === cat.id
+                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  {cat.label} ({count})
+                </button>
+              );
+            })}
+          </div>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none sm:hidden absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent"
+          />
         </div>
       </div>
 

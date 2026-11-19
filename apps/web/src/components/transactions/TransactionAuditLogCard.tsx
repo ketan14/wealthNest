@@ -97,9 +97,9 @@ export function TransactionAuditLogCard({
       <CardHeader className="pb-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <CardTitle className="text-base">Transaction Audit Log</CardTitle>
+            <CardTitle className="text-base">Recent Transactions</CardTitle>
             <CardDescription>
-              Chronological ledger of cashflow movements, asset trades, and dividend payouts.
+              Chronological log of deposits, buys, dividends, and withdrawals.
             </CardDescription>
           </div>
 
@@ -195,15 +195,15 @@ export function TransactionAuditLogCard({
                   <th className="py-3 px-4 font-semibold uppercase tracking-wider">Date</th>
                   <th className="py-3 px-4 font-semibold uppercase tracking-wider">Type</th>
                   <th className="py-3 px-4 font-semibold uppercase tracking-wider">
-                    Asset / Description
+                    Description
                   </th>
                   <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
                     Quantity
                   </th>
-                  <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
+                  <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right whitespace-nowrap">
                     Amount ({currencySymbol})
                   </th>
-                  <th className="py-3 px-4 font-semibold uppercase tracking-wider">Audit Notes</th>
+                  <th className="py-3 px-4 font-semibold uppercase tracking-wider">Notes</th>
                   <th className="py-3 px-4 font-semibold uppercase tracking-wider text-center">
                     Action
                   </th>

@@ -134,8 +134,8 @@ export function Header({ onOpenCommandPalette }: HeaderProps) {
 
         {/* User Authentication state */}
         {user ? (
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-secondary/60 border border-border/60 text-xs">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-secondary/60 border border-border/60 text-xs">
               <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
                 <User className="w-3.5 h-3.5" />
               </div>
@@ -147,8 +147,9 @@ export function Header({ onOpenCommandPalette }: HeaderProps) {
               variant="ghost"
               size="sm"
               onClick={signOut}
-              title="Sign Out"
-              className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+              aria-label="Sign Out of WealthNest"
+              title="Sign Out of WealthNest"
+              className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground gap-1.5"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Sign Out</span>

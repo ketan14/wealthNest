@@ -1,10 +1,14 @@
+import { Link } from 'react-router-dom';
 import { AllocationModelType, PortfolioAnalyticsSummary } from '@wealthnest/domain';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { formatInr } from '@/utils/formatInr';
 import {
   ArrowDownRight,
   ArrowUpRight,
   Award,
+  Plus,
   Scale,
   ShieldCheck,
   SlidersHorizontal,
@@ -104,86 +108,134 @@ export function BenchmarkAndRebalanceSection({
       </Card>
 
       <Card className="border-border/80 bg-card/60 backdrop-blur-md flex flex-col justify-between">
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-4 pb-2">
+          <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-base font-bold flex items-center gap-2">
-              <SlidersHorizontal className="w-5 h-5 text-emerald-400" />
-              Asset Allocation Drift & Rebalancing
+              <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 shrink-0" />
+              <span>Asset Allocation Drift &amp; Rebalancing</span>
             </CardTitle>
-            <Badge variant="outline" className="text-xs capitalize font-medium">
+            <Badge variant="outline" className="text-[11px] capitalize font-medium shrink-0">
               {modelType} Model
             </Badge>
           </div>
           <CardDescription className="text-xs">
-            Deviations from your target strategy with calculated rebalancing buy/sell amounts.
+            Actual vs target buckets with click-through drill-downs.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {analytics.drifts.map((drift) => {
-            const isOver = drift.driftPercentage > 0;
-            const isBalanced = Math.abs(drift.driftPercentage) < 1.0;
-
-            return (
-              <div
-                key={drift.assetClassId}
-                className="p-3 rounded-lg bg-accent/20 border border-border/60 hover:bg-accent/40 transition-all space-y-2"
-              >
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: drift.colorHex }}
+        <CardContent className="p-4 pt-2 space-y-3">
+          {analytics.totalValue.cents <= 0n ? (
+            <div className="min-h-[140px] rounded-xl border border-dashed border-slate-800 bg-slate-950/40 flex flex-col items-center justify-center text-center p-4 gap-2">
+              <p className="text-sm font-semibold text-slate-300">No assets</p>
+              <p className="text-xs text-slate-500">
+                Investments · Real Estate · Cash &amp; Bank · Gold
+              </p>
+              <Link to="/portfolio?action=new">
+                <Button
+                  size="sm"
+                  className="h-8 text-xs mt-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  Add Asset
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <>
+              {/* Horizontal Stacked Allocation Bar */}
+              <div className="w-full h-2.5 rounded-full overflow-hidden flex bg-slate-800/80">
+                {[...analytics.drifts]
+                  .filter((d) => d.currentPercentage > 0)
+                  .sort((a, b) => b.currentPercentage - a.currentPercentage)
+                  .map((d) => (
+                    <div
+                      key={d.assetClassId}
+                      title={`${d.name}: ${d.currentPercentage.toFixed(1)}%`}
+                      style={{
+                        width: `${Math.max(2, d.currentPercentage)}%`,
+                        backgroundColor: d.colorHex,
+                      }}
+                      className="h-full transition-all"
                     />
-                    <span className="font-semibold text-foreground">{drift.name}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 font-mono">
-                    <span className="text-muted-foreground">
-                      {drift.currentPercentage.toFixed(1)}% / {drift.targetPercentage}%
-                    </span>
-                    <Badge
-                      variant="outline"
-                      className={`text-[10px] font-bold ${
-                        isBalanced
-                          ? 'text-slate-400 border-slate-500/30'
-                          : isOver
-                            ? 'text-amber-400 border-amber-500/30'
-                            : 'text-blue-400 border-blue-500/30'
-                      }`}
-                    >
-                      {isBalanced
-                        ? 'Balanced'
-                        : `${isOver ? '+' : ''}${drift.driftPercentage.toFixed(1)}% Drift`}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border/40">
-                  <span className="text-muted-foreground">
-                    Current Value:{' '}
-                    <span className="font-mono text-foreground">
-                      {drift.currentValue.formatIndianCompact()}
-                    </span>
-                  </span>
-                  {isBalanced ? (
-                    <span className="text-emerald-400 font-medium flex items-center gap-1">
-                      <ShieldCheck className="w-3.5 h-3.5" /> Optimal Allocation
-                    </span>
-                  ) : drift.rebalanceAction === 'buy' ? (
-                    <span className="text-blue-400 font-medium flex items-center gap-1">
-                      <ArrowUpRight className="w-3.5 h-3.5" /> Buy +
-                      {drift.rebalanceAmount.formatIndianCompact()}
-                    </span>
-                  ) : (
-                    <span className="text-amber-400 font-medium flex items-center gap-1">
-                      <ArrowDownRight className="w-3.5 h-3.5" /> Trim -
-                      {drift.rebalanceAmount.formatIndianCompact()}
-                    </span>
-                  )}
-                </div>
+                  ))}
               </div>
-            );
-          })}
+
+              {[...analytics.drifts]
+                .sort((a, b) => b.currentPercentage - a.currentPercentage)
+                .map((drift) => {
+                  const isOver = drift.driftPercentage > 0;
+                  const isBalanced = Math.abs(drift.driftPercentage) < 1.0;
+                  const destination =
+                    drift.assetClassId === 'real_estate' ? '/real-estate' : '/portfolio';
+
+                  return (
+                    <Link
+                      key={drift.assetClassId}
+                      to={destination}
+                      className="block p-3 rounded-lg bg-accent/20 border border-border/60 hover:bg-accent/40 hover:border-slate-700 transition-all space-y-2"
+                    >
+                      <div className="flex items-center justify-between text-xs gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: drift.colorHex }}
+                          />
+                          <span className="font-semibold text-foreground truncate">
+                            {drift.name}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 font-mono shrink-0">
+                          <span className="text-muted-foreground">
+                            {drift.currentPercentage.toFixed(1)}% / {drift.targetPercentage}%
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] font-bold ${
+                              isBalanced
+                                ? 'text-slate-400 border-slate-500/30'
+                                : isOver
+                                  ? 'text-amber-400 border-amber-500/30'
+                                  : 'text-blue-400 border-blue-500/30'
+                            }`}
+                          >
+                            {isBalanced
+                              ? 'Balanced'
+                              : `${isOver ? '+' : ''}${drift.driftPercentage.toFixed(1)}% Drift`}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border/40">
+                        <span className="text-muted-foreground">
+                          Current:{' '}
+                          <span className="font-mono text-foreground font-semibold">
+                            {formatInr(drift.currentValue.toDecimal(), { compact: true })}
+                          </span>
+                        </span>
+                        {isBalanced ? (
+                          <span className="text-emerald-400 font-medium flex items-center gap-1">
+                            <ShieldCheck className="w-3.5 h-3.5" /> Optimal Allocation
+                          </span>
+                        ) : drift.rebalanceAction === 'buy' ? (
+                          <span className="text-blue-400 font-medium flex items-center gap-1">
+                            <ArrowUpRight className="w-3.5 h-3.5" /> Buy{' '}
+                            {formatInr(drift.rebalanceAmount.toDecimal(), {
+                              compact: true,
+                              showSign: true,
+                            })}
+                          </span>
+                        ) : (
+                          <span className="text-amber-400 font-medium flex items-center gap-1">
+                            <ArrowDownRight className="w-3.5 h-3.5" /> Trim -
+                            {formatInr(drift.rebalanceAmount.toDecimal(), { compact: true })}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

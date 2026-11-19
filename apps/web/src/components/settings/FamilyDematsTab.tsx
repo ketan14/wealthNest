@@ -38,13 +38,13 @@ export function FamilyDematsTab({ members, accounts, onOpenManageFamily }: Famil
   const { activeHousehold, householdRole } = useHousehold();
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-xl bg-gradient-to-r from-slate-900 via-indigo-950/30 to-slate-900 border border-slate-800">
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-gradient-to-r from-slate-900 via-indigo-950/30 to-slate-900 border border-slate-800">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-              <Users className="w-5 h-5 text-indigo-400" />
-              Family Members & Demat Folios
+            <h2 className="text-base font-semibold text-white flex items-center gap-2">
+              <Users className="w-4 h-4 text-indigo-400" />
+              Family Members &amp; Demat Folios
             </h2>
             {activeHousehold && (
               <Badge
@@ -55,17 +55,17 @@ export function FamilyDematsTab({ members, accounts, onOpenManageFamily }: Famil
               </Badge>
             )}
           </div>
-          <p className="text-sm text-slate-400 mt-1">
-            Manage household legal entities (Individual PAN, HUF, Minor) and link Zerodha, Groww,
-            Angel One, or CAMS accounts.
+          <p className="text-xs text-slate-400 mt-0.5">
+            Household legal entities (PAN, HUF, Minor) and linked broker/CAMS accounts.
           </p>
         </div>
         <Button
+          size="sm"
           onClick={onOpenManageFamily}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 self-start sm:self-auto shrink-0 shadow-lg shadow-indigo-600/20"
+          className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 self-start sm:self-auto shrink-0 shadow-lg shadow-indigo-600/20"
         >
-          <SlidersHorizontal className="w-4 h-4" />
-          Manage Entities & Accounts
+          <SlidersHorizontal className="w-3.5 h-3.5" />
+          Manage Entities &amp; Accounts
         </Button>
       </div>
 

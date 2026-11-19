@@ -23,15 +23,21 @@ import { LoanPortfolioSection } from '@/components/liabilities/LoanPortfolioSect
 import { DEMO_LIABILITIES } from '@/components/liabilities/liabilities-demo-data';
 import { shouldAllowDemoData } from '@/lib/config/mobile-runtime';
 import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useFamily } from '@/lib/family/family-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
-import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
-import { Landmark, Plus, RefreshCw, TrendingDown, Calendar, Percent, Wallet } from 'lucide-react';
+import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay';
+import {
+  Plus,
+  RefreshCw,
+  TrendingDown,
+  Calendar,
+  Building2,
+} from 'lucide-react';
 
 export function LiabilitiesPage() {
   const { user } = useAuth();
@@ -42,7 +48,7 @@ export function LiabilitiesPage() {
   const scopeId = activeHouseholdId || user?.id || '';
   const userId = user?.id || scopeId;
   const queryClient = useQueryClient();
-  const { members, selectedMemberId } = useFamily();
+  const { members, selectedMemberId, setSelectedMemberId } = useFamily();
   const { isSupportModeActive, supportData } = useSupportSession();
   const { currencySymbol, preferences } = usePreferences();
   const locale = preferences.numberFormat || 'en-IN';
@@ -264,40 +270,83 @@ export function LiabilitiesPage() {
     return l.status === statusFilter;
   });
 
-  const totalOutstanding = effectiveSummary.totalLiabilities.toDecimal();
-  const totalMonthlyEmi = effectiveSummary.totalMonthlyEmi.toDecimal();
   const debtToAssets = (effectiveSummary.debtToAssetsRatio ?? 0) * 100;
-  const netWorthVal = effectiveSummary.netWorth.toDecimal();
-  const isSolvent = effectiveSummary.isSolvent ?? true;
+
+  // Aggregate property equity
+  const totalPropertyEquityDecimal = useMemo(() => {
+    return (effectiveSummary.propertyEquities || []).reduce((acc, pe) => {
+      return acc + (pe.equity?.toDecimal() ?? 0);
+    }, 0);
+  }, [effectiveSummary.propertyEquities]);
+
+  const activeLoansCount = effectiveLiabilities.filter((l) => l.status === 'active').length;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-border">
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {/* 1. Header Title Row with Mobile Quick Actions & Desktop Action Buttons */}
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/10 border border-rose-500/20 text-rose-400 mb-2">
-            <Landmark className="w-3.5 h-3.5" />
-            Loans & Liabilities Engine
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-foreground">
+              Loans & Liabilities
+            </h1>
+            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/10 border border-rose-500/20 text-rose-400">
+              Loans & Liabilities Engine
+            </span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Loans & Liabilities</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="hidden sm:block text-xs sm:text-sm text-muted-foreground mt-0.5">
             Track mortgages, EMIs, property equity, LTV ratios, and dated balance repayments.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Mobile Quick Action Buttons: (↻) Sync + (+) Add Loan */}
+        <div className="flex sm:hidden items-center gap-1.5">
           <Button
-            variant="secondary"
+            variant="ghost"
+            size="sm"
             onClick={handleRefresh}
-            className="gap-2 text-xs"
             disabled={isLoadingLiabilities || isLoadingSummary}
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-lg"
+            title="Sync Liabilities"
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${isLoadingLiabilities || isLoadingSummary ? 'animate-spin text-primary' : ''}`}
+            />
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={() => {
+              if (!canEditFinancials || isSupportModeActive) return;
+              setEditingLiability(null);
+              setIsAddModalOpen(true);
+            }}
+            disabled={isSupportModeActive || !canEditFinancials}
+            className="h-8 px-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs rounded-lg shadow-sm flex items-center gap-1"
+            title="Add Loan / Liability"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Add</span>
+          </Button>
+        </div>
+
+        {/* Desktop Quick Actions */}
+        <div className="hidden sm:flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoadingLiabilities || isLoadingSummary}
+            className="text-xs gap-1.5 h-8 border-border/80"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${isLoadingLiabilities || isLoadingSummary ? 'animate-spin' : ''}`}
             />
-            Sync
+            <span>Sync</span>
           </Button>
+
           <Button
+            size="sm"
             onClick={() => {
               if (!canEditFinancials || isSupportModeActive) return;
               setEditingLiability(null);
@@ -311,114 +360,124 @@ export function LiabilitiesPage() {
                   ? 'View-only household role cannot add liabilities'
                   : undefined
             }
-            className="gap-2 shadow-lg shadow-primary/20 disabled:opacity-50"
+            className="text-xs gap-1.5 h-8 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold shadow-sm"
           >
-            <Plus className="w-4 h-4" />
-            Add Loan / Liability
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Add Loan / Liability</span>
           </Button>
         </div>
       </div>
 
-      {/* Phase 6A: Family Entity Switcher Bar */}
-      <FamilyFilterBar
-        showAccountSelector={false}
-        onOpenManageModal={() => setIsManageFamilyOpen(true)}
-      />
+      {/* 2. Compact "MY FAMILY" Horizontal Scroll Row (Matching Home and Portfolio Exactly) */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-xs text-muted-foreground sm:hidden">
+          <span className="font-semibold uppercase tracking-wider text-slate-400 text-[11px]">
+            My Family
+          </span>
+          <span className="px-2 py-0.5 rounded-full bg-secondary text-[10px] border border-border/60">
+            Household
+          </span>
+        </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Outstanding Debt */}
-        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between text-muted-foreground text-xs uppercase font-semibold">
-              <span>Total Outstanding Debt</span>
-              <TrendingDown className="w-4 h-4 text-rose-400" />
-            </div>
-            <CardTitle className="text-2xl font-bold font-mono tracking-tight text-foreground pt-1">
-              {currencySymbol}
-              {totalOutstanding.toLocaleString(locale, { maximumFractionDigits: 0 })}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-xs text-muted-foreground">
-              Across {effectiveLiabilities.filter((l) => l.status === 'active').length} active loan
-              obligations
-            </p>
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+          <button
+            type="button"
+            onClick={() => setSelectedMemberId('all')}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+              selectedMemberId === 'all'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
+            }`}
+          >
+            All Members
+          </button>
 
-        {/* Card 2: Monthly EMI */}
-        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between text-muted-foreground text-xs uppercase font-semibold">
-              <span>Monthly EMI Commitment</span>
-              <Calendar className="w-4 h-4 text-amber-400" />
-            </div>
-            <CardTitle className="text-2xl font-bold font-mono tracking-tight text-foreground pt-1">
-              {currencySymbol}
-              {totalMonthlyEmi.toLocaleString(locale, { maximumFractionDigits: 0 })}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-xs text-muted-foreground">
-              {currencySymbol}
-              {(totalMonthlyEmi * 12).toLocaleString(locale, { maximumFractionDigits: 0 })}/year in
-              debt service
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Card 3: Debt-To-Assets Ratio */}
-        <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between text-muted-foreground text-xs uppercase font-semibold">
-              <span>Debt-To-Assets Ratio</span>
-              <Percent className="w-4 h-4 text-blue-400" />
-            </div>
-            <CardTitle className="text-2xl font-bold font-mono tracking-tight text-foreground pt-1">
-              {debtToAssets.toFixed(1)}%
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center gap-1.5">
-              <Badge
-                variant={
-                  debtToAssets <= 30 ? 'success' : debtToAssets <= 50 ? 'secondary' : 'destructive'
-                }
-                className="text-[10px]"
-              >
-                {debtToAssets <= 30
-                  ? 'Conservative'
-                  : debtToAssets <= 50
-                    ? 'Moderate'
-                    : 'High Leverage'}
-              </Badge>
-              <span className="text-[11px] text-muted-foreground">of total asset base</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 4: Net Worth */}
-        <Card className="border-border/80 bg-gradient-to-br from-card to-accent/20">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between text-muted-foreground text-xs uppercase font-semibold">
-              <span>True Net Worth</span>
-              <Wallet className="w-4 h-4 text-emerald-400" />
-            </div>
-            <CardTitle
-              className={`text-2xl font-bold font-mono tracking-tight pt-1 ${
-                isSolvent ? 'text-emerald-400' : 'text-rose-400'
+          {members.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setSelectedMemberId(m.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                selectedMemberId === m.id
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
               }`}
             >
-              {isSolvent ? currencySymbol : `-${currencySymbol}`}
-              {netWorthVal.toLocaleString(locale, { maximumFractionDigits: 0 })}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-xs text-muted-foreground">
-              Gross Assets minus Total Outstanding Debt
-            </p>
-          </CardContent>
+              {m.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 3. Core Essential KPI Cards (2x2 Grid on Mobile & Tablet, 3-Card Grid on Desktop) */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
+        {/* Card 1: Total Outstanding Debt */}
+        <Card className="border-border/80 bg-card/60 backdrop-blur-sm shadow-sm hover:border-slate-700 transition-all p-3 sm:p-5">
+          <div className="flex items-center justify-between text-muted-foreground text-[10px] sm:text-xs uppercase font-semibold">
+            <span className="truncate">Total Debt</span>
+            <TrendingDown className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+          </div>
+          <div className="text-lg sm:text-2xl font-bold font-mono tracking-tight text-foreground pt-1 sm:pt-1.5">
+            <CurrencyDisplay
+              amount={effectiveSummary.totalLiabilities?.toDecimal() ?? 0}
+              className="text-lg sm:text-2xl text-foreground font-bold"
+            />
+          </div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
+            {activeLoansCount} active {activeLoansCount === 1 ? 'loan' : 'loans'}
+          </p>
+        </Card>
+
+        {/* Card 2: Monthly EMI Commitment */}
+        <Card className="border-border/80 bg-card/60 backdrop-blur-sm shadow-sm hover:border-slate-700 transition-all p-3 sm:p-5">
+          <div className="flex items-center justify-between text-muted-foreground text-[10px] sm:text-xs uppercase font-semibold">
+            <span className="truncate">Monthly EMI</span>
+            <Calendar className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          </div>
+          <div className="text-lg sm:text-2xl font-bold font-mono tracking-tight text-foreground pt-1 sm:pt-1.5">
+            <CurrencyDisplay
+              amount={effectiveSummary.totalMonthlyEmi?.toDecimal() ?? 0}
+              className="text-lg sm:text-2xl text-foreground font-bold"
+            />
+          </div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate flex items-center gap-0.5">
+            <CurrencyDisplay
+              amount={(effectiveSummary.totalMonthlyEmi?.toDecimal() ?? 0) * 12}
+              className="text-[10px] sm:text-xs text-muted-foreground"
+            />
+            <span>/yr</span>
+          </p>
+        </Card>
+
+        {/* Card 3: Net Property Equity (Collateral Protection) */}
+        <Card className="border-border/80 bg-card/60 backdrop-blur-sm shadow-sm hover:border-slate-700 transition-all p-3 sm:p-5 col-span-2 lg:col-span-1">
+          <div className="flex items-center justify-between text-muted-foreground text-[10px] sm:text-xs uppercase font-semibold">
+            <span className="truncate">Property Equity</span>
+            <Building2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          </div>
+          <div className="text-lg sm:text-2xl font-bold font-mono tracking-tight text-emerald-400 pt-1 sm:pt-1.5">
+            <CurrencyDisplay
+              amount={totalPropertyEquityDecimal}
+              className="text-lg sm:text-2xl text-emerald-400 font-bold"
+            />
+          </div>
+          <div className="flex items-center gap-1.5 mt-1">
+            <Badge
+              variant={
+                debtToAssets <= 30 ? 'success' : debtToAssets <= 50 ? 'secondary' : 'destructive'
+              }
+              className="text-[9px] sm:text-[10px] px-1.5 py-0"
+            >
+              {debtToAssets <= 30
+                ? 'Conservative'
+                : debtToAssets <= 50
+                  ? 'Moderate'
+                  : 'High Leverage'}
+            </Badge>
+            <span className="text-[10px] sm:text-[11px] text-muted-foreground truncate">
+              {(effectiveSummary.propertyEquities?.[0]?.ltvRatioPercentage ?? 0).toFixed(1)}% LTV
+            </span>
+          </div>
         </Card>
       </div>
 

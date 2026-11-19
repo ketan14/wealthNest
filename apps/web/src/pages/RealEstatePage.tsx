@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, Landmark, IndianRupee, FileText, ShieldCheck } from 'lucide-react';
+import { Building2, Landmark, IndianRupee, FileText, ShieldCheck, Plus } from 'lucide-react';
 import {
   Money,
   PropertyType,
@@ -15,7 +15,6 @@ import { useRepositories } from '@/lib/persistence/repository-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 import {
   PropertyMetricsModal,
@@ -159,7 +158,7 @@ function saveOverrides(userId: string, overrides: Record<string, PropertyMetrics
 export function RealEstatePage() {
   const { user } = useAuth();
   const { activeHouseholdId, canEditFinancials } = useHousehold();
-  const { members, selectedMemberId } = useFamily();
+  const { members, selectedMemberId, setSelectedMemberId } = useFamily();
   const { holdingRepo, liabilityRepo, mode } = useRepositories();
   const { isSupportModeActive } = useSupportSession();
 
@@ -174,6 +173,8 @@ export function RealEstatePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<RealEstatePropertyInput | null>(null);
+  const [typeFilter, setTypeFilter] = useState<'all' | PropertyType>('all');
+  const [loanFilter, setLoanFilter] = useState<'all' | 'loan' | 'debt_free'>('all');
 
   const loadRealEstateData = useCallback(async () => {
     setIsLoading(true);
@@ -298,6 +299,15 @@ export function RealEstatePage() {
     [memberFilteredProperties]
   );
 
+  const visibleProperties = useMemo(() => {
+    return summary.properties.filter((metrics) => {
+      if (typeFilter !== 'all' && metrics.input.propertyType !== typeFilter) return false;
+      if (loanFilter === 'loan' && metrics.input.linkedLoanBalancePaise <= 0n) return false;
+      if (loanFilter === 'debt_free' && metrics.input.linkedLoanBalancePaise > 0n) return false;
+      return true;
+    });
+  }, [summary.properties, typeFilter, loanFilter]);
+
   const handleSaveOverride = (propertyId: string, override: PropertyMetricsOverride) => {
     if (!canEditFinancials || isSupportModeActive) return;
     const next = { ...overrides, [propertyId]: override };
@@ -306,44 +316,100 @@ export function RealEstatePage() {
   };
 
   return (
-    <div className="space-y-6 pb-20 md:pb-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+    <div className="space-y-4 sm:space-y-5 pb-20 md:pb-8">
+      {/* Compact Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="hidden sm:flex p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
             <Building2 className="w-5 h-5" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">
               Real Estate Equity & Yield
             </h1>
-            <p className="text-sm text-slate-400">
-              Property valuations, linked home loan LTV, net equity, rental yield & cashflow
+            <p className="hidden sm:block text-xs text-slate-400">
+              Property valuations, linked home loan LTV, net equity &amp; rental cashflow
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Link to="/liabilities">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Landmark className="w-4 h-4" />
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+              <Landmark className="w-3.5 h-3.5" />
               Home Loans
             </Button>
           </Link>
           <Link to="/documents">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <FileText className="w-4 h-4" />
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+              <FileText className="w-3.5 h-3.5" />
               Property Deeds
+            </Button>
+          </Link>
+          <Link to="/portfolio?action=new">
+            <Button
+              size="sm"
+              className="h-8 text-xs gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold"
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              Add Property
             </Button>
           </Link>
         </div>
       </div>
 
-      {/* Family Filter Bar */}
-      <FamilyFilterBar
-        onOpenManageModal={() => setIsManageFamilyOpen(true)}
-        showAccountSelector={false}
-      />
+      {/* Compact Single-Row "MY FAMILY" Chip Strip */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-xs text-muted-foreground sm:hidden">
+          <span className="font-semibold uppercase tracking-wider text-slate-400 text-[11px]">
+            My Family
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsManageFamilyOpen(true)}
+            className="text-[10px] text-primary hover:underline"
+          >
+            Manage
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+          <button
+            type="button"
+            onClick={() => setSelectedMemberId('all')}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
+              selectedMemberId === 'all'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
+            }`}
+          >
+            All Members
+          </button>
+
+          {members.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setSelectedMemberId(m.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
+                selectedMemberId === m.id
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
+              }`}
+            >
+              {m.name}
+            </button>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => setIsManageFamilyOpen(true)}
+            className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs text-muted-foreground hover:text-foreground bg-secondary/40 hover:bg-secondary border border-border/60 whitespace-nowrap shrink-0"
+          >
+            <span>+ Manage</span>
+          </button>
+        </div>
+      </div>
 
       {errorMessage && (
         <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm">
@@ -419,10 +485,61 @@ export function RealEstatePage() {
         </Card>
       </div>
 
+      {/* Fast Property Type & Loan Status Filter Strip */}
+      <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar py-0.5">
+        <div className="flex items-center gap-1.5 shrink-0">
+          {(
+            [
+              { id: 'all', label: 'All Types' },
+              { id: 'residential', label: 'Residential' },
+              { id: 'commercial', label: 'Commercial' },
+              { id: 'land', label: 'Plot / Land' },
+              { id: 'reit', label: 'Listed REIT' },
+            ] as const
+          ).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setTypeFilter(item.id)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium border whitespace-nowrap transition-colors ${
+                typeFilter === item.id
+                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0 bg-slate-900 p-0.5 rounded-lg border border-slate-800">
+          {(
+            [
+              { id: 'all', label: 'All' },
+              { id: 'loan', label: 'With Loan' },
+              { id: 'debt_free', label: 'Debt-Free' },
+            ] as const
+          ).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setLoanFilter(item.id)}
+              className={`px-2 py-0.5 rounded-md text-[11px] font-medium whitespace-nowrap transition-colors ${
+                loanFilter === item.id
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Property Cards */}
       <RealEstatePropertyList
         isLoading={isLoading}
-        properties={summary.properties}
+        properties={visibleProperties}
         memberNameMap={memberNameMap}
         isSupportModeActive={isSupportModeActive}
         formatInr={formatInr}

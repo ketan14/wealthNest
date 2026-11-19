@@ -10,15 +10,40 @@ import {
 import { useAuth } from '../supabase/auth-context';
 import { userAdapter } from '../supabase/user.adapter';
 
+const LEGAL_NAME_STORAGE_PREFIX = 'wealthnest_legal_name_';
+
+function readStoredLegalName(userId: string): string {
+  try {
+    return window.localStorage.getItem(`${LEGAL_NAME_STORAGE_PREFIX}${userId}`) || '';
+  } catch {
+    return '';
+  }
+}
+
+function writeStoredLegalName(userId: string, legalName: string): void {
+  try {
+    const key = `${LEGAL_NAME_STORAGE_PREFIX}${userId}`;
+    if (legalName) {
+      window.localStorage.setItem(key, legalName);
+    } else {
+      window.localStorage.removeItem(key);
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
 interface PreferencesContextType {
   preferences: UserPreferences;
   currencyCode: CurrencyCode;
   currencySymbol: string;
   displayName: string;
+  legalName: string;
   email: string;
   isLoading: boolean;
   updatePreferences: (partial: Partial<UserPreferences>) => Promise<void>;
   updateDisplayName: (name: string) => Promise<void>;
+  updateLegalName: (name: string) => Promise<void>;
   formatAmount: (cents: number | bigint, options?: { compact?: boolean }) => string;
   resetPreferences: () => Promise<void>;
 }
@@ -28,10 +53,12 @@ const PreferencesContext = createContext<PreferencesContextType>({
   currencyCode: 'INR',
   currencySymbol: '₹',
   displayName: 'WealthNest Investor',
+  legalName: '',
   email: 'investor@wealthnest.in',
   isLoading: false,
   updatePreferences: async () => {},
   updateDisplayName: async () => {},
+  updateLegalName: async () => {},
   formatAmount: () => '',
   resetPreferences: async () => {},
 });
@@ -42,12 +69,19 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
 
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_USER_PREFERENCES);
   const [displayName, setDisplayName] = useState<string>('WealthNest Investor');
-  const [email, setEmail] = useState<string>('investor@wealthnest.in');
+  const [legalName, setLegalName] = useState<string>(() => readStoredLegalName(userId));
+  const [email, setEmail] = useState<string>(user?.email || 'investor@wealthnest.in');
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Load preferences from adapter on mount or user change
   useEffect(() => {
     let mounted = true;
+    const storedLegal = readStoredLegalName(userId);
+    const fallbackLegal =
+      storedLegal ||
+      (typeof user?.user_metadata?.legal_name === 'string' ? user.user_metadata.legal_name : '');
+    setLegalName(fallbackLegal);
+
     userAdapter.getById(userId).then((res) => {
       if (!mounted) return;
       if (res.success && res.value) {
@@ -56,10 +90,13 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
         }
         if (res.value.displayName) {
           setDisplayName(res.value.displayName);
+        } else if (user?.user_metadata?.full_name) {
+          setDisplayName(user.user_metadata.full_name);
         }
-        if (res.value.email) {
-          setEmail(res.value.email);
-        }
+        // Unify email: prefer live Supabase Auth session email over fallback DB placeholder
+        const profileEmail =
+          res.value.email && res.value.email !== 'user@wealthnest.local' ? res.value.email : '';
+        setEmail(user?.email || profileEmail || 'investor@wealthnest.in');
       } else if (user) {
         setEmail(user.email || 'investor@wealthnest.in');
         setDisplayName(user.user_metadata?.full_name || 'WealthNest Investor');
@@ -84,16 +121,23 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   };
 
   const updateDisplayNameHandler = async (name: string) => {
-    setDisplayName(name);
+    const trimmed = name.trim();
+    setDisplayName(trimmed);
     await userAdapter.save({
       id: userId,
-      email,
-      displayName: name,
+      email: user?.email || email,
+      displayName: trimmed,
       defaultCurrency: preferences.defaultCurrency,
       preferences,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
+  };
+
+  const updateLegalNameHandler = async (name: string) => {
+    const trimmed = name.trim();
+    setLegalName(trimmed);
+    writeStoredLegalName(userId, trimmed);
   };
 
   const resetPreferencesHandler = async () => {
@@ -124,10 +168,12 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
         currencyCode,
         currencySymbol,
         displayName,
+        legalName,
         email,
         isLoading,
         updatePreferences: updatePreferencesHandler,
         updateDisplayName: updateDisplayNameHandler,
+        updateLegalName: updateLegalNameHandler,
         formatAmount,
         resetPreferences: resetPreferencesHandler,
       }}

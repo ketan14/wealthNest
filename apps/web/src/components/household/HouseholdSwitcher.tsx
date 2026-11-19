@@ -46,7 +46,7 @@ export function HouseholdSwitcher() {
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         data-testid="household-switcher-trigger"
-        className="flex items-center gap-2 h-8 px-2.5 sm:px-3 rounded-lg bg-secondary/70 hover:bg-secondary border border-border/70 text-xs transition-colors max-w-[230px]"
+        className="flex items-center gap-1.5 sm:gap-2 h-8 px-2 sm:px-3 rounded-lg bg-secondary/70 hover:bg-secondary border border-border/70 text-xs transition-colors max-w-[140px] sm:max-w-[230px]"
         title={`Active Household: ${activeHousehold.name} (${formatRoleLabel(householdRole)})`}
       >
         <Home className="w-3.5 h-3.5 text-emerald-400 shrink-0" />

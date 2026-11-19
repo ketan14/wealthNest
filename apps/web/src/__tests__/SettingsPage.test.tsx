@@ -43,14 +43,17 @@ describe('SettingsPage Component (Sprint 3)', () => {
     expect(screen.getByRole('button', { name: /Data Portability & Backup/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /System Diagnostics/i })).toBeInTheDocument();
 
-    // Profile Tab Content
+    // Profile Tab Content (compact rows + account tier grid)
     expect(screen.getByText('User Profile Information')).toBeInTheDocument();
+    expect(screen.getByText('Display Name')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Edit Display Name/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Edit Legal \/ KYC Name/i })).toBeInTheDocument();
     expect(screen.getByText('Security & Access Credentials')).toBeInTheDocument();
     expect(screen.getByText('Row-Level Security (RLS)')).toBeInTheDocument();
     expect(screen.getByText('Self-Hosted Private Vault')).toBeInTheDocument();
   });
 
-  it('navigates to Localization & Tax Standards tab and updates formatting options', () => {
+  it('navigates to Localization & Tax Standards tab and updates formatting options via EditSettingModal', async () => {
     renderSettingsPage();
 
     const locTab = screen.getByRole('button', { name: /Localization & Tax Standards/i });
@@ -59,14 +62,22 @@ describe('SettingsPage Component (Sprint 3)', () => {
     // Localization content
     expect(screen.getByText('Currency & Regional Standards')).toBeInTheDocument();
     expect(screen.getByText('Default Base Currency')).toBeInTheDocument();
-    expect(screen.getByText('Indian Rupee')).toBeInTheDocument();
-    expect(screen.getByText('Indian System (en-IN)')).toBeInTheDocument();
+    expect(screen.getByText(/Indian Rupee/i)).toBeInTheDocument();
+    expect(screen.getByText(/Indian System \(en-IN\)/i)).toBeInTheDocument();
     expect(screen.getByText('Indian Fiscal Year (Apr 1 - Mar 31)')).toBeInTheDocument();
     expect(screen.getByText(/New Regime \(Sec 115BAC\)/i)).toBeInTheDocument();
 
     // Live Formatting Preview card
     expect(screen.getByText('Live Formatting Preview')).toBeInTheDocument();
     expect(screen.getByText('Portfolio Valuation (Compact)')).toBeInTheDocument();
+
+    // Edit Base Currency via EditSettingModal
+    fireEvent.click(screen.getByRole('button', { name: /Edit Default Base Currency/i }));
+    const select = await screen.findByLabelText('Base Currency');
+    fireEvent.change(select, { target: { value: 'USD' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Save$/i }));
+
+    expect(await screen.findByText(/USD — US Dollar/i)).toBeInTheDocument();
   });
 
   it('navigates to Data Portability & Backup tab with export and restore capabilities', () => {

@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PortfolioSummary, filterRecordsByPrivacy } from '@wealthnest/domain';
 import {
@@ -41,6 +42,7 @@ import { useLiveMarketFeed } from '@/lib/market/useLiveMarketFeed';
 import { useFamily } from '@/lib/family/family-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
+import { FamilyDistributionWidget } from '@/components/family/FamilyDistributionWidget';
 
 export function PortfolioPage() {
   const { user } = useAuth();
@@ -52,6 +54,15 @@ export function PortfolioPage() {
   const { currencySymbol, preferences } = usePreferences();
   const locale = preferences.numberFormat || 'en-IN';
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'new' && canEditFinancials && !isSupportModeActive) {
+      setIsModalOpen(true);
+      searchParams.delete('action');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, canEditFinancials, isSupportModeActive]);
   const [editingHolding, setEditingHolding] = useState<HoldingDetailDto | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
@@ -203,10 +214,7 @@ export function PortfolioPage() {
   }, []);
 
   const {
-    isPolling,
-    setIsPolling,
     isRefreshing: isRefreshingNavs,
-    session: marketSession,
     statusMessage: navRefreshMessage,
     quotes: liveQuotesMap,
     refreshNow: handleRefreshLiveNavs,
@@ -432,9 +440,6 @@ export function PortfolioPage() {
       <PortfolioHeader
         isAuthenticated={hasLiveBackend}
         canEditFinancials={canEditFinancials}
-        marketSession={marketSession}
-        isPolling={isPolling}
-        onTogglePolling={() => setIsPolling((prev) => !prev)}
         isRefreshingNavs={isRefreshingNavs}
         onRefreshNavs={() => void handleRefreshLiveNavs()}
         isSupportModeActive={isSupportModeActive}
@@ -445,7 +450,6 @@ export function PortfolioPage() {
           if (canEditFinancials) setIsModalOpen(true);
         }}
         onOpenManageFamily={() => setIsManageFamilyOpen(true)}
-        selectedMemberId={selectedMemberId}
         navRefreshMessage={navRefreshMessage}
       />
 
@@ -456,6 +460,10 @@ export function PortfolioPage() {
         onToggleClassFilter={(assetClassId) =>
           setSelectedClassFilter((prev) => (prev === assetClassId ? null : assetClassId))
         }
+        members={members}
+        activeHoldings={activeHoldings}
+        onRefresh={() => void handleRefreshLiveNavs()}
+        isRefreshing={isRefreshingNavs}
       />
 
       <PortfolioHoldingsSection
@@ -499,6 +507,11 @@ export function PortfolioPage() {
         }}
         onDeleteHolding={handleDeleteRequest}
       />
+
+      {/* 4. Family Ownership & PAN Entities Section (Compact / Expandable at bottom) */}
+      <div className="pt-2 border-t border-border/50">
+        <FamilyDistributionWidget />
+      </div>
 
       <PortfolioModals
         isAddOpen={isModalOpen}

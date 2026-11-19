@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   X,
   PieChart,
@@ -27,10 +27,26 @@ interface QuickActionItem {
 
 export function GlobalQuickAddModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   if (!isOpen) return null;
 
-  const actions: QuickActionItem[] = [
+  const isOnRealEstate = pathname.startsWith('/real-estate');
+  const contextualPrimaryId = isOnRealEstate
+    ? 'real-estate'
+    : pathname.startsWith('/documents')
+      ? 'document'
+      : pathname.startsWith('/portfolio')
+        ? 'holding'
+        : pathname.startsWith('/liabilities')
+          ? 'liability'
+          : pathname.startsWith('/goals')
+            ? 'goal'
+            : pathname.startsWith('/transactions')
+              ? 'transaction'
+              : null;
+
+  const baseActions: (QuickActionItem & { isRecommended?: boolean })[] = [
     {
       id: 'transaction',
       title: 'Record Cash Transaction',
@@ -105,17 +121,26 @@ export function GlobalQuickAddModal({ isOpen, onClose }: { isOpen: boolean; onCl
     },
     {
       id: 'real-estate',
-      title: 'Real Estate Equity & LTV',
-      description: 'Track property valuation, linked home loan & rental yield',
+      title: isOnRealEstate ? 'Add Property Holding' : 'Real Estate Equity & LTV',
+      description: isOnRealEstate
+        ? 'Register flat, plot, commercial shop, or REIT in portfolio'
+        : 'Track property valuation, linked home loan & rental yield',
       icon: Building2,
       color: 'text-amber-400',
       bgColor: 'bg-amber-500/15 border-amber-500/30',
       action: () => {
         onClose();
-        navigate('/real-estate');
+        navigate(isOnRealEstate ? '/portfolio?action=new' : '/real-estate');
       },
     },
   ];
+
+  const actions = baseActions
+    .map((item) => ({
+      ...item,
+      isRecommended: item.id === contextualPrimaryId,
+    }))
+    .sort((a, b) => Number(b.isRecommended) - Number(a.isRecommended));
 
   return (
     <ResponsiveModalShell
@@ -176,8 +201,13 @@ export function GlobalQuickAddModal({ isOpen, onClose }: { isOpen: boolean; onCl
                 <Icon className="w-5 h-5" />
               </div>
               <div className="min-w-0">
-                <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                  {act.title}
+                <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
+                  <span>{act.title}</span>
+                  {act.isRecommended && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-medium">
+                      This Page
+                    </span>
+                  )}
                 </h3>
                 <p className="text-xs text-muted-foreground line-clamp-1">{act.description}</p>
               </div>

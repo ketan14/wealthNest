@@ -9,7 +9,7 @@ import { PreferencesProvider } from '../lib/preferences/preferences-context';
 import { FamilyProvider } from '../lib/family/family-context';
 
 describe('HomePage Executive Overview', () => {
-  it('renders Family Net Worth, Runway, Real Estate, and Document Vault summary cards', async () => {
+  it('renders Family Net Worth, Liquid Assets, Monthly EMI, and Wealth Modules according to wireframe', async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -30,12 +30,22 @@ describe('HomePage Executive Overview', () => {
       </QueryClientProvider>
     );
 
-    expect(screen.getByText('Family Net Worth')).toBeInTheDocument();
-    expect(screen.getByText('Real Estate')).toBeInTheDocument();
-    expect(screen.getByText('Document Vault')).toBeInTheDocument();
-    expect(screen.getByText('Equity, LTV & Yield')).toBeInTheDocument();
-    expect(screen.getByText('PAN, HUF & Policies')).toBeInTheDocument();
-    expect(screen.getByText('Action & Attention')).toBeInTheDocument();
-    expect(screen.getByText('HUF Section 112A Tax Shield')).toBeInTheDocument();
+    // Verify Family Net Worth is present (case insensitive for mobile/desktop headers)
+    expect(screen.getAllByText(/FAMILY NET WORTH/i).length).toBeGreaterThan(0);
+
+    // Verify 2x2 executive metrics
+    expect(screen.getByText('Liquid Assets')).toBeInTheDocument();
+    expect(screen.getByText('Monthly EMI')).toBeInTheDocument();
+    expect(screen.getByText('Monthly Cash Flow')).toBeInTheDocument();
+    expect(screen.getByText('Goals')).toBeInTheDocument();
+
+    // Verify Wealth Trajectory & Modules
+    expect(screen.getAllByText('Wealth Trajectory').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Portfolio').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Real Estate|Properties/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Liabilities|Loans/i).length).toBeGreaterThan(0);
+
+    // Verify Quick Add button is present
+    expect(screen.getByText('Quick Add')).toBeInTheDocument();
   });
 });

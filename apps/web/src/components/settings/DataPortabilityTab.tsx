@@ -49,49 +49,50 @@ export function DataPortabilityTab({
   const { canEditFinancials } = useHousehold();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {exportSuccessMessage && (
-        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm flex items-center gap-2">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           {exportSuccessMessage}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Export Section */}
         <Card className="bg-slate-900 border-slate-800">
-          <CardHeader>
-            <CardTitle className="text-lg text-white flex items-center gap-2">
-              <Download className="w-5 h-5 text-indigo-400" />
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-base text-white flex items-center gap-2">
+              <Download className="w-4 h-4 text-indigo-400" />
               Export & Data Portability
             </CardTitle>
-            <CardDescription className="text-slate-400">
-              Download full offline copies of your assets, liabilities, transactions, and goals.
+            <CardDescription className="text-xs text-slate-400">
+              Offline JSON backups and CSV spreadsheet exports.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-1">
+          <CardContent className="p-4 pt-2 space-y-3">
+            <div className="p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-0.5">
                 <div className="text-sm font-semibold text-white flex items-center gap-2">
                   <FileJson className="w-4 h-4 text-indigo-400" />
                   Complete JSON Backup
                 </div>
                 <div className="text-xs text-slate-400">
-                  Standard WealthNest v1.0.0 schema including all metadata, cost bases, and loans.
+                  Full v1.0.0 schema with holdings, cost bases, and loans.
                 </div>
               </div>
               <Button
+                size="sm"
                 onClick={onFullBackupExport}
                 disabled={isExporting}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs whitespace-nowrap shrink-0"
+                className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white text-xs whitespace-nowrap shrink-0"
               >
                 <Download className="w-3.5 h-3.5 mr-1" />
                 Download JSON
               </Button>
             </div>
 
-            <div className="space-y-2 pt-2">
-              <div className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+            <div className="space-y-2 pt-1">
+              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                 Spreadsheet CSV Reports
               </div>
 
@@ -142,17 +143,17 @@ export function DataPortabilityTab({
 
         {/* Restore Section */}
         <Card className="bg-slate-900 border-slate-800">
-          <CardHeader>
-            <CardTitle className="text-lg text-white flex items-center gap-2">
-              <Upload className="w-5 h-5 text-emerald-400" />
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-base text-white flex items-center gap-2">
+              <Upload className="w-4 h-4 text-emerald-400" />
               Restore from Backup
             </CardTitle>
-            <CardDescription className="text-slate-400">
-              Upload and verify a previously exported WealthNest JSON backup file.
+            <CardDescription className="text-xs text-slate-400">
+              Verify and restore a WealthNest JSON backup file.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="border-2 border-dashed border-slate-800 hover:border-slate-700 rounded-xl p-6 text-center transition-colors">
+          <CardContent className="p-4 pt-2 space-y-3">
+            <div className="border-2 border-dashed border-slate-800 hover:border-slate-700 rounded-xl p-5 text-center transition-colors">
               <input
                 ref={fileInputRef}
                 type="file"

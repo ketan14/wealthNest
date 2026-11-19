@@ -31,10 +31,10 @@ describe('TransactionsPage Component (India First)', () => {
     expect(screen.getByText('Total Inflows')).toBeInTheDocument();
     expect(screen.getByText('Total Outflows')).toBeInTheDocument();
     expect(screen.getByText('Net Cashflow')).toBeInTheDocument();
-    expect(screen.getByText(/Audit Volume/i)).toBeInTheDocument();
+    expect(screen.getByText(/Activity/i)).toBeInTheDocument();
 
-    // Audit log table and filter tabs
-    expect(screen.getByText('Transaction Audit Log')).toBeInTheDocument();
+    // Table and filter tabs
+    expect(screen.getByText('Recent Transactions')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /transfers/i })).toBeInTheDocument();
     expect(screen.getByText('Reliance Industries Ltd')).toBeInTheDocument();
     expect(screen.getByText('RELIANCE')).toBeInTheDocument();

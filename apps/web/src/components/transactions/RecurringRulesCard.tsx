@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { NewTransactionFormValues } from '@/components/transactions/RecordTransactionModal';
-import { CalendarClock, CheckCircle2, Plus, Repeat, Trash2 } from 'lucide-react';
+import { Plus, Repeat, Trash2 } from 'lucide-react';
 
 interface RecurringRulesCardProps {
   readonly onPostTransaction: (values: NewTransactionFormValues) => Promise<void>;
@@ -251,53 +251,50 @@ export function RecurringRulesCard({
             {scopedRules.map((rule) => {
               const status = evaluateRecurringRuleStatus(rule);
               const isBusy = isPosting && postingRuleId === rule.id;
+              const formattedDueDate = new Date(rule.nextDueDate).toLocaleDateString('en-IN', {
+                month: 'short',
+                day: 'numeric',
+              });
+
               return (
                 <div
                   key={rule.id}
-                  className="p-3 rounded-xl border border-border/70 bg-secondary/30 flex flex-col justify-between gap-2.5"
+                  className="p-3.5 rounded-xl border border-border/70 bg-secondary/30 flex items-center justify-between gap-3 hover:border-border transition-all"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-xs font-semibold text-foreground">{rule.name}</p>
-                      <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <CalendarClock className="w-3 h-3" />
-                        Next: {rule.nextDueDate} · {rule.frequency}
-                      </p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-foreground truncate">{rule.name}</p>
+                    <div className="flex items-center gap-1.5 mt-1 text-[11px]">
+                      {status.isOverdue ? (
+                        <span className="text-rose-400 font-medium">Overdue • {formattedDueDate}</span>
+                      ) : status.isDue ? (
+                        <span className="text-amber-400 font-medium">Due Today</span>
+                      ) : (
+                        <span className="text-muted-foreground">Next: {formattedDueDate}</span>
+                      )}
+                      <span className="text-muted-foreground/60">•</span>
+                      <span className="text-xs font-bold font-mono text-foreground">
+                        {rule.amount.formatIndianCompact()}/mo
+                      </span>
                     </div>
-                    <Badge
-                      variant={
-                        status.isOverdue ? 'destructive' : status.isDue ? 'secondary' : 'outline'
-                      }
-                      className="text-[10px] uppercase"
-                    >
-                      {status.isOverdue ? 'Overdue' : status.isDue ? 'Due Today' : rule.category}
-                    </Badge>
                   </div>
 
-                  <div className="flex items-center justify-between pt-1 border-t border-border/40">
-                    <span className="text-sm font-bold font-mono text-foreground">
-                      {rule.amount.formatIndianCompact()}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={isBusy}
-                        onClick={() => handlePostRule(rule)}
-                        className="h-7 text-[11px] gap-1 px-2 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/15"
-                      >
-                        <CheckCircle2 className="w-3 h-3" />
-                        {isBusy ? 'Posting...' : 'Post Now'}
-                      </Button>
-                      <button
-                        type="button"
-                        onClick={() => setRules((prev) => prev.filter((r) => r.id !== rule.id))}
-                        title="Remove recurring rule"
-                        className="p-1.5 rounded-md text-muted-foreground hover:text-rose-400 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Button
+                      size="sm"
+                      disabled={isBusy}
+                      onClick={() => handlePostRule(rule)}
+                      className="h-7 text-xs px-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold shadow-sm"
+                    >
+                      {isBusy ? 'Posting...' : 'Post Now'}
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => setRules((prev) => prev.filter((r) => r.id !== rule.id))}
+                      title="Remove rule"
+                      className="p-1 rounded text-muted-foreground/60 hover:text-rose-400 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               );

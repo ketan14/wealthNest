@@ -1,212 +1,219 @@
-import { Link } from 'react-router-dom';
-import { Badge } from '@/components/ui/Badge';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
-import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
-import { FamilyDistributionWidget } from '@/components/family/FamilyDistributionWidget';
+import { useFamily } from '@/lib/family/family-context';
 import {
   Plus,
-  ArrowUpRight,
-  Sparkles,
-  FileSpreadsheet,
-  CheckCircle2,
   RefreshCw,
-  Radio,
+  FileSpreadsheet,
+  ChevronDown,
 } from 'lucide-react';
-
-interface MarketSessionInfo {
-  readonly isOpen: boolean;
-  readonly description: string;
-  readonly istTimeString: string;
-}
 
 interface PortfolioHeaderProps {
   readonly isAuthenticated: boolean;
   readonly canEditFinancials?: boolean;
-  readonly marketSession: MarketSessionInfo;
-  readonly isPolling: boolean;
-  readonly onTogglePolling: () => void;
   readonly isRefreshingNavs: boolean;
   readonly onRefreshNavs: () => void;
   readonly isSupportModeActive: boolean;
   readonly onOpenImportModal: () => void;
   readonly onOpenAddModal: () => void;
   readonly onOpenManageFamily: () => void;
-  readonly selectedMemberId: string;
   readonly navRefreshMessage: string | null;
 }
 
 /**
- * Renders the Portfolio page header, live NSE/BSE session badge, auto-poll & import actions,
- * family filter bar, and demo mode / quote refresh banners.
+ * Modernized Space-Saving Portfolio Header:
+ * - Mobile: Sleek Title row with (↻) Refresh icon and (+) Action Dropdown (Import CAS / Add Holding).
+ * - Mobile: Uses the Home Page's compact "MY FAMILY" horizontal chip row, saving ~170px of vertical space.
+ * - Desktop: Full Title, subtitle, and desktop quick action buttons.
  */
 export function PortfolioHeader({
-  isAuthenticated,
+  isAuthenticated: _isAuthenticated,
   canEditFinancials = true,
-  marketSession,
-  isPolling,
-  onTogglePolling,
   isRefreshingNavs,
   onRefreshNavs,
   isSupportModeActive,
   onOpenImportModal,
   onOpenAddModal,
-  onOpenManageFamily,
-  selectedMemberId,
+  onOpenManageFamily: _onOpenManageFamily,
   navRefreshMessage,
 }: PortfolioHeaderProps) {
+  const { members, selectedMemberId, setSelectedMemberId } = useFamily();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMobileMenuOpen]);
+
   return (
-    <>
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-3">
+      {/* 1. Header Title Row */}
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2 flex-wrap xl:flex-nowrap shrink-0">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-              Portfolio & Asset Allocation
-            </h2>
-            <Badge
-              variant="default"
-              className="font-mono text-[10px] bg-amber-500/15 text-amber-400 border-amber-500/30"
-            >
-              India First (₹ INR)
-            </Badge>
-            <Badge
-              variant={isAuthenticated ? 'success' : 'secondary'}
-              className="font-mono text-[10px]"
-            >
-              {isAuthenticated ? 'Database Active' : 'Demo Mode'}
-            </Badge>
-            {/* Live Indian Market (NSE/BSE) Session Indicator */}
-            <Badge
-              variant="outline"
-              className={`font-mono text-[10px] flex items-center gap-1.5 ${
-                marketSession.isOpen
-                  ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                  : 'bg-secondary/70 text-muted-foreground border-border'
-              }`}
-              title={`Indian Market Session: ${marketSession.description} (${marketSession.istTimeString})`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  marketSession.isOpen ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'
-                }`}
-              />
-              {marketSession.isOpen
-                ? 'NSE/BSE: OPEN'
-                : `NSE/BSE: CLOSED (${marketSession.istTimeString})`}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Indian multi-asset wealth tracker with Lakh/Crore precision, automated live stock CMP,
-            and separated Direct Equities and Mutual Fund portfolios.
+          <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-foreground">
+            Portfolio
+          </h1>
+          <p className="hidden sm:block text-xs sm:text-sm text-muted-foreground mt-0.5">
+            Track investments and asset allocation across your family
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap xl:flex-nowrap shrink-0">
-          {/* Live Auto-Polling Toggle Button */}
+        {/* Mobile Quick Actions: (↻) Refresh + (+) Action Dropdown */}
+        <div className="flex sm:hidden items-center gap-1.5 relative" ref={mobileMenuRef}>
           <Button
-            variant={isPolling ? 'default' : 'outline'}
-            onClick={onTogglePolling}
-            className={`gap-1.5 shadow-sm text-xs border ${
-              isPolling
-                ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500/50'
-                : 'border-border/80 text-muted-foreground hover:text-foreground'
-            }`}
-            title="Automatically poll live stock CMP and AMFI NAVs every 25 seconds"
+            variant="ghost"
+            size="sm"
+            onClick={onRefreshNavs}
+            disabled={isRefreshingNavs}
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-lg"
+            title="Refresh Live Quotes"
           >
-            <Radio
-              className={`w-3.5 h-3.5 ${isPolling ? 'animate-pulse text-white' : 'text-muted-foreground'}`}
-            />
-            <span>Auto-Poll: {isPolling ? 'ON' : 'OFF'}</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingNavs ? 'animate-spin text-primary' : ''}`} />
           </Button>
 
           <Button
-            variant="secondary"
-            onClick={onRefreshNavs}
-            disabled={isRefreshingNavs}
-            className="gap-2 shadow-sm text-xs border border-border/80"
+            size="sm"
+            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+            disabled={isSupportModeActive || !canEditFinancials}
+            className="h-8 px-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs rounded-lg shadow-sm flex items-center gap-1"
+            title="More Portfolio Actions"
+            aria-label="More Actions"
           >
-            <RefreshCw
-              className={`w-3.5 h-3.5 text-cyan-400 ${isRefreshingNavs ? 'animate-spin' : ''}`}
-            />
-            {isRefreshingNavs ? 'Fetching Feeds...' : 'Refresh Quotes (NSE & AMFI)'}
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <ChevronDown className={`w-3 h-3 transition-transform ${isMobileMenuOpen ? 'rotate-180' : ''}`} />
           </Button>
+
+          {/* Mobile Popover Menu for Import CAS & Add Holding */}
+          {isMobileMenuOpen && (
+            <div className="absolute right-0 top-10 w-52 rounded-xl bg-slate-900 border border-slate-700/80 shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  onOpenAddModal();
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 transition-colors"
+              >
+                <div className="w-6 h-6 rounded-md bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                </div>
+                <div>
+                  <div className="font-semibold text-foreground">Add Holding</div>
+                  <div className="text-[10px] text-muted-foreground">Manual stock or MF</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  onOpenImportModal();
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 transition-colors"
+              >
+                <div className="w-6 h-6 rounded-md bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <div className="font-semibold text-foreground">Import CAS</div>
+                  <div className="text-[10px] text-muted-foreground">CAMS / KFintech PDF</div>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Quick Actions */}
+        <div className="hidden sm:flex items-center gap-2">
           <Button
             variant="outline"
+            size="sm"
+            onClick={onRefreshNavs}
+            disabled={isRefreshingNavs}
+            className="text-xs gap-1.5 h-8 border-border/80"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingNavs ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
             onClick={onOpenImportModal}
             disabled={isSupportModeActive || !canEditFinancials}
-            title={
-              isSupportModeActive
-                ? 'Disabled in Support Impersonation Mode (Read-Only)'
-                : !canEditFinancials
-                  ? 'View-only household role cannot import CAS holdings'
-                  : undefined
-            }
-            className="gap-2 shadow-sm border-primary/20 hover:bg-primary/5 text-foreground text-xs disabled:opacity-50"
+            className="text-xs gap-1.5 h-8 border-border/80"
           >
-            <FileSpreadsheet className="w-4 h-4 text-primary" />
-            Import CAS
+            <FileSpreadsheet className="w-3.5 h-3.5 text-primary" />
+            <span>Import CAS</span>
           </Button>
+
           <Button
+            size="sm"
             onClick={onOpenAddModal}
             disabled={isSupportModeActive || !canEditFinancials}
-            title={
-              isSupportModeActive
-                ? 'Disabled in Support Impersonation Mode (Read-Only)'
-                : !canEditFinancials
-                  ? 'View-only household role cannot add holdings'
-                  : undefined
-            }
-            className="gap-2 shadow-sm text-xs disabled:opacity-50"
+            className="text-xs gap-1.5 h-8 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold shadow-sm"
           >
-            <Plus className="w-4 h-4" />
-            Add Holding
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Add Holding</span>
           </Button>
         </div>
       </div>
 
-      {/* Phase 6A: Multi-Entity Family & Demat Filter Bar */}
-      <FamilyFilterBar onOpenManageModal={onOpenManageFamily} />
+      {/* 2. Compact "MY FAMILY" Horizontal Scroll Row (Matches Home Page Exactly) */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-xs text-muted-foreground sm:hidden">
+          <span className="font-semibold uppercase tracking-wider text-slate-400 text-[11px]">
+            My Family
+          </span>
+          <span className="px-2 py-0.5 rounded-full bg-secondary text-[10px] border border-border/60">
+            Household
+          </span>
+        </div>
 
-      {/* Phase 6A: Consolidated Family Distribution & HUF Shield */}
-      {selectedMemberId === 'all' && <FamilyDistributionWidget />}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+          <button
+            type="button"
+            onClick={() => setSelectedMemberId('all')}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+              selectedMemberId === 'all'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
+            }`}
+          >
+            All Members
+          </button>
 
-      {/* AMFI & NSE Refresh Success Alert */}
+          {members.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setSelectedMemberId(m.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                selectedMemberId === m.id
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
+              }`}
+            >
+              {m.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Live NAV / Price Refresh Message */}
       {navRefreshMessage && (
-        <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3.5 flex items-center justify-between text-xs text-cyan-300 animate-in fade-in">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-cyan-400" />
-            <span>{navRefreshMessage}</span>
-          </div>
-          <span className="font-mono text-[10px] text-cyan-400/80">NSE/BSE & AMFI Feeds</span>
+        <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-300 flex items-center justify-between">
+          <span>{navRefreshMessage}</span>
+          <span className="font-mono text-[10px] text-cyan-400/80">NSE & AMFI</span>
         </div>
       )}
-
-      {/* Mode Alert Banner if not authenticated */}
-      {!isAuthenticated && (
-        <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center text-primary shrink-0">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-foreground">
-                India-First Demonstration Portfolio Active
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Sample portfolio featuring Indian Equities (Reliance, TCS), Mutual Funds (Parag
-                Parikh, Bandhan), Sovereign Gold Bonds (SGB), PPF, and FDs. Sign in to save and sync
-                your real portfolio in PostgreSQL.
-              </p>
-            </div>
-          </div>
-          <Link to="/">
-            <Button variant="default" size="sm" className="whitespace-nowrap text-xs gap-1.5">
-              Sign In to Save
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </Button>
-          </Link>
-        </div>
-      )}
-    </>
+    </div>
   );
 }

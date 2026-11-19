@@ -1,5 +1,14 @@
 import { Link } from 'react-router-dom';
-import { Building2, MapPin, AlertTriangle, SlidersHorizontal, TrendingUp } from 'lucide-react';
+import {
+  Building2,
+  MapPin,
+  AlertTriangle,
+  SlidersHorizontal,
+  TrendingUp,
+  Landmark,
+  ArrowLeftRight,
+  FileText,
+} from 'lucide-react';
 import {
   PropertyType,
   RealEstatePropertyInput,
@@ -194,6 +203,49 @@ export function RealEstatePropertyList({
                       </span>
                     )}
                   </div>
+                </div>
+              </div>
+
+              {/* Linked Workflow Actions & Record Checklist */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80 text-[11px]">
+                <div className="flex flex-wrap items-center gap-1.5 text-slate-400">
+                  <span className="px-2 py-0.5 rounded bg-slate-950 border border-slate-800">
+                    {prop.propertyType === 'reit' ? 'Demat Statement' : 'Sale Deed / Index II'}
+                  </span>
+                  {prop.propertyTaxPaise > 0n && (
+                    <span className="px-2 py-0.5 rounded bg-slate-950 border border-slate-800">
+                      Tax: {formatInr(prop.propertyTaxPaise)}/yr
+                    </span>
+                  )}
+                  <span className="px-2 py-0.5 rounded bg-slate-950 border border-slate-800">
+                    {prop.monthlyRentPaise > 0n ? 'Rented / Yielding' : 'Self-Occupied'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {prop.linkedLoanBalancePaise > 0n && (
+                    <Link
+                      to="/liabilities"
+                      className="inline-flex items-center gap-1 text-amber-300 hover:text-amber-200 font-medium"
+                    >
+                      <Landmark className="w-3 h-3" />
+                      Liabilities
+                    </Link>
+                  )}
+                  <Link
+                    to="/transactions"
+                    className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-medium"
+                  >
+                    <ArrowLeftRight className="w-3 h-3" />
+                    Cashflow
+                  </Link>
+                  <Link
+                    to="/documents"
+                    className="inline-flex items-center gap-1 text-indigo-300 hover:text-indigo-200 font-medium"
+                  >
+                    <FileText className="w-3 h-3" />
+                    Deeds
+                  </Link>
                 </div>
               </div>
             </CardContent>

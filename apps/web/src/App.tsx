@@ -151,6 +151,7 @@ export function App() {
                           <Route path="real-estate" element={<RealEstatePage />} />
                           <Route path="liabilities" element={<LiabilitiesPage />} />
                           <Route path="transactions" element={<TransactionsPage />} />
+                          <Route path="cashflow" element={<Navigate to="/transactions" replace />} />
                           <Route path="analytics" element={<AnalyticsPage />} />
                           <Route path="goals" element={<GoalsPage />} />
                           <Route path="documents" element={<DocumentsPage />} />

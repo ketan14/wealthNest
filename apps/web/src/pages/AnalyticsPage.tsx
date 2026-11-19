@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { useHousehold } from '@/lib/supabase/household-context';
 import { useRepositories } from '@/lib/persistence/repository-context';
-import { HoldingDetailDto, TransactionDetailDto } from '@wealthnest/application';
+import { HoldingDetailDto, LiabilityDto, TransactionDetailDto } from '@wealthnest/application';
 import {
   CurrencyCode,
   Money,
@@ -20,17 +21,17 @@ import {
   RawHarvestInputHolding,
   filterRecordsByPrivacy,
 } from '@wealthnest/domain';
-import { Badge } from '@/components/ui/Badge';
 import { AnalyticsKpiGrid } from '@/components/analytics/AnalyticsKpiGrid';
 import { CasReconciliationCard } from '@/components/analytics/CasReconciliationCard';
 import { AnalyticsTrajectoryChartCard } from '@/components/analytics/AnalyticsTrajectoryChartCard';
 import { BenchmarkAndRebalanceSection } from '@/components/analytics/BenchmarkAndRebalanceSection';
 import { TaxHarvestingIntelligenceCard } from '@/components/analytics/TaxHarvestingIntelligenceCard';
-import { AlertTriangle, Users } from 'lucide-react';
+import { Card } from '@/components/ui/Card';
+import { formatInr } from '@/utils/formatInr';
+import { AlertTriangle, CheckCircle2, ChevronRight, Sparkles, TrendingUp } from 'lucide-react';
 import { useFamily } from '@/lib/family/family-context';
 import { shouldAllowDemoData } from '@/lib/config/mobile-runtime';
 import { usePreferences } from '@/lib/preferences/preferences-context';
-import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 
 // Demo initial positions tailored for Indian investors (matches Portfolio demo)
@@ -172,11 +173,21 @@ const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
 export function AnalyticsPage() {
   const { user } = useAuth();
   const { activeHouseholdId } = useHousehold();
-  const { selectedMemberId, selectedAccountId, members, activeMember, privacyRules } = useFamily();
-  const { currencySymbol, preferences } = usePreferences();
+  const {
+    selectedMemberId,
+    setSelectedMemberId,
+    selectedAccountId,
+    setSelectedAccountId,
+    members,
+    accounts,
+    activeMember,
+    privacyRules,
+  } = useFamily();
+  const { currencySymbol, preferences, legalName } = usePreferences();
   const locale = preferences.numberFormat || 'en-IN';
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
-  const { holdingRepo, transactionRepo, mode } = useRepositories();
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
+  const { holdingRepo, transactionRepo, liabilityRepo, mode } = useRepositories();
 
   const isDemoMode = mode === 'supabase' && (!user?.id || user.id.startsWith('demo-'));
   const hasLiveBackend = !isDemoMode && Boolean(activeHouseholdId || user?.id);
@@ -213,10 +224,53 @@ export function AnalyticsPage() {
       if (selectedAccountId !== 'all') {
         if (h.accountId !== selectedAccountId) return false;
       }
+      if (selectedCategoryFilter !== 'all') {
+        if (selectedCategoryFilter === 'equity') {
+          if (h.assetClassId !== 'equity' && h.assetClassId !== 'mutual_fund') return false;
+        } else if (h.assetClassId !== selectedCategoryFilter) {
+          return false;
+        }
+      }
       return true;
     });
     return filterRecordsByPrivacy(memberAccountFiltered, selectedMemberId, privacyRules);
-  }, [rawHoldings, selectedMemberId, selectedAccountId, privacyRules]);
+  }, [rawHoldings, selectedMemberId, selectedAccountId, selectedCategoryFilter, privacyRules]);
+
+  // 2. Query liabilities for unified Assets / Liabilities / Net Worth summary
+  const { data: rawLiabilities = [] } = useQuery<readonly LiabilityDto[]>({
+    queryKey: ['analytics-liabilities', hasLiveBackend ? scopeId : 'demo'],
+    queryFn: async () => {
+      if (!hasLiveBackend || !scopeId) return [];
+      const res = await (liabilityRepo.listLiabilitiesByHousehold
+        ? liabilityRepo.listLiabilitiesByHousehold(scopeId)
+        : liabilityRepo.listLiabilitiesByUser(scopeId));
+      return res.success ? res.value : [];
+    },
+    enabled: true,
+  });
+
+  const totalAssetsRupees = useMemo(() => {
+    const cents = holdings.reduce((sum, h) => sum + Math.round(h.currentValueCents || 0), 0);
+    return cents / 100;
+  }, [holdings]);
+
+  const totalLiabilitiesRupees = useMemo(() => {
+    const active = rawLiabilities.filter((l) => {
+      if (l.status !== 'active') return false;
+      if (selectedMemberId !== 'all') {
+        return (
+          l.memberId === selectedMemberId ||
+          l.parties?.some((p) => p.familyMemberId === selectedMemberId) ||
+          l.coBorrowerMemberIds?.includes(selectedMemberId)
+        );
+      }
+      return true;
+    });
+    const cents = active.reduce((sum, l) => sum + Number(l.currentBalanceCents || 0n), 0);
+    return cents / 100;
+  }, [rawLiabilities, selectedMemberId]);
+
+  const totalNetWorthRupees = totalAssetsRupees - totalLiabilitiesRupees;
 
   // 2. Query transactions
   const { data: rawTransactions = [] } = useQuery<TransactionDetailDto[]>({
@@ -330,54 +384,105 @@ export function AnalyticsPage() {
   const cagrDisplay = `${(analytics.cagr * 100).toFixed(2)}%`;
   const alphaDisplay = `${analytics.alphaVsNifty >= 0 ? '+' : ''}${(analytics.alphaVsNifty * 100).toFixed(2)}%`;
 
+  // Top gain/loss contributors ("What Changed")
+  const topContributors = useMemo(() => {
+    return holdings
+      .map((h) => {
+        const costCents = Math.round((h.quantity || 0) * (h.unitCostCents || 0));
+        const valCents = Math.round(h.currentValueCents || 0);
+        const gainCents = valCents - costCents;
+        const pct = costCents > 0 ? (gainCents / costCents) * 100 : 0;
+        return {
+          id: h.holdingId,
+          name: h.name,
+          ticker: h.ticker,
+          valMoney: Money.fromCents(BigInt(valCents), 'INR'),
+          gainMoney: Money.fromCents(BigInt(Math.abs(gainCents)), 'INR'),
+          isGain: gainCents >= 0,
+          pct,
+          absGain: Math.abs(gainCents),
+        };
+      })
+      .sort((a, b) => b.absGain - a.absGain)
+      .slice(0, 4);
+  }, [holdings]);
+
+  // Actionable completeness & data health nudges
+  const dataHealthNudges = useMemo(() => {
+    const items: { id: string; title: string; detail: string; to: string; cta: string }[] = [];
+    const missingCostCount = holdings.filter(
+      (h) => !h.unitCostCents || h.unitCostCents <= 0
+    ).length;
+
+    if (missingCostCount > 0) {
+      items.push({
+        id: 'missing-cost',
+        title: `${missingCostCount} ${missingCostCount === 1 ? 'holding lacks' : 'holdings lack'} purchase cost basis`,
+        detail: 'Add average buy prices so unrealized gain and tax shields are exact.',
+        to: '/portfolio',
+        cta: 'Fix in Portfolio',
+      });
+    }
+    if (!legalName) {
+      items.push({
+        id: 'missing-kyc',
+        title: 'Legal / KYC Name not set',
+        detail: 'Required for accurate CDSL / NSDL CAS statement and PAN matching.',
+        to: '/settings',
+        cta: 'Set in Settings',
+      });
+    }
+    if (analytics.xirr === null) {
+      items.push({
+        id: 'missing-xirr',
+        title: 'XIRR needs dated cashflows',
+        detail: 'Record buy/deposit dates in Cashflow to unlock annualized XIRR.',
+        to: '/transactions',
+        cta: 'Go to Cashflow',
+      });
+    }
+    if (analytics.concentration.warning) {
+      items.push({
+        id: 'concentration',
+        title: 'Single-asset concentration risk',
+        detail: analytics.concentration.warning,
+        to: '/portfolio',
+        cta: 'Review Holdings',
+      });
+    }
+    return items;
+  }, [holdings, legalName, analytics.xirr, analytics.concentration.warning]);
+
+  const asOfLabel = useMemo(() => {
+    const latest = holdings.reduce((acc, h) => {
+      if (!h.updatedAt) return acc;
+      return h.updatedAt > acc ? h.updatedAt : acc;
+    }, '');
+    return latest
+      ? new Date(latest).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+      : 'Today';
+  }, [holdings]);
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
+      {/* Compact Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <div className="flex flex-wrap items-center gap-2 mb-1.5">
-            <Badge variant="outline" className="text-[11px] font-mono border-border/80 whitespace-nowrap">
-              India First (₹ INR)
-            </Badge>
-            {selectedMemberId !== 'all' && activeMember ? (
-              <Badge
-                variant="secondary"
-                className="text-[11px] font-medium flex items-center gap-1 border whitespace-nowrap"
-                style={{
-                  backgroundColor: `${activeMember.colorHex}22`,
-                  borderColor: `${activeMember.colorHex}55`,
-                  color: activeMember.colorHex,
-                }}
-              >
-                <Users className="w-3 h-3" />
-                {activeMember.name} ({activeMember.relationship.toUpperCase()})
-              </Badge>
-            ) : (
-              <Badge
-                variant="secondary"
-                className="text-[11px] bg-blue-500/10 text-blue-400 border-blue-500/20 whitespace-nowrap"
-              >
-                <Users className="w-3 h-3 mr-1 inline" />
-                Combined Family Portfolio ({members.length} Entities)
-              </Badge>
-            )}
-          </div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-foreground">
             Performance & Wealth Analytics
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Institutional return engine (XIRR, CAGR), benchmark alpha, and strategic asset
-            allocation drift.
+          <p className="hidden sm:block text-xs sm:text-sm text-muted-foreground mt-0.5">
+            Returns (XIRR, CAGR), benchmark alpha, and allocation drift · As of {asOfLabel}
           </p>
         </div>
 
         {/* Model Strategy Pills */}
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-card border border-border">
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-card border border-border overflow-x-auto no-scrollbar self-start md:self-auto max-w-full">
           {(['balanced', 'aggressive', 'conservative'] as AllocationModelType[]).map((type) => (
             <button
               key={type}
               onClick={() => setModelType(type)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
                 modelType === type
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent/40'
@@ -393,8 +498,146 @@ export function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Phase 6A: Multi-Entity Family & Demat Filter Bar */}
-      <FamilyFilterBar onOpenManageModal={() => setIsManageFamilyOpen(true)} />
+      {/* Compact "MY FAMILY" Horizontal Scroll Strip (Matches Transactions, Portfolio, Liabilities) */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-xs text-muted-foreground sm:hidden">
+          <span className="font-semibold uppercase tracking-wider text-slate-400 text-[11px]">
+            My Family
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsManageFamilyOpen(true)}
+            className="text-[10px] text-primary hover:underline"
+          >
+            Manage
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+          <button
+            type="button"
+            onClick={() => setSelectedMemberId('all')}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
+              selectedMemberId === 'all'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
+            }`}
+          >
+            Combined Family ({members.length})
+          </button>
+
+          {members.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setSelectedMemberId(m.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
+                selectedMemberId === m.id
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
+              }`}
+            >
+              {m.name}
+            </button>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => setIsManageFamilyOpen(true)}
+            className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs text-muted-foreground hover:text-foreground bg-secondary/40 hover:bg-secondary border border-border/60 whitespace-nowrap shrink-0"
+          >
+            <span>+ Manage</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Unified Net Worth, Assets & Liabilities Strip (Standardized formatInr) */}
+      <Card className="border-border/80 bg-card/60 backdrop-blur-md p-3 sm:p-4">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 divide-x divide-border/60">
+          <div className="pr-2">
+            <div className="text-[10px] sm:text-xs uppercase font-semibold text-muted-foreground truncate">
+              Total Net Worth
+            </div>
+            <div className="text-base sm:text-xl font-bold font-mono text-white mt-0.5 truncate">
+              {formatInr(totalNetWorthRupees, { compact: true })}
+            </div>
+          </div>
+
+          <Link to="/portfolio" className="pl-2.5 sm:pl-4 group block min-w-0">
+            <div className="text-[10px] sm:text-xs uppercase font-semibold text-muted-foreground group-hover:text-emerald-300 truncate">
+              Assets
+            </div>
+            <div className="text-base sm:text-xl font-bold font-mono text-emerald-400 mt-0.5 truncate">
+              {formatInr(totalAssetsRupees, { compact: true })}
+            </div>
+          </Link>
+
+          <Link to="/liabilities" className="pl-2.5 sm:pl-4 group block min-w-0">
+            <div className="text-[10px] sm:text-xs uppercase font-semibold text-muted-foreground group-hover:text-rose-300 truncate">
+              Liabilities
+            </div>
+            <div className="text-base sm:text-xl font-bold font-mono text-rose-400 mt-0.5 truncate">
+              {formatInr(totalLiabilitiesRupees, { compact: true })}
+            </div>
+          </Link>
+        </div>
+      </Card>
+
+      {/* Account & Category Filter Bar with Comfortable Spacing */}
+      <div className="mt-3 mb-4 flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full">
+          <button
+            type="button"
+            onClick={() => setSelectedAccountId('all')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-medium border whitespace-nowrap shrink-0 transition-colors ${
+              selectedAccountId === 'all'
+                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+            }`}
+          >
+            All Accounts
+          </button>
+          {accounts.map((acc) => (
+            <button
+              key={acc.id}
+              type="button"
+              onClick={() => setSelectedAccountId(acc.id)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium border whitespace-nowrap shrink-0 transition-colors ${
+                selectedAccountId === acc.id
+                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+              }`}
+            >
+              {acc.accountName}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full">
+          {(
+            [
+              { id: 'all', label: 'All Categories' },
+              { id: 'equity', label: 'Equities & MF' },
+              { id: 'fixed_income', label: 'Fixed Income' },
+              { id: 'commodity', label: 'Gold' },
+              { id: 'cash', label: 'Cash & Liquid' },
+            ] as const
+          ).map((cat) => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setSelectedCategoryFilter(cat.id)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium border whitespace-nowrap shrink-0 transition-colors ${
+                selectedCategoryFilter === cat.id
+                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Top 4 Performance KPI Cards */}
       <AnalyticsKpiGrid
@@ -405,7 +648,98 @@ export function AnalyticsPage() {
       />
 
       {/* Trajectory Growth Area Chart */}
-      <AnalyticsTrajectoryChartCard trajectory={analytics.trajectory} />
+      <AnalyticsTrajectoryChartCard
+        trajectory={analytics.trajectory}
+        netWorthRupees={totalNetWorthRupees}
+      />
+
+      {/* Actionable Movers ("What Changed") & Data Health Nudges */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card className="border-border/80 bg-card/60 backdrop-blur-md p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-emerald-400" />
+              Top Contributors &amp; Movers
+            </h3>
+            <Link to="/portfolio" className="text-xs text-primary hover:underline">
+              View all →
+            </Link>
+          </div>
+          {topContributors.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-2">
+              Add holdings in Portfolio to see performance contributors.
+            </p>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {topContributors.map((item) => (
+                <Link
+                  key={item.id}
+                  to="/portfolio"
+                  className="py-2 first:pt-0 last:pb-0 flex items-center justify-between gap-3 hover:bg-secondary/30 rounded-lg px-1.5 -mx-1.5 transition-colors"
+                >
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-white truncate">{item.name}</div>
+                    <div className="text-[11px] text-muted-foreground font-mono">
+                      Value {formatInr(item.valMoney.toDecimal(), { compact: true })}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0 font-mono">
+                    <div
+                      className={`text-xs font-bold ${
+                        item.isGain ? 'text-emerald-400' : 'text-rose-400'
+                      }`}
+                    >
+                      {formatInr(
+                        item.isGain ? item.gainMoney.toDecimal() : -item.gainMoney.toDecimal(),
+                        { compact: true, showSign: true }
+                      )}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {item.isGain ? '+' : ''}
+                      {item.pct.toFixed(1)}%
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        <Card className="border-border/80 bg-card/60 backdrop-blur-md p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              Data Health &amp; Accuracy Nudges
+            </h3>
+            <span className="text-[11px] text-muted-foreground">As of {asOfLabel}</span>
+          </div>
+          {dataHealthNudges.length === 0 ? (
+            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-xs text-emerald-300">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>All valuation, cost-basis, and KYC inputs look complete.</span>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {dataHealthNudges.map((nudge) => (
+                <Link
+                  key={nudge.id}
+                  to={nudge.to}
+                  className="p-2.5 rounded-lg bg-secondary/30 border border-border/60 hover:border-amber-500/40 flex items-center justify-between gap-3 transition-colors group"
+                >
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-white truncate">{nudge.title}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">{nudge.detail}</div>
+                  </div>
+                  <span className="text-[11px] font-medium text-amber-300 shrink-0 flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                    {nudge.cta}
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
 
       {/* Grid: Benchmark Comparison & Asset Rebalancing Radar */}
       <BenchmarkAndRebalanceSection

@@ -158,8 +158,18 @@ export function AllHoldingsTable({
                     </>
                   ) : (
                     <div>
-                      <span>—</span>
-                      <div className="text-[10px] text-amber-400">Unverified in CAS</div>
+                      <button
+                        type="button"
+                        onClick={() => onEdit(h)}
+                        className="text-xs text-emerald-400 font-semibold hover:underline flex items-center justify-end gap-1 ml-auto"
+                        title="Enter purchase price or NAV"
+                      >
+                        <span>Missing cost</span>
+                        <span className="text-[10px] bg-emerald-500/15 px-1 py-0.2 rounded border border-emerald-500/30">
+                          + Add
+                        </span>
+                      </button>
+                      <div className="text-[10px] text-amber-400/80">Unverified in CAS</div>
                     </div>
                   )}
                 </td>

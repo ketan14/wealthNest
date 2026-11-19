@@ -17,31 +17,37 @@ vi.mock('../lib/supabase/client', () => ({
   },
 }));
 
-describe('ProfileSecurityTab In-App Password Change (AUTH-02 & AUTH-05)', () => {
+describe('ProfileSecurityTab Inline Edit & Password Modal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
   });
 
-  function renderTab(userEmail?: string | null) {
+  function renderTab(
+    userEmail?: string | null,
+    overrides?: {
+      email?: string;
+      legalName?: string;
+      onUpdateDisplayName?: (v: string) => Promise<void> | void;
+      onUpdateLegalName?: (v: string) => Promise<void> | void;
+    }
+  ) {
     return render(
       <AuthProvider>
         <ProfileSecurityTab
           displayName="Ketan Vaghela"
-          email={userEmail || 'local@wealthnest.local'}
+          legalName={overrides?.legalName ?? ''}
+          email={overrides?.email ?? (userEmail || 'investor@wealthnest.in')}
           userEmail={userEmail}
-          nameInput="Ketan Vaghela"
-          onNameInputChange={vi.fn()}
-          isSavingName={false}
-          nameSavedSuccess={false}
-          onSaveProfile={vi.fn()}
+          onUpdateDisplayName={overrides?.onUpdateDisplayName ?? vi.fn()}
+          onUpdateLegalName={overrides?.onUpdateLegalName ?? vi.fn()}
           onSignOut={vi.fn()}
         />
       </AuthProvider>
     );
   }
 
-  it('disables in-app password updates when running in Demo / Local Vault mode', async () => {
+  it('hides Change Password modal trigger when running in Demo / Local Vault mode', async () => {
     (supabase.auth.getSession as any).mockResolvedValue({
       data: { session: null },
     });
@@ -51,10 +57,65 @@ describe('ProfileSecurityTab In-App Password Change (AUTH-02 & AUTH-05)', () => 
     expect(
       await screen.findByText(/Password updates apply to authenticated Supabase server\/cloud accounts/i)
     ).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Update Password/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Change Password/i })).not.toBeInTheDocument();
   });
 
-  it('validates complexity and calls supabase.auth.updateUser for authenticated Supabase users', async () => {
+  it('unifies active session email instead of displaying user@wealthnest.local', async () => {
+    (supabase.auth.getSession as any).mockResolvedValue({
+      data: {
+        session: {
+          user: { id: 'usr-live-1', email: 'ketan.v@example.com' },
+        },
+      },
+    });
+
+    renderTab('ketan.v@example.com', { email: 'user@wealthnest.local' });
+
+    expect(await screen.findByText('ketan.v@example.com')).toBeInTheDocument();
+    expect(screen.getByText(/Signed in as ketan\.v@example\.com/i)).toBeInTheDocument();
+    expect(screen.queryByText(/user@wealthnest\.local/i)).not.toBeInTheDocument();
+  });
+
+  it('opens EditSettingModal for Display Name and Legal/KYC Name with validation', async () => {
+    (supabase.auth.getSession as any).mockResolvedValue({
+      data: { session: null },
+    });
+
+    const onUpdateDisplayName = vi.fn().mockResolvedValue(undefined);
+    const onUpdateLegalName = vi.fn().mockResolvedValue(undefined);
+
+    renderTab(null, { onUpdateDisplayName, onUpdateLegalName });
+
+    // Open Display Name edit modal
+    fireEvent.click(screen.getByRole('button', { name: /Edit Display Name/i }));
+    const displayInput = await screen.findByLabelText('Display Name');
+
+    // Empty validation check
+    fireEvent.change(displayInput, { target: { value: '   ' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Save$/i }));
+    expect(await screen.findByText(/Display name cannot be empty/i)).toBeInTheDocument();
+    expect(onUpdateDisplayName).not.toHaveBeenCalled();
+
+    // Valid save
+    fireEvent.change(displayInput, { target: { value: 'Ketan Shamalbhai' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Save$/i }));
+
+    await waitFor(() => {
+      expect(onUpdateDisplayName).toHaveBeenCalledWith('Ketan Shamalbhai');
+    });
+
+    // Open Legal / KYC Name edit modal
+    fireEvent.click(screen.getByRole('button', { name: /Edit Legal \/ KYC Name/i }));
+    const legalInput = await screen.findByLabelText('Legal / KYC Name');
+    fireEvent.change(legalInput, { target: { value: 'KETAN S VAGHELA' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Save$/i }));
+
+    await waitFor(() => {
+      expect(onUpdateLegalName).toHaveBeenCalledWith('KETAN S VAGHELA');
+    });
+  });
+
+  it('opens ChangePasswordModal with live rules, mismatch check, and calls supabase.auth.updateUser', async () => {
     (supabase.auth.getSession as any).mockResolvedValue({
       data: {
         session: {
@@ -69,10 +130,19 @@ describe('ProfileSecurityTab In-App Password Change (AUTH-02 & AUTH-05)', () => 
 
     renderTab('investor@wealthnest.app');
 
-    const updateBtn = await screen.findByRole('button', { name: /Update Password/i });
-    const newPasswordInput = screen.getByLabelText('New Password');
-    const confirmInput = screen.getByLabelText('Confirm New Password');
+    const openModalBtn = await screen.findByRole('button', { name: /Change Password/i });
+    fireEvent.click(openModalBtn);
 
+    const newPasswordInput = await screen.findByLabelText('New Password');
+    const confirmInput = screen.getByLabelText('Confirm New Password');
+    const updateBtn = screen.getByRole('button', { name: /Update Password/i });
+
+    // Instant mismatch feedback
+    fireEvent.change(newPasswordInput, { target: { value: 'WealthNest#2027' } });
+    fireEvent.change(confirmInput, { target: { value: 'WealthNest#9999' } });
+    expect(await screen.findByText(/Passwords do not match/i)).toBeInTheDocument();
+
+    // Weak password blocked by complexity check
     fireEvent.change(newPasswordInput, { target: { value: 'weakpass' } });
     fireEvent.change(confirmInput, { target: { value: 'weakpass' } });
     fireEvent.click(updateBtn);
@@ -80,8 +150,11 @@ describe('ProfileSecurityTab In-App Password Change (AUTH-02 & AUTH-05)', () => 
     expect(await screen.findByText(/Password must be at least 12 characters/i)).toBeInTheDocument();
     expect(supabase.auth.updateUser).not.toHaveBeenCalled();
 
+    // Valid strong password submission
     fireEvent.change(newPasswordInput, { target: { value: 'WealthNest#2027' } });
     fireEvent.change(confirmInput, { target: { value: 'WealthNest#2027' } });
+    expect(await screen.findByText(/Passwords match/i)).toBeInTheDocument();
+
     fireEvent.click(updateBtn);
 
     await waitFor(() => {
@@ -93,4 +166,3 @@ describe('ProfileSecurityTab In-App Password Change (AUTH-02 & AUTH-05)', () => 
     expect(await screen.findByText(/Your password has been updated\./i)).toBeInTheDocument();
   });
 });
-

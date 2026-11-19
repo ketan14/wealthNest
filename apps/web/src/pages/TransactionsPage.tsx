@@ -20,7 +20,6 @@ import {
 import { useRepositories } from '@/lib/persistence/repository-context';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { useHousehold } from '@/lib/supabase/household-context';
-import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
   RecordTransactionModal,
@@ -38,7 +37,6 @@ import { Link } from 'react-router-dom';
 import { useFamily } from '@/lib/family/family-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
-import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 
 export function TransactionsPage() {
@@ -46,7 +44,7 @@ export function TransactionsPage() {
   const { activeHouseholdId, canEditFinancials } = useHousehold();
   const { transactionRepo: transactionAdapter, holdingRepo: holdingAdapter, mode } = useRepositories();
   const queryClient = useQueryClient();
-  const { selectedMemberId, selectedAccountId, members, accounts, privacyRules } = useFamily();
+  const { selectedMemberId, setSelectedMemberId, selectedAccountId, members, accounts, privacyRules } = useFamily();
   const { isSupportModeActive } = useSupportSession();
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -292,32 +290,19 @@ export function TransactionsPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-              Transactions & Cashflow
-            </h2>
-            <Badge
-              variant="default"
-              className="font-mono text-[10px] bg-amber-500/15 text-amber-400 border-amber-500/30"
-            >
-              India First (₹ INR)
-            </Badge>
-            <Badge
-              variant={hasLiveBackend ? 'success' : 'secondary'}
-              className="font-mono text-[10px]"
-            >
-              {hasLiveBackend ? 'Database Active' : 'Demo Mode'}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Cashflow audit log, capital inflows, asset acquisitions, payouts, and statutory charges.
+          <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-foreground">
+            Transactions & Cashflow
+          </h1>
+          <p className="hidden sm:block text-xs sm:text-sm text-muted-foreground mt-0.5">
+            Track money in, money out, and recurring bills
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button
+            size="sm"
             onClick={() => {
               if (canEditFinancials && !isSupportModeActive) setIsModalOpen(true);
             }}
@@ -329,16 +314,66 @@ export function TransactionsPage() {
                   ? 'View-only household role cannot record transactions'
                   : undefined
             }
-            className="gap-2 shadow-sm disabled:opacity-50"
+            className="text-xs h-8 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold gap-1.5 shadow-sm"
           >
-            <Plus className="w-4 h-4" />
-            Record Transaction
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Record Transaction</span>
           </Button>
         </div>
       </div>
 
-      {/* Phase 6A: Multi-Entity Family & Demat Filter Bar */}
-      <FamilyFilterBar onOpenManageModal={() => setIsManageFamilyOpen(true)} />
+      {/* Compact "MY FAMILY" Horizontal Scroll Strip (Consistent with Home, Portfolio, Liabilities) */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-xs text-muted-foreground sm:hidden">
+          <span className="font-semibold uppercase tracking-wider text-slate-400 text-[11px]">
+            My Family
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsManageFamilyOpen(true)}
+            className="text-[10px] text-primary hover:underline"
+          >
+            Manage
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+          <button
+            type="button"
+            onClick={() => setSelectedMemberId('all')}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+              selectedMemberId === 'all'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
+            }`}
+          >
+            Combined Family ({members.length})
+          </button>
+
+          {members.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setSelectedMemberId(m.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                selectedMemberId === m.id
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
+              }`}
+            >
+              {m.name}
+            </button>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => setIsManageFamilyOpen(true)}
+            className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs text-muted-foreground hover:text-foreground bg-secondary/40 hover:bg-secondary border border-border/60 whitespace-nowrap"
+          >
+            <span>+ Manage</span>
+          </button>
+        </div>
+      </div>
 
       {/* Mode Alert Banner if not authenticated */}
       {!hasLiveBackend && (
