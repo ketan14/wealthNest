@@ -335,13 +335,13 @@ export function RealEstatePage() {
 
         <div className="flex items-center gap-2 flex-wrap">
           <Link to="/liabilities">
-            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 whitespace-nowrap shrink-0">
               <Landmark className="w-3.5 h-3.5" />
               Home Loans
             </Button>
           </Link>
           <Link to="/documents">
-            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 whitespace-nowrap shrink-0">
               <FileText className="w-3.5 h-3.5" />
               Property Deeds
             </Button>
@@ -349,7 +349,7 @@ export function RealEstatePage() {
           <Link to="/portfolio?action=new">
             <Button
               size="sm"
-              className="h-8 text-xs gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold"
+              className="h-8 px-2.5 sm:px-3 text-xs gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold whitespace-nowrap shrink-0 shadow-sm"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               Add Property

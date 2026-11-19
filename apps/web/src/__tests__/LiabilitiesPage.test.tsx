@@ -70,7 +70,7 @@ describe('LiabilitiesPage Component (Sprint 4)', () => {
   it('opens and closes Add Loan Modal on user interaction', () => {
     renderLiabilitiesPage();
 
-    const addBtn = screen.getByRole('button', { name: /Add Loan \/ Liability/i });
+    const addBtn = screen.getByRole('button', { name: /Add Liability/i });
     fireEvent.click(addBtn);
 
     // Modal opens

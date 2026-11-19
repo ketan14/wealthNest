@@ -290,9 +290,9 @@ export function TransactionsPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-foreground">
+      <div className="flex items-center justify-between gap-2 sm:gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-foreground truncate">
             Transactions & Cashflow
           </h1>
           <p className="hidden sm:block text-xs sm:text-sm text-muted-foreground mt-0.5">
@@ -300,7 +300,7 @@ export function TransactionsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             size="sm"
             onClick={() => {
@@ -312,12 +312,12 @@ export function TransactionsPage() {
                 ? 'Disabled in Support Impersonation Mode (Read-Only)'
                 : !canEditFinancials
                   ? 'View-only household role cannot record transactions'
-                  : undefined
+                  : 'Add Transaction'
             }
-            className="text-xs h-8 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold gap-1.5 shadow-sm"
+            className="h-8 px-2.5 sm:px-3 text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold gap-1 sm:gap-1.5 shadow-sm whitespace-nowrap shrink-0"
           >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Record Transaction</span>
+            <Plus className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
+            <span>Add Transaction</span>
           </Button>
         </div>
       </div>

@@ -334,8 +334,8 @@ export function GoalsPage() {
   return (
     <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-300">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
+      <div className="flex items-start justify-between gap-2 sm:items-center sm:gap-3">
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <Badge
               variant="outline"
@@ -352,7 +352,7 @@ export function GoalsPage() {
               </Badge>
             )}
           </div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground truncate">
             Financial Goals & Milestones
           </h1>
           <p className="hidden sm:block text-sm text-muted-foreground mt-0.5">
@@ -361,8 +361,9 @@ export function GoalsPage() {
         </div>
 
         {/* Action Button */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0 pt-0.5 sm:pt-0">
           <Button
+            size="sm"
             onClick={() => {
               if (canEditFinancials && !isSupportModeActive) {
                 setEditingGoal(null);
@@ -375,12 +376,12 @@ export function GoalsPage() {
                 ? 'Disabled in Support Impersonation Mode (Read-Only)'
                 : !canEditFinancials
                   ? 'View-only household role cannot create financial goals'
-                  : undefined
+                  : 'Create Goal'
             }
-            className="gap-2 shadow-md disabled:opacity-50"
+            className="h-8 px-2.5 sm:px-3 text-xs gap-1 sm:gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold shadow-sm whitespace-nowrap shrink-0 disabled:opacity-50"
           >
-            <Plus className="w-4 h-4" />
-            Create Financial Goal
+            <Plus className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
+            <span>Create Goal</span>
           </Button>
         </div>
       </div>

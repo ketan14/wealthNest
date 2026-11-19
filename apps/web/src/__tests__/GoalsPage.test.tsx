@@ -30,7 +30,7 @@ describe('GoalsPage Component', () => {
     // Header & Badges
     expect(screen.getByText('Financial Goals & Milestones')).toBeInTheDocument();
     expect(screen.getByText('India First (₹ INR)')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Create Financial Goal/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Create Goal/i })).toBeInTheDocument();
 
     // Top 4 KPI cards & Required Pace
     expect(screen.getByText('Emergency Runway')).toBeInTheDocument();
@@ -102,6 +102,13 @@ describe('GoalsPage Component', () => {
   it('auto-opens Create Financial Goal modal when visiting /goals?action=new', async () => {
     renderGoalsPage(['/goals?action=new']);
 
+    expect(await screen.findByRole('heading', { name: 'Create Financial Goal' })).toBeInTheDocument();
+  });
+
+  it('opens Create Financial Goal modal when clicking header Create Goal button', async () => {
+    renderGoalsPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /^Create Goal$/i }));
     expect(await screen.findByRole('heading', { name: 'Create Financial Goal' })).toBeInTheDocument();
   });
 });

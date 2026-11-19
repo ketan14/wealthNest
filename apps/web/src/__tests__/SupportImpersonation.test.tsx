@@ -263,9 +263,9 @@ describe('Phase 8: Secure Admin View-as-User / Support Impersonation Mode', () =
 
       // Before activation: buttons are enabled
       const importBtn = screen.getByRole('button', { name: /Import CAS/i });
-      const addHoldingBtn = screen.getByRole('button', { name: /Add Holding/i });
+      const addAssetBtn = screen.getByRole('button', { name: /Add Asset/i });
       expect(importBtn).not.toBeDisabled();
-      expect(addHoldingBtn).not.toBeDisabled();
+      expect(addAssetBtn).not.toBeDisabled();
 
       // Activate support mode after admin status loads
       await waitFor(() => {
@@ -279,7 +279,7 @@ describe('Phase 8: Secure Admin View-as-User / Support Impersonation Mode', () =
 
       // After activation: mutation buttons MUST be disabled
       expect(importBtn).toBeDisabled();
-      expect(addHoldingBtn).toBeDisabled();
+      expect(addAssetBtn).toBeDisabled();
     }, 15000);
   });
 });

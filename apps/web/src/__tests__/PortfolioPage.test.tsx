@@ -25,7 +25,7 @@ describe('PortfolioPage Component', () => {
 
     // Header and button
     expect(screen.getByText('Portfolio')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /Add Holding/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /Add Asset/i }).length).toBeGreaterThan(0);
 
     // Summary metrics matching new wireframe hero
     expect(screen.getByText('TOTAL PORTFOLIO VALUE')).toBeInTheDocument();
@@ -175,5 +175,9 @@ describe('PortfolioPage Component', () => {
 
     // Verify button remains accessible
     expect(refreshBtns[0]!).toBeInTheDocument();
+
+    // Clicking Add Asset opens the Add Investment / Holding modal
+    fireEvent.click(screen.getByRole('button', { name: /Add Asset/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });

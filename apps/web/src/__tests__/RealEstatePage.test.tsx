@@ -58,4 +58,10 @@ describe('RealEstatePage (UX-04)', () => {
     );
     expect(screen.getByText('Property Rental & Cost Details')).toBeInTheDocument();
   });
+
+  it('links header Add Property button to /portfolio?action=new', () => {
+    renderRealEstatePage();
+    const addPropertyBtn = screen.getByRole('button', { name: /Add Property/i });
+    expect(addPropertyBtn.closest('a')).toHaveAttribute('href', '/portfolio?action=new');
+  });
 });

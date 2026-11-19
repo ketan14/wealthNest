@@ -6,7 +6,6 @@ import {
   Landmark,
   ArrowLeftRight,
   Settings,
-  Plus,
   ShieldAlert,
   MoreHorizontal,
   Building2,
@@ -17,12 +16,10 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAdmin } from '@/lib/admin/admin-context';
-import { GlobalQuickAddModal } from './GlobalQuickAddModal';
 import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
 
 export function BottomNavigationBar() {
   const { isAnyAdmin } = useAdmin();
-  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   return (
@@ -33,14 +30,14 @@ export function BottomNavigationBar() {
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border shadow-lg select-none"
         style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
       >
-        <div className="flex items-center justify-between h-16 px-2 max-w-md mx-auto relative">
+        <div className="flex items-center justify-around h-16 px-1.5 max-w-lg mx-auto gap-0.5 relative">
           {/* 1. Overview */}
           <NavLink
             to="/"
             data-testid="bottom-nav-overview"
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center flex-1 min-w-[44px] min-h-[44px] py-1 px-1 rounded-lg text-[10px] font-medium transition-all duration-150',
+                'flex flex-col items-center justify-center flex-1 min-w-[44px] min-h-[44px] py-1 px-1 rounded-lg text-[10px] font-medium whitespace-nowrap shrink-0 transition-all duration-150',
                 isActive
                   ? 'text-primary font-semibold'
                   : 'text-muted-foreground hover:text-foreground active:scale-95'
@@ -52,12 +49,12 @@ export function BottomNavigationBar() {
                 <div
                   className={cn(
                     'p-1 rounded-md transition-all',
-                    isActive ? 'bg-primary/15 text-primary scale-110' : ''
+                    isActive ? 'bg-primary/15 text-primary scale-105' : ''
                   )}
                 >
                   <LayoutDashboard className="w-5 h-5" />
                 </div>
-                <span className="truncate max-w-[56px] leading-tight mt-0.5">Overview</span>
+                <span className="leading-tight mt-0.5 whitespace-nowrap">Overview</span>
               </>
             )}
           </NavLink>
@@ -68,7 +65,7 @@ export function BottomNavigationBar() {
             data-testid="bottom-nav-portfolio"
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center flex-1 min-w-[44px] min-h-[44px] py-1 px-1 rounded-lg text-[10px] font-medium transition-all duration-150',
+                'flex flex-col items-center justify-center flex-1 min-w-[44px] min-h-[44px] py-1 px-1 rounded-lg text-[10px] font-medium whitespace-nowrap shrink-0 transition-all duration-150',
                 isActive
                   ? 'text-primary font-semibold'
                   : 'text-muted-foreground hover:text-foreground active:scale-95'
@@ -80,36 +77,23 @@ export function BottomNavigationBar() {
                 <div
                   className={cn(
                     'p-1 rounded-md transition-all',
-                    isActive ? 'bg-primary/15 text-primary scale-110' : ''
+                    isActive ? 'bg-primary/15 text-primary scale-105' : ''
                   )}
                 >
                   <PieChart className="w-5 h-5" />
                 </div>
-                <span className="truncate max-w-[56px] leading-tight mt-0.5">Portfolio</span>
+                <span className="leading-tight mt-0.5 whitespace-nowrap">Portfolio</span>
               </>
             )}
           </NavLink>
 
-          {/* 3. Center Quick-Add Button (Elevated FAB) */}
-          <div className="flex items-center justify-center flex-1 min-w-[50px] -mt-5">
-            <button
-              type="button"
-              onClick={() => setIsQuickAddOpen(true)}
-              data-testid="bottom-nav-quick-add"
-              aria-label="Quick Action"
-              className="w-12 h-12 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-500/30 border-2 border-background hover:scale-105 active:scale-95 transition-all duration-150"
-            >
-              <Plus className="w-6 h-6 stroke-[2.5]" />
-            </button>
-          </div>
-
-          {/* 4. Liabilities */}
+          {/* 3. Liabilities */}
           <NavLink
             to="/liabilities"
             data-testid="bottom-nav-liabilities"
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center flex-1 min-w-[44px] min-h-[44px] py-1 px-1 rounded-lg text-[10px] font-medium transition-all duration-150',
+                'flex flex-col items-center justify-center flex-1 min-w-[44px] min-h-[44px] py-1 px-1 rounded-lg text-[10px] font-medium whitespace-nowrap shrink-0 transition-all duration-150',
                 isActive
                   ? 'text-primary font-semibold'
                   : 'text-muted-foreground hover:text-foreground active:scale-95'
@@ -121,23 +105,23 @@ export function BottomNavigationBar() {
                 <div
                   className={cn(
                     'p-1 rounded-md transition-all',
-                    isActive ? 'bg-primary/15 text-primary scale-110' : ''
+                    isActive ? 'bg-primary/15 text-primary scale-105' : ''
                   )}
                 >
                   <Landmark className="w-5 h-5" />
                 </div>
-                <span className="truncate max-w-[56px] leading-tight mt-0.5">Liabilities</span>
+                <span className="leading-tight mt-0.5 whitespace-nowrap">Liabilities</span>
               </>
             )}
           </NavLink>
 
-          {/* 5. Cashflow */}
+          {/* 4. Cashflow */}
           <NavLink
             to="/transactions"
             data-testid="bottom-nav-cashflow"
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center flex-1 min-w-[44px] min-h-[44px] py-1 px-1 rounded-lg text-[10px] font-medium transition-all duration-150',
+                'flex flex-col items-center justify-center flex-1 min-w-[44px] min-h-[44px] py-1 px-1 rounded-lg text-[10px] font-medium whitespace-nowrap shrink-0 transition-all duration-150',
                 isActive
                   ? 'text-primary font-semibold'
                   : 'text-muted-foreground hover:text-foreground active:scale-95'
@@ -149,23 +133,23 @@ export function BottomNavigationBar() {
                 <div
                   className={cn(
                     'p-1 rounded-md transition-all',
-                    isActive ? 'bg-primary/15 text-primary scale-110' : ''
+                    isActive ? 'bg-primary/15 text-primary scale-105' : ''
                   )}
                 >
                   <ArrowLeftRight className="w-5 h-5" />
                 </div>
-                <span className="truncate max-w-[56px] leading-tight mt-0.5">Cashflow</span>
+                <span className="leading-tight mt-0.5 whitespace-nowrap">Cashflow</span>
               </>
             )}
           </NavLink>
 
-          {/* 6. Settings */}
+          {/* 5. Settings */}
           <NavLink
             to="/settings"
             data-testid="bottom-nav-settings"
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center flex-1 min-w-[44px] min-h-[44px] py-1 px-1 rounded-lg text-[10px] font-medium transition-all duration-150',
+                'flex flex-col items-center justify-center flex-1 min-w-[44px] min-h-[44px] py-1 px-1 rounded-lg text-[10px] font-medium whitespace-nowrap shrink-0 transition-all duration-150',
                 isActive
                   ? 'text-primary font-semibold'
                   : 'text-muted-foreground hover:text-foreground active:scale-95'
@@ -177,24 +161,24 @@ export function BottomNavigationBar() {
                 <div
                   className={cn(
                     'p-1 rounded-md transition-all',
-                    isActive ? 'bg-primary/15 text-primary scale-110' : ''
+                    isActive ? 'bg-primary/15 text-primary scale-105' : ''
                   )}
                 >
                   <Settings className="w-5 h-5" />
                 </div>
-                <span className="truncate max-w-[56px] leading-tight mt-0.5">Settings</span>
+                <span className="leading-tight mt-0.5 whitespace-nowrap">Settings</span>
               </>
             )}
           </NavLink>
 
-          {/* 7. Admin (if applicable) */}
+          {/* 6. Admin (if applicable) */}
           {isAnyAdmin && (
             <NavLink
               to="/admin"
               data-testid="bottom-nav-admin"
               className={({ isActive }) =>
                 cn(
-                  'flex flex-col items-center justify-center flex-1 min-w-[44px] min-h-[44px] py-1 px-1 rounded-lg text-[10px] font-medium transition-all duration-150',
+                  'flex flex-col items-center justify-center flex-1 min-w-[44px] min-h-[44px] py-1 px-1 rounded-lg text-[10px] font-medium whitespace-nowrap shrink-0 transition-all duration-150',
                   isActive
                     ? 'text-cyan-400 font-semibold'
                     : 'text-cyan-500/80 hover:text-cyan-300 active:scale-95'
@@ -206,29 +190,29 @@ export function BottomNavigationBar() {
                   <div
                     className={cn(
                       'p-1 rounded-md transition-all',
-                      isActive ? 'bg-cyan-500/20 text-cyan-300 scale-110' : ''
+                      isActive ? 'bg-cyan-500/20 text-cyan-300 scale-105' : ''
                     )}
                   >
                     <ShieldAlert className="w-5 h-5" />
                   </div>
-                  <span className="truncate max-w-[56px] leading-tight mt-0.5">Admin</span>
+                  <span className="leading-tight mt-0.5 whitespace-nowrap">Admin</span>
                 </>
               )}
             </NavLink>
           )}
 
-          {/* 8. More Modules Sheet Trigger */}
+          {/* 7. More Modules Sheet Trigger */}
           <button
             type="button"
             onClick={() => setIsMoreOpen(true)}
             data-testid="bottom-nav-more"
             aria-label="More modules"
-            className="flex flex-col items-center justify-center flex-1 min-w-[44px] min-h-[44px] py-1 px-1 rounded-lg text-[10px] font-medium text-muted-foreground hover:text-foreground active:scale-95 transition-all duration-150"
+            className="flex flex-col items-center justify-center flex-1 min-w-[44px] min-h-[44px] py-1 px-1 rounded-lg text-[10px] font-medium whitespace-nowrap shrink-0 text-muted-foreground hover:text-foreground active:scale-95 transition-all duration-150"
           >
             <div className="p-1 rounded-md">
               <MoreHorizontal className="w-5 h-5" />
             </div>
-            <span className="truncate max-w-[56px] leading-tight mt-0.5">More</span>
+            <span className="leading-tight mt-0.5 whitespace-nowrap">More</span>
           </button>
         </div>
       </nav>
@@ -284,9 +268,6 @@ export function BottomNavigationBar() {
           </div>
         </ResponsiveModalShell>
       )}
-
-      {/* Global Quick Add Action Sheet / Modal */}
-      <GlobalQuickAddModal isOpen={isQuickAddOpen} onClose={() => setIsQuickAddOpen(false)} />
     </>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TransactionsPage } from '../pages/TransactionsPage';
@@ -25,7 +25,7 @@ describe('TransactionsPage Component (India First)', () => {
 
     // Header and button
     expect(screen.getByText('Transactions & Cashflow')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Record Transaction/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Add Transaction/i })).toBeInTheDocument();
 
     // Summary metrics
     expect(screen.getByText('Total Inflows')).toBeInTheDocument();
@@ -38,5 +38,9 @@ describe('TransactionsPage Component (India First)', () => {
     expect(screen.getByRole('button', { name: /transfers/i })).toBeInTheDocument();
     expect(screen.getByText('Reliance Industries Ltd')).toBeInTheDocument();
     expect(screen.getByText('RELIANCE')).toBeInTheDocument();
+
+    // Clicking Add Transaction opens the transaction creation modal
+    fireEvent.click(screen.getByRole('button', { name: /Add Transaction/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });

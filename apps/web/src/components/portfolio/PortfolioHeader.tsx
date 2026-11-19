@@ -1,11 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { useFamily } from '@/lib/family/family-context';
 import {
   Plus,
   RefreshCw,
   FileSpreadsheet,
-  ChevronDown,
 } from 'lucide-react';
 
 interface PortfolioHeaderProps {
@@ -38,26 +36,13 @@ export function PortfolioHeader({
   navRefreshMessage,
 }: PortfolioHeaderProps) {
   const { members, selectedMemberId, setSelectedMemberId } = useFamily();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!isMobileMenuOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
-        setIsMobileMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isMobileMenuOpen]);
 
   return (
     <div className="space-y-3">
       {/* 1. Header Title Row */}
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-foreground">
+      <div className="flex items-center justify-between gap-2 sm:gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-foreground truncate">
             Portfolio
           </h1>
           <p className="hidden sm:block text-xs sm:text-sm text-muted-foreground mt-0.5">
@@ -65,82 +50,19 @@ export function PortfolioHeader({
           </p>
         </div>
 
-        {/* Mobile Quick Actions: (↻) Refresh + (+) Action Dropdown */}
-        <div className="flex sm:hidden items-center gap-1.5 relative" ref={mobileMenuRef}>
+        {/* Header Actions (Compact on 360-420px, Full on Desktop) */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <Button
             variant="ghost"
             size="sm"
             onClick={onRefreshNavs}
             disabled={isRefreshingNavs}
-            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-lg"
+            className="h-8 w-8 sm:w-auto sm:px-2.5 p-0 text-xs gap-1.5 text-muted-foreground hover:text-foreground sm:border sm:border-border/80 rounded-lg whitespace-nowrap shrink-0"
             title="Refresh Live Quotes"
+            aria-label="Refresh Live Quotes"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingNavs ? 'animate-spin text-primary' : ''}`} />
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-            disabled={isSupportModeActive || !canEditFinancials}
-            className="h-8 px-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs rounded-lg shadow-sm flex items-center gap-1"
-            title="More Portfolio Actions"
-            aria-label="More Actions"
-          >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            <ChevronDown className={`w-3 h-3 transition-transform ${isMobileMenuOpen ? 'rotate-180' : ''}`} />
-          </Button>
-
-          {/* Mobile Popover Menu for Import CAS & Add Holding */}
-          {isMobileMenuOpen && (
-            <div className="absolute right-0 top-10 w-52 rounded-xl bg-slate-900 border border-slate-700/80 shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onOpenAddModal();
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 transition-colors"
-              >
-                <div className="w-6 h-6 rounded-md bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                </div>
-                <div>
-                  <div className="font-semibold text-foreground">Add Holding</div>
-                  <div className="text-[10px] text-muted-foreground">Manual stock or MF</div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onOpenImportModal();
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 transition-colors"
-              >
-                <div className="w-6 h-6 rounded-md bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
-                  <FileSpreadsheet className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <div className="font-semibold text-foreground">Import CAS</div>
-                  <div className="text-[10px] text-muted-foreground">CAMS / KFintech PDF</div>
-                </div>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Desktop Quick Actions */}
-        <div className="hidden sm:flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onRefreshNavs}
-            disabled={isRefreshingNavs}
-            className="text-xs gap-1.5 h-8 border-border/80"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingNavs ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
 
           <Button
@@ -148,20 +70,22 @@ export function PortfolioHeader({
             size="sm"
             onClick={onOpenImportModal}
             disabled={isSupportModeActive || !canEditFinancials}
-            className="text-xs gap-1.5 h-8 border-border/80"
+            className="h-8 px-2 sm:px-2.5 text-xs gap-1.5 border-border/80 whitespace-nowrap shrink-0"
+            title="Import CAS Statement"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-primary" />
-            <span>Import CAS</span>
+            <FileSpreadsheet className="w-3.5 h-3.5 text-primary shrink-0" />
+            <span className="sm:hidden">CAS</span>
+            <span className="hidden sm:inline">Import CAS</span>
           </Button>
 
           <Button
             size="sm"
             onClick={onOpenAddModal}
             disabled={isSupportModeActive || !canEditFinancials}
-            className="text-xs gap-1.5 h-8 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold shadow-sm"
+            className="h-8 px-2.5 sm:px-3 text-xs gap-1 sm:gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold shadow-sm whitespace-nowrap shrink-0"
           >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Add Holding</span>
+            <Plus className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
+            <span>Add Asset</span>
           </Button>
         </div>
       </div>

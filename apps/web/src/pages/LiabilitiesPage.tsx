@@ -283,14 +283,14 @@ export function LiabilitiesPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* 1. Header Title Row with Mobile Quick Actions & Desktop Action Buttons */}
-      <div className="flex items-center justify-between gap-3">
-        <div>
+      {/* 1. Header Title Row */}
+      <div className="flex items-center justify-between gap-2 sm:gap-3">
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-foreground">
+            <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-foreground truncate">
               Loans & Liabilities
             </h1>
-            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/10 border border-rose-500/20 text-rose-400">
+            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/10 border border-rose-500/20 text-rose-400 shrink-0">
               Loans & Liabilities Engine
             </span>
           </div>
@@ -299,50 +299,21 @@ export function LiabilitiesPage() {
           </p>
         </div>
 
-        {/* Mobile Quick Action Buttons: (↻) Sync + (+) Add Loan */}
-        <div className="flex sm:hidden items-center gap-1.5">
+        {/* Header Actions (Compact on 360-420px, Full on Desktop) */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <Button
             variant="ghost"
             size="sm"
             onClick={handleRefresh}
             disabled={isLoadingLiabilities || isLoadingSummary}
-            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-lg"
+            className="h-8 w-8 sm:w-auto sm:px-2.5 p-0 text-xs gap-1.5 text-muted-foreground hover:text-foreground sm:border sm:border-border/80 rounded-lg whitespace-nowrap shrink-0"
             title="Sync Liabilities"
+            aria-label="Sync Liabilities"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${isLoadingLiabilities || isLoadingSummary ? 'animate-spin text-primary' : ''}`}
             />
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={() => {
-              if (!canEditFinancials || isSupportModeActive) return;
-              setEditingLiability(null);
-              setIsAddModalOpen(true);
-            }}
-            disabled={isSupportModeActive || !canEditFinancials}
-            className="h-8 px-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs rounded-lg shadow-sm flex items-center gap-1"
-            title="Add Loan / Liability"
-          >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Add</span>
-          </Button>
-        </div>
-
-        {/* Desktop Quick Actions */}
-        <div className="hidden sm:flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isLoadingLiabilities || isLoadingSummary}
-            className="text-xs gap-1.5 h-8 border-border/80"
-          >
-            <RefreshCw
-              className={`w-3.5 h-3.5 ${isLoadingLiabilities || isLoadingSummary ? 'animate-spin' : ''}`}
-            />
-            <span>Sync</span>
+            <span className="hidden sm:inline">Sync</span>
           </Button>
 
           <Button
@@ -358,12 +329,12 @@ export function LiabilitiesPage() {
                 ? 'Disabled in Support Impersonation Mode (Read-Only)'
                 : !canEditFinancials
                   ? 'View-only household role cannot add liabilities'
-                  : undefined
+                  : 'Add Liability'
             }
-            className="text-xs gap-1.5 h-8 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold shadow-sm"
+            className="h-8 px-2.5 sm:px-3 text-xs gap-1 sm:gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold shadow-sm whitespace-nowrap shrink-0"
           >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Add Loan / Liability</span>
+            <Plus className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
+            <span>Add Liability</span>
           </Button>
         </div>
       </div>

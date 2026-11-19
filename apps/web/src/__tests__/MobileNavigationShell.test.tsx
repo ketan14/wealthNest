@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { BottomNavigationBar } from '../components/layout/BottomNavigationBar';
 import { Sidebar } from '../components/layout/Sidebar';
 import { AdminProvider } from '../lib/admin/admin-context';
 
 describe('Phase 9.2: Mobile Navigation Shell & Ergonomics', () => {
-  it('TC-9.2-01A: renders BottomNavigationBar with primary touch tabs and elevated Quick-Add button', () => {
+  it('TC-9.2-01A: renders BottomNavigationBar with primary touch tabs and without quick-add FAB', () => {
     render(
       <MemoryRouter initialEntries={['/portfolio']}>
         <AdminProvider>
@@ -21,33 +21,24 @@ describe('Phase 9.2: Mobile Navigation Shell & Ergonomics', () => {
     expect(bottomNav).toHaveClass('fixed');
     expect(bottomNav).toHaveClass('bottom-0');
 
-    // 5 primary tabs
+    // Primary tabs + More
     expect(screen.getByTestId('bottom-nav-overview')).toBeInTheDocument();
     expect(screen.getByTestId('bottom-nav-portfolio')).toBeInTheDocument();
     expect(screen.getByTestId('bottom-nav-liabilities')).toBeInTheDocument();
     expect(screen.getByTestId('bottom-nav-cashflow')).toBeInTheDocument();
     expect(screen.getByTestId('bottom-nav-settings')).toBeInTheDocument();
+    expect(screen.getByTestId('bottom-nav-more')).toBeInTheDocument();
 
-    // Center Quick-Add action button
-    const quickAddButton = screen.getByTestId('bottom-nav-quick-add');
-    expect(quickAddButton).toBeInTheDocument();
+    // Quick-Add FAB removed per Option A
+    expect(screen.queryByTestId('bottom-nav-quick-add')).not.toBeInTheDocument();
 
-    // Verify minimum touch target classes
+    // Verify minimum touch target & non-wrapping label classes
     const tabs = screen.getAllByRole('link');
     tabs.forEach((tab) => {
       expect(tab.className).toMatch(/min-h-\[44px\]/);
       expect(tab.className).toMatch(/min-w-\[44px\]/);
+      expect(tab.className).toMatch(/whitespace-nowrap/);
     });
-
-    // Clicking Quick-Add opens GlobalQuickAddModal
-    fireEvent.click(quickAddButton);
-    expect(screen.getByTestId('global-quick-add-modal')).toBeInTheDocument();
-    expect(screen.getByTestId('quick-action-transaction')).toBeInTheDocument();
-    expect(screen.getByTestId('quick-action-holding')).toBeInTheDocument();
-    expect(screen.getByTestId('quick-action-liability')).toBeInTheDocument();
-    expect(screen.getByTestId('quick-action-goal')).toBeInTheDocument();
-    expect(screen.getByTestId('quick-action-document')).toBeInTheDocument();
-    expect(screen.getByTestId('quick-action-real-estate')).toBeInTheDocument();
   });
 
   it('TC-9.2-01B: Sidebar is responsive and hidden on mobile screens', () => {
