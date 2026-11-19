@@ -32,6 +32,7 @@ export function GlobalQuickAddModal({ isOpen, onClose }: { isOpen: boolean; onCl
   if (!isOpen) return null;
 
   const isOnRealEstate = pathname.startsWith('/real-estate');
+  const isOnGoals = pathname.startsWith('/goals');
   const contextualPrimaryId = isOnRealEstate
     ? 'real-estate'
     : pathname.startsWith('/documents')
@@ -40,7 +41,7 @@ export function GlobalQuickAddModal({ isOpen, onClose }: { isOpen: boolean; onCl
         ? 'holding'
         : pathname.startsWith('/liabilities')
           ? 'liability'
-          : pathname.startsWith('/goals')
+          : isOnGoals
             ? 'goal'
             : pathname.startsWith('/transactions')
               ? 'transaction'
@@ -85,7 +86,7 @@ export function GlobalQuickAddModal({ isOpen, onClose }: { isOpen: boolean; onCl
     },
     {
       id: 'goal',
-      title: 'Set Financial Goal',
+      title: isOnGoals ? 'New Goal' : 'Set Financial Goal',
       description: 'Create child education, retirement, or emergency milestone',
       icon: Target,
       color: 'text-purple-400',

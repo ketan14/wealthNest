@@ -5,6 +5,7 @@ import { GoalDetailDto } from '@wealthnest/application';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { AccessibleChartContainer } from '@/components/ui/AccessibleChartContainer';
+import { formatInr } from '@/utils/formatInr';
 
 interface GoalProjectionCardProps {
   goals: readonly GoalDetailDto[];
@@ -149,13 +150,13 @@ export function GoalProjectionCard({ goals }: GoalProjectionCardProps) {
           <div className="p-3 rounded-xl bg-secondary/30 border border-border/60">
             <div className="text-[11px] text-muted-foreground">Projected Step-Up Corpus</div>
             <div className="text-lg font-bold font-mono text-emerald-400 mt-0.5">
-              {finalStepUpMoney.formatIndianCompact()}
+              {formatInr(Number(finalStepUpMoney.cents) / 100, { compact: true })}
             </div>
           </div>
           <div className="p-3 rounded-xl bg-secondary/30 border border-border/60">
             <div className="text-[11px] text-muted-foreground">Inflation-Adjusted Target</div>
             <div className="text-lg font-bold font-mono text-amber-400 mt-0.5">
-              {finalTargetMoney.formatIndianCompact()}
+              {formatInr(Number(finalTargetMoney.cents) / 100, { compact: true })}
             </div>
           </div>
           <div className="p-3 rounded-xl bg-secondary/30 border border-border/60 flex items-center justify-between">
@@ -165,7 +166,7 @@ export function GoalProjectionCard({ goals }: GoalProjectionCardProps) {
                 Step-Up Wealth Boost
               </div>
               <div className="text-lg font-bold font-mono text-cyan-400 mt-0.5">
-                +{advantageMoney.formatIndianCompact()}
+                {formatInr(Number(advantageMoney.cents) / 100, { compact: true, showSign: true })}
               </div>
             </div>
             <Badge variant={projection.isStepUpOnTrack ? 'success' : 'outline'}>
@@ -182,9 +183,9 @@ export function GoalProjectionCard({ goals }: GoalProjectionCardProps) {
           rows={projection.points.map((pt) => ({
             label: String(pt.calendarYear),
             values: [
-              Money.fromCents(pt.stepUpSipCorpusPaise, 'INR').formatIndianCompact(),
-              Money.fromCents(pt.flatSipCorpusPaise, 'INR').formatIndianCompact(),
-              Money.fromCents(pt.inflationAdjustedTargetPaise, 'INR').formatIndianCompact(),
+              formatInr(Number(pt.stepUpSipCorpusPaise) / 100, { compact: true }),
+              formatInr(Number(pt.flatSipCorpusPaise) / 100, { compact: true }),
+              formatInr(Number(pt.inflationAdjustedTargetPaise) / 100, { compact: true }),
             ],
           }))}
         >

@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { GoalCategory, GoalPriority, Money, RecordVisibility } from '@wealthnest/domain';
-import { CreateGoalParams } from '@wealthnest/application';
+import { useEffect, useState } from 'react';
+import { GoalCategory, GoalPriority, RecordVisibility } from '@wealthnest/domain';
+import { CreateGoalParams, GoalDetailDto, UpdateGoalParams } from '@wealthnest/application';
+import { formatInr } from '@/utils/formatInr';
 import { useFamily } from '@/lib/family/family-context';
 import { useHousehold } from '@/lib/supabase/household-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
@@ -25,6 +26,8 @@ interface AddGoalModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (params: Omit<CreateGoalParams, 'userId'>) => Promise<void>;
+  onUpdate?: (params: Omit<UpdateGoalParams, 'userId'>) => Promise<void>;
+  initialGoal?: GoalDetailDto | null;
   isSubmitting?: boolean;
 }
 
@@ -97,11 +100,14 @@ export function AddGoalModal({
   isOpen,
   onClose,
   onSubmit,
+  onUpdate,
+  initialGoal = null,
   isSubmitting = false,
 }: AddGoalModalProps) {
   const { members, selectedMemberId } = useFamily();
   const { canEditFinancials } = useHousehold();
   const { currencySymbol, currencyCode } = usePreferences();
+  const isEditing = Boolean(initialGoal);
   const [name, setName] = useState('');
   const [category, setCategory] = useState<GoalCategory>('wealth_creation');
   const [memberId, setMemberId] = useState<string>(
@@ -119,6 +125,49 @@ export function AddGoalModal({
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    setError(null);
+    if (initialGoal) {
+      setName(initialGoal.name);
+      setCategory(initialGoal.category);
+      setMemberId(
+        initialGoal.memberId ||
+          (selectedMemberId && selectedMemberId !== 'all' ? selectedMemberId : 'mem-self')
+      );
+      setTargetAmountRupees(String(Math.round(initialGoal.targetAmountCents / 100)));
+      const normalizedDate = String(initialGoal.targetDate).includes('T')
+        ? String(initialGoal.targetDate).split('T')[0]!
+        : String(initialGoal.targetDate);
+      setTargetDate(normalizedDate || '2029-12-31');
+      setInitialSavedRupees(String(Math.round(initialGoal.initialSavedCents / 100)));
+      setMonthlyContributionRupees(
+        String(Math.round(initialGoal.monthlyContributionCents / 100))
+      );
+      setExpectedReturnRate(initialGoal.expectedReturnRate);
+      setInflationRate(initialGoal.inflationRate);
+      setPriority(initialGoal.priority);
+      setVisibility(initialGoal.visibility ?? 'household_shared');
+      setRestrictedGranteeUserIds([]);
+      setNotes(initialGoal.notes || '');
+      return;
+    }
+
+    setName('');
+    setCategory('wealth_creation');
+    setMemberId(selectedMemberId && selectedMemberId !== 'all' ? selectedMemberId : 'mem-self');
+    setTargetAmountRupees('');
+    setTargetDate('2029-12-31');
+    setInitialSavedRupees('');
+    setMonthlyContributionRupees('');
+    setExpectedReturnRate(12.0);
+    setInflationRate(6.0);
+    setPriority('high');
+    setVisibility('household_shared');
+    setRestrictedGranteeUserIds([]);
+    setNotes('');
+  }, [isOpen, initialGoal, selectedMemberId]);
+
   if (!isOpen) return null;
 
   const handleCategorySelect = (catId: GoalCategory) => {
@@ -127,15 +176,15 @@ export function AddGoalModal({
     if (preset) {
       setExpectedReturnRate(preset.defaultReturn);
       setInflationRate(preset.defaultInflation);
-      if (!name || CATEGORY_OPTIONS.some((c) => c.label === name)) {
+      if (!isEditing && (!name || CATEGORY_OPTIONS.some((c) => c.label === name))) {
         setName(preset.label);
       }
     }
   };
 
   // Indian Rupee formatting previews
-  const targetCents = Math.round((parseFloat(targetAmountRupees) || 0) * 100);
-  const targetPreviewMoney = Money.fromCents(BigInt(targetCents), 'INR');
+  const targetRupees = parseFloat(targetAmountRupees) || 0;
+  const targetCents = Math.round(targetRupees * 100);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,7 +207,9 @@ export function AddGoalModal({
     }
 
     if (!canEditFinancials) {
-      setError('Viewers have read-only access and cannot create goals.');
+      setError(
+        `Viewers have read-only access and cannot ${isEditing ? 'update' : 'create'} goals.`
+      );
       return;
     }
 
@@ -166,34 +217,45 @@ export function AddGoalModal({
     const monthlyVal = parseFloat(monthlyContributionRupees) || 0;
 
     try {
-      await onSubmit({
-        name: name.trim(),
-        category,
-        targetAmountCents: Math.round(targetVal * 100),
-        targetDate,
-        initialSavedCents: Math.round(initVal * 100),
-        monthlyContributionCents: Math.round(monthlyVal * 100),
-        expectedReturnRate,
-        inflationRate,
-        priority,
-        currency: 'INR',
-        notes: notes.trim() || undefined,
-        memberId: memberId || undefined,
-        visibility,
-        restrictedGranteeUserIds:
-          visibility === 'restricted' ? restrictedGranteeUserIds : undefined,
-      });
+      if (initialGoal && onUpdate) {
+        await onUpdate({
+          goalId: initialGoal.id,
+          name: name.trim(),
+          category,
+          targetAmountCents: Math.round(targetVal * 100),
+          targetDate,
+          initialSavedCents: Math.round(initVal * 100),
+          monthlyContributionCents: Math.round(monthlyVal * 100),
+          expectedReturnRate,
+          inflationRate,
+          priority,
+          notes: notes.trim() || undefined,
+          memberId: memberId || undefined,
+          visibility,
+        });
+      } else {
+        await onSubmit({
+          name: name.trim(),
+          category,
+          targetAmountCents: Math.round(targetVal * 100),
+          targetDate,
+          initialSavedCents: Math.round(initVal * 100),
+          monthlyContributionCents: Math.round(monthlyVal * 100),
+          expectedReturnRate,
+          inflationRate,
+          priority,
+          currency: 'INR',
+          notes: notes.trim() || undefined,
+          memberId: memberId || undefined,
+          visibility,
+          restrictedGranteeUserIds:
+            visibility === 'restricted' ? restrictedGranteeUserIds : undefined,
+        });
+      }
 
-      // Reset and close
-      setName('');
-      setTargetAmountRupees('');
-      setInitialSavedRupees('');
-      setMonthlyContributionRupees('');
-      setVisibility('household_shared');
-      setRestrictedGranteeUserIds([]);
       onClose();
     } catch (err: any) {
-      setError(err?.message || 'Failed to create goal');
+      setError(err?.message || `Failed to ${isEditing ? 'update' : 'create'} goal`);
     }
   };
 
@@ -212,7 +274,7 @@ export function AddGoalModal({
             </div>
             <div className="min-w-0">
               <h3 id="add-goal-modal-title" className="font-bold text-base sm:text-lg text-foreground">
-                Create Financial Goal
+                {isEditing ? 'Edit Financial Goal' : 'Create Financial Goal'}
               </h3>
               <p className="text-xs text-muted-foreground">
                 Target corpus math, inflation adjustments & SIP planning
@@ -237,7 +299,13 @@ export function AddGoalModal({
           </Button>
           <Button type="submit" disabled={isSubmitting || !canEditFinancials} className="gap-2 shadow-md">
             <Target className="w-4 h-4" />
-            {isSubmitting ? 'Creating Goal...' : 'Save Financial Goal'}
+            {isSubmitting
+              ? isEditing
+                ? 'Updating Goal...'
+                : 'Creating Goal...'
+              : isEditing
+                ? 'Update Goal'
+                : 'Save Financial Goal'}
           </Button>
         </div>
       }
@@ -332,7 +400,7 @@ export function AddGoalModal({
                     variant="outline"
                     className="text-[10px] text-emerald-400 font-mono border-emerald-500/30"
                   >
-                    {targetPreviewMoney.formatIndianCompact()}
+                    {formatInr(targetRupees, { compact: true })}
                   </Badge>
                 )}
               </label>

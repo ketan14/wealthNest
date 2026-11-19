@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { useHousehold } from '@/lib/supabase/household-context';
@@ -6,13 +7,16 @@ import { useRepositories } from '@/lib/persistence/repository-context';
 import {
   GoalDetailDto,
   CreateGoalUseCase,
+  UpdateGoalUseCase,
   DeleteGoalUseCase,
   CreateGoalParams,
+  UpdateGoalParams,
   HoldingDetailDto,
 } from '@wealthnest/application';
 import {
   Money,
   CurrencyCode,
+  GoalCategory,
   GoalDefinition,
   GoalsSummary,
   calculateGoalsSummary,
@@ -20,28 +24,33 @@ import {
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { AddGoalModal } from '@/components/goals/AddGoalModal';
+import { TopUpGoalModal, TopUpTargetGoal } from '@/components/goals/TopUpGoalModal';
 import { GoalProjectionCard } from '@/components/goals/GoalProjectionCard';
 import { GoalsKpiSection } from '@/components/goals/GoalsKpiSection';
-import { GoalsGridSection } from '@/components/goals/GoalsGridSection';
+import {
+  GOAL_CATEGORY_LABELS,
+  GoalStatusFilter,
+  GoalsGridSection,
+  getGoalStatusMeta,
+} from '@/components/goals/GoalsGridSection';
 import { DEMO_GOALS } from '@/components/goals/goals-demo-data';
 import { shouldAllowDemoData } from '@/lib/config/mobile-runtime';
 import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
 import { useFamily } from '@/lib/family/family-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
-import { usePreferences } from '@/lib/preferences/preferences-context';
-import { FamilyFilterBar } from '@/components/family/FamilyFilterBar';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
-import { Plus } from 'lucide-react';
+import { ArrowUpDown, Plus } from 'lucide-react';
+
+type GoalSortOption = 'target_date' | 'pct_complete' | 'monthly_gap';
 
 export function GoalsPage() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { activeHouseholdId, canEditFinancials } = useHousehold();
   const queryClient = useQueryClient();
-  const { members, selectedMemberId } = useFamily();
+  const { members, selectedMemberId, setSelectedMemberId } = useFamily();
   const { isSupportModeActive } = useSupportSession();
   const { goalRepo, holdingRepo, mode } = useRepositories();
-  const { currencySymbol, preferences } = usePreferences();
-  const locale = preferences.numberFormat || 'en-IN';
 
   const isDemoMode = mode === 'supabase' && (!user?.id || user.id.startsWith('demo-'));
   const hasLiveBackend = !isDemoMode && Boolean(activeHouseholdId || user?.id);
@@ -49,12 +58,30 @@ export function GoalsPage() {
   const effectiveUserId = user?.id || scopeId;
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<GoalDetailDto | null>(null);
+  const [topUpGoal, setTopUpGoal] = useState<TopUpTargetGoal | null>(null);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState<{ id: string; name: string } | null>(null);
   const [monthlyExpenseRupees, setMonthlyExpenseRupees] = useState<number>(65000);
+  const [statusFilter, setStatusFilter] = useState<GoalStatusFilter>('all');
+  const [categoryFilter, setCategoryFilter] = useState<GoalCategory | 'all'>('all');
+  const [sortBy, setSortBy] = useState<GoalSortOption>('target_date');
   const [demoGoalsState, setDemoGoalsState] = useState<GoalDetailDto[]>(
     shouldAllowDemoData(isDemoMode) ? DEMO_GOALS : []
   );
+
+  // Support global quick-add navigation (/goals?action=new)
+  useEffect(() => {
+    if (searchParams.get('action') === 'new') {
+      if (canEditFinancials && !isSupportModeActive) {
+        setEditingGoal(null);
+        setIsAddModalOpen(true);
+      }
+      const next = new URLSearchParams(searchParams);
+      next.delete('action');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams, canEditFinancials, isSupportModeActive]);
 
   // 1. Query Goals from DB (or fallback to demoGoalsState ONLY in demo preview on web)
   const { data: dbGoals } = useQuery<GoalDetailDto[]>({
@@ -197,6 +224,58 @@ export function GoalsPage() {
     },
   });
 
+  // Update Goal Mutation (used by Edit Goal and Quick Top-Up)
+  const updateMutation = useMutation({
+    mutationFn: async (params: Omit<UpdateGoalParams, 'userId'>) => {
+      if (!params.goalId.startsWith('demo-') && hasLiveBackend) {
+        if (!canEditFinancials) {
+          throw new Error('View-only household role cannot update financial goals.');
+        }
+        const useCase = new UpdateGoalUseCase(goalRepo);
+        const res = await useCase.execute({
+          ...params,
+          userId: effectiveUserId || 'local-user',
+        });
+        if (!res.success) throw res.error;
+        return res.value;
+      }
+
+      let updatedDemo: GoalDetailDto | undefined;
+      setDemoGoalsState((prev) =>
+        prev.map((g) => {
+          if (g.id !== params.goalId) return g;
+          updatedDemo = {
+            ...g,
+            name: params.name ?? g.name,
+            category: params.category ?? g.category,
+            targetAmountCents: params.targetAmountCents ?? g.targetAmountCents,
+            targetDate: params.targetDate ?? g.targetDate,
+            initialSavedCents: params.initialSavedCents ?? g.initialSavedCents,
+            monthlyContributionCents:
+              params.monthlyContributionCents ?? g.monthlyContributionCents,
+            expectedReturnRate: params.expectedReturnRate ?? g.expectedReturnRate,
+            inflationRate: params.inflationRate ?? g.inflationRate,
+            priority: params.priority ?? g.priority,
+            notes: params.notes !== undefined ? params.notes : g.notes,
+            memberId: params.memberId !== undefined ? params.memberId : g.memberId,
+            visibility: params.visibility ?? g.visibility,
+            updatedAt: new Date().toISOString(),
+          };
+          return updatedDemo;
+        })
+      );
+      if (!updatedDemo) {
+        throw new Error('Goal not found');
+      }
+      return updatedDemo;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-goals'] });
+      setEditingGoal(null);
+      setIsAddModalOpen(false);
+    },
+  });
+
   // Delete Goal Mutation
   const deleteMutation = useMutation({
     mutationFn: async (goalId: string) => {
@@ -216,13 +295,52 @@ export function GoalsPage() {
     },
   });
 
+  const statusCounts = useMemo(() => {
+    const counts = { all: summary.goals.length, on_track: 0, needs_boost: 0, completed: 0 };
+    for (const ev of summary.goals) {
+      counts[getGoalStatusMeta(ev).filterGroup] += 1;
+    }
+    return counts;
+  }, [summary.goals]);
+
+  const availableCategories = useMemo(() => {
+    const set = new Set<GoalCategory>();
+    for (const g of filteredGoalsList) set.add(g.category);
+    return Array.from(set);
+  }, [filteredGoalsList]);
+
+  const displayedEvaluations = useMemo(() => {
+    const filtered = summary.goals.filter((ev) => {
+      if (statusFilter !== 'all' && getGoalStatusMeta(ev).filterGroup !== statusFilter) {
+        return false;
+      }
+      if (categoryFilter !== 'all' && ev.goal.category !== categoryFilter) {
+        return false;
+      }
+      return true;
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'pct_complete') {
+        return b.fundedPercentage - a.fundedPercentage;
+      }
+      if (sortBy === 'monthly_gap') {
+        return Number(b.monthlySipShortfall.cents - a.monthlySipShortfall.cents);
+      }
+      return a.goal.targetDate.getTime() - b.goal.targetDate.getTime();
+    });
+  }, [summary.goals, statusFilter, categoryFilter, sortBy]);
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
+    <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-300">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <div className="flex flex-wrap items-center gap-2 mb-1.5">
-            <Badge variant="outline" className="text-[11px] font-mono border-border/80 whitespace-nowrap">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <Badge
+              variant="outline"
+              className="text-[11px] font-mono border-border/80 whitespace-nowrap"
+            >
               India First (₹ INR)
             </Badge>
             {!hasLiveBackend && (
@@ -234,11 +352,11 @@ export function GoalsPage() {
               </Badge>
             )}
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground">
             Financial Goals & Milestones
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Inflation-adjusted target corpus planning, monthly SIP math, and emergency fund runway.
+          <p className="hidden sm:block text-sm text-muted-foreground mt-0.5">
+            Track target dates, corpus progress, and monthly SIP pace.
           </p>
         </div>
 
@@ -246,7 +364,10 @@ export function GoalsPage() {
         <div className="flex items-center gap-2">
           <Button
             onClick={() => {
-              if (canEditFinancials && !isSupportModeActive) setIsAddModalOpen(true);
+              if (canEditFinancials && !isSupportModeActive) {
+                setEditingGoal(null);
+                setIsAddModalOpen(true);
+              }
             }}
             disabled={isSupportModeActive || !canEditFinancials}
             title={
@@ -264,40 +385,186 @@ export function GoalsPage() {
         </div>
       </div>
 
-      {/* Phase 6A: Family Entity Switcher Bar */}
-      <FamilyFilterBar
-        showAccountSelector={false}
-        onOpenManageModal={() => setIsManageFamilyOpen(true)}
-      />
+      {/* Compact "MY FAMILY" Horizontal Scroll Strip */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-xs text-muted-foreground sm:hidden">
+          <span className="font-semibold uppercase tracking-wider text-slate-400 text-[11px]">
+            My Family
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsManageFamilyOpen(true)}
+            className="text-[10px] text-primary hover:underline"
+          >
+            Manage
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+          <button
+            type="button"
+            onClick={() => setSelectedMemberId('all')}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
+              selectedMemberId === 'all'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
+            }`}
+          >
+            Combined Family ({members.length})
+          </button>
+
+          {members.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setSelectedMemberId(m.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
+                selectedMemberId === m.id
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
+              }`}
+            >
+              {m.name}
+            </button>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => setIsManageFamilyOpen(true)}
+            className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs text-muted-foreground hover:text-foreground bg-secondary/40 hover:bg-secondary border border-border/60 whitespace-nowrap shrink-0"
+          >
+            <span>+ Manage</span>
+          </button>
+        </div>
+      </div>
 
       <GoalsKpiSection
         summary={summary}
-        currencySymbol={currencySymbol}
-        locale={locale}
         monthlyExpenseRupees={monthlyExpenseRupees}
         onMonthlyExpenseChange={setMonthlyExpenseRupees}
       />
 
+      {/* Filter & Sort Controls */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2.5 pt-1">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          {(
+            [
+              { id: 'all', label: 'All' },
+              { id: 'on_track', label: 'On Track' },
+              { id: 'needs_boost', label: 'Needs Boost' },
+              { id: 'completed', label: 'Completed' },
+            ] as const
+          ).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setStatusFilter(item.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all shrink-0 border ${
+                statusFilter === item.id
+                  ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
+                  : 'bg-secondary/50 text-muted-foreground hover:text-foreground border-border/60'
+              }`}
+            >
+              {item.label} ({statusCounts[item.id]})
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <select
+            aria-label="Filter goals by category"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value as GoalCategory | 'all')}
+            className="h-8 px-2.5 rounded-lg bg-secondary/60 border border-border/70 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            <option value="all">All Categories</option>
+            {availableCategories.map((cat) => (
+              <option key={cat} value={cat}>
+                {GOAL_CATEGORY_LABELS[cat] || cat}
+              </option>
+            ))}
+          </select>
+
+          <div className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-secondary/60 border border-border/70">
+            <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <select
+              aria-label="Sort goals by"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as GoalSortOption)}
+              className="bg-transparent text-xs text-foreground focus:outline-none"
+            >
+              <option value="target_date">Target Date</option>
+              <option value="pct_complete">% Complete</option>
+              <option value="monthly_gap">Monthly Gap</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <GoalsGridSection
-        summary={summary}
+        evaluations={displayedEvaluations}
+        totalGoalsCount={summary.goals.length}
         members={members}
-        canEditFinancials={canEditFinancials}
+        canEditFinancials={canEditFinancials && !isSupportModeActive}
+        onTopUpGoal={(goal) => {
+          if (canEditFinancials && !isSupportModeActive) setTopUpGoal(goal);
+        }}
+        onEditGoal={(goalId) => {
+          if (!canEditFinancials || isSupportModeActive) return;
+          const found = filteredGoalsList.find((g) => g.id === goalId);
+          if (found) {
+            setEditingGoal(found);
+            setIsAddModalOpen(true);
+          }
+        }}
         onDeleteGoal={(goal) => {
           if (canEditFinancials && !isSupportModeActive) setGoalToDelete(goal);
+        }}
+        onCreateGoal={() => {
+          if (canEditFinancials && !isSupportModeActive) {
+            setEditingGoal(null);
+            setIsAddModalOpen(true);
+          }
+        }}
+        onResetFilters={() => {
+          setStatusFilter('all');
+          setCategoryFilter('all');
         }}
       />
 
       {/* Goal Milestone Projection Curve & Step-Up SIP Simulator */}
       <GoalProjectionCard goals={filteredGoalsList} />
 
-      {/* Add Goal Modal */}
+      {/* Add / Edit Goal Modal */}
       <AddGoalModal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setEditingGoal(null);
+        }}
+        initialGoal={editingGoal}
         onSubmit={async (params) => {
           await createMutation.mutateAsync(params);
         }}
-        isSubmitting={createMutation.isPending}
+        onUpdate={async (params) => {
+          await updateMutation.mutateAsync(params);
+        }}
+        isSubmitting={createMutation.isPending || updateMutation.isPending}
+      />
+
+      {/* Quick Top-Up Contribution Modal */}
+      <TopUpGoalModal
+        goal={topUpGoal}
+        isSubmitting={updateMutation.isPending}
+        onClose={() => setTopUpGoal(null)}
+        onConfirm={async (goalId, additionalCents) => {
+          const existing = activeGoalsList.find((g) => g.id === goalId);
+          const nextSavedCents = (existing?.initialSavedCents ?? topUpGoal?.currentSavedCents ?? 0) + additionalCents;
+          await updateMutation.mutateAsync({
+            goalId,
+            initialSavedCents: nextSavedCents,
+          });
+        }}
       />
 
       {/* Phase 6A: Manage Family Entities Modal */}
