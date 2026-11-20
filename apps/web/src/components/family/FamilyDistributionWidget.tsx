@@ -1,5 +1,6 @@
 import { useFamily } from '@/lib/family/family-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
+import { usePrivacy } from '@/lib/preferences/privacy-context';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Users, Shield, CheckCircle } from 'lucide-react';
@@ -7,6 +8,7 @@ import { Users, Shield, CheckCircle } from 'lucide-react';
 export function FamilyDistributionWidget() {
   const { familySummary, members, accounts, setSelectedMemberId, selectedMemberId } = useFamily();
   const { formatAmount } = usePreferences();
+  const { maskAmount } = usePrivacy();
 
   if (!familySummary) {
     return null;
@@ -50,7 +52,7 @@ export function FamilyDistributionWidget() {
               Total Family Wealth
             </div>
             <div className="text-lg font-bold text-white tracking-tight">
-              {formatAmount(Number(totalFamilyWealthPaise))}
+              {maskAmount(formatAmount(Number(totalFamilyWealthPaise)))}
             </div>
           </div>
         </div>
@@ -75,7 +77,7 @@ export function FamilyDistributionWidget() {
                     width: `${dist.percentageOfTotal}%`,
                     backgroundColor: dist.colorHex,
                   }}
-                  title={`${dist.memberName}: ${dist.percentageOfTotal}% (${formatAmount(Number(dist.totalWealthPaise))})`}
+                  title={`${dist.memberName}: ${dist.percentageOfTotal}% (${maskAmount(formatAmount(Number(dist.totalWealthPaise)))})`}
                   onClick={() => setSelectedMemberId(dist.memberId)}
                 />
               );
@@ -113,7 +115,7 @@ export function FamilyDistributionWidget() {
                 </div>
 
                 <div className="text-sm font-bold text-white mb-1">
-                  {formatAmount(Number(dist.totalWealthPaise))}
+                  {maskAmount(formatAmount(Number(dist.totalWealthPaise)))}
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] text-slate-400">
@@ -154,7 +156,9 @@ export function FamilyDistributionWidget() {
             <div className="text-sm font-bold text-emerald-400 flex items-center sm:justify-end gap-1">
               <CheckCircle className="w-3.5 h-3.5" />
               <span>
-                {hufBenefitNumber > 0 ? formatAmount(hufBenefitNumber) : '₹15,625 / year'}
+                {hufBenefitNumber > 0
+                  ? maskAmount(formatAmount(hufBenefitNumber))
+                  : maskAmount('₹15,625 / year')}
               </span>
             </div>
           </div>

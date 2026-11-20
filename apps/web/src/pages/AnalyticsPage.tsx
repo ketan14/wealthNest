@@ -32,6 +32,7 @@ import { AlertTriangle, CheckCircle2, ChevronRight, Sparkles, TrendingUp } from 
 import { useFamily } from '@/lib/family/family-context';
 import { shouldAllowDemoData } from '@/lib/config/mobile-runtime';
 import { usePreferences } from '@/lib/preferences/preferences-context';
+import { usePrivacy } from '@/lib/preferences/privacy-context';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 
 // Demo initial positions tailored for Indian investors (matches Portfolio demo)
@@ -184,6 +185,7 @@ export function AnalyticsPage() {
     privacyRules,
   } = useFamily();
   const { currencySymbol, preferences, legalName } = usePreferences();
+  const { maskAmount } = usePrivacy();
   const locale = preferences.numberFormat || 'en-IN';
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
@@ -559,7 +561,7 @@ export function AnalyticsPage() {
               Total Net Worth
             </div>
             <div className="text-base sm:text-xl font-bold font-mono text-white mt-0.5 truncate">
-              {formatInr(totalNetWorthRupees, { compact: true })}
+              {maskAmount(formatInr(totalNetWorthRupees, { compact: true }))}
             </div>
           </div>
 
@@ -568,7 +570,7 @@ export function AnalyticsPage() {
               Assets
             </div>
             <div className="text-base sm:text-xl font-bold font-mono text-emerald-400 mt-0.5 truncate">
-              {formatInr(totalAssetsRupees, { compact: true })}
+              {maskAmount(formatInr(totalAssetsRupees, { compact: true }))}
             </div>
           </Link>
 
@@ -577,7 +579,7 @@ export function AnalyticsPage() {
               Liabilities
             </div>
             <div className="text-base sm:text-xl font-bold font-mono text-rose-400 mt-0.5 truncate">
-              {formatInr(totalLiabilitiesRupees, { compact: true })}
+              {maskAmount(formatInr(totalLiabilitiesRupees, { compact: true }))}
             </div>
           </Link>
         </div>
@@ -680,7 +682,7 @@ export function AnalyticsPage() {
                   <div className="min-w-0">
                     <div className="text-xs font-semibold text-white truncate">{item.name}</div>
                     <div className="text-[11px] text-muted-foreground font-mono">
-                      Value {formatInr(item.valMoney.toDecimal(), { compact: true })}
+                      Value {maskAmount(formatInr(item.valMoney.toDecimal(), { compact: true }))}
                     </div>
                   </div>
                   <div className="text-right shrink-0 font-mono">
@@ -689,9 +691,11 @@ export function AnalyticsPage() {
                         item.isGain ? 'text-emerald-400' : 'text-rose-400'
                       }`}
                     >
-                      {formatInr(
-                        item.isGain ? item.gainMoney.toDecimal() : -item.gainMoney.toDecimal(),
-                        { compact: true, showSign: true }
+                      {maskAmount(
+                        formatInr(
+                          item.isGain ? item.gainMoney.toDecimal() : -item.gainMoney.toDecimal(),
+                          { compact: true, showSign: true }
+                        )
                       )}
                     </div>
                     <div className="text-[10px] text-muted-foreground">

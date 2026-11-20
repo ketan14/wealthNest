@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { formatInr } from '@/utils/formatInr';
+import { usePrivacy } from '@/lib/preferences/privacy-context';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -25,6 +26,7 @@ export function BenchmarkAndRebalanceSection({
   xirrDisplay,
   modelType,
 }: BenchmarkAndRebalanceSectionProps) {
+  const { maskAmount } = usePrivacy();
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <Card className="border-border/80 bg-card/60 backdrop-blur-md flex flex-col justify-between">
@@ -209,7 +211,7 @@ export function BenchmarkAndRebalanceSection({
                         <span className="text-muted-foreground">
                           Current:{' '}
                           <span className="font-mono text-foreground font-semibold">
-                            {formatInr(drift.currentValue.toDecimal(), { compact: true })}
+                            {maskAmount(formatInr(drift.currentValue.toDecimal(), { compact: true }))}
                           </span>
                         </span>
                         {isBalanced ? (
@@ -219,15 +221,19 @@ export function BenchmarkAndRebalanceSection({
                         ) : drift.rebalanceAction === 'buy' ? (
                           <span className="text-blue-400 font-medium flex items-center gap-1">
                             <ArrowUpRight className="w-3.5 h-3.5" /> Buy{' '}
-                            {formatInr(drift.rebalanceAmount.toDecimal(), {
-                              compact: true,
-                              showSign: true,
-                            })}
+                            {maskAmount(
+                              formatInr(drift.rebalanceAmount.toDecimal(), {
+                                compact: true,
+                                showSign: true,
+                              })
+                            )}
                           </span>
                         ) : (
                           <span className="text-amber-400 font-medium flex items-center gap-1">
-                            <ArrowDownRight className="w-3.5 h-3.5" /> Trim -
-                            {formatInr(drift.rebalanceAmount.toDecimal(), { compact: true })}
+                            <ArrowDownRight className="w-3.5 h-3.5" /> Trim{' '}
+                            {maskAmount(
+                              `-${formatInr(drift.rebalanceAmount.toDecimal(), { compact: true })}`
+                            )}
                           </span>
                         )}
                       </div>

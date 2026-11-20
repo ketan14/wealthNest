@@ -2,6 +2,7 @@ import { GoalsSummary } from '@wealthnest/domain';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { formatInr } from '@/utils/formatInr';
+import { usePrivacy } from '@/lib/preferences/privacy-context';
 import { ShieldAlert, Target, TrendingUp, Wallet } from 'lucide-react';
 
 interface GoalsKpiSectionProps {
@@ -21,6 +22,7 @@ export function GoalsKpiSection({
   monthlyExpenseRupees,
   onMonthlyExpenseChange,
 }: GoalsKpiSectionProps) {
+  const { maskAmount } = usePrivacy();
   const totalTargetRupees = toRupees(summary.totalTargetCorpus.cents);
   const totalCurrentRupees = toRupees(summary.totalCurrentCorpus.cents);
   const totalCommittedRupees = toRupees(summary.totalMonthlyCommittedSip.cents);
@@ -63,7 +65,7 @@ export function GoalsKpiSection({
             <p className="text-[11px] sm:text-xs text-muted-foreground truncate">
               Liquid:{' '}
               <span className="font-semibold text-foreground font-mono">
-                {formatInr(liquidCorpusRupees, { compact: true })}
+                {maskAmount(formatInr(liquidCorpusRupees, { compact: true }))}
               </span>
             </p>
           </CardContent>
@@ -83,7 +85,7 @@ export function GoalsKpiSection({
           <CardContent className="p-3 sm:p-5 pt-0 space-y-1.5">
             <div className="flex flex-wrap items-baseline gap-1.5">
               <span className="text-xl sm:text-2xl xl:text-3xl font-extrabold tracking-tight text-foreground font-mono">
-                {formatInr(totalTargetRupees, { compact: true })}
+                {maskAmount(formatInr(totalTargetRupees, { compact: true }))}
               </span>
               <Badge
                 variant="outline"
@@ -113,7 +115,7 @@ export function GoalsKpiSection({
           <CardContent className="p-3 sm:p-5 pt-0 space-y-1.5">
             <div className="flex flex-wrap items-baseline gap-1.5">
               <span className="text-xl sm:text-2xl xl:text-3xl font-extrabold tracking-tight text-foreground font-mono">
-                {formatInr(totalCurrentRupees, { compact: true })}
+                {maskAmount(formatInr(totalCurrentRupees, { compact: true }))}
               </span>
               <span className="text-[11px] sm:text-xs text-emerald-400 font-mono font-bold">
                 {summary.overallFundedPercentage.toFixed(1)}%
@@ -139,8 +141,7 @@ export function GoalsKpiSection({
           <CardContent className="p-3 sm:p-5 pt-0 space-y-1.5">
             <div className="flex flex-wrap items-baseline gap-1.5">
               <span className="text-xl sm:text-2xl xl:text-3xl font-extrabold tracking-tight text-foreground font-mono">
-                {formatInr(totalCommittedRupees, { compact: true })}
-                <span className="text-xs font-normal text-muted-foreground">/m</span>
+                {maskAmount(`${formatInr(totalCommittedRupees, { compact: true })}/m`)}
               </span>
               <Badge
                 variant="outline"
@@ -152,7 +153,7 @@ export function GoalsKpiSection({
             <p className="text-[11px] sm:text-xs text-muted-foreground truncate">
               Required Pace:{' '}
               <span className="font-semibold text-foreground font-mono">
-                {formatInr(totalRequiredRupees, { compact: true })}/m
+                {maskAmount(`${formatInr(totalRequiredRupees, { compact: true })}/m`)}
               </span>
             </p>
           </CardContent>
@@ -178,7 +179,7 @@ export function GoalsKpiSection({
                 Monthly Expense:
               </span>
               <div className="px-3 py-1 bg-accent/40 rounded-xl border border-border/80 text-xs font-mono font-bold text-foreground whitespace-nowrap">
-                {formatInr(monthlyExpenseRupees)}
+                {maskAmount(formatInr(monthlyExpenseRupees))}
               </div>
             </div>
           </div>
@@ -191,13 +192,13 @@ export function GoalsKpiSection({
               <span className="text-muted-foreground">
                 Current Buffer:{' '}
                 <b className="text-foreground">
-                  {formatInr(liquidCorpusRupees, { compact: true })}
+                  {maskAmount(formatInr(liquidCorpusRupees, { compact: true }))}
                 </b>
               </span>
               <span className="text-muted-foreground">
                 6-Mo Target:{' '}
                 <b className="text-emerald-400">
-                  {formatInr(monthlyExpenseRupees * 6, { compact: true })}
+                  {maskAmount(formatInr(monthlyExpenseRupees * 6, { compact: true }))}
                 </b>
               </span>
             </div>

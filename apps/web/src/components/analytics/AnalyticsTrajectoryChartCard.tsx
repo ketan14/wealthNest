@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { AccessibleChartContainer } from '@/components/ui/AccessibleChartContainer';
 import { Button } from '@/components/ui/Button';
 import { formatInr } from '@/utils/formatInr';
+import { usePrivacy } from '@/lib/preferences/privacy-context';
 import { BarChart3, Calendar, Plus } from 'lucide-react';
 
 interface AnalyticsTrajectoryChartCardProps {
@@ -16,6 +17,7 @@ export function AnalyticsTrajectoryChartCard({
   trajectory,
   netWorthRupees,
 }: AnalyticsTrajectoryChartCardProps) {
+  const { hideBalances, maskAmount } = usePrivacy();
   const [timeframe, setTimeframe] = useState<'1M' | '3M' | '6M' | 'YTD' | '1Y' | 'ALL'>('ALL');
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -171,18 +173,20 @@ export function AnalyticsTrajectoryChartCard({
           <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
             <div className="flex items-baseline gap-2.5 flex-wrap">
               <span className="text-lg sm:text-xl font-bold font-mono text-white">
-                {formatInr(headlineValue, { compact: true, compactDecimals: 2 })}
+                {maskAmount(formatInr(headlineValue, { compact: true, compactDecimals: 2 }))}
               </span>
               <span
                 className={`text-xs font-semibold font-mono ${
                   periodDeltaRupees >= 0 ? 'text-emerald-400' : 'text-rose-400'
                 }`}
               >
-                {formatInr(periodDeltaRupees, {
-                  compact: true,
-                  compactDecimals: 2,
-                  showSign: true,
-                })}{' '}
+                {maskAmount(
+                  formatInr(periodDeltaRupees, {
+                    compact: true,
+                    compactDecimals: 2,
+                    showSign: true,
+                  })
+                )}{' '}
                 ({periodDeltaPct >= 0 ? '+' : ''}
                 {periodDeltaPct.toFixed(1)}%)
               </span>
@@ -194,10 +198,10 @@ export function AnalyticsTrajectoryChartCard({
                 <span className="text-white font-semibold">{activePoint.date}</span>
               </span>
               <span className="text-emerald-400">
-                Value: {formatInr(activePoint.valRupees, { compact: true })}
+                Value: {maskAmount(formatInr(activePoint.valRupees, { compact: true }))}
               </span>
               <span className="text-slate-300">
-                Cost: {formatInr(activePoint.invRupees, { compact: true })}
+                Cost: {maskAmount(formatInr(activePoint.invRupees, { compact: true }))}
               </span>
             </div>
           </div>
@@ -227,9 +231,9 @@ export function AnalyticsTrajectoryChartCard({
               rows={points.map((p) => ({
                 label: p.date,
                 values: [
-                  formatInr(p.valRupees, { compact: false }),
-                  formatInr(p.invRupees, { compact: false }),
-                  formatInr(p.benchRupees, { compact: false }),
+                  maskAmount(formatInr(p.valRupees, { compact: false })),
+                  maskAmount(formatInr(p.invRupees, { compact: false })),
+                  maskAmount(formatInr(p.benchRupees, { compact: false })),
                 ],
               }))}
             >
@@ -273,7 +277,9 @@ export function AnalyticsTrajectoryChartCard({
                           textAnchor="end"
                           className="fill-slate-500 text-[11px] font-mono"
                         >
-                          {formatInr(tickValue, { compact: true, compactDecimals: 1 })}
+                          {hideBalances
+                            ? '••••'
+                            : formatInr(tickValue, { compact: true, compactDecimals: 1 })}
                         </text>
                       </g>
                     );
@@ -307,7 +313,7 @@ export function AnalyticsTrajectoryChartCard({
                       key={p.date}
                       tabIndex={0}
                       role="button"
-                      aria-label={`${p.date}: Valuation ${formatInr(p.valRupees, { compact: true })}, Cost Basis ${formatInr(p.invRupees, { compact: true })}`}
+                      aria-label={`${p.date}: Valuation ${maskAmount(formatInr(p.valRupees, { compact: true }))}, Cost Basis ${maskAmount(formatInr(p.invRupees, { compact: true }))}`}
                       onMouseEnter={() => setHoveredIndex(idx)}
                       onClick={() => setHoveredIndex(idx)}
                       onFocus={() => setHoveredIndex(idx)}

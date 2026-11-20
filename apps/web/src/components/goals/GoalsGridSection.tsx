@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { formatInr } from '@/utils/formatInr';
+import { usePrivacy } from '@/lib/preferences/privacy-context';
 import { TopUpTargetGoal } from '@/components/goals/TopUpGoalModal';
 import {
   Building2,
@@ -113,6 +114,7 @@ export function GoalsGridSection({
   onCreateGoal,
   onResetFilters,
 }: GoalsGridSectionProps) {
+  const { maskAmount } = usePrivacy();
   const [expandedGoalIds, setExpandedGoalIds] = useState<Record<string, boolean>>({});
 
   const toggleExpanded = (goalId: string) => {
@@ -250,9 +252,9 @@ export function GoalsGridSection({
                   <div className="space-y-1.5">
                     <div className="flex items-baseline justify-between gap-2 text-xs">
                       <span className="font-mono font-bold text-foreground">
-                        {formatInr(currentCorpusRupees, { compact: true })}{' '}
+                        {maskAmount(formatInr(currentCorpusRupees, { compact: true }))}{' '}
                         <span className="text-muted-foreground font-normal">
-                          / {formatInr(targetRupees, { compact: true })}
+                          / {maskAmount(formatInr(targetRupees, { compact: true }))}
                         </span>
                       </span>
                       <span className="font-mono font-bold text-emerald-400">
@@ -282,7 +284,7 @@ export function GoalsGridSection({
                           Committed SIP
                         </span>
                         <span className="font-bold text-foreground">
-                          {formatInr(committedSipRupees, { compact: true })}/mo
+                          {maskAmount(`${formatInr(committedSipRupees, { compact: true })}/mo`)}
                         </span>
                       </div>
                       <div className="text-right">
@@ -294,7 +296,7 @@ export function GoalsGridSection({
                             shortfallRupees <= 0 ? 'text-emerald-400' : 'text-amber-400'
                           }`}
                         >
-                          {formatInr(requiredSipRupees, { compact: true })}/mo
+                          {maskAmount(`${formatInr(requiredSipRupees, { compact: true })}/mo`)}
                         </span>
                       </div>
                     </div>
@@ -304,8 +306,8 @@ export function GoalsGridSection({
                         {statusMeta.filterGroup === 'completed'
                           ? 'Target corpus achieved'
                           : shortfallRupees > 0
-                            ? `Gap: +${formatInr(shortfallRupees, { compact: true })}/mo`
-                            : `Projected: ${formatInr(projectedRupees, { compact: true })}`}
+                            ? `Gap: ${maskAmount(`+${formatInr(shortfallRupees, { compact: true })}/mo`)}`
+                            : `Projected: ${maskAmount(formatInr(projectedRupees, { compact: true }))}`}
                       </span>
                       <span className="text-muted-foreground font-mono shrink-0 inline-flex items-center gap-1">
                         <Link2 className="w-3 h-3" />
@@ -382,7 +384,7 @@ export function GoalsGridSection({
                         <span>
                           Inflation Target ({goal.inflationRate}%):{' '}
                           <b className="text-foreground">
-                            {formatInr(futureTargetRupees, { compact: true })}
+                            {maskAmount(formatInr(futureTargetRupees, { compact: true }))}
                           </b>
                         </span>
                         <span>Assumed Return: {goal.expectedReturnRate}% p.a.</span>

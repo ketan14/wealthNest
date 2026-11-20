@@ -13,6 +13,7 @@ import { useHousehold } from '@/lib/supabase/household-context';
 import { useFamily } from '@/lib/family/family-context';
 import { useRepositories } from '@/lib/persistence/repository-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
+import { usePrivacy } from '@/lib/preferences/privacy-context';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
@@ -161,6 +162,8 @@ export function RealEstatePage() {
   const { members, selectedMemberId, setSelectedMemberId } = useFamily();
   const { holdingRepo, liabilityRepo, mode } = useRepositories();
   const { isSupportModeActive } = useSupportSession();
+  const { maskAmount } = usePrivacy();
+  const formatMaskedInr = useCallback((paise: bigint) => maskAmount(formatInr(paise)), [maskAmount]);
 
   const isDemoMode = mode === 'supabase' && (!user?.id || user.id.startsWith('demo-'));
   const scopeId = isDemoMode ? user?.id || 'demo-user' : activeHouseholdId || user?.id || '';
@@ -426,7 +429,7 @@ export function RealEstatePage() {
               <Building2 className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-xl sm:text-2xl font-bold text-white">
-              {formatInr(summary.totalPropertyValuePaise)}
+              {formatMaskedInr(summary.totalPropertyValuePaise)}
             </div>
             <p className="text-xs text-slate-500 mt-1">
               {summary.propertyCount} {summary.propertyCount === 1 ? 'property' : 'properties'}
@@ -441,10 +444,10 @@ export function RealEstatePage() {
               <ShieldCheck className="w-4 h-4 text-cyan-400" />
             </div>
             <div className="text-xl sm:text-2xl font-bold text-emerald-400">
-              {formatInr(summary.totalNetEquityPaise)}
+              {formatMaskedInr(summary.totalNetEquityPaise)}
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Debt: {formatInr(summary.totalLinkedDebtPaise)}
+              Debt: {formatMaskedInr(summary.totalLinkedDebtPaise)}
             </p>
           </CardContent>
         </Card>
@@ -475,7 +478,7 @@ export function RealEstatePage() {
               <IndianRupee className="w-4 h-4 text-indigo-400" />
             </div>
             <div className="text-xl sm:text-2xl font-bold text-white">
-              {formatInr(summary.totalMonthlyRentPaise)}
+              {formatMaskedInr(summary.totalMonthlyRentPaise)}
             </div>
             <p className="text-xs text-slate-500 mt-1">
               Gross {summary.averageGrossYieldPct.toFixed(2)}% · Net{' '}
@@ -542,7 +545,7 @@ export function RealEstatePage() {
         properties={visibleProperties}
         memberNameMap={memberNameMap}
         isSupportModeActive={isSupportModeActive}
-        formatInr={formatInr}
+        formatInr={formatMaskedInr}
         getPropertyTypeLabel={getPropertyTypeLabel}
         onEditProperty={setEditingProperty}
       />

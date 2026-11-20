@@ -4,6 +4,7 @@ import { PortfolioAnalyticsSummary } from '@wealthnest/domain';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { formatInr } from '@/utils/formatInr';
+import { usePrivacy } from '@/lib/preferences/privacy-context';
 
 interface AnalyticsKpiGridProps {
   analytics: PortfolioAnalyticsSummary;
@@ -18,6 +19,7 @@ export function AnalyticsKpiGrid({
   alphaDisplay,
   cagrDisplay,
 }: AnalyticsKpiGridProps) {
+  const { maskAmount } = usePrivacy();
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
       {/* Card 1: XIRR -> /portfolio */}
@@ -73,10 +75,12 @@ export function AnalyticsKpiGrid({
                 analytics.absoluteGain.cents >= 0n ? 'text-emerald-400' : 'text-rose-400'
               }`}
             >
-              {formatInr(analytics.absoluteGain.toDecimal(), {
-                compact: true,
-                showSign: true,
-              })}
+              {maskAmount(
+                formatInr(analytics.absoluteGain.toDecimal(), {
+                  compact: true,
+                  showSign: true,
+                })
+              )}
             </span>{' '}
             <span className="font-sans">net gain</span>
           </p>

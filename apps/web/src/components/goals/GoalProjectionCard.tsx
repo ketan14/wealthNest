@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/Badge';
 import { AccessibleChartContainer } from '@/components/ui/AccessibleChartContainer';
 import { formatInr } from '@/utils/formatInr';
+import { usePrivacy } from '@/lib/preferences/privacy-context';
 
 interface GoalProjectionCardProps {
   goals: readonly GoalDetailDto[];
@@ -14,6 +15,7 @@ interface GoalProjectionCardProps {
 const STEP_UP_OPTIONS = [0, 5, 10, 15] as const;
 
 export function GoalProjectionCard({ goals }: GoalProjectionCardProps) {
+  const { maskAmount } = usePrivacy();
   const [selectedGoalId, setSelectedGoalId] = useState<string>(() => goals[0]?.id || '');
   const [stepUpRatePct, setStepUpRatePct] = useState<number>(10);
 
@@ -150,13 +152,13 @@ export function GoalProjectionCard({ goals }: GoalProjectionCardProps) {
           <div className="p-3 rounded-xl bg-secondary/30 border border-border/60">
             <div className="text-[11px] text-muted-foreground">Projected Step-Up Corpus</div>
             <div className="text-lg font-bold font-mono text-emerald-400 mt-0.5">
-              {formatInr(Number(finalStepUpMoney.cents) / 100, { compact: true })}
+              {maskAmount(formatInr(Number(finalStepUpMoney.cents) / 100, { compact: true }))}
             </div>
           </div>
           <div className="p-3 rounded-xl bg-secondary/30 border border-border/60">
             <div className="text-[11px] text-muted-foreground">Inflation-Adjusted Target</div>
             <div className="text-lg font-bold font-mono text-amber-400 mt-0.5">
-              {formatInr(Number(finalTargetMoney.cents) / 100, { compact: true })}
+              {maskAmount(formatInr(Number(finalTargetMoney.cents) / 100, { compact: true }))}
             </div>
           </div>
           <div className="p-3 rounded-xl bg-secondary/30 border border-border/60 flex items-center justify-between">
@@ -166,7 +168,9 @@ export function GoalProjectionCard({ goals }: GoalProjectionCardProps) {
                 Step-Up Wealth Boost
               </div>
               <div className="text-lg font-bold font-mono text-cyan-400 mt-0.5">
-                {formatInr(Number(advantageMoney.cents) / 100, { compact: true, showSign: true })}
+                {maskAmount(
+                  formatInr(Number(advantageMoney.cents) / 100, { compact: true, showSign: true })
+                )}
               </div>
             </div>
             <Badge variant={projection.isStepUpOnTrack ? 'success' : 'outline'}>
@@ -183,9 +187,11 @@ export function GoalProjectionCard({ goals }: GoalProjectionCardProps) {
           rows={projection.points.map((pt) => ({
             label: String(pt.calendarYear),
             values: [
-              formatInr(Number(pt.stepUpSipCorpusPaise) / 100, { compact: true }),
-              formatInr(Number(pt.flatSipCorpusPaise) / 100, { compact: true }),
-              formatInr(Number(pt.inflationAdjustedTargetPaise) / 100, { compact: true }),
+              maskAmount(formatInr(Number(pt.stepUpSipCorpusPaise) / 100, { compact: true })),
+              maskAmount(formatInr(Number(pt.flatSipCorpusPaise) / 100, { compact: true })),
+              maskAmount(
+                formatInr(Number(pt.inflationAdjustedTargetPaise) / 100, { compact: true })
+              ),
             ],
           }))}
         >

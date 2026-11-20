@@ -1,6 +1,7 @@
 import { PortfolioTaxSummary, Section112aHarvestingPlan } from '@wealthnest/domain';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { usePrivacy } from '@/lib/preferences/privacy-context';
 import { Coins, Receipt, Scissors, Sparkles, Users } from 'lucide-react';
 
 interface TaxHarvestingIntelligenceCardProps {
@@ -18,6 +19,7 @@ export function TaxHarvestingIntelligenceCard({
   currencySymbol,
   locale,
 }: TaxHarvestingIntelligenceCardProps) {
+  const { maskAmount } = usePrivacy();
   return (
     <Card className="border-border/80 bg-card/60 backdrop-blur-md">
       <CardHeader className="pb-4">
@@ -54,7 +56,7 @@ export function TaxHarvestingIntelligenceCard({
                 : 'Section 112A LTCG Exemption'}
             </span>
             <div className="text-lg font-bold font-mono text-emerald-400">
-              {taxSummary.annualLtcgExemption.formatIndianCompact()}
+              {maskAmount(taxSummary.annualLtcgExemption.formatIndianCompact())}
             </div>
             <p className="text-[11px] text-muted-foreground">
               {activeMemberRelationship === 'huf'
@@ -66,20 +68,20 @@ export function TaxHarvestingIntelligenceCard({
           <div className="p-3.5 rounded-xl bg-accent/30 border border-border/60 space-y-1">
             <span className="text-xs text-muted-foreground">Taxable LTCG (&gt;1 Year @ 12.5%)</span>
             <div className="text-lg font-bold font-mono text-foreground">
-              {taxSummary.taxableLtcg.formatIndianCompact()}
+              {maskAmount(taxSummary.taxableLtcg.formatIndianCompact())}
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Estimated Tax: {taxSummary.estimatedLtcgTax.formatIndianCompact()}
+              Estimated Tax: {maskAmount(taxSummary.estimatedLtcgTax.formatIndianCompact())}
             </p>
           </div>
 
           <div className="p-3.5 rounded-xl bg-accent/30 border border-border/60 space-y-1">
             <span className="text-xs text-muted-foreground">Taxable STCG (&le;1 Year @ 20%)</span>
             <div className="text-lg font-bold font-mono text-foreground">
-              {taxSummary.netStcg.formatIndianCompact()}
+              {maskAmount(taxSummary.netStcg.formatIndianCompact())}
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Estimated Tax: {taxSummary.estimatedStcgTax.formatIndianCompact()}
+              Estimated Tax: {maskAmount(taxSummary.estimatedStcgTax.formatIndianCompact())}
             </p>
           </div>
 
@@ -89,10 +91,11 @@ export function TaxHarvestingIntelligenceCard({
               Loss Harvesting Savings
             </span>
             <div className="text-lg font-bold font-mono text-emerald-400">
-              {taxSummary.potentialTaxSavings.formatIndianCompact()}
+              {maskAmount(taxSummary.potentialTaxSavings.formatIndianCompact())}
             </div>
             <p className="text-[11px] text-emerald-300">
-              From {taxSummary.harvestableLossPotential.formatIndianCompact()} in bookable losses
+              From {maskAmount(taxSummary.harvestableLossPotential.formatIndianCompact())} in
+              bookable losses
             </p>
           </div>
         </div>
@@ -123,18 +126,20 @@ export function TaxHarvestingIntelligenceCard({
                     </div>
                     <div className="flex items-center gap-3 font-mono">
                       <span className="text-rose-400 font-bold">
-                        -{h.harvestableLoss.formatIndianCompact()}
+                        {maskAmount(`-${h.harvestableLoss.formatIndianCompact()}`)}
                       </span>
                       <Badge
                         variant="outline"
                         className="text-emerald-400 border-emerald-500/20 bg-emerald-500/10 text-[10px]"
                       >
-                        Save ~{currencySymbol}
-                        {(
-                          (Number(h.harvestableLoss.cents) *
-                            (h.term === 'short_term' ? 0.2 : 0.125)) /
-                          100
-                        ).toLocaleString(locale, { maximumFractionDigits: 0 })}
+                        Save{' '}
+                        {maskAmount(
+                          `~${currencySymbol}${(
+                            (Number(h.harvestableLoss.cents) *
+                              (h.term === 'short_term' ? 0.2 : 0.125)) /
+                            100
+                          ).toLocaleString(locale, { maximumFractionDigits: 0 })}`
+                        )}
                       </Badge>
                     </div>
                   </div>
@@ -155,7 +160,8 @@ export function TaxHarvestingIntelligenceCard({
               variant="outline"
               className="text-[10px] bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
             >
-              Total Family Tax Shield: {harvestingPlan.totalEstimatedTaxSaved.formatIndianCompact()}
+              Total Family Tax Shield:{' '}
+              {maskAmount(harvestingPlan.totalEstimatedTaxSaved.formatIndianCompact())}
             </Badge>
           </div>
 
@@ -195,7 +201,7 @@ export function TaxHarvestingIntelligenceCard({
                       )}
                     </div>
                     <span className="text-xs font-mono font-bold text-emerald-400">
-                      +{entity.estimatedTaxShield.formatIndianCompact()} Saved
+                      {maskAmount(`+${entity.estimatedTaxShield.formatIndianCompact()} Saved`)}
                     </span>
                   </div>
 
@@ -204,9 +210,9 @@ export function TaxHarvestingIntelligenceCard({
                       <span>
                         Exemption Utilized:{' '}
                         <strong className="text-foreground font-mono">
-                          {entity.optimalHarvestAmount.formatIndianCompact()}
+                          {maskAmount(entity.optimalHarvestAmount.formatIndianCompact())}
                         </strong>{' '}
-                        / {entity.annualExemptionLimit.formatIndianCompact()}
+                        / {maskAmount(entity.annualExemptionLimit.formatIndianCompact())}
                       </span>
                       <span className="font-mono">{headroomPct.toFixed(0)}%</span>
                     </div>
@@ -246,10 +252,10 @@ export function TaxHarvestingIntelligenceCard({
                           </div>
                           <div className="text-right font-mono">
                             <span className="text-emerald-400 font-bold block">
-                              +{pos.harvestedGainsAmount.formatIndianCompact()}
+                              {maskAmount(`+${pos.harvestedGainsAmount.formatIndianCompact()}`)}
                             </span>
                             <span className="text-[9px] text-muted-foreground">
-                              Save ~{pos.taxSavedAmount.formatIndianCompact()}
+                              Save {maskAmount(`~${pos.taxSavedAmount.formatIndianCompact()}`)}
                             </span>
                           </div>
                         </div>
