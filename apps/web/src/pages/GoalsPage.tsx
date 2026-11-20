@@ -476,7 +476,7 @@ export function GoalsPage() {
             aria-label="Filter goals by category"
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value as GoalCategory | 'all')}
-            className="h-8 px-2.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-100 [color-scheme:dark] cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="h-8 px-2.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-100 [color-scheme:dark] cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
             <option value="all" className="bg-slate-900 text-slate-100">
               All Categories

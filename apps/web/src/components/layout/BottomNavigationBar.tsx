@@ -17,17 +17,24 @@ import {
 import { cn } from '@/lib/utils';
 import { useAdmin } from '@/lib/admin/admin-context';
 import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
+import { useVirtualKeyboard } from '@/lib/mobile/use-virtual-keyboard';
 
 export function BottomNavigationBar() {
   const { isAnyAdmin } = useAdmin();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const isKeyboardOpen = useVirtualKeyboard();
 
   return (
     <>
       <nav
         data-testid="bottom-nav-bar"
+        data-keyboard-open={isKeyboardOpen ? 'true' : 'false'}
+        aria-hidden={isKeyboardOpen || undefined}
         aria-label="Mobile Navigation"
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border shadow-lg select-none"
+        className={cn(
+          'md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border shadow-lg select-none transition-transform duration-150',
+          isKeyboardOpen && 'translate-y-full pointer-events-none opacity-0'
+        )}
         style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="flex items-center justify-around h-16 px-1.5 max-w-lg mx-auto gap-0.5 relative">

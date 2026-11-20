@@ -1,6 +1,7 @@
-import type { FormHTMLAttributes, KeyboardEventHandler, ReactNode } from 'react';
+import { useEffect, type FormHTMLAttributes, type KeyboardEventHandler, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
+import { registerBackDismissHandler } from '@/lib/navigation/android-back';
 
 export interface ResponsiveModalShellProps {
   /** Mount overlay into document.body via React portal. */
@@ -13,6 +14,8 @@ export interface ResponsiveModalShellProps {
   panelClassName?: string;
   /** Optional handler invoked when clicking outside the modal panel. */
   onBackdropClick?: () => void;
+  /** Optional close handler invoked by hardware/system Back gestures. Defaults to `onBackdropClick`. */
+  onDismiss?: () => void;
   /** Optional keyboard handler attached to the modal panel. */
   onPanelKeyDown?: KeyboardEventHandler<HTMLDivElement>;
   role?: 'dialog' | 'alertdialog';
@@ -65,6 +68,7 @@ export function ResponsiveModalShell({
   backdropClassName,
   panelClassName,
   onBackdropClick,
+  onDismiss,
   onPanelKeyDown,
   role,
   ariaLabel,
@@ -79,6 +83,15 @@ export function ResponsiveModalShell({
   footerClassName,
   children,
 }: ResponsiveModalShellProps) {
+  useEffect(() => {
+    const dismissHandler = onDismiss ?? onBackdropClick;
+    if (!dismissHandler) return;
+    return registerBackDismissHandler(() => {
+      dismissHandler();
+      return true;
+    });
+  }, [onDismiss, onBackdropClick]);
+
   const innerContent = (
     <>
       <div

@@ -11,6 +11,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { InviteAcceptPage } from '@/pages/InviteAcceptPage';
 import { AppLinkListener } from '@/components/common/AppLinkListener';
+import { AndroidBackHandler } from '@/components/common/AndroidBackHandler';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 const PortfolioPage = lazy(() =>
@@ -129,6 +130,7 @@ export function App() {
                     <ToastProvider>
                     <BrowserRouter>
                     <AppLinkListener />
+                    <AndroidBackHandler />
                     <Suspense fallback={<RouteLoadingFallback />}>
                       <Routes>
                         {/* Dedicated Authentication & Invitation Routes */}

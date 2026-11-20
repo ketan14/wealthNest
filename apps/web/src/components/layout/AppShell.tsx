@@ -6,9 +6,12 @@ import { BottomNavigationBar } from './BottomNavigationBar';
 import { DesktopTitlebar } from './DesktopTitlebar';
 import { SupportModeBanner } from '../admin/SupportModeBanner';
 import { CommandPaletteModal } from './CommandPaletteModal';
+import { useVirtualKeyboard } from '@/lib/mobile/use-virtual-keyboard';
+import { cn } from '@/lib/utils';
 
 export function AppShell() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const isKeyboardOpen = useVirtualKeyboard();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -32,7 +35,12 @@ export function AppShell() {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0 max-w-full overflow-hidden">
           <Header onOpenCommandPalette={() => setIsCommandPaletteOpen(true)} />
-          <main className="flex-1 p-4 sm:p-6 md:p-8 pb-24 md:pb-8 max-w-7xl w-full mx-auto overflow-y-auto overflow-x-hidden">
+          <main
+            className={cn(
+              'flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto overflow-y-auto overflow-x-hidden',
+              isKeyboardOpen ? 'pb-4' : 'pb-24 md:pb-8'
+            )}
+          >
             <Outlet />
           </main>
         </div>
