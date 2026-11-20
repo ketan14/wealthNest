@@ -155,6 +155,10 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
       // Family Filter Bar exists on Portfolio Page
       expect(screen.getByText('Combined Family')).toBeInTheDocument();
       expect(screen.getByText('Shamalbhai Vaghela HUF')).toBeInTheDocument();
+      const allMembersBtn = screen.getByRole('button', { name: /All Members/i });
+      expect(allMembersBtn).toBeInTheDocument();
+      const hufFilter = screen.getByRole('button', { name: 'Shamalbhai Vaghela HUF' });
+      expect(hufFilter).toBeInTheDocument();
 
       // Holdings table renders with demat / member badges
       expect(screen.getByText('Reliance Industries Ltd')).toBeInTheDocument();
@@ -177,6 +181,8 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
       // Switch back to "Combined Family"
       const combinedFamilyBtn = screen.getByText('Combined Family');
       fireEvent.click(combinedFamilyBtn);
+      // Switch back to All Members
+      fireEvent.click(allMembersBtn);
 
       await waitFor(() => {
         expect(screen.getByText('Reliance Industries Ltd')).toBeInTheDocument();
@@ -202,6 +208,7 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
 
       // Verify legal entities list
       expect(screen.getByText(/Family Entities/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Family Entities/i })).toBeInTheDocument();
       expect(screen.getAllByText('Ketan Vaghela').length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText('Parul Vaghela').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Shamalbhai Vaghela HUF')).toBeInTheDocument();
@@ -223,6 +230,8 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
 
       // Verify FamilyFilterBar is rendered
       expect(screen.getByText('Combined Family')).toBeInTheDocument();
+      // Verify compact family filter chip bar is rendered
+      expect(screen.getByRole('button', { name: /Combined Family/i })).toBeInTheDocument();
       expect(screen.getByText('Shamalbhai Vaghela HUF')).toBeInTheDocument();
 
       // Verify table has entity/broker badges
@@ -247,11 +256,15 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
 
       // Verify FamilyFilterBar exists
       expect(screen.getByText('Combined Family')).toBeInTheDocument();
+      // Verify compact family filter chip bar exists
+      expect(screen.getByRole('button', { name: /Combined Family/i })).toBeInTheDocument();
       expect(screen.getByText('Shamalbhai Vaghela HUF')).toBeInTheDocument();
 
       // Verify page title and header badge
+      // Verify page title and unified Net Worth strip
       expect(screen.getByText('Performance & Wealth Analytics')).toBeInTheDocument();
       expect(screen.getByText(/Combined Family Portfolio/i)).toBeInTheDocument();
+      expect(screen.getByText('Total Net Worth')).toBeInTheDocument();
 
       // Filter by HUF entity
       const hufFilter = screen.getByText('Shamalbhai Vaghela HUF');
@@ -311,6 +324,8 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
 
       // Verify FamilyFilterBar is rendered
       expect(screen.getByText('Combined Family')).toBeInTheDocument();
+      // Verify compact family filter chip bar is rendered
+      expect(screen.getByRole('button', { name: /Combined Family/i })).toBeInTheDocument();
       expect(screen.getAllByText('Krisha Vaghela').length).toBeGreaterThanOrEqual(1);
 
       // Verify beneficiary badges are rendered on goals
@@ -332,6 +347,8 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
 
       // Verify FamilyFilterBar is rendered
       expect(screen.getByText('Combined Family')).toBeInTheDocument();
+      // Verify compact family filter chip bar is rendered
+      expect(screen.getByRole('button', { name: /All Members/i })).toBeInTheDocument();
       expect(screen.getAllByText('Parul Vaghela').length).toBeGreaterThanOrEqual(1);
 
       // Verify loan and borrower tags

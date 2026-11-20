@@ -8,7 +8,7 @@ import { FamilyProvider } from '../lib/family/family-context';
 import { RepositoryProvider } from '../lib/persistence/repository-context';
 
 describe('Phase 9.2: Responsive SVG Chart Layout', () => {
-  it('TC-9.2-04A: Analytics SVG chart does not have min-w-[600px] forcing horizontal overflow', () => {
+  it('TC-9.2-04A: Analytics SVG chart does not have min-w-[600px] forcing horizontal overflow', async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -27,7 +27,7 @@ describe('Phase 9.2: Responsive SVG Chart Layout', () => {
       </QueryClientProvider>
     );
 
-    const projectionSvg = screen.getByTestId('analytics-trajectory-svg');
+    const projectionSvg = await screen.findByTestId('analytics-trajectory-svg');
 
     expect(projectionSvg).toBeDefined();
     expect(projectionSvg.getAttribute('class')).not.toContain('min-w-[600px]');
