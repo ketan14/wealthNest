@@ -45,11 +45,44 @@
     background-color: hsl(var(--card));
     color: hsl(var(--foreground));
   }
+
+  button,
+  a,
+  select,
+  summary,
+  [role='button'],
+  [role='tab'] {
+    touch-action: manipulation;
+  }
+
+  [role='tab'] {
+    transition: transform 150ms cubic-bezier(0.2, 0, 0, 1), opacity 150ms ease;
+  }
+
+  [role='tab']:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  nav,
+  button,
+  [role='button'],
+  [role='tab'] {
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+
+  input,
+  textarea,
+  [contenteditable='true'] {
+    user-select: text;
+    -webkit-user-select: text;
+  }
 }
 
 html, body {
   max-width: 100%;
   overflow-x: clip;
+  overscroll-behavior-y: contain;
   -webkit-tap-highlight-color: transparent;
 }
 

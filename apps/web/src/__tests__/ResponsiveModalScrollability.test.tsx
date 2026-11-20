@@ -308,11 +308,18 @@ describe('Phase 18A: Responsive Modal Scrollability & Pinned Footers', () => {
       expect(panel).toHaveClass('max-h-[90dvh]', 'pb-[env(safe-area-inset-bottom)]');
     });
 
-    it('renders AddHoldingModal with form-wrapped scrollable fields and pinned Save Position button', async () => {
+    it('renders AddHoldingModal with form-wrapped scrollable fields, bottom-sheet mobile ergonomics, and instant active button feedback', async () => {
       const onSubmit = vi.fn().mockResolvedValue(undefined);
       renderWithAppProviders(<AddHoldingModal isOpen onClose={vi.fn()} onSubmit={onSubmit} />);
 
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toHaveClass('items-end', 'sm:items-center', 'duration-150');
+      const panel = dialog.firstElementChild as HTMLElement;
+      expect(panel).toHaveClass('rounded-t-2xl', 'pb-[env(safe-area-inset-bottom)]');
+
       const saveBtn = screen.getByRole('button', { name: /Save Position/i });
+      expect(saveBtn.className).toContain('active:scale-[0.97]');
+      expect(saveBtn.className).toContain('duration-150');
       const footerWrapper = saveBtn.parentElement?.parentElement as HTMLElement;
       expect(footerWrapper).toHaveClass('shrink-0');
       expect(saveBtn.closest('form')).not.toBeNull();

@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { BottomNavigationBar } from '../components/layout/BottomNavigationBar';
@@ -55,5 +57,13 @@ describe('Phase 9.2: Mobile Navigation Shell & Ergonomics', () => {
     expect(sidebar).toHaveClass('hidden');
     expect(sidebar).toHaveClass('md:flex');
     expect(sidebar).toHaveClass('md:w-64');
+  });
+
+  it('TC-9.2-01C: enforces touch-action manipulation, callout suppression, and overscroll containment in CSS', () => {
+    const css = readFileSync(resolve(__dirname, '../index.css'), 'utf8');
+    expect(css).toContain('touch-action: manipulation;');
+    expect(css).toContain('-webkit-touch-callout: none;');
+    expect(css).toContain('overscroll-behavior-y: contain;');
+    expect(css).toContain('user-select: text;');
   });
 });

@@ -74,9 +74,11 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
 
   return (
     <ResponsiveModalShell
+      variant="sheet"
       role="dialog"
       ariaLabelledBy="manage-family-title"
       panelClassName="max-w-2xl bg-slate-900 border-slate-800"
+      onDismiss={onClose}
       header={
         <div className="flex items-center justify-between gap-2 px-4 py-3.5 sm:px-6 sm:py-4 border-b border-slate-800">
           <div className="flex items-center gap-2.5 min-w-0">

@@ -80,7 +80,7 @@ export function Header({ onOpenCommandPalette }: HeaderProps) {
 
   return (
     <header
-      className="min-h-16 border-b border-border bg-card/40 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between shrink-0 z-10"
+      className="min-h-16 border-b border-border bg-card/40 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between shrink-0 z-10 select-none"
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">

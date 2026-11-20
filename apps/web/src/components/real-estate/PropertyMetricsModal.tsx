@@ -77,6 +77,7 @@ export function PropertyMetricsModal({
   return (
     <ResponsiveModalShell
       portal
+      variant="sheet"
       role="dialog"
       ariaLabelledBy="property-metrics-modal-title"
       onBackdropClick={onClose}

@@ -65,10 +65,11 @@ export function TopUpGoalModal({
 
   return (
     <ResponsiveModalShell
+      variant="sheet"
       role="dialog"
       ariaLabelledBy="top-up-goal-title"
       backdropClassName="bg-background/80"
-      panelClassName="max-w-md bg-card border-border/80 animate-in fade-in zoom-in-95 duration-200"
+      panelClassName="max-w-md bg-card border-border/80"
       formProps={{ onSubmit: handleSubmit }}
       onBackdropClick={onClose}
       header={

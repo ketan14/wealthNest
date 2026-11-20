@@ -107,7 +107,7 @@ export function EditSettingModal({
   return (
     <ResponsiveModalShell
       portal
-      variant="center"
+      variant="sheet"
       role="dialog"
       ariaLabelledBy={titleId}
       panelClassName="max-w-md bg-slate-900 border-slate-800"

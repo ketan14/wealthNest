@@ -261,10 +261,12 @@ export function AddGoalModal({
 
   return (
     <ResponsiveModalShell
+      variant="sheet"
       role="dialog"
       ariaLabelledBy="add-goal-modal-title"
       backdropClassName="bg-background/80"
-      panelClassName="max-w-xl bg-card border-border/80 animate-in fade-in zoom-in-95 duration-200"
+      panelClassName="max-w-xl bg-card border-border/80"
+      onDismiss={onClose}
       formProps={{ onSubmit: handleSubmit }}
       header={
         <div className="p-4 sm:p-5 border-b border-border/70 flex items-center justify-between gap-2 bg-accent/20">

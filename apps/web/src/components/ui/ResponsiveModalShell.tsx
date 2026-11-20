@@ -52,9 +52,10 @@ const VARIANT_PANEL_CLASSES: Record<
   NonNullable<ResponsiveModalShellProps['variant']>,
   string
 > = {
-  center: 'rounded-2xl max-h-[90dvh]',
-  sheet: 'rounded-t-2xl sm:rounded-2xl max-h-[90dvh] pb-[env(safe-area-inset-bottom)] sm:pb-0',
-  top: 'rounded-2xl max-h-[82dvh]',
+  center: 'rounded-2xl max-h-[90dvh] animate-in fade-in zoom-in-95 duration-150',
+  sheet:
+    'rounded-t-2xl sm:rounded-2xl max-h-[90dvh] pb-[env(safe-area-inset-bottom)] sm:pb-0 animate-in fade-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200',
+  top: 'rounded-2xl max-h-[82dvh] animate-in fade-in slide-in-from-top-2 duration-150',
 };
 
 /**
@@ -117,7 +118,7 @@ export function ResponsiveModalShell({
       data-testid={testId}
       onClick={onBackdropClick}
       className={cn(
-        'fixed inset-0 z-50 flex justify-center overscroll-contain bg-black/75 backdrop-blur-sm animate-in fade-in duration-200',
+        'fixed inset-0 z-50 flex justify-center overscroll-contain bg-black/75 backdrop-blur-sm animate-in fade-in duration-150',
         VARIANT_BACKDROP_CLASSES[variant],
         backdropClassName
       )}

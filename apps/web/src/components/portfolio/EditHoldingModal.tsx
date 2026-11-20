@@ -150,10 +150,12 @@ export function EditHoldingModal({
 
   return (
     <ResponsiveModalShell
+      variant="sheet"
       role="dialog"
       ariaLabelledBy="edit-holding-modal-title"
       backdropClassName="bg-background/80"
       panelClassName="max-w-lg bg-card border-border"
+      onDismiss={onClose}
       formProps={{ onSubmit: handleSubmit }}
       header={
         <div className="flex items-center justify-between gap-2 px-4 py-3.5 sm:px-6 sm:py-4 border-b border-border/80">

@@ -107,10 +107,12 @@ export function UpdateBalanceModal({
 
   return (
     <ResponsiveModalShell
+      variant="sheet"
       role="dialog"
       ariaLabelledBy="update-balance-title"
       backdropClassName="bg-black/70"
       panelClassName="max-w-xl bg-card border-border"
+      onDismiss={onClose}
       formProps={{ onSubmit: handleSubmit }}
       header={
         <div className="flex items-center justify-between gap-2 px-4 py-3.5 sm:px-6 sm:py-4 md:px-8 border-b border-border">

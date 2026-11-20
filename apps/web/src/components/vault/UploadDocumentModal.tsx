@@ -146,6 +146,7 @@ export function UploadDocumentModal({
   return (
     <ResponsiveModalShell
       portal
+      variant="sheet"
       role="dialog"
       ariaLabelledBy="upload-doc-modal-title"
       onBackdropClick={onClose}
