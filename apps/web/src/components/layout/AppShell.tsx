@@ -37,7 +37,7 @@ export function AppShell() {
           <Header onOpenCommandPalette={() => setIsCommandPaletteOpen(true)} />
           <main
             className={cn(
-              'flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto overflow-y-auto overflow-x-hidden overscroll-y-contain',
+              'min-h-0 flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto overflow-y-auto overflow-x-hidden overscroll-y-contain',
               isKeyboardOpen ? 'pb-4' : 'pb-24 md:pb-8'
             )}
           >

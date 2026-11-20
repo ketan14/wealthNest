@@ -9,10 +9,11 @@ describe('Phase 9.2: Touch Target Ergonomics Invariant (>= 44x44px)', () => {
     expect(btn.className).toMatch(/min-h-\[44px\]/);
   });
 
-  it('TC-9.2-03B: sm Button size provides touch-target hit expansion', () => {
+  it('TC-9.2-03B: sm Button size provides pointer-coarse touch-target hit expansion', () => {
     render(<Button size="sm">Compact Action</Button>);
     const btn = screen.getByRole('button');
     expect(btn.className).toMatch(/before:-inset-1\.5/);
+    expect(btn.className).toContain('[@media(pointer:coarse)]:before:-inset-1.5');
   });
 
   it('TC-9.2-03C: icon Button enforces min-h-[44px] and min-w-[44px]', () => {
