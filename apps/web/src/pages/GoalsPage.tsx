@@ -476,27 +476,35 @@ export function GoalsPage() {
             aria-label="Filter goals by category"
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value as GoalCategory | 'all')}
-            className="h-8 px-2.5 rounded-lg bg-secondary/60 border border-border/70 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+            className="h-8 px-2.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-100 [color-scheme:dark] cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
-            <option value="all">All Categories</option>
+            <option value="all" className="bg-slate-900 text-slate-100">
+              All Categories
+            </option>
             {availableCategories.map((cat) => (
-              <option key={cat} value={cat}>
+              <option key={cat} value={cat} className="bg-slate-900 text-slate-100">
                 {GOAL_CATEGORY_LABELS[cat] || cat}
               </option>
             ))}
           </select>
 
-          <div className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-secondary/60 border border-border/70">
+          <div className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-slate-900 border border-slate-800 focus-within:ring-2 focus-within:ring-primary/40">
             <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
             <select
               aria-label="Sort goals by"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as GoalSortOption)}
-              className="bg-transparent text-xs text-foreground focus:outline-none"
+              className="bg-slate-900 text-xs text-slate-100 focus:outline-none [color-scheme:dark] cursor-pointer"
             >
-              <option value="target_date">Target Date</option>
-              <option value="pct_complete">% Complete</option>
-              <option value="monthly_gap">Monthly Gap</option>
+              <option value="target_date" className="bg-slate-900 text-slate-100">
+                Target Date
+              </option>
+              <option value="pct_complete" className="bg-slate-900 text-slate-100">
+                % Complete
+              </option>
+              <option value="monthly_gap" className="bg-slate-900 text-slate-100">
+                Monthly Gap
+              </option>
             </select>
           </div>
         </div>

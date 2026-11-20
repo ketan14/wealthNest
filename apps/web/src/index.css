@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    color-scheme: dark;
     --background: 224 71% 4%;
     --foreground: 213 31% 91%;
 
@@ -33,6 +34,16 @@
     --ring: 158 64% 52%;
 
     --radius: 0.75rem;
+  }
+
+  select {
+    color-scheme: dark;
+  }
+
+  select option,
+  select optgroup {
+    background-color: hsl(var(--card));
+    color: hsl(var(--foreground));
   }
 }
 
