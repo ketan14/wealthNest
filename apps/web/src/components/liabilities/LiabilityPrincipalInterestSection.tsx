@@ -37,45 +37,53 @@ export function LiabilityPrincipalInterestSection({
       {/* Principal & Current Balance */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+          <label
+            htmlFor="liability-original-principal"
+            className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5"
+          >
             Original Sanctioned Principal ({currencySymbol}){' '}
             <span className="text-destructive">*</span>
           </label>
           <input
+            id="liability-original-principal"
             type="number"
             step="any"
             required
-            disabled={isEditing}
             value={originalPrincipalStr}
             onChange={(e) => onOriginalPrincipalChange(e.target.value)}
             placeholder="e.g. 5000000 (50 Lakhs)"
-            className="w-full px-3.5 py-2.5 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors font-mono disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full px-3.5 py-2.5 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors font-mono"
           />
           <p className="text-[11px] text-muted-foreground mt-1">
             {isEditing
-              ? 'Original principal cannot be changed after creation.'
+              ? 'Update the sanctioned amount if needed.'
               : 'The original amount sanctioned by the bank.'}
           </p>
         </div>
 
-        {!isEditing && (
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-              Current Outstanding Principal ({currencySymbol})
-            </label>
-            <input
-              type="number"
-              step="any"
-              value={currentBalanceStr}
-              onChange={(e) => onCurrentBalanceChange(e.target.value)}
-              placeholder="Defaults to original principal if new"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors font-mono"
-            />
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Leave blank if starting at full original principal.
-            </p>
-          </div>
-        )}
+        <div>
+          <label
+            htmlFor="liability-current-balance"
+            className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5"
+          >
+            Current Outstanding Principal ({currencySymbol})
+          </label>
+          <input
+            id="liability-current-balance"
+            type="number"
+            step="any"
+            min="0"
+            value={currentBalanceStr}
+            onChange={(e) => onCurrentBalanceChange(e.target.value)}
+            placeholder={isEditing ? 'Enter latest outstanding balance' : 'Defaults to original principal if new'}
+            className="w-full px-3.5 py-2.5 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors font-mono"
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">
+            {isEditing
+              ? 'Update latest outstanding balance after part-payment or prepayment.'
+              : 'Leave blank if starting at full original principal.'}
+          </p>
+        </div>
       </div>
 
       {/* Interest Rate & Type */}

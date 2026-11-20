@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { ok } from '@wealthnest/shared';
 import {
   CreateLiabilityUseCase,
+  UpdateLiabilityUseCase,
   GetNetWorthSummaryUseCase,
   RecordLiabilityBalanceUseCase,
   LiabilityRepositoryPort,
@@ -268,5 +269,113 @@ describe('Application Layer — Loans & Liabilities Use Cases', () => {
 
     expect(mockHoldingRepo.listDetailsByUser).toHaveBeenCalledWith('household-a');
     expect(mockHoldingRepo.listDetailsByUser).toHaveBeenCalledWith('household-b');
+  });
+
+  it('UpdateLiabilityUseCase validates and forwards principal, currentBalanceCents (including 0n), and dates', async () => {
+    const mockRepo: Partial<LiabilityRepositoryPort> = {
+      updateLiability: vi.fn().mockImplementation(async (params) =>
+        ok({
+          ...mockLiability,
+          originalPrincipalCents:
+            params.originalPrincipalCents ?? mockLiability.originalPrincipalCents,
+          currentBalanceCents: params.currentBalanceCents ?? mockLiability.currentBalanceCents,
+          status: params.status ?? mockLiability.status,
+          startDate: params.startDate,
+        })
+      ),
+    };
+
+    const useCase = new UpdateLiabilityUseCase(mockRepo as LiabilityRepositoryPort);
+
+    // Valid part-payment update
+    const partPayRes = await useCase.execute({
+      id: 'lib-1',
+      userId: 'user-123',
+      originalPrincipalCents: 480000000n,
+      currentBalanceCents: 320000000n,
+      startDate: '2025-04-01',
+    });
+    expect(partPayRes.success).toBe(true);
+    expect(mockRepo.updateLiability).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'lib-1',
+        originalPrincipalCents: 480000000n,
+        currentBalanceCents: 320000000n,
+        startDate: '2025-04-01',
+      })
+    );
+
+    // Zero balance (full payoff via Edit) is allowed
+    const payoffRes = await useCase.execute({
+      id: 'lib-1',
+      userId: 'user-123',
+      currentBalanceCents: 0n,
+      status: 'closed',
+    });
+    expect(payoffRes.success).toBe(true);
+
+    // Rejects negative outstanding balance or non-positive original principal
+    const negBalRes = await useCase.execute({
+      id: 'lib-1',
+      userId: 'user-123',
+      currentBalanceCents: -100n,
+    });
+    expect(negBalRes.success).toBe(false);
+
+    const zeroOrigRes = await useCase.execute({
+      id: 'lib-1',
+      userId: 'user-123',
+      originalPrincipalCents: 0n,
+    });
+    expect(zeroOrigRes.success).toBe(false);
+  });
+
+  it('GetNetWorthSummaryUseCase live view reflects 0n balances and latest balance ahead of UTC date', async () => {
+    const mockHoldingRepo: Partial<HoldingRepositoryPort> = {
+      listDetailsByUser: vi.fn().mockResolvedValue(ok([])),
+    };
+    const mockLiabilityRepo: Partial<LiabilityRepositoryPort> = {
+      listLiabilitiesByUser: vi.fn().mockResolvedValue(
+        ok([
+          { ...mockLiability, id: 'lib-paid', currentBalanceCents: 0n, startDate: '2023-01-01' },
+          { ...mockLiability, id: 'lib-tz', currentBalanceCents: 180000000n, startDate: '2023-01-01' },
+        ])
+      ),
+      listAssetLiabilityLinks: vi.fn().mockResolvedValue(ok([])),
+      listLiabilityBalances: vi.fn().mockImplementation(async (id: string) => {
+        if (id === 'lib-paid') return ok([]);
+        return ok([
+          {
+            id: 'bal-old',
+            liabilityId: 'lib-tz',
+            userId: 'user-123',
+            balanceCents: 420000000n,
+            asOfDate: '2025-01-01',
+            source: 'manual',
+            createdAt: '2025-01-01T00:00:00Z',
+          },
+          {
+            id: 'bal-new',
+            liabilityId: 'lib-tz',
+            userId: 'user-123',
+            balanceCents: 180000000n,
+            asOfDate: '2099-12-31',
+            source: 'manual',
+            createdAt: '2026-11-20T00:00:00Z',
+          },
+        ]);
+      }),
+    };
+
+    const nwUc = new GetNetWorthSummaryUseCase(
+      mockHoldingRepo as HoldingRepositoryPort,
+      mockLiabilityRepo as LiabilityRepositoryPort
+    );
+
+    const liveRes = await nwUc.execute({ userId: 'user-123' });
+    expect(liveRes.success).toBe(true);
+    if (liveRes.success) {
+      expect(liveRes.value.totalLiabilities.cents).toBe(180000000n);
+    }
   });
 });

@@ -357,10 +357,13 @@ export class SqliteLiabilityAdapter implements LiabilityRepositoryPort {
              loan_type = COALESCE(?, loan_type),
              lender = COALESCE(?, lender),
              account_number = COALESCE(?, account_number),
+             original_principal_paise = COALESCE(?, original_principal_paise),
              interest_rate = COALESCE(?, interest_rate),
              interest_type = COALESCE(?, interest_type),
              tenure_months = COALESCE(?, tenure_months),
              emi_amount_paise = COALESCE(?, emi_amount_paise),
+             start_date = COALESCE(?, start_date),
+             end_date = COALESCE(?, end_date),
              status = COALESCE(?, status),
              linked_asset_id = COALESCE(?, linked_asset_id),
              member_id = COALESCE(?, member_id),
@@ -372,10 +375,15 @@ export class SqliteLiabilityAdapter implements LiabilityRepositoryPort {
           params.loanType ?? null,
           params.lender ?? null,
           params.accountNumber ?? null,
+          params.originalPrincipalCents !== undefined
+            ? Number(params.originalPrincipalCents)
+            : null,
           params.interestRate ?? null,
           params.interestType ?? null,
           params.tenureMonths ?? null,
           params.emiAmountCents !== undefined ? Number(params.emiAmountCents) : null,
+          params.startDate ?? null,
+          params.endDate ?? null,
           params.status ?? null,
           params.linkedAssetId !== undefined ? params.linkedAssetId : null,
           params.memberId ?? null,
@@ -384,6 +392,27 @@ export class SqliteLiabilityAdapter implements LiabilityRepositoryPort {
           params.userId,
           params.householdId ?? params.userId
         );
+
+      if (params.currentBalanceCents !== undefined) {
+        const todayIso = new Date().toISOString().split('T')[0]!;
+        const latestBal = this.db
+          .prepare<{ as_of_date: string }>(
+            'SELECT as_of_date FROM liability_balances WHERE liability_id = ? ORDER BY as_of_date DESC LIMIT 1;'
+          )
+          .get(params.id);
+        const asOfDate =
+          latestBal?.as_of_date && latestBal.as_of_date > todayIso ? latestBal.as_of_date : todayIso;
+        const balRes = await this.recordLiabilityBalance({
+          liabilityId: params.id,
+          userId: params.userId,
+          householdId: params.householdId,
+          balanceCents: params.currentBalanceCents,
+          asOfDate,
+          source: 'manual',
+          notes: 'Updated via Edit Loan / Part-payment',
+        });
+        if (!balRes.success) return err(balRes.error);
+      }
 
       if (params.visibility) {
         this.db

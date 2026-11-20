@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LiabilitiesPage } from '../pages/LiabilitiesPage';
@@ -87,5 +87,48 @@ describe('LiabilitiesPage Component (Sprint 4)', () => {
 
     // Modal closes
     expect(screen.queryByText('Add New Loan / Liability')).not.toBeInTheDocument();
+  });
+
+  it('allows editing all fields including original principal and current outstanding balance after part-payment', async () => {
+    renderLiabilitiesPage();
+
+    const editButtons = screen.getAllByTitle('Edit loan details');
+    expect(editButtons[0]).toBeDefined();
+    fireEvent.click(editButtons[0]!);
+
+    expect(screen.getByText('Edit Loan / Liability')).toBeInTheDocument();
+
+    const originalPrincipalInput = screen.getByLabelText(
+      /Original Sanctioned Principal/i
+    ) as HTMLInputElement;
+    const currentBalanceInput = screen.getByLabelText(
+      /Current Outstanding Principal/i
+    ) as HTMLInputElement;
+
+    expect(originalPrincipalInput).not.toBeDisabled();
+    expect(currentBalanceInput).not.toBeDisabled();
+    expect(currentBalanceInput.value).toBe('4125000');
+
+    // Simulate part-payment reducing outstanding balance to 25,00,000
+    fireEvent.change(originalPrincipalInput, { target: { value: '7400000' } });
+    fireEvent.change(currentBalanceInput, { target: { value: '2500000' } });
+
+    const saveBtn = screen.getByRole('button', { name: /Save Changes/i });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Edit Loan / Liability')).not.toBeInTheDocument();
+    });
+
+    // Re-open edit modal to verify updated values persisted cleanly in state
+    const updatedEditButtons = screen.getAllByTitle('Edit loan details');
+    expect(updatedEditButtons[0]).toBeDefined();
+    fireEvent.click(updatedEditButtons[0]!);
+    expect(
+      (screen.getByLabelText(/Original Sanctioned Principal/i) as HTMLInputElement).value
+    ).toBe('7400000');
+    expect(
+      (screen.getByLabelText(/Current Outstanding Principal/i) as HTMLInputElement).value
+    ).toBe('2500000');
   });
 });

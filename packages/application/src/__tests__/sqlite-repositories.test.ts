@@ -184,6 +184,20 @@ describe('Phase 9.1: SQLite Repository Adapters', () => {
     expect(updatedLia.success).toBe(true);
     if (!updatedLia.success || !updatedLia.value) return;
     expect(updatedLia.value.currentBalanceCents).toBe(447000000n);
+
+    // Edit loan directly (part-payment / updated sanctioned principal & start date)
+    const editedRes = await liabilityAdapter.updateLiability({
+      id: liaRes.value.id,
+      userId: testUserId,
+      originalPrincipalCents: 495000000n,
+      currentBalanceCents: 350000000n,
+      startDate: '2025-12-15',
+    });
+    expect(editedRes.success).toBe(true);
+    if (!editedRes.success) return;
+    expect(editedRes.value.originalPrincipalCents).toBe(495000000n);
+    expect(editedRes.value.currentBalanceCents).toBe(350000000n);
+    expect(editedRes.value.startDate).toBe('2025-12-15');
   });
 
   it('TC-9.1-03F: GoalAdapter creates financial goal and links to holdings', async () => {

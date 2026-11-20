@@ -31,6 +31,7 @@ import { useSupportSession } from '@/lib/admin/support-session-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay';
+import { SyncingIndicator } from '@/components/ui/SyncingIndicator';
 import {
   Plus,
   RefreshCw,
@@ -81,6 +82,7 @@ export function LiabilitiesPage() {
   const {
     data: liabilities = [],
     isLoading: isLoadingLiabilities,
+    isFetching: isFetchingLiabilities,
     refetch: refetchLiabilities,
   } = useQuery({
     queryKey: ['liabilities-list', scopeId],
@@ -99,6 +101,7 @@ export function LiabilitiesPage() {
   const {
     data: netWorthSummary,
     isLoading: isLoadingSummary,
+    isFetching: isFetchingSummary,
     refetch: refetchSummary,
   } = useQuery<NetWorthSummary | null>({
     queryKey: ['net-worth-summary', scopeId, selectedMemberId],
@@ -116,6 +119,15 @@ export function LiabilitiesPage() {
     enabled: hasLiveBackend,
   });
 
+  const invalidateLiabilityCaches = () => {
+    queryClient.invalidateQueries({ queryKey: ['liabilities-list'] });
+    queryClient.invalidateQueries({ queryKey: ['liabilities'] });
+    queryClient.invalidateQueries({ queryKey: ['net-worth-summary'] });
+    queryClient.invalidateQueries({ queryKey: ['analytics-liabilities'] });
+    queryClient.invalidateQueries({ queryKey: ['holdings-details'] });
+    queryClient.invalidateQueries({ queryKey: ['liability-balances'] });
+  };
+
   // Mutation: Save / Create / Update Liability
   const saveLiabilityMutation = useMutation({
     mutationFn: async (params: CreateLiabilityParams | UpdateLiabilityParams) => {
@@ -123,11 +135,82 @@ export function LiabilitiesPage() {
         throw new Error('View-only household role cannot modify liabilities.');
       }
       if ('id' in params) {
+        if (params.id.startsWith('demo-') || !hasLiveBackend) {
+          const existing = localDemoLiabilities.find((l) => l.id === params.id);
+          if (!existing) {
+            throw new Error('Demo liability not found.');
+          }
+          const updatedDemo: LiabilityDto = {
+            ...existing,
+            name: params.name ?? existing.name,
+            loanType: params.loanType ?? existing.loanType,
+            lender: params.lender ?? existing.lender,
+            accountNumber:
+              params.accountNumber !== undefined ? params.accountNumber : existing.accountNumber,
+            originalPrincipalCents:
+              params.originalPrincipalCents ?? existing.originalPrincipalCents,
+            currentBalanceCents: params.currentBalanceCents ?? existing.currentBalanceCents,
+            interestRate: params.interestRate ?? existing.interestRate,
+            interestType: params.interestType ?? existing.interestType,
+            tenureMonths:
+              params.tenureMonths !== undefined ? params.tenureMonths : existing.tenureMonths,
+            emiAmountCents: params.emiAmountCents ?? existing.emiAmountCents,
+            startDate: params.startDate !== undefined ? params.startDate : existing.startDate,
+            endDate: params.endDate !== undefined ? params.endDate : existing.endDate,
+            status: params.status ?? existing.status,
+            linkedAssetId:
+              params.linkedAssetId === null
+                ? undefined
+                : (params.linkedAssetId ?? existing.linkedAssetId),
+            memberId: params.memberId ?? existing.memberId,
+            coBorrowerMemberIds: params.coBorrowerMemberIds ?? existing.coBorrowerMemberIds,
+            parties: params.parties ?? existing.parties,
+            notes: params.notes !== undefined ? params.notes : existing.notes,
+            visibility: params.visibility ?? existing.visibility,
+            updatedAt: new Date().toISOString(),
+          };
+          setLocalDemoLiabilities((prev) =>
+            prev.map((l) => (l.id === params.id ? updatedDemo : l))
+          );
+          return updatedDemo;
+        }
         const useCase = new UpdateLiabilityUseCase(liabilityRepo);
         const res = await useCase.execute(params);
         if (!res.success) throw res.error;
         return res.value;
       } else {
+        if (!hasLiveBackend) {
+          const now = new Date().toISOString();
+          const newDemo: LiabilityDto = {
+            id: `demo-${Date.now()}`,
+            userId: params.userId,
+            householdId: params.householdId,
+            visibility: params.visibility ?? 'household_shared',
+            name: params.name,
+            loanType: params.loanType,
+            lender: params.lender,
+            accountNumber: params.accountNumber,
+            originalPrincipalCents: params.originalPrincipalCents,
+            currentBalanceCents: params.initialBalanceCents ?? params.originalPrincipalCents,
+            interestRate: params.interestRate,
+            interestType: params.interestType ?? 'floating',
+            tenureMonths: params.tenureMonths,
+            emiAmountCents: params.emiAmountCents ?? 0n,
+            currency: params.currency ?? 'INR',
+            startDate: params.startDate,
+            endDate: params.endDate,
+            status: 'active',
+            linkedAssetId: params.linkedAssetId,
+            memberId: params.memberId,
+            coBorrowerMemberIds: params.coBorrowerMemberIds,
+            parties: params.parties,
+            notes: params.notes,
+            createdAt: now,
+            updatedAt: now,
+          };
+          setLocalDemoLiabilities((prev) => [newDemo, ...prev]);
+          return newDemo;
+        }
         const useCase = new CreateLiabilityUseCase(liabilityRepo);
         const res = await useCase.execute(params);
         if (!res.success) throw res.error;
@@ -135,9 +218,7 @@ export function LiabilitiesPage() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['liabilities-list'] });
-      queryClient.invalidateQueries({ queryKey: ['net-worth-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['holdings-details'] });
+      invalidateLiabilityCaches();
     },
   });
 
@@ -161,8 +242,7 @@ export function LiabilitiesPage() {
     },
     onSuccess: () => {
       if (scopeId || userId) {
-        queryClient.invalidateQueries({ queryKey: ['liabilities-list'] });
-        queryClient.invalidateQueries({ queryKey: ['net-worth-summary'] });
+        invalidateLiabilityCaches();
       }
     },
   });
@@ -173,6 +253,7 @@ export function LiabilitiesPage() {
   };
 
   const handleRefresh = async () => {
+    invalidateLiabilityCaches();
     await Promise.all([refetchLiabilities(), refetchSummary()]);
   };
 
@@ -293,6 +374,7 @@ export function LiabilitiesPage() {
             <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/10 border border-rose-500/20 text-rose-400 shrink-0">
               Loans & Liabilities Engine
             </span>
+            <SyncingIndicator isSyncing={isFetchingLiabilities || isFetchingSummary} />
           </div>
           <p className="hidden sm:block text-xs sm:text-sm text-muted-foreground mt-0.5">
             Track mortgages, EMIs, property equity, LTV ratios, and dated balance repayments.
@@ -519,6 +601,7 @@ export function LiabilitiesPage() {
         liability={balanceModalLiability}
         userId={userId}
         onSuccess={() => {
+          invalidateLiabilityCaches();
           refetchLiabilities();
           refetchSummary();
         }}
@@ -531,6 +614,7 @@ export function LiabilitiesPage() {
         liability={emiModalLiability}
         userId={userId}
         onSuccess={() => {
+          invalidateLiabilityCaches();
           refetchLiabilities();
           refetchSummary();
         }}
@@ -545,8 +629,8 @@ export function LiabilitiesPage() {
           currentValuationCents={valuationModalAsset.valuationCents}
           userId={userId}
           onSuccess={() => {
+            invalidateLiabilityCaches();
             refetchSummary();
-            queryClient.invalidateQueries({ queryKey: ['holdings-details'] });
           }}
         />
       )}

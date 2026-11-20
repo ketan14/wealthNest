@@ -110,10 +110,14 @@ export interface UpdateLiabilityParams {
   readonly loanType?: LoanType;
   readonly lender?: string;
   readonly accountNumber?: string;
+  readonly originalPrincipalCents?: bigint;
+  readonly currentBalanceCents?: bigint;
   readonly interestRate?: number;
   readonly interestType?: InterestType;
   readonly tenureMonths?: number;
   readonly emiAmountCents?: bigint;
+  readonly startDate?: string;
+  readonly endDate?: string;
   readonly status?: LiabilityStatus;
   readonly linkedAssetId?: string | null;
   readonly memberId?: string;

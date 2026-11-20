@@ -444,11 +444,15 @@ export class SupabaseLiabilityAdapter implements LiabilityRepositoryPort {
       if (params.loanType !== undefined) updateData.loan_type = params.loanType;
       if (params.lender !== undefined) updateData.lender = params.lender;
       if (params.accountNumber !== undefined) updateData.account_number = params.accountNumber;
+      if (params.originalPrincipalCents !== undefined)
+        updateData.original_principal_cents = Number(params.originalPrincipalCents);
       if (params.interestRate !== undefined) updateData.interest_rate = params.interestRate;
       if (params.interestType !== undefined) updateData.interest_type = params.interestType;
       if (params.tenureMonths !== undefined) updateData.tenure_months = params.tenureMonths;
       if (params.emiAmountCents !== undefined)
         updateData.emi_amount_cents = Number(params.emiAmountCents);
+      if (params.startDate !== undefined) updateData.start_date = params.startDate || null;
+      if (params.endDate !== undefined) updateData.end_date = params.endDate || null;
       if (params.status !== undefined) updateData.status = params.status;
       if (params.linkedAssetId !== undefined)
         updateData.linked_asset_id = toValidUuidOrNull(params.linkedAssetId);
@@ -465,6 +469,32 @@ export class SupabaseLiabilityAdapter implements LiabilityRepositoryPort {
 
       if (error || !data) {
         return err(new Error(`Failed to update liability: ${error?.message || 'Unknown error'}`));
+      }
+
+      if (params.currentBalanceCents !== undefined) {
+        const todayIso = new Date().toISOString().split('T')[0]!;
+        const { data: latestRow } = await supabase
+          .from('liability_balances')
+          .select('as_of_date')
+          .eq('liability_id', data.id)
+          .order('as_of_date', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const latestDate = latestRow?.as_of_date ? String(latestRow.as_of_date) : '';
+        const asOfDate = latestDate > todayIso ? latestDate : todayIso;
+
+        const balRes = await this.recordLiabilityBalance({
+          liabilityId: data.id,
+          householdId: params.householdId,
+          userId: params.userId,
+          balanceCents: params.currentBalanceCents,
+          asOfDate,
+          source: 'manual',
+          notes: 'Updated via Edit Loan / Part-payment',
+        });
+        if (!balRes.success) {
+          return err(balRes.error);
+        }
       }
 
       if (params.parties && params.parties.length > 0) {

@@ -28,6 +28,7 @@ import { useFamily } from '@/lib/family/family-context';
 import { usePrivacy } from '@/lib/preferences/privacy-context';
 import { useHousehold } from '@/lib/supabase/household-context';
 import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay';
+import { SyncingIndicator } from '@/components/ui/SyncingIndicator';
 import { WealthTrajectoryChart } from '@/components/home/WealthTrajectoryChart';
 import { GlobalQuickAddModal } from '@/components/layout/GlobalQuickAddModal';
 import {
@@ -75,7 +76,7 @@ export function HomePage() {
   const householdDisplayName = activeHousehold?.name || 'My Family';
 
   // 1. Fetch Holdings
-  const { data: holdings = [] } = useQuery<HoldingDetailDto[]>({
+  const { data: holdings = [], isFetching: isFetchingHoldings } = useQuery<HoldingDetailDto[]>({
     queryKey: ['holdings', scopeId, selectedMemberId, privacyRules],
     queryFn: async () => {
       if (!scopeId) return [];
@@ -96,7 +97,7 @@ export function HomePage() {
   });
 
   // 2. Fetch Net Worth Summary
-  const { data: netWorthSummary } = useQuery<NetWorthSummary | null>({
+  const { data: netWorthSummary, isFetching: isFetchingSummary } = useQuery<NetWorthSummary | null>({
     queryKey: ['net-worth-summary', scopeId, selectedMemberId],
     queryFn: async () => {
       const useCase = new GetNetWorthSummaryUseCase(holdingRepo, liabilityRepo);
@@ -140,7 +141,7 @@ export function HomePage() {
   });
 
   // 5. Fetch Liabilities
-  const { data: liabilities = [] } = useQuery<readonly LiabilityDto[]>({
+  const { data: liabilities = [], isFetching: isFetchingLiabilities } = useQuery<readonly LiabilityDto[]>({
     queryKey: ['liabilities', scopeId, selectedMemberId],
     queryFn: async () => {
       if (!scopeId) return [];
@@ -187,11 +188,18 @@ export function HomePage() {
   const portfolioSummary = calculatePortfolioSummary(valuationItems, 'INR');
 
   // Total Assets & Liabilities
+  const fallbackLiabilities = liabilities
+    .filter((l) => l.status !== 'closed')
+    .reduce((sum, l) => sum + Number(l.currentBalanceCents || 0n) / 100, 0);
   const totalAssets =
     netWorthSummary?.totalAssets?.toDecimal() ?? portfolioSummary.totalValue.toDecimal();
-  const totalLiabilities = netWorthSummary?.totalLiabilities?.toDecimal() ?? 0;
+  const totalLiabilities = netWorthSummary?.totalLiabilities?.toDecimal() ?? fallbackLiabilities;
   const netWorth = totalAssets - totalLiabilities;
   const totalMonthlyEmi = netWorthSummary?.totalMonthlyEmi?.toDecimal() ?? 0;
+  const isSyncingOverview = isFetchingSummary || isFetchingHoldings || isFetchingLiabilities;
+  const syncingValueClass = isSyncingOverview
+    ? 'opacity-65 animate-pulse transition-opacity duration-200'
+    : 'transition-opacity duration-200';
 
   // Monthly Cashflow
   const monthlyInflow = cashflowSummary?.totalInflows?.toDecimal() ?? 0;
@@ -398,7 +406,10 @@ export function HomePage() {
         <Card className="border-border/80 bg-card/60 backdrop-blur-sm relative overflow-hidden">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between text-muted-foreground text-xs uppercase font-semibold">
-              <span>{categoryDisplay.title}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <span>{categoryDisplay.title}</span>
+                <SyncingIndicator isSyncing={isSyncingOverview} />
+              </div>
               <button
                 type="button"
                 onClick={toggleHideBalances}
@@ -411,7 +422,7 @@ export function HomePage() {
                 )}
               </button>
             </div>
-            <CardTitle className="text-3xl font-extrabold font-mono tracking-tight pt-1">
+            <CardTitle className={`text-3xl font-extrabold font-mono tracking-tight pt-1 ${syncingValueClass}`}>
               <CurrencyDisplay
                 amount={categoryDisplay.amount}
                 isPositiveColor={categoryDisplay.amount >= 0}
@@ -430,7 +441,7 @@ export function HomePage() {
                   </span>
                   <CurrencyDisplay
                     amount={categoryDisplay.assets}
-                    className="text-sm font-bold text-foreground"
+                    className={`text-sm font-bold text-foreground ${syncingValueClass}`}
                     allowToggle
                   />
                 </div>
@@ -440,7 +451,7 @@ export function HomePage() {
                   </span>
                   <CurrencyDisplay
                     amount={categoryDisplay.debt}
-                    className="text-sm font-bold text-foreground"
+                    className={`text-sm font-bold text-foreground ${syncingValueClass}`}
                     allowToggle
                   />
                 </div>
@@ -517,7 +528,7 @@ export function HomePage() {
               <Landmark className="w-3.5 h-3.5 text-amber-400" />
               <span>Monthly EMI</span>
             </div>
-            <div className="text-lg font-bold font-mono mt-1">
+            <div className={`text-lg font-bold font-mono mt-1 ${syncingValueClass}`}>
               <CurrencyDisplay amount={totalMonthlyEmi} allowToggle />
             </div>
             <p className="text-[11px] text-muted-foreground mt-0.5">Monthly obligations</p>
@@ -699,7 +710,10 @@ export function HomePage() {
           <Card className="border-border/80 bg-card/60 backdrop-blur-sm relative overflow-hidden">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between text-muted-foreground text-xs uppercase font-semibold">
-                <span>{categoryDisplay.title}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span>{categoryDisplay.title}</span>
+                  <SyncingIndicator isSyncing={isSyncingOverview} />
+                </div>
                 <button
                   type="button"
                   onClick={toggleHideBalances}
@@ -712,7 +726,7 @@ export function HomePage() {
                   )}
                 </button>
               </div>
-              <CardTitle className="text-3xl font-extrabold font-mono tracking-tight pt-1">
+              <CardTitle className={`text-3xl font-extrabold font-mono tracking-tight pt-1 ${syncingValueClass}`}>
                 <CurrencyDisplay
                   amount={categoryDisplay.amount}
                   isPositiveColor={categoryDisplay.amount >= 0}
@@ -728,7 +742,7 @@ export function HomePage() {
                   <span className="block text-[11px] uppercase tracking-wider text-muted-foreground">
                     Assets
                   </span>
-                  <div className="text-sm font-bold mt-0.5">
+                  <div className={`text-sm font-bold mt-0.5 ${syncingValueClass}`}>
                     <CurrencyDisplay amount={categoryDisplay.assets} allowToggle />
                   </div>
                 </div>
@@ -736,7 +750,7 @@ export function HomePage() {
                   <span className="block text-[11px] uppercase tracking-wider text-muted-foreground">
                     Debt
                   </span>
-                  <div className="text-sm font-bold mt-0.5">
+                  <div className={`text-sm font-bold mt-0.5 ${syncingValueClass}`}>
                     <CurrencyDisplay amount={categoryDisplay.debt} allowToggle />
                   </div>
                 </div>
@@ -744,7 +758,7 @@ export function HomePage() {
                   <span className="block text-[11px] uppercase tracking-wider text-muted-foreground">
                     Net Worth
                   </span>
-                  <div className="text-sm font-bold mt-0.5">
+                  <div className={`text-sm font-bold mt-0.5 ${syncingValueClass}`}>
                     <CurrencyDisplay
                       amount={categoryDisplay.amount}
                       isPositiveColor={categoryDisplay.amount >= 0}
@@ -865,7 +879,7 @@ export function HomePage() {
             <span className="block text-[11px] uppercase tracking-wider text-muted-foreground">
               Monthly EMIs
             </span>
-            <div className="text-2xl font-bold font-mono mt-1">
+            <div className={`text-2xl font-bold font-mono mt-1 ${syncingValueClass}`}>
               <CurrencyDisplay amount={totalMonthlyEmi} allowToggle />
             </div>
             <p className="text-xs text-muted-foreground mt-1">Outstanding obligations</p>

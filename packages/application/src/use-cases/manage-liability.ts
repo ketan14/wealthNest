@@ -18,6 +18,14 @@ export class UpdateLiabilityUseCase {
       return err(new Error('Liability ID is required.'));
     }
 
+    if (params.originalPrincipalCents !== undefined && params.originalPrincipalCents <= 0n) {
+      return err(new Error('Original principal must be greater than zero.'));
+    }
+
+    if (params.currentBalanceCents !== undefined && params.currentBalanceCents < 0n) {
+      return err(new Error('Outstanding balance cannot be negative.'));
+    }
+
     if (params.interestRate !== undefined && params.interestRate < 0) {
       return err(new Error('Interest rate cannot be negative.'));
     }

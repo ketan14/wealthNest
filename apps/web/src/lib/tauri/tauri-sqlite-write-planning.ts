@@ -94,10 +94,13 @@ export function executePlanningWrite(
       loan_type,
       lender,
       account_number,
+      original_principal_paise,
       interest_rate,
       interest_type,
       tenure_months,
       emi_amount_paise,
+      start_date,
+      end_date,
       status,
       linked_asset_id,
       member_id,
@@ -115,11 +118,15 @@ export function executePlanningWrite(
       if (lender !== null && lender !== undefined) lia.lender = lender;
       if (account_number !== null && account_number !== undefined)
         lia.account_number = account_number;
+      if (original_principal_paise !== null && original_principal_paise !== undefined)
+        lia.original_principal_paise = original_principal_paise;
       if (interest_rate !== null && interest_rate !== undefined) lia.interest_rate = interest_rate;
       if (interest_type !== null && interest_type !== undefined) lia.interest_type = interest_type;
       if (tenure_months !== null && tenure_months !== undefined) lia.tenure_months = tenure_months;
       if (emi_amount_paise !== null && emi_amount_paise !== undefined)
         lia.emi_amount_paise = emi_amount_paise;
+      if (start_date !== null && start_date !== undefined) lia.start_date = start_date;
+      if (end_date !== null && end_date !== undefined) lia.end_date = end_date;
       if (status !== null && status !== undefined) lia.status = status;
       if (linked_asset_id !== null && linked_asset_id !== undefined)
         lia.linked_asset_id = linked_asset_id;

@@ -123,6 +123,7 @@ export function AddLiabilityModal({
       );
       setStartDate(liabilityToEdit.startDate || '');
       setEndDate(liabilityToEdit.endDate || '');
+      setStatus(liabilityToEdit.status);
       setLinkedAssetId(liabilityToEdit.linkedAssetId || '');
       const editPrimaryId = liabilityToEdit.memberId || members[0]?.id || 'mem-self';
       setMemberId(editPrimaryId);
@@ -194,6 +195,14 @@ export function AddLiabilityModal({
       return;
     }
 
+    if (currentBalanceStr.trim() !== '') {
+      const parsedCurrentBalance = parseFloat(currentBalanceStr);
+      if (isNaN(parsedCurrentBalance) || parsedCurrentBalance < 0) {
+        setErrorMsg('Please enter a valid current outstanding balance (0 or greater).');
+        return;
+      }
+    }
+
     const interestRate = parseFloat(interestRateStr);
     if (isNaN(interestRate) || interestRate < 0) {
       setErrorMsg('Please enter a valid interest rate (e.g. 8.5 for 8.50%).');
@@ -229,7 +238,8 @@ export function AddLiabilityModal({
       .map((p) => p.familyMemberId);
 
     const emiAmount = emiAmountStr ? parseFloat(emiAmountStr) : 0;
-    const currentBalance = currentBalanceStr ? parseFloat(currentBalanceStr) : origPrincipal;
+    const currentBalance =
+      currentBalanceStr.trim() !== '' ? parseFloat(currentBalanceStr) : origPrincipal;
     const tenureMonths = tenureMonthsStr ? parseInt(tenureMonthsStr, 10) : undefined;
 
     setIsSubmitting(true);
@@ -244,10 +254,17 @@ export function AddLiabilityModal({
           loanType,
           lender: lender.trim(),
           accountNumber: accountNumber.trim() || undefined,
+          originalPrincipalCents: BigInt(Math.round(origPrincipal * 100)),
+          currentBalanceCents:
+            currentBalanceStr.trim() !== ''
+              ? BigInt(Math.round(currentBalance * 100))
+              : undefined,
           interestRate,
           interestType,
           tenureMonths,
           emiAmountCents: BigInt(Math.round(emiAmount * 100)),
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
           status,
           linkedAssetId: linkedAssetId || null,
           memberId: resolvedPrimaryMemberId || undefined,
