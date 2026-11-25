@@ -27,11 +27,21 @@ describe('PortfolioPage Component', () => {
     expect(screen.getByText('Portfolio')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Add Asset/i }).length).toBeGreaterThan(0);
 
-    // Summary metrics matching new wireframe hero
+    // Summary metrics matching Phase 2 hero + 4 KPI cards
     expect(screen.getByText('TOTAL PORTFOLIO VALUE')).toBeInTheDocument();
+    expect(screen.getByText('Portfolio Value')).toBeInTheDocument();
     expect(screen.getAllByText('Cost Basis').length).toBeGreaterThan(0);
+    expect(screen.getByText('Unrealized P/L')).toBeInTheDocument();
+    expect(screen.getByText('Asset Diversity')).toBeInTheDocument();
     expect(screen.getAllByText('Profit / Loss').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Positions').length).toBeGreaterThan(0);
+    expect(screen.getByText(/Updated /i)).toBeInTheDocument();
+
+    // Auto-Poll toggle control works without fake intraday placeholder
+    expect(screen.queryByText(/0\.82%/)).not.toBeInTheDocument();
+    const autoPollBtn = screen.getByRole('button', { name: /Auto-Poll: Off/i });
+    fireEvent.click(autoPollBtn);
+    expect(screen.getByRole('button', { name: /Auto-Poll: On \(25s\)/i })).toBeInTheDocument();
 
     // Asset allocation section
     expect(screen.getByText(/Allocation & Family Split/i)).toBeInTheDocument();
@@ -179,5 +189,45 @@ describe('PortfolioPage Component', () => {
     // Clicking Add Asset opens the Add Investment / Holding modal
     fireEvent.click(screen.getByRole('button', { name: /Add Asset/i }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('filters by Phase 3 category navigation tabs, isolates Direct Equities from Gold/Debt, and sorts holdings', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <MemoryRouter>
+            <PortfolioPage />
+          </MemoryRouter>
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+
+    // Click Gold category tab -> only Sovereign Gold Bond 2028 remains visible
+    const goldTab = screen.getByRole('button', { name: /^Gold \(1\)$/i });
+    fireEvent.click(goldTab);
+    expect(screen.getByText('Sovereign Gold Bond 2028')).toBeInTheDocument();
+    expect(screen.queryByText('Reliance Industries Ltd')).not.toBeInTheDocument();
+
+    // Clear filter back to All
+    fireEvent.click(screen.getByRole('button', { name: /Clear Filter/i }));
+    expect(screen.getByText('Reliance Industries Ltd')).toBeInTheDocument();
+
+    // Switch to Direct Equities & ETFs view -> Gold & PPF are NOT mixed into Equities
+    fireEvent.click(screen.getByRole('button', { name: /Direct Equities & ETFs/i }));
+    expect(screen.getByText('Reliance Industries Ltd')).toBeInTheDocument();
+    expect(screen.getByText('Tata Consultancy Services')).toBeInTheDocument();
+    expect(screen.queryByText('Sovereign Gold Bond 2028')).not.toBeInTheDocument();
+    expect(screen.queryByText('Public Provident Fund (PPF)')).not.toBeInTheDocument();
+
+    // Sort control changes sort order cleanly
+    const sortSelect = screen.getByLabelText('Sort holdings');
+    fireEvent.change(sortSelect, { target: { value: 'name_asc' } });
+    expect((sortSelect as HTMLSelectElement).value).toBe('name_asc');
   });
 });

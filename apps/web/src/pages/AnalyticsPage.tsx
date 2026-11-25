@@ -382,9 +382,12 @@ export function AnalyticsPage() {
     return calculateSection112aHarvestingPlan(rawHarvestInputs);
   }, [holdings, members]);
 
+  const hasHoldings = holdings.length > 0;
   const xirrDisplay = analytics.xirr !== null ? `${(analytics.xirr * 100).toFixed(2)}%` : 'N/A';
   const cagrDisplay = `${(analytics.cagr * 100).toFixed(2)}%`;
-  const alphaDisplay = `${analytics.alphaVsNifty >= 0 ? '+' : ''}${(analytics.alphaVsNifty * 100).toFixed(2)}%`;
+  const alphaDisplay = hasHoldings
+    ? `${analytics.alphaVsNifty >= 0 ? '+' : ''}${(analytics.alphaVsNifty * 100).toFixed(2)}%`
+    : 'N/A';
 
   // Top gain/loss contributors ("What Changed")
   const topContributors = useMemo(() => {

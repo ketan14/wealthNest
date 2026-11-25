@@ -32,6 +32,7 @@ import { usePreferences } from '@/lib/preferences/preferences-context';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay';
 import { SyncingIndicator } from '@/components/ui/SyncingIndicator';
+import { EntitySelectorChips } from '@/components/family/EntitySelectorChips';
 import {
   Plus,
   RefreshCw,
@@ -422,45 +423,11 @@ export function LiabilitiesPage() {
       </div>
 
       {/* 2. Compact "MY FAMILY" Horizontal Scroll Row (Matching Home and Portfolio Exactly) */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-xs text-muted-foreground sm:hidden">
-          <span className="font-semibold uppercase tracking-wider text-slate-400 text-[11px]">
-            My Family
-          </span>
-          <span className="px-2 py-0.5 rounded-full bg-secondary text-[10px] border border-border/60">
-            Household
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-          <button
-            type="button"
-            onClick={() => setSelectedMemberId('all')}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-              selectedMemberId === 'all'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
-            }`}
-          >
-            All Members
-          </button>
-
-          {members.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => setSelectedMemberId(m.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-                selectedMemberId === m.id
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
-              }`}
-            >
-              {m.name}
-            </button>
-          ))}
-        </div>
-      </div>
+      <EntitySelectorChips
+        members={members}
+        selectedMemberId={selectedMemberId}
+        onSelectMember={setSelectedMemberId}
+      />
 
       {/* 3. Core Essential KPI Cards (2x2 Grid on Mobile & Tablet, 3-Card Grid on Desktop) */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">

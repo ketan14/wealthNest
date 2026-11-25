@@ -12,6 +12,7 @@ import { Header } from '../components/layout/Header';
 import AnalyticsPage from '../pages/AnalyticsPage';
 import { RealEstatePage } from '../pages/RealEstatePage';
 import { GoalsPage } from '../pages/GoalsPage';
+import { PortfolioPage } from '../pages/PortfolioPage';
 import { FamilyDistributionWidget } from '../components/family/FamilyDistributionWidget';
 
 function renderWithPrivacyShell(ui: React.ReactNode) {
@@ -92,5 +93,17 @@ describe('Header Privacy Toggle Masking', () => {
     fireEvent.click(screen.getByTestId('header-privacy-toggle'));
 
     expect(screen.getAllByText('₹ ••••••').length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('masks monetary figures in PortfolioPage summary, allocation, and holdings rows when header-privacy-toggle is active', () => {
+    renderWithPrivacyShell(<PortfolioPage />);
+
+    expect(screen.getByText('Reliance Industries Ltd')).toBeInTheDocument();
+    expect(screen.getAllByText(/2,36,000/).length).toBeGreaterThanOrEqual(1);
+
+    fireEvent.click(screen.getByTestId('header-privacy-toggle'));
+
+    expect(screen.getAllByText('₹ ••••••').length).toBeGreaterThanOrEqual(10);
+    expect(screen.queryByText(/2,36,000/)).not.toBeInTheDocument();
   });
 });

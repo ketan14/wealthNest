@@ -22,13 +22,13 @@ export function WealthTrajectoryChart({
   const [hoveredPoint, setHoveredPoint] = useState<TrajectoryDataPoint | null>(null);
   const { hideBalances } = usePrivacy();
 
-  // Generate responsive trajectory points ending at currentNetWorthRupees
+  // Generate responsive trajectory points ending at currentNetWorthRupees (never fabricate ₹1.27Cr when net worth is 0)
   const dataPoints: TrajectoryDataPoint[] = useMemo(() => {
-    const base = currentNetWorthRupees !== 0 ? currentNetWorthRupees : 12700000;
+    const base = currentNetWorthRupees;
     const isNegative = base < 0;
     const absBase = Math.abs(base);
 
-    // Realistic curve calculation
+    // Realistic curve calculation when non-zero; flat 0 when empty
     const multipliers = [0.72, 0.78, 0.75, 0.88, 0.85, 0.94, 1.0];
     const labels = ['Jan 24', 'Jul 24', 'Jan 25', 'Jul 25', 'Jan 26', 'Jun 26', 'Nov 26'];
     const dates = [
@@ -44,9 +44,12 @@ export function WealthTrajectoryChart({
     const allPoints: TrajectoryDataPoint[] = labels.map((label, idx) => ({
       date: dates[idx]!,
       label,
-      valueRupees: isNegative
-        ? -Math.round(absBase * (1.3 - idx * 0.05))
-        : Math.round(absBase * multipliers[idx]!),
+      valueRupees:
+        absBase === 0
+          ? 0
+          : isNegative
+            ? -Math.round(absBase * (1.3 - idx * 0.05))
+            : Math.round(absBase * multipliers[idx]!),
     }));
 
     if (timeframe === '1M') return allPoints.slice(-2);

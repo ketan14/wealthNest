@@ -1,4 +1,5 @@
 import { HoldingDetailDto, MarketQuoteDto } from '@wealthnest/application';
+import { usePrivacy } from '@/lib/preferences/privacy-context';
 import {
   EquitiesSubtotals,
   HoldingActionButtons,
@@ -36,6 +37,7 @@ export function EquitiesHoldingsTable({
   onEdit,
   onDelete,
 }: EquitiesHoldingsTableProps) {
+  const { maskAmount } = usePrivacy();
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-xs border-collapse">
@@ -109,11 +111,12 @@ export function EquitiesHoldingsTable({
                   <td className="py-3.5 px-4 text-right text-muted-foreground">
                     <div>
                       <div className="font-bold text-foreground">
-                        {currencySymbol}
-                        {price.toLocaleString(locale, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
+                        {maskAmount(
+                          `${currencySymbol}${price.toLocaleString(locale, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}`
+                        )}
                       </div>
                       {q && (
                         <div className="flex items-center justify-end gap-1 text-[10px] mt-0.5 font-sans">
@@ -133,10 +136,11 @@ export function EquitiesHoldingsTable({
                     </div>
                   </td>
                   <td className="py-3.5 px-4 text-right font-bold text-foreground">
-                    {currencySymbol}
-                    {(h.currentValueCents / 100).toLocaleString(locale, {
-                      minimumFractionDigits: 2,
-                    })}
+                    {maskAmount(
+                      `${currencySymbol}${(h.currentValueCents / 100).toLocaleString(locale, {
+                        minimumFractionDigits: 2,
+                      })}`
+                    )}
                   </td>
                   <td className="py-3.5 px-4 text-right">
                     <span
@@ -144,11 +148,13 @@ export function EquitiesHoldingsTable({
                         isGain ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'
                       }
                     >
-                      {isGain ? '+' : '-'}
-                      {currencySymbol}
-                      {(Math.abs(gainLossCents) / 100).toLocaleString(locale, {
-                        minimumFractionDigits: 2,
-                      })}
+                      {maskAmount(
+                        `${isGain ? '+' : '-'}${currencySymbol}${(
+                          Math.abs(gainLossCents) / 100
+                        ).toLocaleString(locale, {
+                          minimumFractionDigits: 2,
+                        })}`
+                      )}
                     </span>
                     <div
                       className={`text-[10px] font-medium ${isGain ? 'text-emerald-400/80' : 'text-rose-400/80'}`}
@@ -181,17 +187,26 @@ export function EquitiesHoldingsTable({
                   maximumFractionDigits: 2,
                 })}
               </td>
-              <td className="py-3 px-4 text-right text-muted-foreground">
-                Cost: {currencySymbol}
-                {(equitiesSubtotals.totalCostCents / 100).toLocaleString(locale, {
-                  minimumFractionDigits: 2,
-                })}
+              <td className="py-3.5 px-4 text-right text-muted-foreground">
+                Cost:{' '}
+                {maskAmount(
+                  `${currencySymbol}${(equitiesSubtotals.totalCostCents / 100).toLocaleString(
+                    locale,
+                    {
+                      minimumFractionDigits: 2,
+                    }
+                  )}`
+                )}
               </td>
               <td className="py-3 px-4 text-right font-bold text-foreground">
-                {currencySymbol}
-                {(equitiesSubtotals.totalValueCents / 100).toLocaleString(locale, {
-                  minimumFractionDigits: 2,
-                })}
+                {maskAmount(
+                  `${currencySymbol}${(equitiesSubtotals.totalValueCents / 100).toLocaleString(
+                    locale,
+                    {
+                      minimumFractionDigits: 2,
+                    }
+                  )}`
+                )}
               </td>
               <td className="py-3 px-4 text-right">
                 <span
@@ -199,11 +214,13 @@ export function EquitiesHoldingsTable({
                     equitiesSubtotals.gainLossCents >= 0 ? 'text-emerald-400' : 'text-rose-400'
                   }
                 >
-                  {equitiesSubtotals.gainLossCents >= 0 ? '+' : '-'}
-                  {currencySymbol}
-                  {(Math.abs(equitiesSubtotals.gainLossCents) / 100).toLocaleString(locale, {
-                    minimumFractionDigits: 2,
-                  })}
+                  {maskAmount(
+                    `${equitiesSubtotals.gainLossCents >= 0 ? '+' : '-'}${currencySymbol}${(
+                      Math.abs(equitiesSubtotals.gainLossCents) / 100
+                    ).toLocaleString(locale, {
+                      minimumFractionDigits: 2,
+                    })}`
+                  )}
                 </span>
                 <div className="text-[10px] text-muted-foreground">
                   {equitiesSubtotals.gainLossCents >= 0 ? '+' : ''}

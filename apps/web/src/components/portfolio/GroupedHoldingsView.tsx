@@ -1,5 +1,6 @@
 import { HoldingDetailDto } from '@wealthnest/application';
 import { Badge } from '@/components/ui/Badge';
+import { usePrivacy } from '@/lib/preferences/privacy-context';
 import { GroupedHoldingBucket, HoldingActionButtons } from './portfolio-table-shared';
 
 interface GroupedHoldingsViewProps {
@@ -22,23 +23,30 @@ export function GroupedHoldingsView({
   onEdit,
   onDelete,
 }: GroupedHoldingsViewProps) {
+  const { maskAmount } = usePrivacy();
   return (
     <div className="p-4 space-y-6">
       {groupedHoldings.map((grp) => {
         const grpGainLossCents = grp.totalValueCents - grp.totalCostCents;
         const isGrpGain = grpGainLossCents >= 0;
-        const grpGainLossFormatted = (Math.abs(grpGainLossCents) / 100).toLocaleString('en-IN', {
-          style: 'currency',
-          currency: 'INR',
-        });
-        const grpCostFormatted = (grp.totalCostCents / 100).toLocaleString('en-IN', {
-          style: 'currency',
-          currency: 'INR',
-        });
-        const grpValueFormatted = (grp.totalValueCents / 100).toLocaleString('en-IN', {
-          style: 'currency',
-          currency: 'INR',
-        });
+        const grpGainLossFormatted = maskAmount(
+          `${isGrpGain ? '+' : '-'}${(Math.abs(grpGainLossCents) / 100).toLocaleString('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+          })}`
+        );
+        const grpCostFormatted = maskAmount(
+          (grp.totalCostCents / 100).toLocaleString('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+          })
+        );
+        const grpValueFormatted = maskAmount(
+          (grp.totalValueCents / 100).toLocaleString('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+          })
+        );
         const grpReturnPct =
           grp.totalCostCents > 0 ? (grpGainLossCents / grp.totalCostCents) * 100 : 0;
 
@@ -71,7 +79,6 @@ export function GroupedHoldingsView({
                     isGrpGain ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'
                   }
                 >
-                  {isGrpGain ? '+' : '-'}
                   {grpGainLossFormatted} ({isGrpGain ? '+' : ''}
                   {grpReturnPct.toFixed(2)}%)
                 </span>
@@ -111,23 +118,31 @@ export function GroupedHoldingsView({
                     const returnPct =
                       totalCostCents > 0 ? (gainLossCents / totalCostCents) * 100 : 0;
 
-                    const costBasisFormatted = (totalCostCents / 100).toLocaleString('en-IN', {
-                      style: 'currency',
-                      currency: h.currency || 'INR',
-                    });
-                    const currentValueFormatted = (h.currentValueCents / 100).toLocaleString(
-                      'en-IN',
-                      {
+                    const costBasisFormatted = maskAmount(
+                      (totalCostCents / 100).toLocaleString('en-IN', {
                         style: 'currency',
                         currency: h.currency || 'INR',
-                      }
+                      })
                     );
-                    const gainLossFormatted = (Math.abs(gainLossCents) / 100).toLocaleString(
-                      'en-IN',
-                      {
+                    const currentValueFormatted = maskAmount(
+                      (h.currentValueCents / 100).toLocaleString('en-IN', {
                         style: 'currency',
                         currency: h.currency || 'INR',
-                      }
+                      })
+                    );
+                    const gainLossFormatted = maskAmount(
+                      `${isGain ? '+' : '-'}${(Math.abs(gainLossCents) / 100).toLocaleString(
+                        'en-IN',
+                        {
+                          style: 'currency',
+                          currency: h.currency || 'INR',
+                        }
+                      )}`
+                    );
+                    const unitCostFormatted = maskAmount(
+                      `${currencySymbol}${(h.unitCostCents / 100).toLocaleString(locale, {
+                        minimumFractionDigits: 2,
+                      })}`
                     );
 
                     return (
@@ -148,11 +163,7 @@ export function GroupedHoldingsView({
                         <td className="py-3 px-4 text-right text-muted-foreground">
                           <div>{costBasisFormatted}</div>
                           <div className="text-[10px] text-muted-foreground/80">
-                            {currencySymbol}
-                            {(h.unitCostCents / 100).toLocaleString(locale, {
-                              minimumFractionDigits: 2,
-                            })}
-                            /u
+                            {unitCostFormatted}/u
                           </div>
                         </td>
                         <td className="py-3 px-4 text-right font-bold text-foreground">
@@ -166,7 +177,6 @@ export function GroupedHoldingsView({
                                 : 'text-rose-400 font-semibold'
                             }
                           >
-                            {isGain ? '+' : '-'}
                             {gainLossFormatted}
                           </span>
                           <div
@@ -208,7 +218,6 @@ export function GroupedHoldingsView({
                     </td>
                     <td className="py-2.5 px-4 text-right">
                       <span className={isGrpGain ? 'text-emerald-400' : 'text-rose-400'}>
-                        {isGrpGain ? '+' : '-'}
                         {grpGainLossFormatted}
                       </span>
                     </td>

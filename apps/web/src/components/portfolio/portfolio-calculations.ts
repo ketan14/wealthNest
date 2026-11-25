@@ -41,6 +41,39 @@ export function computePortfolioSummary(
   return calculatePortfolioSummary(valuationItems, 'INR');
 }
 
+export type HoldingSortField =
+  | 'default'
+  | 'value_desc'
+  | 'gain_pct_desc'
+  | 'cost_desc'
+  | 'name_asc'
+  | 'updated_desc';
+
+export function matchesPortfolioCategory(
+  assetClassId: string,
+  selectedClassFilter: string | null
+): boolean {
+  if (!selectedClassFilter) return true;
+  if (selectedClassFilter === 'others') {
+    return (
+      assetClassId === 'cash' ||
+      assetClassId === 'crypto' ||
+      ![
+        'equity',
+        'mutual_fund',
+        'commodity',
+        'fixed_income',
+        'real_estate',
+        'property',
+      ].includes(assetClassId)
+    );
+  }
+  if (selectedClassFilter === 'real_estate') {
+    return assetClassId === 'real_estate' || assetClassId === 'property';
+  }
+  return assetClassId === selectedClassFilter;
+}
+
 /**
  * Filters holdings by search query and optional asset class filter.
  */
@@ -57,9 +90,45 @@ export function filterHoldingsByCriteria(
       (h.isin && h.isin.toLowerCase().includes(normalizedQuery)) ||
       (h.folioNumber && h.folioNumber.toLowerCase().includes(normalizedQuery)) ||
       (h.amcName && h.amcName.toLowerCase().includes(normalizedQuery));
-    const matchesClass = !selectedClassFilter || h.assetClassId === selectedClassFilter;
+    const matchesClass = matchesPortfolioCategory(h.assetClassId, selectedClassFilter);
     return matchesSearch && matchesClass;
   });
+}
+
+/**
+ * Sorts holdings according to user selection while preserving original order on 'default'.
+ */
+export function sortHoldings(
+  holdings: readonly HoldingDetailDto[],
+  sortBy: HoldingSortField
+): HoldingDetailDto[] {
+  if (sortBy === 'default') return [...holdings];
+  const copy = [...holdings];
+  copy.sort((a, b) => {
+    if (sortBy === 'value_desc') {
+      return (b.currentValueCents || 0) - (a.currentValueCents || 0);
+    }
+    if (sortBy === 'cost_desc') {
+      const costA = Math.round((a.quantity || 0) * (a.unitCostCents || 0));
+      const costB = Math.round((b.quantity || 0) * (b.unitCostCents || 0));
+      return costB - costA;
+    }
+    if (sortBy === 'gain_pct_desc') {
+      const costA = Math.round((a.quantity || 0) * (a.unitCostCents || 0));
+      const costB = Math.round((b.quantity || 0) * (b.unitCostCents || 0));
+      const pctA = costA > 0 ? ((a.currentValueCents - costA) / costA) * 100 : -Infinity;
+      const pctB = costB > 0 ? ((b.currentValueCents - costB) / costB) * 100 : -Infinity;
+      return pctB - pctA;
+    }
+    if (sortBy === 'name_asc') {
+      return a.name.localeCompare(b.name);
+    }
+    if (sortBy === 'updated_desc') {
+      return String(b.updatedAt || '').localeCompare(String(a.updatedAt || ''));
+    }
+    return 0;
+  });
+  return copy;
 }
 
 /**

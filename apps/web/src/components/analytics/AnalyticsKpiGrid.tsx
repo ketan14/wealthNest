@@ -127,20 +127,26 @@ export function AnalyticsKpiGrid({
           </div>
           <div className="flex items-baseline gap-1.5 pt-1 sm:pt-1.5 flex-wrap">
             <span className="text-lg sm:text-2xl font-extrabold tracking-tight text-foreground font-mono">
-              {analytics.concentration.diversificationScore}
+              {analytics.concentration.topAssetWeight > 0
+                ? analytics.concentration.diversificationScore
+                : 0}
             </span>
             <span className="text-[10px] sm:text-xs text-muted-foreground">/100</span>
             <Badge
               variant="outline"
               className={`text-[9px] sm:text-[10px] uppercase font-bold px-1.5 py-0 ${
-                analytics.concentration.riskLevel === 'low'
-                  ? 'text-emerald-400 border-emerald-500/30'
-                  : analytics.concentration.riskLevel === 'moderate'
-                    ? 'text-amber-400 border-amber-500/30'
-                    : 'text-rose-400 border-rose-500/30'
+                analytics.concentration.topAssetWeight === 0
+                  ? 'text-muted-foreground border-border'
+                  : analytics.concentration.riskLevel === 'low'
+                    ? 'text-emerald-400 border-emerald-500/30'
+                    : analytics.concentration.riskLevel === 'moderate'
+                      ? 'text-amber-400 border-amber-500/30'
+                      : 'text-rose-400 border-rose-500/30'
               }`}
             >
-              {analytics.concentration.riskLevel} Risk
+              {analytics.concentration.topAssetWeight === 0
+                ? 'Empty'
+                : `${analytics.concentration.riskLevel} Risk`}
             </Badge>
           </div>
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">

@@ -1,5 +1,6 @@
 import { HoldingDetailDto } from '@wealthnest/application';
 import { CheckCircle2, HelpCircle } from 'lucide-react';
+import { usePrivacy } from '@/lib/preferences/privacy-context';
 import {
   HoldingActionButtons,
   HoldingEntityBadges,
@@ -34,6 +35,7 @@ export function MutualFundsHoldingsTable({
   onEdit,
   onDelete,
 }: MutualFundsHoldingsTableProps) {
+  const { maskAmount } = usePrivacy();
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-xs border-collapse">
@@ -103,20 +105,22 @@ export function MutualFundsHoldingsTable({
                     {h.quantity.toLocaleString('en-IN', { maximumFractionDigits: 4 })}
                   </td>
                   <td className="py-3.5 px-4 text-right text-muted-foreground">
-                    {currencySymbol}
-                    {navPerUnit.toLocaleString(locale, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 4,
-                    })}
+                    {maskAmount(
+                      `${currencySymbol}${navPerUnit.toLocaleString(locale, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 4,
+                      })}`
+                    )}
                   </td>
                   <td className="py-3.5 px-4 text-right">
                     {h.costBasisVerified ? (
                       <div>
                         <div className="text-foreground font-semibold">
-                          {currencySymbol}
-                          {(totalCostCents / 100).toLocaleString(locale, {
-                            minimumFractionDigits: 2,
-                          })}
+                          {maskAmount(
+                            `${currencySymbol}${(totalCostCents / 100).toLocaleString(locale, {
+                              minimumFractionDigits: 2,
+                            })}`
+                          )}
                         </div>
                         <div className="text-[10px] text-emerald-400 flex items-center justify-end gap-1">
                           <CheckCircle2 className="w-2.5 h-2.5" />
@@ -134,10 +138,11 @@ export function MutualFundsHoldingsTable({
                     )}
                   </td>
                   <td className="py-3.5 px-4 text-right font-bold text-foreground">
-                    {currencySymbol}
-                    {(h.currentValueCents / 100).toLocaleString(locale, {
-                      minimumFractionDigits: 2,
-                    })}
+                    {maskAmount(
+                      `${currencySymbol}${(h.currentValueCents / 100).toLocaleString(locale, {
+                        minimumFractionDigits: 2,
+                      })}`
+                    )}
                   </td>
                   <td className="py-3.5 px-4 text-right">
                     {h.costBasisVerified ? (
@@ -149,11 +154,13 @@ export function MutualFundsHoldingsTable({
                               : 'text-rose-400 font-semibold'
                           }
                         >
-                          {isGain ? '+' : '-'}
-                          {currencySymbol}
-                          {(Math.abs(gainLossCents) / 100).toLocaleString(locale, {
-                            minimumFractionDigits: 2,
-                          })}
+                          {maskAmount(
+                            `${isGain ? '+' : '-'}${currencySymbol}${(
+                              Math.abs(gainLossCents) / 100
+                            ).toLocaleString(locale, {
+                              minimumFractionDigits: 2,
+                            })}`
+                          )}
                         </span>
                         <div
                           className={`text-[10px] font-medium ${isGain ? 'text-emerald-400/80' : 'text-rose-400/80'}`}
@@ -194,16 +201,22 @@ export function MutualFundsHoldingsTable({
               </td>
               <td className="py-3 px-4"></td>
               <td className="py-3 px-4 text-right text-muted-foreground">
-                Verified: {currencySymbol}
-                {(mfSubtotals.totalVerifiedCostCents / 100).toLocaleString(locale, {
-                  minimumFractionDigits: 2,
-                })}
+                Verified:{' '}
+                {maskAmount(
+                  `${currencySymbol}${(mfSubtotals.totalVerifiedCostCents / 100).toLocaleString(
+                    locale,
+                    {
+                      minimumFractionDigits: 2,
+                    }
+                  )}`
+                )}
               </td>
               <td className="py-3 px-4 text-right font-bold text-foreground">
-                {currencySymbol}
-                {(mfSubtotals.totalValueCents / 100).toLocaleString(locale, {
-                  minimumFractionDigits: 2,
-                })}
+                {maskAmount(
+                  `${currencySymbol}${(mfSubtotals.totalValueCents / 100).toLocaleString(locale, {
+                    minimumFractionDigits: 2,
+                  })}`
+                )}
               </td>
               <td className="py-3 px-4 text-right">
                 <span
@@ -211,11 +224,13 @@ export function MutualFundsHoldingsTable({
                     mfSubtotals.verifiedGainLossCents >= 0 ? 'text-emerald-400' : 'text-rose-400'
                   }
                 >
-                  {mfSubtotals.verifiedGainLossCents >= 0 ? '+' : '-'}
-                  {currencySymbol}
-                  {(Math.abs(mfSubtotals.verifiedGainLossCents) / 100).toLocaleString(locale, {
-                    minimumFractionDigits: 2,
-                  })}
+                  {maskAmount(
+                    `${mfSubtotals.verifiedGainLossCents >= 0 ? '+' : '-'}${currencySymbol}${(
+                      Math.abs(mfSubtotals.verifiedGainLossCents) / 100
+                    ).toLocaleString(locale, {
+                      minimumFractionDigits: 2,
+                    })}`
+                  )}
                 </span>
               </td>
               <td className="py-3 px-4"></td>

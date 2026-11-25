@@ -29,6 +29,7 @@ import { usePrivacy } from '@/lib/preferences/privacy-context';
 import { useHousehold } from '@/lib/supabase/household-context';
 import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay';
 import { SyncingIndicator } from '@/components/ui/SyncingIndicator';
+import { EntitySelectorChips } from '@/components/family/EntitySelectorChips';
 import { WealthTrajectoryChart } from '@/components/home/WealthTrajectoryChart';
 import { GlobalQuickAddModal } from '@/components/layout/GlobalQuickAddModal';
 import {
@@ -224,16 +225,11 @@ export function HomePage() {
   const liquidHoldings = holdings.filter((h) => liquidAssetClasses.has(h.assetClassId));
   const liquidAssets = liquidHoldings.reduce((sum, h) => sum + (h.currentValueCents || 0) / 100, 0);
 
-  // Asset Class Allocation percentages for Left Desktop Column
+  // Asset Class Allocation percentages for Left Desktop Column (factual only, no fake fallback)
   const assetAllocations = useMemo(() => {
     const total = portfolioSummary.totalValue.toDecimal();
     if (total <= 0) {
-      return [
-        { label: 'Equities', pct: 42, color: 'text-blue-400' },
-        { label: 'Property', pct: 35, color: 'text-amber-400' },
-        { label: 'Cash', pct: 15, color: 'text-emerald-400' },
-        { label: 'Gold', pct: 8, color: 'text-yellow-400' },
-      ];
+      return [];
     }
     return portfolioSummary.allocations.slice(0, 4).map((a) => ({
       label: a.name,
@@ -325,39 +321,22 @@ export function HomePage() {
 
   return (
     <div className="space-y-6 pb-20 lg:pb-8">
-      {/* Mobile-Only Sub-Header Bar */}
-      <div className="flex md:hidden items-center justify-between py-1">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 shadow-sm">
-            <ShieldCheck className="w-4 h-4 text-slate-950" />
-          </div>
-          <div>
-            <span className="font-bold text-base tracking-tight text-foreground">WealthNest</span>
-            <span className="block text-[10px] text-muted-foreground">{householdDisplayName}</span>
-          </div>
+      {/* Mobile-Only Sub-Header Action Row (No duplicate logo/privacy toggle) */}
+      <div className="flex md:hidden items-center justify-between py-0.5">
+        <div>
+          <h1 className="font-bold text-lg tracking-tight text-foreground">System Overview</h1>
+          <span className="block text-[11px] text-muted-foreground">{householdDisplayName}</span>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleHideBalances}
-            className="text-muted-foreground hover:text-foreground h-8 w-8 p-0 rounded-lg"
-            title={hideBalances ? 'Show Balances' : 'Hide Balances'}
-          >
-            {hideBalances ? <EyeOff className="w-4 h-4 text-amber-400" /> : <Eye className="w-4 h-4" />}
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={() => setIsQuickAddOpen(true)}
-            className="h-8 px-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs rounded-lg shadow-sm flex items-center gap-1"
-            title="Quick Add"
-          >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Quick Add</span>
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          onClick={() => setIsQuickAddOpen(true)}
+          className="h-8 px-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs rounded-lg shadow-sm flex items-center gap-1"
+          title="Quick Add"
+        >
+          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>Quick Add</span>
+        </Button>
       </div>
 
       {/* ============================================================== */}
@@ -366,41 +345,11 @@ export function HomePage() {
       {/* ============================================================== */}
       <div className="block lg:hidden space-y-5">
         {/* My Family & Member Filter Chips */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span className="font-semibold uppercase tracking-wider text-slate-400">My Family</span>
-            <span className="px-2 py-0.5 rounded-full bg-secondary text-[11px] border border-border/60">
-              Household
-            </span>
-          </div>
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-            <button
-              type="button"
-              onClick={() => setSelectedMemberId('all')}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-                selectedMemberId === 'all'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
-              }`}
-            >
-              All Members
-            </button>
-            {members.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setSelectedMemberId(m.id)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-                  selectedMemberId === m.id
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
-                }`}
-              >
-                {m.name}
-              </button>
-            ))}
-          </div>
-        </div>
+        <EntitySelectorChips
+          members={members}
+          selectedMemberId={selectedMemberId}
+          onSelectMember={setSelectedMemberId}
+        />
 
         {/* Hero Card: Family Net Worth / Contextual Asset Value */}
         <Card className="border-border/80 bg-card/60 backdrop-blur-sm relative overflow-hidden">
@@ -690,14 +639,18 @@ export function HomePage() {
             <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
               Asset Allocation
             </span>
-            <div className="space-y-2.5">
-              {assetAllocations.map((a, i) => (
-                <div key={i} className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">{a.label}</span>
-                  <span className="font-semibold font-mono text-foreground">{a.pct}%</span>
-                </div>
-              ))}
-            </div>
+            {assetAllocations.length > 0 ? (
+              <div className="space-y-2.5">
+                {assetAllocations.map((a, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">{a.label}</span>
+                    <span className="font-semibold font-mono text-foreground">{a.pct}%</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">No assets recorded yet</p>
+            )}
           </div>
         </div>
 

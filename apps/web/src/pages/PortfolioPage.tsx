@@ -116,6 +116,7 @@ export function PortfolioPage() {
   const {
     data: dbPortfolioData,
     isLoading: isLoadingDb,
+    isFetching: isFetchingDb,
     refetch,
   } = useQuery({
     queryKey: ['portfolio-summary', scopeId],
@@ -214,7 +215,10 @@ export function PortfolioPage() {
   }, []);
 
   const {
+    isPolling,
+    setIsPolling,
     isRefreshing: isRefreshingNavs,
+    lastUpdated: lastFeedUpdated,
     statusMessage: navRefreshMessage,
     quotes: liveQuotesMap,
     refreshNow: handleRefreshLiveNavs,
@@ -239,10 +243,7 @@ export function PortfolioPage() {
 
   // Separate investment subsets for specialized views
   const equitiesHoldings = useMemo(
-    () =>
-      filteredHoldings.filter(
-        (h) => h.assetClassId === 'equity' || (h.assetClassId !== 'mutual_fund' && !h.folioNumber)
-      ),
+    () => filteredHoldings.filter((h) => h.assetClassId === 'equity'),
     [filteredHoldings]
   );
 
@@ -441,6 +442,7 @@ export function PortfolioPage() {
         isAuthenticated={hasLiveBackend}
         canEditFinancials={canEditFinancials}
         isRefreshingNavs={isRefreshingNavs}
+        isSyncing={isFetchingDb}
         onRefreshNavs={() => void handleRefreshLiveNavs()}
         isSupportModeActive={isSupportModeActive}
         onOpenImportModal={() => {
@@ -464,6 +466,11 @@ export function PortfolioPage() {
         activeHoldings={activeHoldings}
         onRefresh={() => void handleRefreshLiveNavs()}
         isRefreshing={isRefreshingNavs}
+        isSyncing={isFetchingDb}
+        isPolling={isPolling}
+        onTogglePolling={() => setIsPolling((prev) => !prev)}
+        lastUpdatedAt={lastFeedUpdated}
+        liveQuotesMap={liveQuotesMap}
       />
 
       <PortfolioHoldingsSection
@@ -472,6 +479,7 @@ export function PortfolioPage() {
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         selectedClassFilter={selectedClassFilter}
+        onSelectClassFilter={setSelectedClassFilter}
         onClearClassFilter={() => setSelectedClassFilter(null)}
         deleteError={deleteError}
         onDismissDeleteError={() => setDeleteError(null)}

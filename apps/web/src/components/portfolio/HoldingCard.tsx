@@ -1,6 +1,7 @@
-import { Trash2, TrendingUp, TrendingDown, Edit2 } from 'lucide-react';
+import { Trash2, TrendingUp, TrendingDown, Minus, Edit2 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { usePrivacy } from '@/lib/preferences/privacy-context';
 import { HoldingDetailDto } from '@wealthnest/application';
 
 export interface HoldingCardProps {
@@ -13,33 +14,55 @@ export interface HoldingCardProps {
   isDeleting?: boolean;
 }
 
+function formatShortDate(iso?: string): string | null {
+  if (!iso) return null;
+  const ms = Date.parse(iso);
+  if (isNaN(ms)) return iso.slice(0, 10);
+  return new Date(ms).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 export function HoldingCard({ holding, onEdit, onDelete, isDeleting = false }: HoldingCardProps) {
+  const { maskAmount } = usePrivacy();
   const totalCostCents = Math.round(holding.quantity * holding.unitCostCents);
   const gainLossCents = holding.currentValueCents - totalCostCents;
-  const isGain = gainLossCents >= 0;
+  const isGain = gainLossCents > 0;
+  const isLoss = gainLossCents < 0;
   const returnPct = totalCostCents > 0 ? (gainLossCents / totalCostCents) * 100 : 0;
+  const isCostVerified = holding.costBasisVerified ?? true;
 
-  const costBasisFormatted = (totalCostCents / 100).toLocaleString('en-IN', {
-    style: 'currency',
-    currency: holding.currency || 'INR',
-  });
+  const costBasisFormatted = maskAmount(
+    (totalCostCents / 100).toLocaleString('en-IN', {
+      style: 'currency',
+      currency: holding.currency || 'INR',
+    })
+  );
 
-  const currentValueFormatted = (holding.currentValueCents / 100).toLocaleString('en-IN', {
-    style: 'currency',
-    currency: holding.currency || 'INR',
-  });
+  const currentValueFormatted = maskAmount(
+    (holding.currentValueCents / 100).toLocaleString('en-IN', {
+      style: 'currency',
+      currency: holding.currency || 'INR',
+    })
+  );
 
-  const gainLossFormatted = (Math.abs(gainLossCents) / 100).toLocaleString('en-IN', {
-    style: 'currency',
-    currency: holding.currency || 'INR',
-  });
+  const gainLossFormatted = maskAmount(
+    `${isGain ? '+' : isLoss ? '-' : ''}${(Math.abs(gainLossCents) / 100).toLocaleString('en-IN', {
+      style: 'currency',
+      currency: holding.currency || 'INR',
+    })}`
+  );
+
+  const updatedLabel = formatShortDate(holding.updatedAt);
 
   return (
     <div
       data-testid="holding-card"
       className="bg-card border border-border/80 rounded-xl p-4 shadow-sm hover:border-primary/40 transition-all space-y-3"
     >
-      {/* Header: Name, Ticker, and Delete */}
+      {/* Header: Name, Ticker, and Actions */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -74,6 +97,11 @@ export function HoldingCard({ holding, onEdit, onDelete, isDeleting = false }: H
             {holding.brokerName && (
               <span className="text-[10px] text-muted-foreground font-mono">
                 {holding.brokerName}
+              </span>
+            )}
+            {updatedLabel && (
+              <span className="text-[10px] text-muted-foreground font-mono">
+                • {updatedLabel}
               </span>
             )}
           </div>
@@ -121,22 +149,33 @@ export function HoldingCard({ holding, onEdit, onDelete, isDeleting = false }: H
           <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
             Gain / Loss
           </span>
-          <div
-            className={`inline-flex items-center gap-1 font-semibold ${
-              isGain ? 'text-emerald-400' : 'text-rose-400'
-            }`}
-          >
-            {isGain ? (
-              <TrendingUp className="w-3.5 h-3.5" />
-            ) : (
-              <TrendingDown className="w-3.5 h-3.5" />
-            )}
-            <span>
-              {isGain ? '+' : '-'}
-              {gainLossFormatted} ({isGain ? '+' : ''}
-              {returnPct.toFixed(1)}%)
+          {isCostVerified ? (
+            <div
+              className={`inline-flex items-center gap-1 font-semibold ${
+                isGain
+                  ? 'text-emerald-400'
+                  : isLoss
+                    ? 'text-rose-400'
+                    : 'text-muted-foreground'
+              }`}
+            >
+              {isGain ? (
+                <TrendingUp className="w-3.5 h-3.5" />
+              ) : isLoss ? (
+                <TrendingDown className="w-3.5 h-3.5" />
+              ) : (
+                <Minus className="w-3.5 h-3.5" />
+              )}
+              <span>
+                {gainLossFormatted} ({isGain ? '+' : ''}
+                {returnPct.toFixed(1)}%)
+              </span>
+            </div>
+          ) : (
+            <span className="text-muted-foreground text-[11px] italic font-sans">
+              Pending txn history
             </span>
-          </div>
+          )}
         </div>
 
         <div>
@@ -154,7 +193,17 @@ export function HoldingCard({ holding, onEdit, onDelete, isDeleting = false }: H
           <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
             Cost Basis
           </span>
-          <span className="text-muted-foreground">{costBasisFormatted}</span>
+          {isCostVerified ? (
+            <span className="text-muted-foreground">{costBasisFormatted}</span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onEdit?.(holding)}
+              className="text-xs text-emerald-400 font-semibold hover:underline font-sans"
+            >
+              + Add cost
+            </button>
+          )}
         </div>
       </div>
     </div>

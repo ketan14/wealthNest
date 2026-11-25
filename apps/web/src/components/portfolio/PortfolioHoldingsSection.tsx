@@ -1,11 +1,19 @@
+import { useState, useMemo } from 'react';
 import { HoldingDetailDto, LiabilityDto, MarketQuoteDto } from '@wealthnest/application';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay';
+import { getPolarityBool } from '@/components/ui/DashboardPrimitives';
 import { RealEstateSubView } from '@/components/portfolio/RealEstateSubView';
 import { EquitiesHoldingsTable } from '@/components/portfolio/EquitiesHoldingsTable';
 import { MutualFundsHoldingsTable } from '@/components/portfolio/MutualFundsHoldingsTable';
 import { GroupedHoldingsView } from '@/components/portfolio/GroupedHoldingsView';
 import { AllHoldingsTable } from '@/components/portfolio/AllHoldingsTable';
+import {
+  HoldingSortField,
+  matchesPortfolioCategory,
+  sortHoldings,
+} from '@/components/portfolio/portfolio-calculations';
 import {
   EquitiesSubtotals,
   GroupedHoldingBucket,
@@ -13,7 +21,7 @@ import {
   PortfolioAccountRef,
   PortfolioMemberRef,
 } from './portfolio-table-shared';
-import { AlertCircle, Database, FileSpreadsheet, Plus, Search } from 'lucide-react';
+import { AlertCircle, ArrowUpDown, Database, FileSpreadsheet, Plus, Search } from 'lucide-react';
 
 export type PortfolioViewMode = 'all' | 'equities' | 'mutual_funds' | 'real_estate' | 'grouped';
 
@@ -23,6 +31,7 @@ interface PortfolioHoldingsSectionProps {
   readonly searchQuery: string;
   readonly onSearchQueryChange: (query: string) => void;
   readonly selectedClassFilter: string | null;
+  readonly onSelectClassFilter?: (classId: string | null) => void;
   readonly onClearClassFilter: () => void;
   readonly deleteError: string | null;
   readonly onDismissDeleteError: () => void;
@@ -51,9 +60,21 @@ interface PortfolioHoldingsSectionProps {
   readonly onDeleteHolding: (holding: HoldingDetailDto) => void;
 }
 
+const CATEGORY_TABS: readonly { id: string | null; label: string }[] = [
+  { id: null, label: 'All' },
+  { id: 'equity', label: 'Equities' },
+  { id: 'mutual_fund', label: 'Mutual Funds' },
+  { id: 'commodity', label: 'Gold' },
+  { id: 'fixed_income', label: 'Bonds & Debt' },
+  { id: 'real_estate', label: 'Real Estate' },
+  { id: 'others', label: 'Others' },
+];
+
 /**
- * Renders the Portfolio Holdings card with view-mode switcher, search/class filtering,
- * empty/loading states, and tailored sub-views for Equities, Mutual Funds, Real Estate, and Grouped holdings.
+ * Phase 3B & 3C Portfolio Holdings Card:
+ * - Compact Category Navigation tabs updating holdings and active category summary.
+ * - Specialized view switcher (All Investments, Direct Equities & ETFs, Mutual Funds, Real Estate, By Asset Class).
+ * - Search + Sort controls + Privacy-aware Holdings tables/cards.
  */
 export function PortfolioHoldingsSection({
   viewMode,
@@ -61,6 +82,7 @@ export function PortfolioHoldingsSection({
   searchQuery,
   onSearchQueryChange,
   selectedClassFilter,
+  onSelectClassFilter,
   onClearClassFilter,
   deleteError,
   onDismissDeleteError,
@@ -88,14 +110,63 @@ export function PortfolioHoldingsSection({
   onEditHolding,
   onDeleteHolding,
 }: PortfolioHoldingsSectionProps) {
+  const [sortBy, setSortBy] = useState<HoldingSortField>('default');
+
   const realEstateCount = activeHoldings.filter(
     (h) => h.assetClassId === 'real_estate' || h.assetClassId === 'property'
   ).length;
 
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string | null, number>();
+    counts.set(null, activeHoldings.length);
+    for (const tab of CATEGORY_TABS) {
+      if (tab.id !== null) {
+        counts.set(
+          tab.id,
+          activeHoldings.filter((h) => matchesPortfolioCategory(h.assetClassId, tab.id)).length
+        );
+      }
+    }
+    return counts;
+  }, [activeHoldings]);
+
+  const sortedFilteredHoldings = useMemo(
+    () => sortHoldings(filteredHoldings, sortBy),
+    [filteredHoldings, sortBy]
+  );
+  const sortedEquitiesHoldings = useMemo(
+    () => sortHoldings(equitiesHoldings, sortBy),
+    [equitiesHoldings, sortBy]
+  );
+  const sortedMutualFundHoldings = useMemo(
+    () => sortHoldings(mutualFundHoldings, sortBy),
+    [mutualFundHoldings, sortBy]
+  );
+
+  // Active filtered category summary (when category tab or search filter is active)
+  const filteredCategorySummary = useMemo(() => {
+    let valCents = 0;
+    let costCents = 0;
+    let verifiedCount = 0;
+    for (const h of filteredHoldings) {
+      valCents += h.currentValueCents || 0;
+      if (h.costBasisVerified !== false) {
+        costCents += Math.round((h.quantity || 0) * (h.unitCostCents || 0));
+        verifiedCount++;
+      }
+    }
+    return {
+      valueRupees: valCents / 100,
+      costRupees: costCents / 100,
+      gainRupees: (valCents - costCents) / 100,
+      hasVerified: verifiedCount > 0,
+    };
+  }, [filteredHoldings]);
+
   return (
     <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
-      <CardHeader className="pb-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <CardHeader className="pb-4 space-y-3.5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div>
             <CardTitle className="text-base">Portfolio Holdings</CardTitle>
             <CardDescription>
@@ -103,85 +174,34 @@ export function PortfolioHoldingsSection({
             </CardDescription>
           </div>
 
-          {/* View Mode Toggle and Filter/Search */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Specialized View Switcher */}
-            <div className="flex items-center p-0.5 bg-secondary/60 rounded-lg border border-border text-xs max-w-full overflow-x-auto scrollbar-none">
-              <button
-                type="button"
-                onClick={() => onViewModeChange('all')}
-                className={`px-3 py-1.5 rounded-md font-medium transition-all ${
-                  viewMode === 'all'
-                    ? 'bg-background text-foreground shadow-xs font-semibold'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                All Investments ({activeHoldings.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewModeChange('equities')}
-                className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-1.5 ${
-                  viewMode === 'equities'
-                    ? 'bg-blue-600 text-white shadow-xs font-semibold'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <span>Direct Equities & ETFs</span>
-                <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-background/20 font-bold">
-                  {equitiesHoldings.length}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewModeChange('mutual_funds')}
-                className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-1.5 ${
-                  viewMode === 'mutual_funds'
-                    ? 'bg-cyan-600 text-white shadow-xs font-semibold'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <span>Mutual Funds</span>
-                <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-background/20 font-bold">
-                  {mutualFundHoldings.length}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewModeChange('real_estate')}
-                className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-1.5 ${
-                  viewMode === 'real_estate'
-                    ? 'bg-amber-600 text-white shadow-xs font-semibold'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <span>Real Estate & Land</span>
-                <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-background/20 font-bold">
-                  {realEstateCount}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewModeChange('grouped')}
-                className={`px-3 py-1.5 rounded-md font-medium transition-all ${
-                  viewMode === 'grouped'
-                    ? 'bg-background text-foreground shadow-xs font-semibold'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                By Asset Class
-              </button>
-            </div>
-
-            <div className="relative">
+          {/* Search & Sort Controls */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 sm:flex-initial">
               <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Filter ticker, ISIN, folio..."
                 value={searchQuery}
                 onChange={(e) => onSearchQueryChange(e.target.value)}
-                className="h-8 pl-8 pr-3 text-xs rounded-lg bg-secondary/50 border border-border focus:outline-none focus:ring-1 focus:ring-primary w-40 sm:w-56 font-mono text-foreground"
+                className="h-8 pl-8 pr-3 text-xs rounded-lg bg-secondary/50 border border-border focus:outline-none focus:ring-1 focus:ring-primary w-full sm:w-52 font-mono text-foreground"
               />
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-secondary/50 border border-border text-xs text-muted-foreground">
+              <ArrowUpDown className="w-3.5 h-3.5 shrink-0" />
+              <select
+                aria-label="Sort holdings"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as HoldingSortField)}
+                className="bg-transparent text-foreground text-xs focus:outline-none cursor-pointer"
+              >
+                <option value="default">Sort: Default</option>
+                <option value="value_desc">Value (High → Low)</option>
+                <option value="gain_pct_desc">Return % (High → Low)</option>
+                <option value="cost_desc">Invested (High → Low)</option>
+                <option value="name_asc">Name (A → Z)</option>
+                <option value="updated_desc">Last Updated</option>
+              </select>
             </div>
 
             {selectedClassFilter && (
@@ -195,6 +215,126 @@ export function PortfolioHoldingsSection({
               </Button>
             )}
           </div>
+        </div>
+
+        {/* Phase 3B: Compact Category Navigation Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto overscroll-x-contain no-scrollbar py-0.5">
+          {CATEGORY_TABS.map((tab) => {
+            const count = categoryCounts.get(tab.id) ?? 0;
+            const isSelected = selectedClassFilter === tab.id;
+            return (
+              <button
+                key={tab.id ?? 'all'}
+                type="button"
+                onClick={() => {
+                  onSelectClassFilter?.(tab.id);
+                  if (viewMode !== 'all' && viewMode !== 'grouped') {
+                    onViewModeChange('all');
+                  }
+                }}
+                className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all shrink-0 inline-flex items-center gap-1.5 touch-manipulation ${
+                  isSelected
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                    : 'bg-secondary/50 text-muted-foreground hover:text-foreground border border-border/60'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className="font-mono text-[10px] opacity-80">({count})</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Specialized Table View Mode Switcher */}
+        <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-border/40">
+          <div className="flex items-center p-0.5 bg-secondary/60 rounded-lg border border-border text-xs max-w-full overflow-x-auto overscroll-x-contain no-scrollbar">
+            <button
+              type="button"
+              onClick={() => onViewModeChange('all')}
+              className={`px-3 py-1.5 rounded-md font-medium whitespace-nowrap transition-all ${
+                viewMode === 'all'
+                  ? 'bg-background text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              All Investments ({activeHoldings.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewModeChange('equities')}
+              className={`px-3 py-1.5 rounded-md font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                viewMode === 'equities'
+                  ? 'bg-blue-600 text-white shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span>Direct Equities &amp; ETFs</span>
+              <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-background/20 font-bold">
+                {equitiesHoldings.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewModeChange('mutual_funds')}
+              className={`px-3 py-1.5 rounded-md font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                viewMode === 'mutual_funds'
+                  ? 'bg-cyan-600 text-white shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span>Mutual Funds</span>
+              <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-background/20 font-bold">
+                {mutualFundHoldings.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewModeChange('real_estate')}
+              className={`px-3 py-1.5 rounded-md font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                viewMode === 'real_estate'
+                  ? 'bg-amber-600 text-white shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span>Real Estate &amp; Land</span>
+              <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-background/20 font-bold">
+                {realEstateCount}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewModeChange('grouped')}
+              className={`px-3 py-1.5 rounded-md font-medium whitespace-nowrap transition-all ${
+                viewMode === 'grouped'
+                  ? 'bg-background text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              By Asset Class
+            </button>
+          </div>
+
+          {/* Active Filter Subtotal Pill */}
+          {(selectedClassFilter || searchQuery.trim()) && filteredHoldings.length > 0 && (
+            <div className="flex items-center gap-3 text-xs font-mono bg-secondary/40 px-3 py-1 rounded-lg border border-border/60">
+              <span className="text-muted-foreground">
+                Showing <strong className="text-foreground">{filteredHoldings.length}</strong>:
+              </span>
+              <span className="font-bold text-foreground">
+                <CurrencyDisplay amount={filteredCategorySummary.valueRupees} allowToggle />
+              </span>
+              {filteredCategorySummary.hasVerified && (
+                <span>
+                  <CurrencyDisplay
+                    amount={filteredCategorySummary.gainRupees}
+                    showSign={filteredCategorySummary.gainRupees !== 0}
+                    isPositiveColor={getPolarityBool(filteredCategorySummary.gainRupees)}
+                    allowToggle
+                  />
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </CardHeader>
 
@@ -229,7 +369,7 @@ export function PortfolioHoldingsSection({
                 ? 'Your personal portfolio is currently empty. Add your first position or seed starter assets.'
                 : 'No positions matched your search criteria.'}
             </p>
-            <div className="flex items-center justify-center gap-3 pt-2">
+            <div className="flex items-center justify-center gap-3 pt-2 flex-wrap">
               <Button
                 size="sm"
                 onClick={onOpenAddModal}
@@ -269,7 +409,7 @@ export function PortfolioHoldingsSection({
           </div>
         ) : viewMode === 'equities' ? (
           <EquitiesHoldingsTable
-            equitiesHoldings={equitiesHoldings}
+            equitiesHoldings={sortedEquitiesHoldings}
             equitiesSubtotals={equitiesSubtotals}
             members={members}
             accounts={accounts}
@@ -282,7 +422,7 @@ export function PortfolioHoldingsSection({
           />
         ) : viewMode === 'mutual_funds' ? (
           <MutualFundsHoldingsTable
-            mutualFundHoldings={mutualFundHoldings}
+            mutualFundHoldings={sortedMutualFundHoldings}
             mfSubtotals={mfSubtotals}
             members={members}
             accounts={accounts}
@@ -312,7 +452,7 @@ export function PortfolioHoldingsSection({
           />
         ) : (
           <AllHoldingsTable
-            filteredHoldings={filteredHoldings}
+            filteredHoldings={sortedFilteredHoldings}
             isMobile={isMobile}
             members={members}
             accounts={accounts}
