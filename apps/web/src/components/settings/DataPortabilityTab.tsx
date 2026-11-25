@@ -3,6 +3,7 @@ import { ParsedBackupPreview } from '@wealthnest/application';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useHousehold } from '@/lib/supabase/household-context';
+import { DataResetSection } from '@/components/settings/DataResetSection';
 import {
   AlertCircle,
   CheckCircle2,
@@ -15,6 +16,7 @@ import {
 interface DataPortabilityTabProps {
   readonly exportSuccessMessage: string | null;
   readonly isExporting: boolean;
+  readonly lastBackupTime?: string | null;
   readonly onFullBackupExport: () => void;
   readonly onExportCsv: (entity: 'holdings' | 'transactions' | 'liabilities' | 'goals') => void;
   readonly fileInputRef: RefObject<HTMLInputElement>;
@@ -29,11 +31,13 @@ interface DataPortabilityTabProps {
 }
 
 /**
- * Renders the Data Portability & Backup tab in Settings: JSON/CSV export and backup validation/restore.
+ * Renders the Data Management & Portability tab in Settings: JSON/CSV export, backup validation/restore,
+ * and selective household financial category reset.
  */
 export function DataPortabilityTab({
   exportSuccessMessage,
   isExporting,
+  lastBackupTime = null,
   onFullBackupExport,
   onExportCsv,
   fileInputRef,
@@ -247,6 +251,13 @@ export function DataPortabilityTab({
           </CardContent>
         </Card>
       </div>
+
+      {/* Stage 1 (P0): Selective Financial Data Reset */}
+      <DataResetSection
+        onFullBackupExport={onFullBackupExport}
+        isExporting={isExporting}
+        lastBackupTime={lastBackupTime}
+      />
     </div>
   );
 }

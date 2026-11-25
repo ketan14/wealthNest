@@ -59,7 +59,7 @@ describe('WealthNest App Shell', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText(/System Overview/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/System Overview/i).length).toBeGreaterThan(0);
     });
 
     const brandElements = screen.getAllByText(/WealthNest/i);

@@ -1,8 +1,16 @@
 import { Result, ok, err } from '@wealthnest/shared';
-import { BackupPort, PortfolioBackupData } from '@wealthnest/application';
+import {
+  BackupPort,
+  HouseholdDataResetPreview,
+  HouseholdDataResetResult,
+  PortfolioBackupData,
+  ResettableFinancialCategory,
+} from '@wealthnest/application';
 import { supabase } from './client';
 import { toValidUuidOrNull } from './uuid-utils';
 import { resolveHouseholdIdForWrite } from './household-scope';
+
+const VAULT_BUCKET = 'family-vault';
 
 export class SupabaseBackupAdapter implements BackupPort {
   async createFullBackup(_scopeId: string): Promise<Result<PortfolioBackupData>> {
@@ -209,6 +217,313 @@ export class SupabaseBackupAdapter implements BackupPort {
       });
     } catch (e: any) {
       return err(new Error(`Restore execution aborted: ${e?.message || 'Unknown error'}`));
+    }
+  }
+
+  async getDataResetPreview(params: {
+    readonly householdId?: string;
+    readonly userId?: string;
+  }): Promise<Result<HouseholdDataResetPreview>> {
+    try {
+      const validHouseholdId = toValidUuidOrNull(params.householdId);
+      if (!validHouseholdId) {
+        return ok({
+          investment_portfolio: 0,
+          real_estate: 0,
+          loans_liabilities: 0,
+          transactions: 0,
+          financial_goals: 0,
+          documents_vault: 0,
+          cas_import_history: 0,
+          linked_home_loans: 0,
+          linked_goal_holdings: 0,
+        });
+      }
+
+      const { data: rpcData, error: rpcErr } = await supabase.rpc(
+        'get_household_data_reset_preview',
+        { p_household_id: validHouseholdId }
+      );
+
+      if (!rpcErr && rpcData && typeof rpcData === 'object') {
+        const raw = rpcData as Record<string, unknown>;
+        return ok({
+          investment_portfolio: Number(raw.investment_portfolio || 0),
+          real_estate: Number(raw.real_estate || 0),
+          loans_liabilities: Number(raw.loans_liabilities || 0),
+          transactions: Number(raw.transactions || 0),
+          financial_goals: Number(raw.financial_goals || 0),
+          documents_vault: Number(raw.documents_vault || 0),
+          cas_import_history: Number(raw.cas_import_history || 0),
+          linked_home_loans: Number(raw.linked_home_loans || 0),
+          linked_goal_holdings: Number(raw.linked_goal_holdings || 0),
+        });
+      }
+
+      // Fallback count query if migration 26 has not been applied yet on local DB
+      const [holdingsRes, liabilitiesRes, txRes, goalsRes, docsRes, batchesRes] =
+        await Promise.all([
+          supabase
+            .from('holdings')
+            .select('id, assets!inner(asset_class_id)')
+            .eq('household_id', validHouseholdId),
+          supabase
+            .from('liabilities')
+            .select('id, linked_asset_id')
+            .eq('household_id', validHouseholdId),
+          supabase
+            .from('transactions')
+            .select('id', { count: 'exact', head: true })
+            .eq('household_id', validHouseholdId),
+          supabase
+            .from('goals')
+            .select('id', { count: 'exact', head: true })
+            .eq('household_id', validHouseholdId),
+          supabase
+            .from('family_documents')
+            .select('id', { count: 'exact', head: true })
+            .eq('household_id', validHouseholdId),
+          supabase
+            .from('import_batches')
+            .select('id', { count: 'exact', head: true })
+            .eq('household_id', validHouseholdId),
+        ]);
+
+      const holdingRows = (holdingsRes.data || []) as unknown as Array<{
+        id: string;
+        assets: { asset_class_id: string } | Array<{ asset_class_id: string }> | null;
+      }>;
+      let investmentCount = 0;
+      let realEstateCount = 0;
+      for (const h of holdingRows) {
+        const assetObj = Array.isArray(h.assets) ? h.assets[0] : h.assets;
+        if (assetObj?.asset_class_id === 'real_estate') {
+          realEstateCount++;
+        } else {
+          investmentCount++;
+        }
+      }
+
+      const liabilityRows = (liabilitiesRes.data || []) as Array<{
+        id: string;
+        linked_asset_id: string | null;
+      }>;
+
+      return ok({
+        investment_portfolio: investmentCount,
+        real_estate: realEstateCount,
+        loans_liabilities: liabilityRows.length,
+        transactions: txRes.count ?? 0,
+        financial_goals: goalsRes.count ?? 0,
+        documents_vault: docsRes.count ?? 0,
+        cas_import_history: batchesRes.count ?? 0,
+        linked_home_loans: liabilityRows.filter((l) => Boolean(l.linked_asset_id)).length,
+        linked_goal_holdings: 0,
+      });
+    } catch (e: any) {
+      return err(new Error(e?.message || 'Failed to load data reset preview'));
+    }
+  }
+
+  async resetHouseholdFinancialData(params: {
+    readonly householdId?: string;
+    readonly userId?: string;
+    readonly categories: readonly ResettableFinancialCategory[];
+  }): Promise<Result<HouseholdDataResetResult>> {
+    try {
+      if (params.categories.length === 0) {
+        return err(new Error('Please select at least one category to reset.'));
+      }
+
+      const householdId = await resolveHouseholdIdForWrite(params.householdId, params.userId);
+
+      // 1. If documents_vault is selected, clean up storage objects in 'family-vault' first
+      if (params.categories.includes('documents_vault')) {
+        const { data: docs } = await supabase
+          .from('family_documents')
+          .select('storage_path')
+          .eq('household_id', householdId);
+        const paths = (docs || [])
+          .map((d: { storage_path: string | null }) => d.storage_path)
+          .filter((p): p is string => Boolean(p));
+        if (paths.length > 0) {
+          await supabase.storage.from(VAULT_BUCKET).remove(paths);
+        }
+      }
+
+      // 2. Execute atomic server-side RPC (enforces primary_owner + audit log)
+      const { data: rpcData, error: rpcErr } = await supabase.rpc(
+        'reset_household_financial_data_atomic',
+        {
+          p_household_id: householdId,
+          p_categories: [...params.categories],
+        }
+      );
+
+      if (!rpcErr && rpcData && typeof rpcData === 'object') {
+        const raw = rpcData as {
+          audit_log_id?: string;
+          deleted_counts?: Partial<Record<ResettableFinancialCategory, number>>;
+        };
+        const counts = raw.deleted_counts || {};
+        return ok({
+          auditLogId: raw.audit_log_id,
+          deletedCounts: {
+            investment_portfolio: Number(counts.investment_portfolio || 0),
+            real_estate: Number(counts.real_estate || 0),
+            loans_liabilities: Number(counts.loans_liabilities || 0),
+            transactions: Number(counts.transactions || 0),
+            financial_goals: Number(counts.financial_goals || 0),
+            documents_vault: Number(counts.documents_vault || 0),
+            cas_import_history: Number(counts.cas_import_history || 0),
+          },
+        });
+      }
+
+      // If the RPC failed due to authorization, surface that error immediately
+      if (rpcErr && (rpcErr.code === '42501' || /permission denied/i.test(rpcErr.message))) {
+        return err(new Error(rpcErr.message));
+      }
+
+      // 3. Fallback dependency-ordered deletion if migration 26 RPC is not yet loaded in local DB
+      const actorId = toValidUuidOrNull(params.userId);
+      if (actorId) {
+        const { data: roleRow } = await supabase
+          .from('household_members')
+          .select('household_role, status')
+          .eq('household_id', householdId)
+          .eq('user_id', actorId)
+          .maybeSingle();
+        if (!roleRow || roleRow.status !== 'active' || roleRow.household_role !== 'primary_owner') {
+          return err(
+            new Error(
+              'Permission denied. Only the household primary owner can reset household financial data.'
+            )
+          );
+        }
+      }
+
+      const deletedCounts: Record<ResettableFinancialCategory, number> = {
+        investment_portfolio: 0,
+        real_estate: 0,
+        loans_liabilities: 0,
+        transactions: 0,
+        financial_goals: 0,
+        documents_vault: 0,
+        cas_import_history: 0,
+      };
+
+      const cats = new Set(params.categories);
+
+      if (cats.has('financial_goals')) {
+        const { data: gRows } = await supabase
+          .from('goals')
+          .select('id')
+          .eq('household_id', householdId);
+        const gIds = (gRows || []).map((g: { id: string }) => g.id);
+        if (gIds.length > 0) {
+          await supabase.from('goal_holding_allocations').delete().in('goal_id', gIds);
+          await supabase.from('goals').delete().in('id', gIds);
+          deletedCounts.financial_goals = gIds.length;
+        }
+      }
+
+      if (cats.has('loans_liabilities')) {
+        await supabase.from('loan_payments').delete().eq('household_id', householdId);
+        await supabase.from('liability_balances').delete().eq('household_id', householdId);
+        await supabase.from('asset_liability_links').delete().eq('household_id', householdId);
+        await supabase.from('liability_parties').delete().eq('household_id', householdId);
+        const { data: lRows } = await supabase
+          .from('liabilities')
+          .delete()
+          .eq('household_id', householdId)
+          .select('id');
+        deletedCounts.loans_liabilities = (lRows || []).length;
+      }
+
+      if (cats.has('transactions')) {
+        const { data: tRows } = await supabase
+          .from('transactions')
+          .delete()
+          .eq('household_id', householdId)
+          .select('id');
+        deletedCounts.transactions = (tRows || []).length;
+      }
+
+      if (cats.has('real_estate') || cats.has('investment_portfolio')) {
+        const { data: hRows } = await supabase
+          .from('holdings')
+          .select('id, asset_id, assets!inner(asset_class_id)')
+          .eq('household_id', householdId);
+
+        const parsedHoldings = (hRows || []) as unknown as Array<{
+          id: string;
+          asset_id: string;
+          assets: { asset_class_id: string } | Array<{ asset_class_id: string }> | null;
+        }>;
+
+        const reHoldingIds: string[] = [];
+        const reAssetIds: string[] = [];
+        const invHoldingIds: string[] = [];
+        const invAssetIds: string[] = [];
+
+        for (const h of parsedHoldings) {
+          const assetObj = Array.isArray(h.assets) ? h.assets[0] : h.assets;
+          if (assetObj?.asset_class_id === 'real_estate') {
+            reHoldingIds.push(h.id);
+            reAssetIds.push(h.asset_id);
+          } else {
+            invHoldingIds.push(h.id);
+            invAssetIds.push(h.asset_id);
+          }
+        }
+
+        if (cats.has('real_estate') && reHoldingIds.length > 0) {
+          await supabase
+            .from('liabilities')
+            .update({ linked_asset_id: null })
+            .eq('household_id', householdId)
+            .in('linked_asset_id', reAssetIds);
+          await supabase.from('holding_owners').delete().in('holding_id', reHoldingIds);
+          await supabase.from('holdings').delete().in('id', reHoldingIds);
+          deletedCounts.real_estate = reHoldingIds.length;
+        }
+
+        if (cats.has('investment_portfolio') && invHoldingIds.length > 0) {
+          await supabase
+            .from('liabilities')
+            .update({ linked_asset_id: null })
+            .eq('household_id', householdId)
+            .in('linked_asset_id', invAssetIds);
+          await supabase.from('holding_owners').delete().in('holding_id', invHoldingIds);
+          await supabase.from('holdings').delete().in('id', invHoldingIds);
+          deletedCounts.investment_portfolio = invHoldingIds.length;
+        }
+      }
+
+      if (cats.has('documents_vault')) {
+        const { data: dRows } = await supabase
+          .from('family_documents')
+          .delete()
+          .eq('household_id', householdId)
+          .select('id');
+        deletedCounts.documents_vault = (dRows || []).length;
+      }
+
+      if (cats.has('cas_import_history')) {
+        const { data: bRows } = await supabase
+          .from('import_batches')
+          .delete()
+          .eq('household_id', householdId)
+          .select('id');
+        deletedCounts.cas_import_history = (bRows || []).length;
+      }
+
+      return ok({
+        deletedCounts,
+      });
+    } catch (e: any) {
+      return err(new Error(e?.message || 'Failed to reset household financial data'));
     }
   }
 }

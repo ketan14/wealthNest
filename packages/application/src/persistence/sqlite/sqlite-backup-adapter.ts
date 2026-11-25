@@ -1,6 +1,12 @@
 import { Result, ok, err } from '@wealthnest/shared';
 import { SqliteDatabase } from './sqlite-connection.js';
-import { BackupPort, PortfolioBackupData } from '../../ports/backup.port.js';
+import {
+  BackupPort,
+  HouseholdDataResetPreview,
+  HouseholdDataResetResult,
+  PortfolioBackupData,
+  ResettableFinancialCategory,
+} from '../../ports/backup.port.js';
 import { generateId } from './sqlite-utils.js';
 import { SqliteHoldingAdapter, SqliteTransactionAdapter } from './sqlite-portfolio-adapters.js';
 import { SqliteLiabilityAdapter } from './sqlite-liability-adapter.js';
@@ -332,6 +338,226 @@ export class SqliteBackupAdapter implements BackupPort {
           restoredTransactions,
           restoredLiabilities,
           restoredGoals,
+        });
+      } catch (innerErr) {
+        this.db.exec('ROLLBACK;');
+        throw innerErr;
+      }
+    } catch (errEx) {
+      return err(errEx instanceof Error ? errEx : new Error(String(errEx)));
+    }
+  }
+
+  async getDataResetPreview(params: {
+    readonly householdId?: string;
+    readonly userId?: string;
+  }): Promise<Result<HouseholdDataResetPreview>> {
+    try {
+      const scopeId = params.householdId || params.userId || '';
+      const isHousehold = Boolean(
+        params.householdId &&
+          this.db
+            .prepare<{ id: string }>('SELECT id FROM households WHERE id = ?;')
+            .get(params.householdId)
+      );
+
+      const [holdingsRes, transactionsRes, liabilitiesRes, goalsRes] = await Promise.all([
+        isHousehold
+          ? this.holdingAdapter.listDetailsByHousehold(scopeId)
+          : this.holdingAdapter.listDetailsByUser(scopeId),
+        isHousehold
+          ? this.transactionAdapter.listByHousehold(scopeId)
+          : this.transactionAdapter.listByUser(scopeId),
+        isHousehold
+          ? this.liabilityAdapter.listLiabilitiesByHousehold(scopeId)
+          : this.liabilityAdapter.listLiabilitiesByUser(scopeId),
+        isHousehold
+          ? this.goalAdapter.listGoalsByHousehold(scopeId)
+          : this.goalAdapter.listGoalsByUser(scopeId),
+      ]);
+
+      const holdings = holdingsRes.success ? holdingsRes.value : [];
+      const transactions = transactionsRes.success ? transactionsRes.value : [];
+      const liabilities = liabilitiesRes.success ? liabilitiesRes.value : [];
+      const goals = goalsRes.success ? goalsRes.value : [];
+      const docs = this.db
+        .prepare<{ id: string }>(
+          isHousehold
+            ? 'SELECT id FROM family_documents WHERE household_id = ?;'
+            : 'SELECT id FROM family_documents WHERE user_id = ?;'
+        )
+        .all(scopeId);
+
+      const realEstateCount = holdings.filter((h) => h.assetClassId === 'real_estate').length;
+      const investmentCount = holdings.length - realEstateCount;
+      const linkedHomeLoans = liabilities.filter((l) => Boolean(l.linkedAssetId)).length;
+      const linkedGoalHoldings = goals.reduce((acc, g) => acc + (g.linkedHoldings?.length || 0), 0);
+
+      return ok({
+        investment_portfolio: investmentCount,
+        real_estate: realEstateCount,
+        loans_liabilities: liabilities.length,
+        transactions: transactions.length,
+        financial_goals: goals.length,
+        documents_vault: docs.length,
+        cas_import_history: 0,
+        linked_home_loans: linkedHomeLoans,
+        linked_goal_holdings: linkedGoalHoldings,
+      });
+    } catch (errEx) {
+      return err(errEx instanceof Error ? errEx : new Error(String(errEx)));
+    }
+  }
+
+  async resetHouseholdFinancialData(params: {
+    readonly householdId?: string;
+    readonly userId?: string;
+    readonly categories: readonly ResettableFinancialCategory[];
+  }): Promise<Result<HouseholdDataResetResult>> {
+    try {
+      if (params.categories.length === 0) {
+        return err(new Error('Please select at least one category to reset.'));
+      }
+
+      const scopeId = params.householdId || params.userId || '';
+      const userId = params.userId || scopeId;
+      const householdId = params.householdId || scopeId;
+      const isHousehold = Boolean(
+        params.householdId &&
+          this.db
+            .prepare<{ id: string }>('SELECT id FROM households WHERE id = ?;')
+            .get(params.householdId)
+      );
+
+      const deletedCounts: Record<ResettableFinancialCategory, number> = {
+        investment_portfolio: 0,
+        real_estate: 0,
+        loans_liabilities: 0,
+        transactions: 0,
+        financial_goals: 0,
+        documents_vault: 0,
+        cas_import_history: 0,
+      };
+
+      const cats = new Set(params.categories);
+      this.db.exec('BEGIN IMMEDIATE TRANSACTION;');
+
+      try {
+        if (cats.has('financial_goals')) {
+          const goalsRes = await (isHousehold
+            ? this.goalAdapter.listGoalsByHousehold(scopeId)
+            : this.goalAdapter.listGoalsByUser(scopeId));
+          if (goalsRes.success) {
+            for (const g of goalsRes.value) {
+              for (const lh of g.linkedHoldings || []) {
+                this.db
+                  .prepare('DELETE FROM goal_holdings WHERE goal_id = ? AND holding_id = ?;')
+                  .run(g.id, lh.holdingId);
+              }
+              this.db
+                .prepare('DELETE FROM financial_goals WHERE id = ?;')
+                .run(g.id, userId, householdId);
+              deletedCounts.financial_goals++;
+            }
+          }
+        }
+
+        if (cats.has('loans_liabilities')) {
+          const liabilitiesRes = await (isHousehold
+            ? this.liabilityAdapter.listLiabilitiesByHousehold(scopeId)
+            : this.liabilityAdapter.listLiabilitiesByUser(scopeId));
+          if (liabilitiesRes.success) {
+            for (const l of liabilitiesRes.value) {
+              this.db
+                .prepare('DELETE FROM liability_parties WHERE liability_id = ?;')
+                .run(l.id);
+              this.db
+                .prepare('DELETE FROM liabilities WHERE id = ?;')
+                .run(l.id, userId, householdId);
+              deletedCounts.loans_liabilities++;
+            }
+          }
+        }
+
+        if (cats.has('transactions')) {
+          const txRes = await (isHousehold
+            ? this.transactionAdapter.listByHousehold(scopeId)
+            : this.transactionAdapter.listByUser(scopeId));
+          if (txRes.success) {
+            for (const t of txRes.value) {
+              this.db
+                .prepare('DELETE FROM transactions WHERE id = ?;')
+                .run(t.id, userId, householdId);
+              deletedCounts.transactions++;
+            }
+          }
+        }
+
+        if (cats.has('real_estate') || cats.has('investment_portfolio')) {
+          const holdingsRes = await (isHousehold
+            ? this.holdingAdapter.listDetailsByHousehold(scopeId)
+            : this.holdingAdapter.listDetailsByUser(scopeId));
+          if (holdingsRes.success) {
+            for (const h of holdingsRes.value) {
+              const isRealEstate = h.assetClassId === 'real_estate';
+              if ((isRealEstate && cats.has('real_estate')) || (!isRealEstate && cats.has('investment_portfolio'))) {
+                this.db
+                  .prepare('DELETE FROM holding_owners WHERE holding_id = ?;')
+                  .run(h.holdingId);
+                this.db
+                  .prepare('DELETE FROM holdings WHERE id = ?;')
+                  .run(h.holdingId, userId, householdId);
+                if (isRealEstate) {
+                  deletedCounts.real_estate++;
+                } else {
+                  deletedCounts.investment_portfolio++;
+                }
+              }
+            }
+          }
+        }
+
+        if (cats.has('documents_vault')) {
+          const docs = this.db
+            .prepare<{ id: string }>(
+              isHousehold
+                ? 'SELECT id FROM family_documents WHERE household_id = ?;'
+                : 'SELECT id FROM family_documents WHERE user_id = ?;'
+            )
+            .all(scopeId);
+          for (const d of docs) {
+            this.db
+              .prepare('DELETE FROM family_documents WHERE id = ?;')
+              .run(d.id, userId, householdId);
+            deletedCounts.documents_vault++;
+          }
+        }
+
+        const auditLogId = generateId('hal');
+        this.db
+          .prepare(
+            `INSERT INTO household_audit_logs (
+               id, household_id, actor_user_id, target_user_id, target_family_member_id, action, metadata_json
+             ) VALUES (?, ?, ?, ?, ?, ?, ?);`
+          )
+          .run(
+            auditLogId,
+            householdId,
+            userId,
+            null,
+            null,
+            'household_financial_data_reset',
+            JSON.stringify({
+              categories: params.categories,
+              deletedCounts,
+              executedAt: new Date().toISOString(),
+            })
+          );
+
+        this.db.exec('COMMIT;');
+        return ok({
+          auditLogId,
+          deletedCounts,
         });
       } catch (innerErr) {
         this.db.exec('ROLLBACK;');

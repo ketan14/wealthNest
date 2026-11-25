@@ -48,6 +48,32 @@ export interface BackupValidationResult {
   readonly errors: readonly string[];
 }
 
+export type ResettableFinancialCategory =
+  | 'investment_portfolio'
+  | 'real_estate'
+  | 'loans_liabilities'
+  | 'transactions'
+  | 'financial_goals'
+  | 'documents_vault'
+  | 'cas_import_history';
+
+export interface HouseholdDataResetPreview {
+  readonly investment_portfolio: number;
+  readonly real_estate: number;
+  readonly loans_liabilities: number;
+  readonly transactions: number;
+  readonly financial_goals: number;
+  readonly documents_vault: number;
+  readonly cas_import_history: number;
+  readonly linked_home_loans: number;
+  readonly linked_goal_holdings: number;
+}
+
+export interface HouseholdDataResetResult {
+  readonly auditLogId?: string;
+  readonly deletedCounts: Record<ResettableFinancialCategory, number>;
+}
+
 export interface BackupPort {
   createFullBackup(scopeId: string): Promise<Result<PortfolioBackupData>>;
   restoreFromBackup(
@@ -62,4 +88,13 @@ export interface BackupPort {
       readonly restoredGoals: number;
     }>
   >;
+  getDataResetPreview?(params: {
+    readonly householdId?: string;
+    readonly userId?: string;
+  }): Promise<Result<HouseholdDataResetPreview>>;
+  resetHouseholdFinancialData?(params: {
+    readonly householdId?: string;
+    readonly userId?: string;
+    readonly categories: readonly ResettableFinancialCategory[];
+  }): Promise<Result<HouseholdDataResetResult>>;
 }

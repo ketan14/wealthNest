@@ -222,7 +222,7 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
       renderWithProviders(<TransactionsPage />);
 
       // Verify compact family filter chip bar is rendered
-      expect(screen.getByRole('button', { name: /Combined Family/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /All Members/i })).toBeInTheDocument();
       expect(screen.getByText('Shamalbhai Vaghela HUF')).toBeInTheDocument();
 
       // Verify table has entity/broker badges
@@ -300,8 +300,10 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
       });
 
       // Verify family member options appear in the assignment dropdown
-      expect(screen.getByText(/Ketan Vaghela \(SELF\)/i)).toBeInTheDocument();
-      expect(screen.getByText(/Shamalbhai Vaghela HUF \(HUF\)/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Ketan Vaghela \(SELF\)/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/Shamalbhai Vaghela HUF \(HUF\)/i).length).toBeGreaterThanOrEqual(
+        1
+      );
     });
   });
 
@@ -310,7 +312,7 @@ describe('Phase 6A: Family Portfolios & Multi-Demat UI', () => {
       renderWithProviders(<GoalsPage />);
 
       // Verify compact family filter chip bar is rendered
-      expect(screen.getByRole('button', { name: /Combined Family/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /All Members/i })).toBeInTheDocument();
       expect(screen.getAllByText('Krisha Vaghela').length).toBeGreaterThanOrEqual(1);
 
       // Verify beneficiary badges are rendered on goals

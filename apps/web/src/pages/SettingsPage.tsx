@@ -485,6 +485,7 @@ export function SettingsPage() {
         <DataPortabilityTab
           exportSuccessMessage={exportSuccessMessage}
           isExporting={isExporting}
+          lastBackupTime={lastBackupTime}
           onFullBackupExport={handleFullBackupExport}
           onExportCsv={handleExportCsv}
           fileInputRef={fileInputRef}

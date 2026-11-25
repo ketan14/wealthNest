@@ -65,12 +65,12 @@ describe('Header Privacy Toggle Masking', () => {
     renderWithPrivacyShell(<RealEstatePage />);
 
     expect(await screen.findByText('3BHK Apartment — Prahlad Nagar')).toBeInTheDocument();
-    expect(screen.getAllByText(/92,50,000/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/92\.50L/).length).toBeGreaterThanOrEqual(1);
 
     fireEvent.click(screen.getByTestId('header-privacy-toggle'));
 
     expect(screen.getAllByText('₹ ••••••').length).toBeGreaterThanOrEqual(4);
-    expect(screen.queryByText(/92,50,000/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/92\.50L/)).not.toBeInTheDocument();
   });
 
   it('masks monetary figures in GoalsPage when header-privacy-toggle is active', () => {

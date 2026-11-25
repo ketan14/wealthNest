@@ -98,6 +98,60 @@ describe('SettingsPage Component (Sprint 3)', () => {
     // Restore section
     expect(screen.getByText('Restore from Backup')).toBeInTheDocument();
     expect(screen.getByText(/Click to select WealthNest backup JSON/i)).toBeInTheDocument();
+
+    // Stage 1 (P0): Selective Financial Data Reset section
+    expect(screen.getByText('Reset Selected Financial Data')).toBeInTheDocument();
+    expect(screen.getByLabelText('Investment Portfolio')).toBeInTheDocument();
+    expect(screen.getByLabelText('Real Estate')).toBeInTheDocument();
+    expect(screen.getByLabelText('Loans & Liabilities')).toBeInTheDocument();
+    expect(screen.getByLabelText('Transactions')).toBeInTheDocument();
+    expect(screen.getByLabelText('Financial Goals')).toBeInTheDocument();
+    expect(screen.getByLabelText('Documents Vault')).toBeInTheDocument();
+    expect(screen.getByLabelText('CAS & Import History')).toBeInTheDocument();
+  });
+
+  it('supports selecting reset categories, viewing dependency warnings, and confirming with RESET MY DATA', async () => {
+    renderSettingsPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Data Portability & Backup/i }));
+
+    // Initially 0 categories selected and Review button disabled
+    const reviewBtn = screen.getByRole('button', { name: /Review Selection \(0\)/i });
+    expect(reviewBtn).toBeDisabled();
+
+    // Select Real Estate only -> triggers Dependent Record Handling warning about Home Loans
+    fireEvent.click(screen.getByLabelText('Real Estate'));
+    expect(screen.getByText('Dependent Record Handling')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Real Estate is selected without Loans & Liabilities/i)
+    ).toBeInTheDocument();
+
+    // Test Select All / Deselect All
+    fireEvent.click(screen.getByRole('button', { name: /Select All Categories/i }));
+    expect(screen.getByRole('button', { name: /Review Selection \(7\)/i })).toBeEnabled();
+
+    // Open Confirmation Modal
+    fireEvent.click(screen.getByRole('button', { name: /Review Selection \(7\)/i }));
+    expect(screen.getByText('Confirm Data Reset')).toBeInTheDocument();
+
+    const confirmResetBtn = screen.getByRole('button', { name: /Confirm Permanent Reset/i });
+    expect(confirmResetBtn).toBeDisabled();
+
+    // Check both mandatory acknowledgements
+    fireEvent.click(
+      screen.getByLabelText(/I understand that selected records will be permanently deleted/i)
+    );
+    fireEvent.click(
+      screen.getByLabelText(
+        /I have downloaded a backup or understand that this operation may not be recoverable/i
+      )
+    );
+    expect(confirmResetBtn).toBeDisabled();
+
+    // Type RESET MY DATA
+    const phraseInput = screen.getByPlaceholderText('RESET MY DATA');
+    fireEvent.change(phraseInput, { target: { value: 'RESET MY DATA' } });
+    expect(confirmResetBtn).toBeEnabled();
   });
 
   it('navigates to System Diagnostics tab and displays clean architecture layers', () => {
