@@ -3,6 +3,7 @@ import {
   BackupPort,
   HouseholdDataResetPreview,
   HouseholdDataResetResult,
+  HouseholdDeletionResult,
   PortfolioBackupData,
   ResettableFinancialCategory,
 } from '@wealthnest/application';
@@ -524,6 +525,52 @@ export class SupabaseBackupAdapter implements BackupPort {
       });
     } catch (e: any) {
       return err(new Error(e?.message || 'Failed to reset household financial data'));
+    }
+  }
+
+  async deleteHousehold(params: {
+    readonly householdId: string;
+    readonly userId?: string;
+  }): Promise<Result<HouseholdDeletionResult>> {
+    try {
+      const validHouseholdId = toValidUuidOrNull(params.householdId);
+      if (!validHouseholdId) {
+        return err(new Error('Valid household ID is required to delete a household.'));
+      }
+
+      // Clean up storage objects in 'family-vault' first
+      const { data: docs } = await supabase
+        .from('family_documents')
+        .select('storage_path')
+        .eq('household_id', validHouseholdId);
+      const paths = (docs || [])
+        .map((d: { storage_path: string | null }) => d.storage_path)
+        .filter((p): p is string => Boolean(p));
+      if (paths.length > 0) {
+        await supabase.storage.from(VAULT_BUCKET).remove(paths);
+      }
+
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('delete_household_atomic', {
+        p_household_id: validHouseholdId,
+      });
+
+      if (rpcErr) {
+        return err(new Error(rpcErr.message));
+      }
+
+      const raw = (rpcData || {}) as {
+        deleted_household_id?: string;
+        deleted_household_name?: string;
+        audit_log_id?: string;
+      };
+
+      return ok({
+        deletedHouseholdId: raw.deleted_household_id || validHouseholdId,
+        deletedHouseholdName: raw.deleted_household_name,
+        auditLogId: raw.audit_log_id,
+      });
+    } catch (e: any) {
+      return err(new Error(e?.message || 'Failed to delete household'));
     }
   }
 }

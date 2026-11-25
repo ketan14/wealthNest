@@ -40,8 +40,22 @@ export function executeHouseholdWrite(
     }
     return 0;
   }
+  if (/DELETE FROM households WHERE id = \?/i.test(sql)) {
+    const [id] = params;
+    const before = state.households.length;
+    state.households = state.households.filter((r) => r.id !== id);
+    return before - state.households.length;
+  }
 
   // household_members
+  if (/DELETE FROM household_members WHERE household_id = \?/i.test(sql)) {
+    const [household_id] = params;
+    const before = state.household_members.length;
+    state.household_members = state.household_members.filter(
+      (r) => r.household_id !== household_id
+    );
+    return before - state.household_members.length;
+  }
   if (/INSERT INTO household_members/i.test(sql)) {
     const [id, household_id, user_id, household_role, status, joined_at] = params;
     state.household_members.push({

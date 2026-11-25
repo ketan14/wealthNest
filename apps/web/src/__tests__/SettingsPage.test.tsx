@@ -154,6 +154,25 @@ describe('SettingsPage Component (Sprint 3)', () => {
     expect(confirmResetBtn).toBeEnabled();
   });
 
+  it('renders Stage 2 Full Household Reset preset, Reset History & Operation Status, and Delete Household safeguard', () => {
+    renderSettingsPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Data Portability & Backup/i }));
+
+    // Stage 2 sections
+    expect(screen.getByText('Reset History & Operation Status')).toBeInTheDocument();
+    expect(screen.getByText('Delete Household Workspace')).toBeInTheDocument();
+    expect(screen.getByText(/Safeguard Active:/i)).toBeInTheDocument();
+
+    // Delete Household button is disabled when user only has 1 active household
+    expect(screen.getByRole('button', { name: /Delete Household\.\.\./i })).toBeDisabled();
+
+    // Clicking Full Household Reset preset selects all 7 categories and opens the confirmation modal
+    fireEvent.click(screen.getByRole('button', { name: /Full Household Reset/i }));
+    expect(screen.getByText('Confirm Full Household Financial Reset')).toBeInTheDocument();
+    expect(screen.getByText('Selected Categories (7)')).toBeInTheDocument();
+  });
+
   it('navigates to System Diagnostics tab and displays clean architecture layers', () => {
     renderSettingsPage();
 

@@ -4,6 +4,7 @@ import {
   BackupPort,
   HouseholdDataResetPreview,
   HouseholdDataResetResult,
+  HouseholdDeletionResult,
   PortfolioBackupData,
   ResettableFinancialCategory,
 } from '../../ports/backup.port.js';
@@ -558,6 +559,92 @@ export class SqliteBackupAdapter implements BackupPort {
         return ok({
           auditLogId,
           deletedCounts,
+        });
+      } catch (innerErr) {
+        this.db.exec('ROLLBACK;');
+        throw innerErr;
+      }
+    } catch (errEx) {
+      return err(errEx instanceof Error ? errEx : new Error(String(errEx)));
+    }
+  }
+
+  async deleteHousehold(params: {
+    readonly householdId: string;
+    readonly userId?: string;
+  }): Promise<Result<HouseholdDeletionResult>> {
+    try {
+      const householdId = params.householdId;
+      const userId = params.userId || 'usr-local-vault';
+
+      const hhRow = this.db
+        .prepare<{ id: string; name: string }>('SELECT id, name FROM households WHERE id = ?;')
+        .get(householdId);
+      if (!hhRow) {
+        return err(new Error('Household not found.'));
+      }
+
+      const resetRes = await this.resetHouseholdFinancialData({
+        householdId,
+        userId,
+        categories: [
+          'investment_portfolio',
+          'real_estate',
+          'loans_liabilities',
+          'transactions',
+          'financial_goals',
+          'documents_vault',
+          'cas_import_history',
+        ],
+      });
+      if (!resetRes.success) return resetRes;
+
+      this.db.exec('BEGIN IMMEDIATE TRANSACTION;');
+      try {
+        const members = this.db
+          .prepare<{ id: string }>('SELECT id FROM family_members WHERE household_id = ?;')
+          .all(householdId);
+        for (const m of members) {
+          this.db.prepare('DELETE FROM family_members WHERE id = ?;').run(m.id);
+        }
+
+        const accounts = this.db
+          .prepare<{ id: string }>('SELECT id FROM portfolio_accounts WHERE household_id = ?;')
+          .all(householdId);
+        for (const a of accounts) {
+          this.db.prepare('DELETE FROM portfolio_accounts WHERE id = ?;').run(a.id);
+        }
+
+        this.db
+          .prepare('DELETE FROM household_members WHERE household_id = ?;')
+          .run(householdId);
+        this.db.prepare('DELETE FROM households WHERE id = ?;').run(householdId);
+
+        const auditLogId = generateId('hal');
+        this.db
+          .prepare(
+            `INSERT INTO household_audit_logs (
+               id, household_id, actor_user_id, target_user_id, target_family_member_id, action, metadata_json
+             ) VALUES (?, ?, ?, ?, ?, ?, ?);`
+          )
+          .run(
+            auditLogId,
+            householdId,
+            userId,
+            null,
+            null,
+            'household_deleted',
+            JSON.stringify({
+              householdName: hhRow.name,
+              deletedAt: new Date().toISOString(),
+            })
+          );
+
+        this.db.exec('COMMIT;');
+        return ok({
+          deletedHouseholdId: householdId,
+          deletedHouseholdName: hhRow.name,
+          auditLogId,
         });
       } catch (innerErr) {
         this.db.exec('ROLLBACK;');

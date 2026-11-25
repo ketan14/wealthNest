@@ -74,6 +74,12 @@ export interface HouseholdDataResetResult {
   readonly deletedCounts: Record<ResettableFinancialCategory, number>;
 }
 
+export interface HouseholdDeletionResult {
+  readonly deletedHouseholdId: string;
+  readonly deletedHouseholdName?: string;
+  readonly auditLogId?: string;
+}
+
 export interface BackupPort {
   createFullBackup(scopeId: string): Promise<Result<PortfolioBackupData>>;
   restoreFromBackup(
@@ -97,4 +103,8 @@ export interface BackupPort {
     readonly userId?: string;
     readonly categories: readonly ResettableFinancialCategory[];
   }): Promise<Result<HouseholdDataResetResult>>;
+  deleteHousehold?(params: {
+    readonly householdId: string;
+    readonly userId?: string;
+  }): Promise<Result<HouseholdDeletionResult>>;
 }

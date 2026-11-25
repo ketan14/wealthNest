@@ -5,6 +5,7 @@ import {
   HouseholdDataResetResult,
   ResettableFinancialCategory,
 } from '@wealthnest/application';
+import { HouseholdAuditLogEntry } from '@wealthnest/domain';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -14,17 +15,22 @@ import { useHousehold } from '@/lib/supabase/household-context';
 import { useRepositories } from '@/lib/persistence/repository-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
 import { useToast } from '@/components/ui/Toast';
+import { supabase } from '@/lib/supabase/client';
 import {
   AlertTriangle,
   Briefcase,
   Building2,
   CheckCircle2,
+  Clock,
   Download,
   FileSpreadsheet,
   FileText,
+  History,
   Landmark,
   Loader2,
+  Lock,
   Repeat,
+  RotateCcw,
   ShieldAlert,
   Target,
   Trash2,
@@ -99,6 +105,7 @@ export const RESET_CATEGORIES: readonly ResetCategoryMetadata[] = [
 ];
 
 const CONFIRMATION_PHRASE = 'RESET MY DATA';
+const DELETE_HOUSEHOLD_PHRASE = 'DELETE HOUSEHOLD';
 
 interface DataResetSectionProps {
   readonly onFullBackupExport: () => void;
@@ -112,47 +119,87 @@ export function DataResetSection({
   lastBackupTime,
 }: DataResetSectionProps) {
   const { user } = useAuth();
-  const { activeHousehold, activeHouseholdId, householdRole } = useHousehold();
+  const {
+    households,
+    activeHousehold,
+    activeHouseholdId,
+    householdRole,
+    refreshHouseholds,
+  } = useHousehold();
   const { isSupportModeActive } = useSupportSession();
-  const { backupRepo } = useRepositories();
+  const { backupRepo, householdRepo, mode } = useRepositories();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
   const isPrimaryOwner = householdRole === 'primary_owner' && !isSupportModeActive;
   const householdDisplayName = activeHousehold?.name || 'Active Household';
+  const hasMultipleHouseholds = households.length > 1;
+  const requiresPasswordReauth =
+    mode === 'supabase' && Boolean(user?.email && !user.id.startsWith('demo-'));
 
   const [selectedCategories, setSelectedCategories] = useState<Set<ResettableFinancialCategory>>(
     () => new Set()
   );
   const [previewCounts, setPreviewCounts] = useState<HouseholdDataResetPreview | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+
+  // Reset confirmation modal state
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isFullResetMode, setIsFullResetMode] = useState(false);
   const [ackPermanent, setAckPermanent] = useState(false);
   const [ackBackup, setAckBackup] = useState(false);
   const [confirmPhraseInput, setConfirmPhraseInput] = useState('');
+  const [reauthPassword, setReauthPassword] = useState('');
   const [isExecutingReset, setIsExecutingReset] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
   const [lastResetResult, setLastResetResult] = useState<HouseholdDataResetResult | null>(null);
 
-  const loadPreviewCounts = useCallback(async () => {
-    if (!backupRepo.getDataResetPreview) return;
+  // Delete household modal state (Stage 2 - P1)
+  const [isDeleteHouseholdModalOpen, setIsDeleteHouseholdModalOpen] = useState(false);
+  const [ackDeleteHouseholdPermanent, setAckDeleteHouseholdPermanent] = useState(false);
+  const [ackDeleteHouseholdMembers, setAckDeleteHouseholdMembers] = useState(false);
+  const [deleteHouseholdPhraseInput, setDeleteHouseholdPhraseInput] = useState('');
+  const [deleteHouseholdPassword, setDeleteHouseholdPassword] = useState('');
+  const [isDeletingHousehold, setIsDeletingHousehold] = useState(false);
+  const [deleteHouseholdError, setDeleteHouseholdError] = useState<string | null>(null);
+
+  // Reset audit history (Stage 2 - P1)
+  const [resetHistoryLogs, setResetHistoryLogs] = useState<readonly HouseholdAuditLogEntry[]>([]);
+
+  const loadPreviewAndHistory = useCallback(async () => {
     setIsLoadingPreview(true);
     try {
-      const res = await backupRepo.getDataResetPreview({
-        householdId: activeHouseholdId,
-        userId: user?.id,
-      });
-      if (res.success) {
-        setPreviewCounts(res.value);
+      const [previewRes, logsRes] = await Promise.all([
+        backupRepo.getDataResetPreview
+          ? backupRepo.getDataResetPreview({
+              householdId: activeHouseholdId,
+              userId: user?.id,
+            })
+          : Promise.resolve(null),
+        activeHouseholdId
+          ? householdRepo.listAuditLogs(activeHouseholdId, 25)
+          : Promise.resolve(null),
+      ]);
+
+      if (previewRes && previewRes.success) {
+        setPreviewCounts(previewRes.value);
+      }
+      if (logsRes && logsRes.success) {
+        const filtered = logsRes.value.filter(
+          (entry) =>
+            entry.action === 'household_financial_data_reset' ||
+            entry.action === 'household_deleted'
+        );
+        setResetHistoryLogs(filtered);
       }
     } finally {
       setIsLoadingPreview(false);
     }
-  }, [backupRepo, activeHouseholdId, user?.id]);
+  }, [backupRepo, householdRepo, activeHouseholdId, user?.id]);
 
   useEffect(() => {
-    void loadPreviewCounts();
-  }, [loadPreviewCounts]);
+    void loadPreviewAndHistory();
+  }, [loadPreviewAndHistory]);
 
   const toggleCategory = (catId: ResettableFinancialCategory) => {
     if (!isPrimaryOwner) return;
@@ -222,13 +269,46 @@ export function DataResetSection({
     return warnings;
   }, [selectedCategories]);
 
-  const handleOpenReviewModal = () => {
-    if (!isPrimaryOwner || selectedCategories.size === 0) return;
+  const handleOpenReviewModal = (fullResetPreset = false) => {
+    if (!isPrimaryOwner) return;
+    if (fullResetPreset) {
+      setSelectedCategories(new Set(RESET_CATEGORIES.map((c) => c.id)));
+      setIsFullResetMode(true);
+    } else {
+      if (selectedCategories.size === 0) return;
+      setIsFullResetMode(false);
+    }
     setAckPermanent(false);
     setAckBackup(false);
     setConfirmPhraseInput('');
+    setReauthPassword('');
     setResetError(null);
     setIsConfirmModalOpen(true);
+  };
+
+  const handleOpenDeleteHouseholdModal = () => {
+    if (!isPrimaryOwner) return;
+    setAckDeleteHouseholdPermanent(false);
+    setAckDeleteHouseholdMembers(false);
+    setDeleteHouseholdPhraseInput('');
+    setDeleteHouseholdPassword('');
+    setDeleteHouseholdError(null);
+    setIsDeleteHouseholdModalOpen(true);
+  };
+
+  const verifyFreshAuthenticationIfRequired = async (passwordToVerify: string): Promise<boolean> => {
+    if (!requiresPasswordReauth || !user?.email) return true;
+    if (!passwordToVerify.trim()) {
+      throw new Error('Please enter your account password to verify fresh authentication.');
+    }
+    const { error } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: passwordToVerify,
+    });
+    if (error) {
+      throw new Error(`Authentication verification failed: ${error.message}`);
+    }
+    return true;
   };
 
   const canConfirmReset =
@@ -237,6 +317,7 @@ export function DataResetSection({
     ackPermanent &&
     ackBackup &&
     confirmPhraseInput.trim() === CONFIRMATION_PHRASE &&
+    (!requiresPasswordReauth || !isFullResetMode || reauthPassword.trim().length > 0) &&
     !isExecutingReset;
 
   const handleExecuteReset = async (e: React.FormEvent) => {
@@ -247,6 +328,10 @@ export function DataResetSection({
     setResetError(null);
 
     try {
+      if (isFullResetMode && requiresPasswordReauth) {
+        await verifyFreshAuthenticationIfRequired(reauthPassword);
+      }
+
       const categoriesArray = Array.from(selectedCategories);
       const res = await backupRepo.resetHouseholdFinancialData({
         householdId: activeHouseholdId,
@@ -259,7 +344,6 @@ export function DataResetSection({
         return;
       }
 
-      // Clear local Real Estate overrides if Real Estate was reset
       if (selectedCategories.has('real_estate') && typeof window !== 'undefined') {
         try {
           const keysToRemove: string[] = [];
@@ -277,7 +361,6 @@ export function DataResetSection({
         }
       }
 
-      // Invalidate all affected React Query caches across the application
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['net-worth-summary'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-summary'] }),
@@ -297,7 +380,7 @@ export function DataResetSection({
       setSelectedCategories(new Set());
       setIsConfirmModalOpen(false);
       showToast('Selected financial data categories have been reset', 'success');
-      await loadPreviewCounts();
+      await loadPreviewAndHistory();
     } catch (err) {
       setResetError(err instanceof Error ? err.message : 'Failed to execute data reset');
     } finally {
@@ -305,8 +388,53 @@ export function DataResetSection({
     }
   };
 
+  const canConfirmDeleteHousehold =
+    isPrimaryOwner &&
+    hasMultipleHouseholds &&
+    Boolean(activeHouseholdId) &&
+    ackDeleteHouseholdPermanent &&
+    ackDeleteHouseholdMembers &&
+    deleteHouseholdPhraseInput.trim() === DELETE_HOUSEHOLD_PHRASE &&
+    (!requiresPasswordReauth || deleteHouseholdPassword.trim().length > 0) &&
+    !isDeletingHousehold;
+
+  const handleExecuteDeleteHousehold = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canConfirmDeleteHousehold || !activeHouseholdId || !backupRepo.deleteHousehold) return;
+
+    setIsDeletingHousehold(true);
+    setDeleteHouseholdError(null);
+
+    try {
+      if (requiresPasswordReauth) {
+        await verifyFreshAuthenticationIfRequired(deleteHouseholdPassword);
+      }
+
+      const res = await backupRepo.deleteHousehold({
+        householdId: activeHouseholdId,
+        userId: user?.id,
+      });
+
+      if (!res.success) {
+        setDeleteHouseholdError(res.error.message);
+        return;
+      }
+
+      setIsDeleteHouseholdModalOpen(false);
+      showToast(`Deleted household "${householdDisplayName}"`, 'success');
+      await refreshHouseholds();
+    } catch (err) {
+      setDeleteHouseholdError(
+        err instanceof Error ? err.message : 'Failed to delete household'
+      );
+    } finally {
+      setIsDeletingHousehold(false);
+    }
+  };
+
   return (
-    <>
+    <div className="space-y-4">
+      {/* Stage 1 & 2:Selective + Full Financial Data Reset Card */}
       <Card className="bg-slate-900 border-rose-500/30">
         <CardHeader className="p-4 sm:p-5 pb-3 border-b border-slate-800/80">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -332,15 +460,27 @@ export function DataResetSection({
             </div>
 
             {isPrimaryOwner && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleSelectAllToggle}
-                className="h-8 text-xs border-slate-700 hover:bg-slate-800 text-slate-200 shrink-0 self-start sm:self-auto"
-              >
-                {allSelected ? 'Deselect All' : 'Select All Categories'}
-              </Button>
+              <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectAllToggle}
+                  className="h-8 text-xs border-slate-700 hover:bg-slate-800 text-slate-200"
+                >
+                  {allSelected ? 'Deselect All' : 'Select All Categories'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenReviewModal(true)}
+                  className="h-8 text-xs border-rose-500/40 text-rose-300 hover:bg-rose-500/15 gap-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Full Household Reset</span>
+                </Button>
+              </div>
             )}
           </div>
         </CardHeader>
@@ -457,7 +597,7 @@ export function DataResetSection({
               <span className="text-slate-200 font-medium">{householdDisplayName}</span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 type="button"
                 variant="outline"
@@ -474,7 +614,7 @@ export function DataResetSection({
                 type="button"
                 size="sm"
                 disabled={!isPrimaryOwner || selectedCategories.size === 0}
-                onClick={handleOpenReviewModal}
+                onClick={() => handleOpenReviewModal(false)}
                 className="h-8 text-xs bg-rose-600 hover:bg-rose-500 text-white font-semibold gap-1.5 disabled:opacity-50"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -485,7 +625,121 @@ export function DataResetSection({
         </CardContent>
       </Card>
 
-      {/* High-Safety Confirmation Modal */}
+      {/* Stage 2 (P1): Delete Household & Reset Operation History Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Reset History & Operation Audit Trail */}
+        <Card className="bg-slate-900 border-slate-800">
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-sm sm:text-base text-white flex items-center gap-2">
+              <History className="w-4 h-4 text-cyan-400" />
+              Reset History & Operation Status
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-400">
+              Immutable audit log of financial data resets executed in {householdDisplayName}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 pt-2">
+            {resetHistoryLogs.length === 0 ? (
+              <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800/80 text-xs text-slate-400 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-slate-500 shrink-0" />
+                <span>No data reset operations have been recorded for this household yet.</span>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {resetHistoryLogs.map((entry) => {
+                  const cats = Array.isArray(entry.metadata?.categories)
+                    ? (entry.metadata.categories as string[])
+                    : [];
+                  return (
+                    <div
+                      key={entry.id}
+                      className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-white flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span>
+                            {entry.action === 'household_deleted'
+                              ? 'Household Deleted'
+                              : cats.length >= RESET_CATEGORIES.length
+                                ? 'Full Household Financial Reset'
+                                : 'Selective Financial Reset'}
+                          </span>
+                        </span>
+                        <span className="text-[11px] font-mono text-slate-400">
+                          {new Date(entry.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                      {cats.length > 0 && (
+                        <p className="text-[11px] text-slate-400">
+                          Categories:{' '}
+                          <span className="text-slate-300">
+                            {cats.map((c) => c.replace(/_/g, ' ')).join(', ')}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Delete Household Card (Three Levels of Reset — Level 3) */}
+        <Card className="bg-slate-900 border-rose-500/30">
+          <CardHeader className="p-4 pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-sm sm:text-base text-white flex items-center gap-2">
+                <Trash2 className="w-4 h-4 text-rose-400" />
+                Delete Household Workspace
+              </CardTitle>
+              <Badge
+                variant="outline"
+                className="text-[10px] border-rose-500/30 text-rose-300 bg-rose-500/10"
+              >
+                Level 3 · Permanent
+              </Badge>
+            </div>
+            <CardDescription className="text-xs text-slate-400">
+              Permanently removes <strong className="text-slate-200">{householdDisplayName}</strong>
+              , all its financial data, family member profiles, Demat accounts, and membership
+              relationships. Your login account remains active.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 pt-2 space-y-3">
+            {!hasMultipleHouseholds ? (
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400">
+                <strong className="text-slate-200">Safeguard Active:</strong> You cannot delete your
+                only active household workspace. To clear all financial data while keeping this
+                household, use <strong className="text-rose-300">Full Household Reset</strong>{' '}
+                above.
+              </div>
+            ) : (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-200">
+                Deleting this household will switch your session to another active household you
+                belong to.
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={!isPrimaryOwner || !hasMultipleHouseholds}
+                onClick={handleOpenDeleteHouseholdModal}
+                className="h-8 text-xs border-rose-500/40 text-rose-300 hover:bg-rose-500/15 disabled:opacity-50 gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Household...</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* High-Safety Confirmation Modal for Selective / Full Financial Reset */}
       {isConfirmModalOpen && (
         <ResponsiveModalShell
           role="dialog"
@@ -507,7 +761,7 @@ export function DataResetSection({
                     id="confirm-data-reset-modal-title"
                     className="text-base font-bold text-white"
                   >
-                    Confirm Data Reset
+                    {isFullResetMode ? 'Confirm Full Household Financial Reset' : 'Confirm Data Reset'}
                   </h3>
                   <p className="text-xs text-rose-300">Permanent action · Cannot be undone</p>
                 </div>
@@ -573,7 +827,7 @@ export function DataResetSection({
             <div className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
               Selected Categories ({selectedCategoryItems.length})
             </div>
-            <div className="rounded-xl bg-slate-950 border border-slate-800 divide-y divide-slate-800/80">
+            <div className="rounded-xl bg-slate-950 border border-slate-800 divide-y divide-slate-800/80 max-h-44 overflow-y-auto">
               {selectedCategoryItems.map((cat) => {
                 const count = previewCounts ? previewCounts[cat.id] : undefined;
                 return (
@@ -645,6 +899,27 @@ export function DataResetSection({
             </label>
           </div>
 
+          {/* Fresh Authentication Password Input (for Full Household Reset in live Supabase sessions) */}
+          {isFullResetMode && requiresPasswordReauth && (
+            <div className="space-y-1.5">
+              <label
+                htmlFor="confirm-reset-password-input"
+                className="text-xs font-medium text-slate-300 flex items-center gap-1.5"
+              >
+                <Lock className="w-3.5 h-3.5 text-amber-400" />
+                <span>Verify Account Password (Fresh Authentication)</span>
+              </label>
+              <input
+                id="confirm-reset-password-input"
+                type="password"
+                value={reauthPassword}
+                onChange={(e) => setReauthPassword(e.target.value)}
+                placeholder="Enter your password"
+                className="w-full h-9 rounded-lg bg-slate-950 border border-slate-700 px-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-rose-500"
+              />
+            </div>
+          )}
+
           {/* Type RESET MY DATA to Confirm */}
           <div className="space-y-1.5">
             <label
@@ -666,6 +941,156 @@ export function DataResetSection({
           </div>
         </ResponsiveModalShell>
       )}
-    </>
+
+      {/* Stage 2 (P1): Delete Household Confirmation Modal */}
+      {isDeleteHouseholdModalOpen && (
+        <ResponsiveModalShell
+          role="dialog"
+          ariaLabelledBy="confirm-delete-household-modal-title"
+          backdropClassName="bg-black/75"
+          panelClassName="max-w-lg bg-slate-900 border-rose-500/40"
+          onDismiss={() => {
+            if (!isDeletingHousehold) setIsDeleteHouseholdModalOpen(false);
+          }}
+          formProps={{ onSubmit: handleExecuteDeleteHousehold }}
+          header={
+            <div className="flex items-center justify-between gap-3 px-4 py-3.5 sm:px-6 sm:py-4 border-b border-slate-800">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h3
+                    id="confirm-delete-household-modal-title"
+                    className="text-base font-bold text-white"
+                  >
+                    Delete Household Permanently
+                  </h3>
+                  <p className="text-xs text-rose-300">
+                    Removes household workspace, financial data, and memberships
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDeleteHouseholdModalOpen(false)}
+                disabled={isDeletingHousehold}
+                aria-label="Close delete household modal"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          }
+          bodyClassName="space-y-4 p-4 sm:p-6"
+          footer={
+            <div className="flex items-center justify-end gap-2.5 px-4 py-3 sm:px-6 border-t border-slate-800 bg-slate-900">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsDeleteHouseholdModalOpen(false)}
+                disabled={isDeletingHousehold}
+                className="border-slate-700 text-slate-200"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!canConfirmDeleteHousehold}
+                className="bg-rose-600 hover:bg-rose-500 text-white font-semibold gap-1.5 disabled:opacity-50"
+              >
+                {isDeletingHousehold && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>Permanently Delete Household</span>
+              </Button>
+            </div>
+          }
+        >
+          {deleteHouseholdError && (
+            <div className="p-3 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-200 text-xs flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>{deleteHouseholdError}</span>
+            </div>
+          )}
+
+          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5 text-xs">
+            <p className="text-slate-400">Target Household to Delete:</p>
+            <p className="text-sm font-bold text-white">{householdDisplayName}</p>
+            <p className="text-[11px] text-slate-400">
+              Your login account and any other households you belong to will not be affected.
+            </p>
+          </div>
+
+          <div className="space-y-2.5">
+            <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-950 border border-slate-800 cursor-pointer text-xs text-slate-200">
+              <input
+                type="checkbox"
+                checked={ackDeleteHouseholdPermanent}
+                onChange={(e) => setAckDeleteHouseholdPermanent(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-slate-700 accent-rose-500 cursor-pointer shrink-0"
+              />
+              <span>
+                I understand that this household and all its financial data will be permanently
+                deleted.
+              </span>
+            </label>
+
+            <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-950 border border-slate-800 cursor-pointer text-xs text-slate-200">
+              <input
+                type="checkbox"
+                checked={ackDeleteHouseholdMembers}
+                onChange={(e) => setAckDeleteHouseholdMembers(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-slate-700 accent-rose-500 cursor-pointer shrink-0"
+              />
+              <span>
+                I confirm removing all family member profiles, PAN entities, and member access
+                associations inside this household.
+              </span>
+            </label>
+          </div>
+
+          {requiresPasswordReauth && (
+            <div className="space-y-1.5">
+              <label
+                htmlFor="delete-household-password-input"
+                className="text-xs font-medium text-slate-300 flex items-center gap-1.5"
+              >
+                <Lock className="w-3.5 h-3.5 text-amber-400" />
+                <span>Verify Account Password (Fresh Authentication)</span>
+              </label>
+              <input
+                id="delete-household-password-input"
+                type="password"
+                value={deleteHouseholdPassword}
+                onChange={(e) => setDeleteHouseholdPassword(e.target.value)}
+                placeholder="Enter your password"
+                className="w-full h-9 rounded-lg bg-slate-950 border border-slate-700 px-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-rose-500"
+              />
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <label
+              htmlFor="delete-household-phrase-input"
+              className="text-xs font-medium text-slate-300 block"
+            >
+              Type{' '}
+              <code className="font-mono font-bold text-rose-400">{DELETE_HOUSEHOLD_PHRASE}</code>{' '}
+              to confirm
+            </label>
+            <input
+              id="delete-household-phrase-input"
+              type="text"
+              value={deleteHouseholdPhraseInput}
+              onChange={(e) => setDeleteHouseholdPhraseInput(e.target.value)}
+              placeholder={DELETE_HOUSEHOLD_PHRASE}
+              autoComplete="off"
+              className="w-full h-9 rounded-lg bg-slate-950 border border-slate-700 px-3 text-xs font-mono text-white focus:outline-none focus:ring-1 focus:ring-rose-500"
+            />
+          </div>
+        </ResponsiveModalShell>
+      )}
+    </div>
   );
 }

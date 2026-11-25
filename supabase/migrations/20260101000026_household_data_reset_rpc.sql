@@ -336,5 +336,95 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.delete_household_atomic(
+  p_household_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_caller_id uuid;
+  v_household_name text;
+  v_other_active_households int := 0;
+  v_audit_id uuid;
+BEGIN
+  v_caller_id := auth.uid();
+  IF v_caller_id IS NULL THEN
+    RAISE EXCEPTION 'Authentication required.' USING ERRCODE = '42501';
+  END IF;
+
+  IF NOT public.is_household_primary_owner(p_household_id, v_caller_id) THEN
+    RAISE EXCEPTION 'Permission denied. Only the household primary owner can delete a household.'
+      USING ERRCODE = '42501';
+  END IF;
+
+  SELECT name INTO v_household_name
+  FROM public.households
+  WHERE id = p_household_id;
+
+  IF v_household_name IS NULL THEN
+    RAISE EXCEPTION 'Household % not found.', p_household_id USING ERRCODE = 'P0002';
+  END IF;
+
+  SELECT COUNT(*) INTO v_other_active_households
+  FROM public.household_members
+  WHERE user_id = v_caller_id
+    AND status = 'active'
+    AND household_id <> p_household_id;
+
+  IF v_other_active_households < 1 THEN
+    RAISE EXCEPTION 'Cannot delete your only active household. Use Full Household Reset to clear financial data while preserving your household.'
+      USING ERRCODE = '22023';
+  END IF;
+
+  -- Record immutable audit log entry prior to household deletion
+  v_audit_id := public.log_household_action(
+    p_household_id,
+    v_caller_id,
+    'household_deleted',
+    NULL,
+    NULL,
+    jsonb_build_object(
+      'household_name', v_household_name,
+      'deleted_at', timezone('utc'::text, now())
+    )
+  );
+
+  -- Delete all financial and membership data for this household in FK-safe order
+  DELETE FROM public.goal_holding_allocations
+  WHERE goal_id IN (SELECT id FROM public.goals WHERE household_id = p_household_id);
+  DELETE FROM public.goals WHERE household_id = p_household_id;
+  DELETE FROM public.loan_payments WHERE household_id = p_household_id;
+  DELETE FROM public.liability_balances WHERE household_id = p_household_id;
+  DELETE FROM public.asset_liability_links WHERE household_id = p_household_id;
+  DELETE FROM public.liability_parties WHERE household_id = p_household_id;
+  DELETE FROM public.liabilities WHERE household_id = p_household_id;
+  DELETE FROM public.asset_valuations WHERE household_id = p_household_id;
+  DELETE FROM public.transactions WHERE household_id = p_household_id;
+  DELETE FROM public.holding_owners WHERE household_id = p_household_id;
+  DELETE FROM public.holdings WHERE household_id = p_household_id;
+  DELETE FROM public.import_batches WHERE household_id = p_household_id;
+  DELETE FROM public.family_documents WHERE household_id = p_household_id;
+  DELETE FROM public.assets WHERE household_id = p_household_id;
+  DELETE FROM public.restricted_record_grants WHERE household_id = p_household_id;
+  DELETE FROM public.family_member_access WHERE household_id = p_household_id;
+  DELETE FROM public.portfolio_accounts WHERE household_id = p_household_id;
+  DELETE FROM public.household_invitations WHERE household_id = p_household_id;
+  DELETE FROM public.family_members WHERE household_id = p_household_id;
+  DELETE FROM public.household_members WHERE household_id = p_household_id;
+  DELETE FROM public.households WHERE id = p_household_id;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'deleted_household_id', p_household_id,
+    'deleted_household_name', v_household_name,
+    'audit_log_id', v_audit_id
+  );
+END;
+$$;
+
 GRANT EXECUTE ON FUNCTION public.get_household_data_reset_preview(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.reset_household_financial_data_atomic(uuid, text[]) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.delete_household_atomic(uuid) TO authenticated;
