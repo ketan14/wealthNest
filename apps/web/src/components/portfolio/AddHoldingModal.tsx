@@ -45,6 +45,7 @@ interface AddHoldingModalProps {
   onClose: () => void;
   onSubmit: (values: NewHoldingFormValues) => Promise<void>;
   isLoading?: boolean;
+  defaultAssetClassId?: string;
 }
 
 export function AddHoldingModal({
@@ -52,6 +53,7 @@ export function AddHoldingModal({
   onClose,
   onSubmit,
   isLoading = false,
+  defaultAssetClassId = 'equity',
 }: AddHoldingModalProps) {
   const { members, accounts, selectedMemberId, selectedAccountId } = useFamily();
   const { canEditFinancials } = useHousehold();
@@ -65,7 +67,7 @@ export function AddHoldingModal({
   const [amcName, setAmcName] = useState('');
   const [schemePlan, setSchemePlan] = useState('Direct - Growth');
   const [costBasisVerified, setCostBasisVerified] = useState(true);
-  const [assetClassId, setAssetClassId] = useState('equity');
+  const [assetClassId, setAssetClassId] = useState(defaultAssetClassId);
   const [quantity, setQuantity] = useState('');
   const [unitCost, setUnitCost] = useState('');
   const [currentValue, setCurrentValue] = useState('');
@@ -74,6 +76,12 @@ export function AddHoldingModal({
   const [restrictedGranteeUserIds, setRestrictedGranteeUserIds] = useState<string[]>([]);
   const [isJointOwnership, setIsJointOwnership] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setAssetClassId(defaultAssetClassId);
+    }
+  }, [isOpen, defaultAssetClassId]);
 
   // Entity & Demat Account state
   const [holdingMemberId, setHoldingMemberId] = useState<string>(() => {
@@ -231,7 +239,7 @@ export function AddHoldingModal({
       setAmcName('');
       setSchemePlan('Direct - Growth');
       setCostBasisVerified(true);
-      setAssetClassId('equity');
+      setAssetClassId(defaultAssetClassId);
       setQuantity('');
       setUnitCost('');
       setCurrentValue('');

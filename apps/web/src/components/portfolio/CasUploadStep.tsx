@@ -11,6 +11,8 @@ import {
   AlertCircle,
   Loader2,
   ArrowRight,
+  Trash2,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import {
@@ -20,12 +22,23 @@ import {
   SANITIZED_GROWW_ORDERS_CSV,
 } from '@/components/portfolio/cas-import-fixtures';
 
+interface FamilyMemberOption {
+  id: string;
+  name: string;
+  relationship: string;
+}
+
 interface CasUploadStepProps {
   importSource: 'cas_pdf' | 'zerodha_csv' | 'groww_csv';
   file: File | null;
   password: string;
   error: string | null;
   isParsing: boolean;
+  members?: FamilyMemberOption[];
+  importMemberId?: string;
+  wipeExistingForMember?: boolean;
+  onMemberChange?: (memberId: string) => void;
+  onWipeExistingChange?: (wipe: boolean) => void;
   onSelectSource: (source: 'cas_pdf' | 'zerodha_csv' | 'groww_csv') => void;
   onFileChange: (file: File | null) => void;
   onPasswordChange: (password: string) => void;
@@ -42,6 +55,11 @@ export function CasUploadStep({
   password,
   error,
   isParsing,
+  members = [],
+  importMemberId = '',
+  wipeExistingForMember = false,
+  onMemberChange,
+  onWipeExistingChange,
   onSelectSource,
   onFileChange,
   onPasswordChange,
@@ -55,6 +73,8 @@ export function CasUploadStep({
 
   const isPasswordError = Boolean(error && error.toLowerCase().includes('password'));
   const hasLowercase = Boolean(password && password !== password.toUpperCase());
+  const selectedMemberName =
+    members.find((m) => m.id === importMemberId)?.name || 'selected family member';
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden pt-3 sm:pt-4">
@@ -242,6 +262,62 @@ export function CasUploadStep({
               text. They will be parsed completely client-side in your browser.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Target Family Member & Wipe Existing Records Option */}
+      {(members.length > 0 || onWipeExistingChange) && (
+        <div className="p-3 rounded-xl bg-secondary/30 border border-border/60 space-y-2.5">
+          {members.length > 0 && onMemberChange && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <label
+                htmlFor="cas-upload-member-select"
+                className="text-xs font-medium text-foreground flex items-center gap-1.5"
+              >
+                <Users className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <span>Target Family Member / Legal Entity</span>
+              </label>
+              <select
+                id="cas-upload-member-select"
+                value={importMemberId}
+                onChange={(e) => onMemberChange(e.target.value)}
+                className="h-8 rounded-lg bg-card border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer sm:w-64"
+              >
+                {members.map((m) => (
+                  <option key={m.id} value={m.id} className="bg-slate-900 text-foreground">
+                    {m.name} ({m.relationship.toUpperCase()})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {onWipeExistingChange && (
+            <label
+              className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                wipeExistingForMember
+                  ? 'bg-rose-500/10 border-rose-500/30 text-rose-200'
+                  : 'bg-card/60 border-border/50 text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={wipeExistingForMember}
+                onChange={(e) => onWipeExistingChange(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-border accent-rose-500 cursor-pointer shrink-0"
+              />
+              <div className="text-xs leading-snug">
+                <span className="font-semibold text-foreground flex items-center gap-1.5">
+                  <Trash2 className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                  Wipe old records for {selectedMemberName} before importing
+                </span>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Replaces all existing holdings for {selectedMemberName} with a clean snapshot from
+                  this statement. Holdings belonging to other family members are untouched.
+                </p>
+              </div>
+            </label>
+          )}
         </div>
       )}
 

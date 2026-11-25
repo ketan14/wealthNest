@@ -56,6 +56,7 @@ export interface ImportSummaryResult {
   readonly updated: number;
   readonly skipped: number;
   readonly failed: number;
+  readonly wiped?: number;
   readonly equitiesImported?: number;
   readonly equitiesUpdated?: number;
   readonly mutualFundsImported?: number;

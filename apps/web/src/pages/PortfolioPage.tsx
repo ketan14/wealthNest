@@ -598,11 +598,12 @@ export function PortfolioPage() {
         isEditLoading={updateHoldingMutation.isPending}
         isImportOpen={isImportModalOpen}
         onCloseImport={() => setIsImportModalOpen(false)}
-        onImportSuccess={(importedItems, memberId, accountId) => {
+        onImportSuccess={(importedItems, memberId, accountId, wipeExistingForMember) => {
           if (hasLiveBackend) {
             queryClient.invalidateQueries({ queryKey: ['portfolio-summary'] });
             queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] });
             queryClient.invalidateQueries({ queryKey: ['holdings'] });
+            queryClient.invalidateQueries({ queryKey: ['net-worth-summary'] });
           } else if (importedItems && importedItems.length > 0) {
             const chosenMemberId =
               memberId || (selectedMemberId !== 'all' ? selectedMemberId : 'mem-self');
@@ -613,7 +614,16 @@ export function PortfolioPage() {
               chosenMemberId,
               chosenAccountId
             );
-            setLocalDemoHoldings((prev) => [...newHoldings, ...prev]);
+            setLocalDemoHoldings((prev) => {
+              const base = wipeExistingForMember
+                ? prev.filter(
+                    (h) =>
+                      h.memberId !== chosenMemberId &&
+                      !(chosenMemberId === 'mem-self' && !h.memberId)
+                  )
+                : prev;
+              return [...newHoldings, ...base];
+            });
           }
         }}
         isManageFamilyOpen={isManageFamilyOpen}

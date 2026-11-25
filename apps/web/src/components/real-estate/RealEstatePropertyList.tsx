@@ -27,6 +27,7 @@ interface RealEstatePropertyListProps {
   formatInr: (paise: bigint) => string;
   getPropertyTypeLabel: (type: PropertyType) => string;
   onEditProperty: (property: RealEstatePropertyInput) => void;
+  onAddProperty?: () => void;
 }
 
 export function RealEstatePropertyList({
@@ -37,6 +38,7 @@ export function RealEstatePropertyList({
   formatInr,
   getPropertyTypeLabel,
   onEditProperty,
+  onAddProperty,
 }: RealEstatePropertyListProps) {
   const { canEditFinancials } = useHousehold();
   if (isLoading) {
@@ -59,9 +61,20 @@ export function RealEstatePropertyList({
             Add a Real Estate holding or REIT in your Portfolio to track property equity, LTV,
             rental yields, and appreciation CAGR.
           </p>
-          <Link to="/portfolio">
-            <Button className="mt-2">Go to Portfolio</Button>
-          </Link>
+          <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
+            {onAddProperty && (
+              <Button
+                onClick={onAddProperty}
+                disabled={isSupportModeActive || !canEditFinancials}
+                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold"
+              >
+                + Add Property
+              </Button>
+            )}
+            <Link to="/portfolio">
+              <Button variant={onAddProperty ? 'outline' : 'default'}>Go to Portfolio</Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
     );

@@ -183,4 +183,49 @@ describe('Broker Tradebook & Holdings CSV Importers (Zerodha Kite & Groww)', () 
       expect(screen.getByText(/CAS Import Completed Successfully!/i)).toBeInTheDocument();
     });
   });
+
+  it('supports wiping old records for the selected family member before importing', async () => {
+    const onSuccessMock = vi.fn();
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AuthProvider>
+          <FamilyProvider>
+            <ImportCasModal isOpen={true} onClose={() => {}} onSuccess={onSuccessMock} />
+          </FamilyProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+
+    // Toggle wipe old records on the Upload step
+    const uploadWipeCheckbox = screen.getByRole('checkbox', {
+      name: /Wipe old records for .* before importing/i,
+    });
+    expect(uploadWipeCheckbox).not.toBeChecked();
+    fireEvent.click(uploadWipeCheckbox);
+    expect(uploadWipeCheckbox).toBeChecked();
+
+    // Load Sample Zerodha Holdings CSV to advance to Preview step
+    fireEvent.click(screen.getByText(/Load Sample Zerodha Holdings CSV/i));
+
+    await waitFor(() => {
+      expect(screen.getByText(/ZERODHA Statement/i)).toBeInTheDocument();
+    });
+
+    // Verify the checkbox remains checked on the Preview step
+    const previewWipeCheckbox = screen.getByRole('checkbox', {
+      name: /Wipe old records for .* before importing/i,
+    });
+    expect(previewWipeCheckbox).toBeChecked();
+
+    // Confirm & Import
+    fireEvent.click(screen.getByRole('button', { name: /Confirm & Import/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/CAS Import Completed Successfully!/i)).toBeInTheDocument();
+    });
+
+    expect(onSuccessMock).toHaveBeenCalledTimes(1);
+    expect(onSuccessMock.mock.calls[0]![3]).toBe(true);
+  });
 });

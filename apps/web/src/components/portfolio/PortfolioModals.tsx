@@ -20,7 +20,8 @@ interface PortfolioModalsProps {
   readonly onImportSuccess: (
     importedItems?: readonly DemoImportedHoldingInput[],
     memberId?: string,
-    accountId?: string
+    accountId?: string,
+    wipeExistingForMember?: boolean
   ) => void;
   readonly isManageFamilyOpen: boolean;
   readonly onCloseManageFamily: () => void;

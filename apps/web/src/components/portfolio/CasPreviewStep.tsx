@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AlertCircle, Users, Briefcase, RotateCcw, Loader2 } from 'lucide-react';
+import { AlertCircle, Users, Briefcase, RotateCcw, Loader2, Trash2 } from 'lucide-react';
 import { CasPreviewDto, ImportCasItemDto, ImportCasTransactionDto } from '@wealthnest/application';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -40,6 +40,8 @@ interface CasPreviewStepProps {
   selectedCount: number;
   selectedTransactionsCount: number;
   isConfirmPending: boolean;
+  wipeExistingForMember?: boolean;
+  onWipeExistingChange?: (wipe: boolean) => void;
   onMemberChange: (memberId: string, firstAccountId: string) => void;
   onAccountChange: (accountId: string) => void;
   onTabChange: (tab: 'equities' | 'mutual_funds' | 'transactions') => void;
@@ -75,6 +77,8 @@ export function CasPreviewStep({
   selectedCount,
   selectedTransactionsCount,
   isConfirmPending,
+  wipeExistingForMember = false,
+  onWipeExistingChange,
   onMemberChange,
   onAccountChange,
   onTabChange,
@@ -147,56 +151,88 @@ export function CasPreviewStep({
         )}
 
         {/* Phase 6A: Legal Entity & Demat Account Assignment */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-secondary/30 border border-border/60">
-          <div>
-            <label
-              htmlFor="import-member-select"
-              className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5"
-            >
-              <Users className="w-3.5 h-3.5 text-blue-400" />
-              Assign To Legal Entity / Member
-            </label>
-            <select
-              id="import-member-select"
-              value={importMemberId}
-              onChange={(e) => {
-                const firstAcc = accounts.find((a) => a.memberId === e.target.value);
-                onMemberChange(e.target.value, firstAcc?.id || '');
-              }}
-              className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-            >
-              {members.map((m) => (
-                <option key={m.id} value={m.id} className="bg-slate-900 text-foreground">
-                  {m.name} ({m.relationship.toUpperCase()})
+        <div className="p-3 rounded-xl bg-secondary/30 border border-border/60 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor="import-member-select"
+                className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5"
+              >
+                <Users className="w-3.5 h-3.5 text-blue-400" />
+                Assign To Legal Entity / Member
+              </label>
+              <select
+                id="import-member-select"
+                value={importMemberId}
+                onChange={(e) => {
+                  const firstAcc = accounts.find((a) => a.memberId === e.target.value);
+                  onMemberChange(e.target.value, firstAcc?.id || '');
+                }}
+                className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+              >
+                {members.map((m) => (
+                  <option key={m.id} value={m.id} className="bg-slate-900 text-foreground">
+                    {m.name} ({m.relationship.toUpperCase()})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="import-account-select"
+                className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5"
+              >
+                <Briefcase className="w-3.5 h-3.5 text-slate-400" />
+                Assign Demat / Broker Account
+              </label>
+              <select
+                id="import-account-select"
+                value={importAccountId}
+                onChange={(e) => onAccountChange(e.target.value)}
+                className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+              >
+                <option value="" className="bg-slate-900 text-foreground">
+                  -- Auto / Statement Folios --
                 </option>
-              ))}
-            </select>
+                {relevantAccounts.map((a) => (
+                  <option key={a.id} value={a.id} className="bg-slate-900 text-foreground">
+                    {a.brokerName}: {a.accountName}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div>
+          {onWipeExistingChange && (
             <label
-              htmlFor="import-account-select"
-              className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5"
+              className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                wipeExistingForMember
+                  ? 'bg-rose-500/10 border-rose-500/30 text-rose-200'
+                  : 'bg-card/60 border-border/50 text-muted-foreground hover:text-foreground'
+              }`}
             >
-              <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-              Assign Demat / Broker Account
+              <input
+                type="checkbox"
+                checked={wipeExistingForMember}
+                onChange={(e) => onWipeExistingChange(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-border accent-rose-500 cursor-pointer shrink-0"
+              />
+              <div className="text-xs leading-snug">
+                <span className="font-semibold text-foreground flex items-center gap-1.5">
+                  <Trash2 className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                  Wipe old records for{' '}
+                  {members.find((m) => m.id === importMemberId)?.name || 'selected family member'}{' '}
+                  before importing
+                </span>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Deletes existing holdings assigned to{' '}
+                  {members.find((m) => m.id === importMemberId)?.name || 'this member'} prior to
+                  saving this statement. Other family members&apos; records remain untouched.
+                </p>
+              </div>
             </label>
-            <select
-              id="import-account-select"
-              value={importAccountId}
-              onChange={(e) => onAccountChange(e.target.value)}
-              className="w-full h-8 rounded-lg bg-secondary/50 border border-border px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-            >
-              <option value="" className="bg-slate-900 text-foreground">
-                -- Auto / Statement Folios --
-              </option>
-              {relevantAccounts.map((a) => (
-                <option key={a.id} value={a.id} className="bg-slate-900 text-foreground">
-                  {a.brokerName}: {a.accountName}
-                </option>
-              ))}
-            </select>
-          </div>
+          )}
         </div>
 
         {/* Tab Navigation: Direct Equities, Mutual Funds, Historical Transactions */}

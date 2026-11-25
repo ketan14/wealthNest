@@ -82,6 +82,17 @@ export function CasSummaryStep({ importSummary, onClose }: CasSummaryStepProps) 
           <p className="text-[11px] text-muted-foreground mt-0.5">Skipped</p>
         </div>
 
+        {Boolean(importSummary.wiped) && (
+          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 col-span-2 sm:col-span-4">
+            <span className="text-xl font-bold font-mono text-rose-400">
+              {importSummary.wiped}
+            </span>
+            <p className="text-[11px] text-rose-200 mt-0.5">
+              Old Holdings Wiped for Selected Family Member Before Import
+            </p>
+          </div>
+        )}
+
         {Boolean(importSummary.transactionsImported) && (
           <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 col-span-2 sm:col-span-4">
             <span className="text-xl font-bold font-mono text-emerald-400">

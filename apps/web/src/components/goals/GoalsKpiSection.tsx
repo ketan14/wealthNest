@@ -1,6 +1,7 @@
 import { GoalsSummary } from '@wealthnest/domain';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { KpiMetricCard, WEALTH_KPI_GRID, getPolarityTone } from '@/components/ui/DashboardPrimitives';
 import { formatInr } from '@/utils/formatInr';
 import { usePrivacy } from '@/lib/preferences/privacy-context';
 import { ShieldAlert, Target, TrendingUp, Wallet } from 'lucide-react';
@@ -29,135 +30,103 @@ export function GoalsKpiSection({
   const totalRequiredRupees = toRupees(summary.totalRequiredMonthlySip.cents);
   const liquidCorpusRupees = toRupees(summary.emergencyFund.liquidCorpus.cents);
 
+  const fundedTone = getPolarityTone(summary.overallFundedPercentage);
+  const runwayMonths = summary.emergencyFund.monthsRunway;
+  const runwayTextClass =
+    runwayMonths === 0
+      ? 'text-foreground'
+      : runwayMonths >= 6
+        ? 'text-emerald-400'
+        : runwayMonths >= 3
+          ? 'text-amber-400'
+          : 'text-rose-400';
+
   return (
     <>
       {/* Top 4 KPI Cards (2x2 mobile, 4-across desktop) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+      <div className={WEALTH_KPI_GRID}>
         {/* Card 1: Emergency Runway */}
-        <Card className="border-border/80 bg-card/60 backdrop-blur-md relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
-          <CardHeader className="p-3 sm:p-5 pb-1.5 sm:pb-2">
-            <div className="flex items-center justify-between gap-1 text-muted-foreground">
-              <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider truncate">
-                Emergency Runway
-              </span>
-              <ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-5 pt-0 space-y-1.5">
-            <div className="flex flex-wrap items-baseline gap-1.5">
-              <span className="text-xl sm:text-2xl xl:text-3xl font-extrabold tracking-tight text-emerald-400 font-mono">
-                {`${summary.emergencyFund.monthsRunway.toFixed(1)} Mos`}
-              </span>
-              <Badge
-                variant="outline"
-                className={`text-[10px] px-1.5 py-0 whitespace-nowrap ${
-                  summary.emergencyFund.monthsRunway >= 6
-                    ? 'text-emerald-400 border-emerald-500/30'
-                    : summary.emergencyFund.monthsRunway >= 3
-                      ? 'text-amber-400 border-amber-500/30'
-                      : 'text-rose-400 border-rose-500/30'
-                }`}
-              >
-                {summary.emergencyFund.monthsRunway >= 6 ? 'Optimal Buffer' : 'Action Needed'}
-              </Badge>
-            </div>
-            <p className="text-[11px] sm:text-xs text-muted-foreground truncate">
-              Liquid:{' '}
-              <span className="font-semibold text-foreground font-mono">
-                {maskAmount(formatInr(liquidCorpusRupees, { compact: true }))}
-              </span>
-            </p>
-          </CardContent>
-        </Card>
+        <KpiMetricCard
+          label="Emergency Runway"
+          icon={<ShieldAlert className="w-4 h-4 text-emerald-400" />}
+          displayValue={
+            <span className={runwayTextClass}>
+              {`${runwayMonths.toFixed(1)} Mos`}
+            </span>
+          }
+          subtext={`Liquid: ${maskAmount(formatInr(liquidCorpusRupees, { compact: true }))}`}
+          badge={
+            <Badge
+              variant="outline"
+              className={`text-[10px] px-1.5 py-0 whitespace-nowrap ${
+                runwayMonths >= 6
+                  ? 'text-emerald-400 border-emerald-500/30'
+                  : runwayMonths >= 3
+                    ? 'text-amber-400 border-amber-500/30'
+                    : 'text-rose-400 border-rose-500/30'
+              }`}
+            >
+              {runwayMonths >= 6 ? 'Optimal Buffer' : 'Action Needed'}
+            </Badge>
+          }
+        />
 
         {/* Card 2: Total Target Corpus */}
-        <Card className="border-border/80 bg-card/60 backdrop-blur-md relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
-          <CardHeader className="p-3 sm:p-5 pb-1.5 sm:pb-2">
-            <div className="flex items-center justify-between gap-1 text-muted-foreground">
-              <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider truncate">
-                Target Corpus Sum
-              </span>
-              <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 shrink-0" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-5 pt-0 space-y-1.5">
-            <div className="flex flex-wrap items-baseline gap-1.5">
-              <span className="text-xl sm:text-2xl xl:text-3xl font-extrabold tracking-tight text-foreground font-mono">
-                {maskAmount(formatInr(totalTargetRupees, { compact: true }))}
-              </span>
-              <Badge
-                variant="outline"
-                className="text-[10px] px-1.5 py-0 text-blue-400 border-blue-500/30 whitespace-nowrap hidden sm:inline-flex"
-              >
-                {summary.totalGoalsCount} Active
-              </Badge>
-            </div>
-            <p className="text-[11px] sm:text-xs text-muted-foreground truncate">
-              <span className="font-semibold text-foreground">{summary.totalGoalsCount}</span> active{' '}
-              {summary.totalGoalsCount === 1 ? 'goal' : 'goals'}
-            </p>
-          </CardContent>
-        </Card>
+        <KpiMetricCard
+          label="Target Corpus Sum"
+          icon={<Target className="w-4 h-4 text-blue-400" />}
+          amountRupees={totalTargetRupees}
+          subtext={`${summary.totalGoalsCount} active ${
+            summary.totalGoalsCount === 1 ? 'goal' : 'goals'
+          }`}
+          badge={
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 text-blue-400 border-blue-500/30 whitespace-nowrap hidden sm:inline-flex"
+            >
+              {summary.totalGoalsCount} Active
+            </Badge>
+          }
+        />
 
         {/* Card 3: Current Funded Corpus */}
-        <Card className="border-border/80 bg-card/60 backdrop-blur-md relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl pointer-events-none" />
-          <CardHeader className="p-3 sm:p-5 pb-1.5 sm:pb-2">
-            <div className="flex items-center justify-between gap-1 text-muted-foreground">
-              <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider truncate">
-                Accumulated Corpus
-              </span>
-              <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400 shrink-0" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-5 pt-0 space-y-1.5">
-            <div className="flex flex-wrap items-baseline gap-1.5">
-              <span className="text-xl sm:text-2xl xl:text-3xl font-extrabold tracking-tight text-foreground font-mono">
-                {maskAmount(formatInr(totalCurrentRupees, { compact: true }))}
-              </span>
-              <span className="text-[11px] sm:text-xs text-emerald-400 font-mono font-bold">
-                {summary.overallFundedPercentage.toFixed(1)}%
-              </span>
-            </div>
-            <p className="text-[11px] sm:text-xs text-muted-foreground truncate">
-              Total funded progress
-            </p>
-          </CardContent>
-        </Card>
+        <KpiMetricCard
+          label="Accumulated Corpus"
+          icon={<Wallet className="w-4 h-4 text-purple-400" />}
+          amountRupees={totalCurrentRupees}
+          subtext="Total funded progress"
+          badge={
+            <span className={`text-[11px] font-mono font-bold ${fundedTone.text}`}>
+              {summary.overallFundedPercentage.toFixed(1)}%
+            </span>
+          }
+        />
 
         {/* Card 4: Monthly SIP Commitment & Required Pace */}
-        <Card className="border-border/80 bg-card/60 backdrop-blur-md relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
-          <CardHeader className="p-3 sm:p-5 pb-1.5 sm:pb-2">
-            <div className="flex items-center justify-between gap-1 text-muted-foreground">
-              <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider truncate">
-                Committed Monthly SIP
-              </span>
-              <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-5 pt-0 space-y-1.5">
-            <div className="flex flex-wrap items-baseline gap-1.5">
-              <span className="text-xl sm:text-2xl xl:text-3xl font-extrabold tracking-tight text-foreground font-mono">
-                {maskAmount(`${formatInr(totalCommittedRupees, { compact: true })}/m`)}
-              </span>
-              <Badge
-                variant="outline"
-                className="text-[10px] px-1.5 py-0 text-emerald-400 border-emerald-500/30 whitespace-nowrap"
-              >
-                {summary.goalsOnTrackCount}/{summary.totalGoalsCount} On Track
-              </Badge>
-            </div>
-            <p className="text-[11px] sm:text-xs text-muted-foreground truncate">
-              Required Pace:{' '}
-              <span className="font-semibold text-foreground font-mono">
-                {maskAmount(`${formatInr(totalRequiredRupees, { compact: true })}/m`)}
-              </span>
-            </p>
-          </CardContent>
-        </Card>
+        <KpiMetricCard
+          label="Committed Monthly SIP"
+          icon={<TrendingUp className="w-4 h-4 text-emerald-400" />}
+          displayValue={
+            <span className="text-foreground">
+              {maskAmount(`${formatInr(totalCommittedRupees, { compact: true })}/m`)}
+            </span>
+          }
+          subtext={`Required Pace: ${maskAmount(
+            `${formatInr(totalRequiredRupees, { compact: true })}/m`
+          )}`}
+          badge={
+            <Badge
+              variant="outline"
+              className={`text-[10px] px-1.5 py-0 whitespace-nowrap ${
+                summary.totalGoalsCount === 0
+                  ? 'text-muted-foreground border-border/60'
+                  : 'text-emerald-400 border-emerald-500/30'
+              }`}
+            >
+              {summary.goalsOnTrackCount}/{summary.totalGoalsCount} On Track
+            </Badge>
+          }
+        />
       </div>
 
       {/* Emergency Fund Interactive Burn Rate Section */}

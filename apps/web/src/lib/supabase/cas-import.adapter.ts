@@ -19,10 +19,51 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
       let imported = 0;
       let updated = 0;
       let failed = 0;
+      let wiped = 0;
       let equitiesImported = 0;
       let equitiesUpdated = 0;
       let mutualFundsImported = 0;
       let mutualFundsUpdated = 0;
+
+      if (params.wipeExistingForMember) {
+        let existingHoldingsQuery = supabase
+          .from('holdings')
+          .select('id, member_id')
+          .eq('household_id', householdId);
+
+        if (validMemberId) {
+          existingHoldingsQuery = existingHoldingsQuery.or(
+            `member_id.eq.${validMemberId},member_id.is.null`
+          );
+        } else {
+          existingHoldingsQuery = existingHoldingsQuery.is('member_id', null);
+        }
+
+        const { data: toWipeHoldings } = await existingHoldingsQuery;
+        const holdingIdsToWipe = (toWipeHoldings || []).map((h) => h.id);
+        if (holdingIdsToWipe.length > 0) {
+          const { error: wipeHoldingsErr } = await supabase
+            .from('holdings')
+            .delete()
+            .in('id', holdingIdsToWipe);
+          if (!wipeHoldingsErr) {
+            wiped = holdingIdsToWipe.length;
+          }
+        }
+
+        if (params.transactions && params.transactions.length > 0) {
+          let wipeTxQuery = supabase
+            .from('transactions')
+            .delete()
+            .eq('household_id', householdId);
+          if (validMemberId) {
+            wipeTxQuery = wipeTxQuery.or(`member_id.eq.${validMemberId},member_id.is.null`);
+          } else {
+            wipeTxQuery = wipeTxQuery.is('member_id', null);
+          }
+          await wipeTxQuery;
+        }
+      }
 
       for (const item of params.items) {
         try {
@@ -395,6 +436,7 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
         updated,
         skipped: 0,
         failed,
+        wiped,
         equitiesImported,
         equitiesUpdated,
         mutualFundsImported,

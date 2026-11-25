@@ -31,6 +31,10 @@ export function CashflowSummarySection({
     ? categories
     : categories.filter((c) => c.val.cents !== 0n);
 
+  const hasInflows = summary.totalInflows.cents > 0n;
+  const hasOutflows = summary.totalOutflows.cents > 0n;
+  const hasNetCashflow = summary.netCashflow.cents !== 0n;
+
   return (
     <div className="space-y-4">
       {/* 1. Summary Cards (Mobile 2-card split / Desktop 4 cards) */}
@@ -39,10 +43,19 @@ export function CashflowSummarySection({
         <Card className="border-border/80 bg-card/60 backdrop-blur-sm p-3 sm:p-5">
           <div className="flex items-center justify-between text-muted-foreground text-[10px] sm:text-xs uppercase font-semibold">
             <span>Total Inflows</span>
-            <TrendingUp className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+            <TrendingUp
+              className={`h-3.5 w-3.5 shrink-0 ${
+                hasInflows ? 'text-emerald-400' : 'text-muted-foreground'
+              }`}
+            />
           </div>
-          <div className="text-lg sm:text-2xl font-bold font-mono text-emerald-400 pt-1 sm:pt-1.5">
-            +<CurrencyDisplay amount={summary.totalInflows.toDecimal()} />
+          <div
+            className={`text-lg sm:text-2xl font-bold font-mono tabular-nums pt-1 sm:pt-1.5 ${
+              hasInflows ? 'text-emerald-400' : 'text-foreground'
+            }`}
+          >
+            {hasInflows ? '+' : ''}
+            <CurrencyDisplay amount={summary.totalInflows.toDecimal()} />
           </div>
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
             {summary.inflowCount} {summary.inflowCount === 1 ? 'event' : 'events'}
@@ -53,10 +66,19 @@ export function CashflowSummarySection({
         <Card className="border-border/80 bg-card/60 backdrop-blur-sm p-3 sm:p-5">
           <div className="flex items-center justify-between text-muted-foreground text-[10px] sm:text-xs uppercase font-semibold">
             <span>Total Outflows</span>
-            <TrendingDown className="h-3.5 w-3.5 text-rose-400 shrink-0" />
+            <TrendingDown
+              className={`h-3.5 w-3.5 shrink-0 ${
+                hasOutflows ? 'text-rose-400' : 'text-muted-foreground'
+              }`}
+            />
           </div>
-          <div className="text-lg sm:text-2xl font-bold font-mono text-rose-400 pt-1 sm:pt-1.5">
-            -<CurrencyDisplay amount={summary.totalOutflows.toDecimal()} />
+          <div
+            className={`text-lg sm:text-2xl font-bold font-mono tabular-nums pt-1 sm:pt-1.5 ${
+              hasOutflows ? 'text-rose-400' : 'text-foreground'
+            }`}
+          >
+            {hasOutflows ? '-' : ''}
+            <CurrencyDisplay amount={summary.totalOutflows.toDecimal()} />
           </div>
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
             {summary.outflowCount} {summary.outflowCount === 1 ? 'event' : 'events'}
@@ -70,11 +92,15 @@ export function CashflowSummarySection({
             <Scale className="h-3.5 w-3.5 text-primary shrink-0" />
           </div>
           <div
-            className={`text-lg sm:text-2xl font-bold font-mono pt-1 sm:pt-1.5 ${
-              summary.isNetPositive ? 'text-emerald-400' : 'text-rose-400'
+            className={`text-lg sm:text-2xl font-bold font-mono tabular-nums pt-1 sm:pt-1.5 ${
+              !hasNetCashflow
+                ? 'text-foreground'
+                : summary.isNetPositive
+                  ? 'text-emerald-400'
+                  : 'text-rose-400'
             }`}
           >
-            {summary.isNetPositive ? '+' : '-'}
+            {hasNetCashflow ? (summary.isNetPositive ? '+' : '-') : ''}
             <CurrencyDisplay amount={summary.netCashflow.toDecimal()} />
           </div>
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">

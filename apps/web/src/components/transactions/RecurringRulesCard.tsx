@@ -12,7 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { NewTransactionFormValues } from '@/components/transactions/RecordTransactionModal';
-import { Plus, Repeat, Trash2 } from 'lucide-react';
+import { usePrivacy } from '@/lib/preferences/privacy-context';
+import { Plus, Repeat, RotateCcw, Trash2 } from 'lucide-react';
 
 interface RecurringRulesCardProps {
   readonly onPostTransaction: (values: NewTransactionFormValues) => Promise<void>;
@@ -69,6 +70,7 @@ export function RecurringRulesCard({
   isPosting = false,
   selectedMemberId = 'all',
 }: RecurringRulesCardProps) {
+  const { maskAmount } = usePrivacy();
   const [rules, setRules] = useState<RecurringTransactionRule[]>(DEFAULT_RULES);
   const [showAddForm, setShowAddForm] = useState(false);
   const [name, setName] = useState('');
@@ -152,11 +154,33 @@ export function RecurringRulesCard({
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="outline" className="text-[11px] border-cyan-500/30 text-cyan-300">
-              SIPs: {summary.totalMonthlySip.formatIndianCompact()}/mo
+              SIPs: {maskAmount(summary.totalMonthlySip.formatIndianCompact())}/mo
             </Badge>
             <Badge variant="outline" className="text-[11px] border-amber-500/30 text-amber-300">
-              EMIs: {summary.totalMonthlyEmi.formatIndianCompact()}/mo
+              EMIs: {maskAmount(summary.totalMonthlyEmi.formatIndianCompact())}/mo
             </Badge>
+            {rules.length > 0 ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 text-xs text-muted-foreground hover:text-rose-400 px-2"
+                onClick={() => setRules([])}
+                title="Clear sample recurring rules"
+              >
+                Clear All
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1 px-2"
+                onClick={() => setRules(DEFAULT_RULES)}
+                title="Restore starter SIP & EMI templates"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Load Templates
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -273,7 +297,7 @@ export function RecurringRulesCard({
                       )}
                       <span className="text-muted-foreground/60">•</span>
                       <span className="text-xs font-bold font-mono text-foreground">
-                        {rule.amount.formatIndianCompact()}/mo
+                        {maskAmount(rule.amount.formatIndianCompact())}/mo
                       </span>
                     </div>
                   </div>

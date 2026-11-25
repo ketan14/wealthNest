@@ -2,12 +2,11 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, Landmark, IndianRupee, FileText, ShieldCheck, Plus } from 'lucide-react';
 import {
-  Money,
   PropertyType,
   RealEstatePropertyInput,
   summarizeRealEstatePortfolio,
 } from '@wealthnest/domain';
-import { HoldingDetailDto, LiabilityDto } from '@wealthnest/application';
+import { AddHoldingUseCase, HoldingDetailDto, LiabilityDto } from '@wealthnest/application';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { useHousehold } from '@/lib/supabase/household-context';
 import { useFamily } from '@/lib/family/family-context';
@@ -16,13 +15,17 @@ import { useSupportSession } from '@/lib/admin/support-session-context';
 import { usePrivacy } from '@/lib/preferences/privacy-context';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { EntitySelectorChips } from '@/components/family/EntitySelectorChips';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
+import { AddHoldingModal, NewHoldingFormValues } from '@/components/portfolio/AddHoldingModal';
 import {
   PropertyMetricsModal,
   PropertyMetricsOverride,
 } from '@/components/real-estate/PropertyMetricsModal';
 import { RealEstatePropertyList } from '@/components/real-estate/RealEstatePropertyList';
 import { shouldAllowDemoData } from '@/lib/config/mobile-runtime';
+import { formatCompactRupees } from '@/lib/formatters/currency';
+import { getPolarityTone } from '@/components/ui/DashboardPrimitives';
 
 const STORAGE_KEY_PREFIX = 'wealthnest_real_estate_overrides_v1_';
 
@@ -76,7 +79,19 @@ const DEMO_PROPERTIES: RealEstatePropertyInput[] = [
 ];
 
 function formatInr(paise: bigint): string {
-  return Money.fromCents(paise, 'INR').format();
+  return formatCompactRupees(Number(paise) / 100);
+}
+
+function inferPropertyTypeFromName(name: string): PropertyType {
+  const lower = name.toLowerCase();
+  if (lower.includes('reit')) return 'reit';
+  if (lower.includes('shop') || lower.includes('office') || lower.includes('commercial')) {
+    return 'commercial';
+  }
+  if (lower.includes('plot') || lower.includes('land') || lower.includes('agri')) {
+    return 'land';
+  }
+  return 'residential';
 }
 
 function getPropertyTypeLabel(type: PropertyType): string {
@@ -93,15 +108,7 @@ function getPropertyTypeLabel(type: PropertyType): string {
 }
 
 function inferPropertyType(holding: HoldingDetailDto): PropertyType {
-  const lower = holding.name.toLowerCase();
-  if (lower.includes('reit')) return 'reit';
-  if (lower.includes('shop') || lower.includes('office') || lower.includes('commercial')) {
-    return 'commercial';
-  }
-  if (lower.includes('plot') || lower.includes('land') || lower.includes('agri')) {
-    return 'land';
-  }
-  return 'residential';
+  return inferPropertyTypeFromName(holding.name);
 }
 
 function loadOverrides(userId: string): Record<string, PropertyMetricsOverride> {
@@ -175,9 +182,59 @@ export function RealEstatePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
+  const [isAddPropertyOpen, setIsAddPropertyOpen] = useState(false);
+  const [isAddingProperty, setIsAddingProperty] = useState(false);
   const [editingProperty, setEditingProperty] = useState<RealEstatePropertyInput | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | PropertyType>('all');
   const [loanFilter, setLoanFilter] = useState<'all' | 'loan' | 'debt_free'>('all');
+
+  const handleCreatePropertyHolding = async (values: NewHoldingFormValues) => {
+    if (!canEditFinancials || isSupportModeActive) return;
+    setIsAddingProperty(true);
+    try {
+      const unitCostPaise = Math.round(values.unitCost * 100);
+      const currentValuePaise = Math.round(values.currentValue * 100);
+      if (isDemoMode || !scopeId) {
+        const newProp: RealEstatePropertyInput = {
+          id: `demo-re-${Date.now()}`,
+          name: values.name,
+          propertyType: inferPropertyTypeFromName(values.name),
+          memberId: values.memberId,
+          purchasePricePaise: BigInt(Math.round(values.quantity * unitCostPaise)),
+          currentValuePaise: BigInt(currentValuePaise),
+          monthlyRentPaise: 0n,
+          annualMaintenancePaise: 0n,
+          propertyTaxPaise: 0n,
+          linkedLoanBalancePaise: 0n,
+          linkedMonthlyEmiPaise: 0n,
+        };
+        setBaseProperties((prev) => [newProp, ...prev]);
+        return;
+      }
+
+      const useCase = new AddHoldingUseCase(holdingRepo);
+      const res = await useCase.execute({
+        userId: user?.id || scopeId,
+        householdId: activeHouseholdId || undefined,
+        name: values.name,
+        ticker: values.ticker,
+        assetClassId: values.assetClassId || 'real_estate',
+        quantity: values.quantity,
+        unitCostCents: unitCostPaise,
+        currentValueCents: currentValuePaise,
+        currency: values.currency || 'INR',
+        memberId: values.memberId,
+        accountId: values.accountId,
+        visibility: values.visibility,
+        ownerShares: values.ownerShares,
+        restrictedGranteeUserIds: values.restrictedGranteeUserIds,
+      });
+      if (!res.success) throw res.error;
+      await loadRealEstateData();
+    } finally {
+      setIsAddingProperty(false);
+    }
+  };
 
   const loadRealEstateData = useCallback(async () => {
     setIsLoading(true);
@@ -349,9 +406,18 @@ export function RealEstatePage() {
               Property Deeds
             </Button>
           </Link>
-          <Link to="/portfolio?action=new">
+          <Link
+            to="/portfolio?action=new"
+            onClick={(e) => {
+              e.preventDefault();
+              if (canEditFinancials && !isSupportModeActive) {
+                setIsAddPropertyOpen(true);
+              }
+            }}
+          >
             <Button
               size="sm"
+              disabled={isSupportModeActive || !canEditFinancials}
               className="h-8 px-2.5 sm:px-3 text-xs gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold whitespace-nowrap shrink-0 shadow-sm"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -361,58 +427,13 @@ export function RealEstatePage() {
         </div>
       </div>
 
-      {/* Compact Single-Row "MY FAMILY" Chip Strip */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-xs text-muted-foreground sm:hidden">
-          <span className="font-semibold uppercase tracking-wider text-slate-400 text-[11px]">
-            My Family
-          </span>
-          <button
-            type="button"
-            onClick={() => setIsManageFamilyOpen(true)}
-            className="text-[10px] text-primary hover:underline"
-          >
-            Manage
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-          <button
-            type="button"
-            onClick={() => setSelectedMemberId('all')}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
-              selectedMemberId === 'all'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
-            }`}
-          >
-            All Members
-          </button>
-
-          {members.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => setSelectedMemberId(m.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
-                selectedMemberId === m.id
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
-              }`}
-            >
-              {m.name}
-            </button>
-          ))}
-
-          <button
-            type="button"
-            onClick={() => setIsManageFamilyOpen(true)}
-            className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs text-muted-foreground hover:text-foreground bg-secondary/40 hover:bg-secondary border border-border/60 whitespace-nowrap shrink-0"
-          >
-            <span>+ Manage</span>
-          </button>
-        </div>
-      </div>
+      {/* Shared "MY FAMILY" Chip Strip */}
+      <EntitySelectorChips
+        members={members}
+        selectedMemberId={selectedMemberId}
+        onSelectMember={setSelectedMemberId}
+        onOpenManage={() => setIsManageFamilyOpen(true)}
+      />
 
       {errorMessage && (
         <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm">
@@ -443,7 +464,11 @@ export function RealEstatePage() {
               <span>Net Property Equity</span>
               <ShieldCheck className="w-4 h-4 text-cyan-400" />
             </div>
-            <div className="text-xl sm:text-2xl font-bold text-emerald-400">
+            <div
+              className={`text-xl sm:text-2xl font-bold font-mono tabular-nums ${
+                getPolarityTone(Number(summary.totalNetEquityPaise)).text
+              }`}
+            >
               {formatMaskedInr(summary.totalNetEquityPaise)}
             </div>
             <p className="text-xs text-slate-500 mt-1">
@@ -548,9 +573,22 @@ export function RealEstatePage() {
         formatInr={formatMaskedInr}
         getPropertyTypeLabel={getPropertyTypeLabel}
         onEditProperty={setEditingProperty}
+        onAddProperty={() => {
+          if (canEditFinancials && !isSupportModeActive) {
+            setIsAddPropertyOpen(true);
+          }
+        }}
       />
 
       {/* Modals */}
+      <AddHoldingModal
+        isOpen={isAddPropertyOpen}
+        onClose={() => setIsAddPropertyOpen(false)}
+        onSubmit={handleCreatePropertyHolding}
+        isLoading={isAddingProperty}
+        defaultAssetClassId="real_estate"
+      />
+
       <PropertyMetricsModal
         isOpen={Boolean(editingProperty)}
         property={editingProperty}

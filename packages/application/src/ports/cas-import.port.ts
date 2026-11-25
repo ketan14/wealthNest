@@ -56,6 +56,7 @@ export interface ConfirmCasImportParams {
   readonly transactions?: readonly ImportCasTransactionDto[];
   readonly memberId?: string;
   readonly accountId?: string;
+  readonly wipeExistingForMember?: boolean;
 }
 
 export interface CasImportRepositoryPort {

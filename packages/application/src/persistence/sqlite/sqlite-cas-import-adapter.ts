@@ -53,10 +53,37 @@ export class SqliteCasImportAdapter implements CasImportRepositoryPort {
       let imported = 0;
       let updated = 0;
       let failed = 0;
+      let wiped = 0;
       let equitiesImported = 0;
       let equitiesUpdated = 0;
       let mutualFundsImported = 0;
       let mutualFundsUpdated = 0;
+
+      if (params.wipeExistingForMember) {
+        const allUserHoldings = this.db
+          .prepare<{ holdingId: string; memberId?: string | null }>(
+            `SELECT h.id as holdingId, h.member_id as memberId FROM holdings h JOIN assets a ON h.asset_id = a.id WHERE h.user_id = ?;`
+          )
+          .all(params.userId);
+
+        const targetMemberId = validMemberId ?? params.memberId ?? null;
+        for (const h of allUserHoldings) {
+          const matchesMember = targetMemberId
+            ? h.memberId === targetMemberId || !h.memberId
+            : !h.memberId;
+          if (matchesMember) {
+            this.db
+              .prepare('DELETE FROM holding_owners WHERE holding_id = ?;')
+              .run(h.holdingId);
+            const delRes = this.db
+              .prepare('DELETE FROM holdings WHERE id = ? AND user_id = ?;')
+              .run(h.holdingId, params.userId);
+            if (delRes.changes > 0) {
+              wiped += 1;
+            }
+          }
+        }
+      }
 
       for (const item of params.items) {
         try {
@@ -335,6 +362,7 @@ export class SqliteCasImportAdapter implements CasImportRepositoryPort {
         updated,
         skipped: 0,
         failed,
+        wiped,
         equitiesImported,
         equitiesUpdated,
         mutualFundsImported,

@@ -31,7 +31,12 @@ import { CasSummaryStep } from '@/components/portfolio/CasSummaryStep';
 interface ImportCasModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (importedItems?: ImportCasItemDto[], memberId?: string, accountId?: string) => void;
+  onSuccess?: (
+    importedItems?: ImportCasItemDto[],
+    memberId?: string,
+    accountId?: string,
+    wipeExistingForMember?: boolean
+  ) => void;
 }
 
 export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalProps) {
@@ -64,6 +69,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
   const [importAccountId, setImportAccountId] = useState<string>(() => {
     return selectedAccountId !== 'all' ? selectedAccountId : '';
   });
+  const [wipeExistingForMember, setWipeExistingForMember] = useState(false);
 
   useEffect(() => {
     if (selectedMemberId !== 'all') {
@@ -127,6 +133,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
     setTransactions([]);
     setActiveTab('equities');
     setImportSummary(null);
+    setWipeExistingForMember(false);
   };
 
   const handleClose = () => {
@@ -268,6 +275,7 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
           transactions,
           memberId: importMemberId || undefined,
           accountId: importAccountId || undefined,
+          wipeExistingForMember,
         });
 
         if (!res.success) throw res.error;
@@ -306,7 +314,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
         onSuccess(
           items.filter((i) => i.selected),
           importMemberId || undefined,
-          importAccountId || undefined
+          importAccountId || undefined,
+          wipeExistingForMember
         );
       }
     },
@@ -404,6 +413,15 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
           password={password}
           error={error}
           isParsing={parseMutation.isPending}
+          members={members}
+          importMemberId={importMemberId}
+          wipeExistingForMember={wipeExistingForMember}
+          onMemberChange={(memberId) => {
+            setImportMemberId(memberId);
+            const firstAcc = accounts.find((a) => a.memberId === memberId);
+            setImportAccountId(firstAcc?.id || '');
+          }}
+          onWipeExistingChange={setWipeExistingForMember}
           onSelectSource={(source) => {
             setImportSource(source);
             setFile(null);
@@ -456,6 +474,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
           selectedCount={selectedCount}
           selectedTransactionsCount={selectedTransactionsCount}
           isConfirmPending={confirmMutation.isPending}
+          wipeExistingForMember={wipeExistingForMember}
+          onWipeExistingChange={setWipeExistingForMember}
           onMemberChange={(memberId, firstAccountId) => {
             setImportMemberId(memberId);
             setImportAccountId(firstAccountId);

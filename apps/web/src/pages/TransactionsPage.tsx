@@ -37,6 +37,7 @@ import { Link } from 'react-router-dom';
 import { useFamily } from '@/lib/family/family-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
+import { EntitySelectorChips } from '@/components/family/EntitySelectorChips';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 
 export function TransactionsPage() {
@@ -322,58 +323,13 @@ export function TransactionsPage() {
         </div>
       </div>
 
-      {/* Compact "MY FAMILY" Horizontal Scroll Strip (Consistent with Home, Portfolio, Liabilities) */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-xs text-muted-foreground sm:hidden">
-          <span className="font-semibold uppercase tracking-wider text-slate-400 text-[11px]">
-            My Family
-          </span>
-          <button
-            type="button"
-            onClick={() => setIsManageFamilyOpen(true)}
-            className="text-[10px] text-primary hover:underline"
-          >
-            Manage
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-          <button
-            type="button"
-            onClick={() => setSelectedMemberId('all')}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-              selectedMemberId === 'all'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
-            }`}
-          >
-            Combined Family ({members.length})
-          </button>
-
-          {members.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => setSelectedMemberId(m.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-                selectedMemberId === m.id
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-secondary/60 text-muted-foreground hover:bg-secondary border border-border/60'
-              }`}
-            >
-              {m.name}
-            </button>
-          ))}
-
-          <button
-            type="button"
-            onClick={() => setIsManageFamilyOpen(true)}
-            className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs text-muted-foreground hover:text-foreground bg-secondary/40 hover:bg-secondary border border-border/60 whitespace-nowrap"
-          >
-            <span>+ Manage</span>
-          </button>
-        </div>
-      </div>
+      {/* Shared "MY FAMILY" Horizontal Scroll Strip */}
+      <EntitySelectorChips
+        members={members}
+        selectedMemberId={selectedMemberId}
+        onSelectMember={setSelectedMemberId}
+        onOpenManage={() => setIsManageFamilyOpen(true)}
+      />
 
       {/* Mode Alert Banner if not authenticated */}
       {!hasLiveBackend && (
