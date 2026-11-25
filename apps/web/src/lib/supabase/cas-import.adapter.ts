@@ -28,7 +28,7 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
       if (params.wipeExistingForMember) {
         let existingHoldingsQuery = supabase
           .from('holdings')
-          .select('id, member_id')
+          .select('id, member_id, folio_number, demat_account_id, assets!inner(asset_class_id)')
           .eq('household_id', householdId);
 
         if (validMemberId) {
@@ -40,7 +40,26 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
         }
 
         const { data: toWipeHoldings } = await existingHoldingsQuery;
-        const holdingIdsToWipe = (toWipeHoldings || []).map((h) => h.id);
+        const holdingIdsToWipe = (
+          (toWipeHoldings || []) as unknown as Array<{
+            id: string;
+            folio_number: string | null;
+            demat_account_id: string | null;
+            assets: { asset_class_id: string } | Array<{ asset_class_id: string }> | null;
+          }>
+        )
+          .filter((h) => {
+            const assetObj = Array.isArray(h.assets) ? h.assets[0] : h.assets;
+            const classId = assetObj?.asset_class_id;
+            return (
+              classId === 'equity' ||
+              classId === 'mutual_fund' ||
+              Boolean(h.folio_number) ||
+              Boolean(h.demat_account_id)
+            );
+          })
+          .map((h) => h.id);
+
         if (holdingIdsToWipe.length > 0) {
           const { error: wipeHoldingsErr } = await supabase
             .from('holdings')
@@ -49,19 +68,6 @@ export class SupabaseCasImportAdapter implements CasImportRepositoryPort {
           if (!wipeHoldingsErr) {
             wiped = holdingIdsToWipe.length;
           }
-        }
-
-        if (params.transactions && params.transactions.length > 0) {
-          let wipeTxQuery = supabase
-            .from('transactions')
-            .delete()
-            .eq('household_id', householdId);
-          if (validMemberId) {
-            wipeTxQuery = wipeTxQuery.or(`member_id.eq.${validMemberId},member_id.is.null`);
-          } else {
-            wipeTxQuery = wipeTxQuery.is('member_id', null);
-          }
-          await wipeTxQuery;
         }
       }
 

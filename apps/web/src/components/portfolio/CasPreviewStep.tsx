@@ -226,9 +226,10 @@ export function CasPreviewStep({
                   before importing
                 </span>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Deletes existing holdings assigned to{' '}
+                  Deletes existing Stocks / Equities and Mutual Fund holdings assigned to{' '}
                   {members.find((m) => m.id === importMemberId)?.name || 'this member'} prior to
-                  saving this statement. Other family members&apos; records remain untouched.
+                  saving this statement. Real Estate, Gold, Fixed Deposits, and other family
+                  members&apos; records remain untouched.
                 </p>
               </div>
             </label>

@@ -616,11 +616,17 @@ export function PortfolioPage() {
             );
             setLocalDemoHoldings((prev) => {
               const base = wipeExistingForMember
-                ? prev.filter(
-                    (h) =>
-                      h.memberId !== chosenMemberId &&
-                      !(chosenMemberId === 'mem-self' && !h.memberId)
-                  )
+                ? prev.filter((h) => {
+                    const belongsToMember =
+                      h.memberId === chosenMemberId ||
+                      (chosenMemberId === 'mem-self' && !h.memberId);
+                    const isStockOrMf =
+                      h.assetClassId === 'equity' ||
+                      h.assetClassId === 'mutual_fund' ||
+                      Boolean(h.folioNumber) ||
+                      Boolean(h.dematAccountId);
+                    return !(belongsToMember && isStockOrMf);
+                  })
                 : prev;
               return [...newHoldings, ...base];
             });

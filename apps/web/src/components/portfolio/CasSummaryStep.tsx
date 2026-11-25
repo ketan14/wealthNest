@@ -88,7 +88,7 @@ export function CasSummaryStep({ importSummary, onClose }: CasSummaryStepProps) 
               {importSummary.wiped}
             </span>
             <p className="text-[11px] text-rose-200 mt-0.5">
-              Old Holdings Wiped for Selected Family Member Before Import
+              Old Stock &amp; Mutual Fund Holdings Wiped for Selected Member Before Import
             </p>
           </div>
         )}

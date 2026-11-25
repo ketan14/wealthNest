@@ -312,8 +312,9 @@ export function CasUploadStep({
                   Wipe old records for {selectedMemberName} before importing
                 </span>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Replaces all existing holdings for {selectedMemberName} with a clean snapshot from
-                  this statement. Holdings belonging to other family members are untouched.
+                  Replaces existing Stocks / Equities and Mutual Fund holdings for{' '}
+                  {selectedMemberName} with a clean snapshot from this statement. Real Estate,
+                  Gold, Fixed Deposits, and other family members&apos; holdings are untouched.
                 </p>
               </div>
             </label>

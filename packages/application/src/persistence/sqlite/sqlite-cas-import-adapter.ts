@@ -61,8 +61,14 @@ export class SqliteCasImportAdapter implements CasImportRepositoryPort {
 
       if (params.wipeExistingForMember) {
         const allUserHoldings = this.db
-          .prepare<{ holdingId: string; memberId?: string | null }>(
-            `SELECT h.id as holdingId, h.member_id as memberId FROM holdings h JOIN assets a ON h.asset_id = a.id WHERE h.user_id = ?;`
+          .prepare<{
+            holdingId: string;
+            memberId?: string | null;
+            assetClassId?: string | null;
+            folioNumber?: string | null;
+            dematAccountId?: string | null;
+          }>(
+            `SELECT h.id as holdingId, h.member_id as memberId, a.asset_class_id as assetClassId, h.folio_number as folioNumber, h.demat_account_id as dematAccountId FROM holdings h JOIN assets a ON h.asset_id = a.id WHERE h.user_id = ?;`
           )
           .all(params.userId);
 
@@ -71,7 +77,12 @@ export class SqliteCasImportAdapter implements CasImportRepositoryPort {
           const matchesMember = targetMemberId
             ? h.memberId === targetMemberId || !h.memberId
             : !h.memberId;
-          if (matchesMember) {
+          const isStockOrMutualFund =
+            h.assetClassId === 'equity' ||
+            h.assetClassId === 'mutual_fund' ||
+            Boolean(h.folioNumber) ||
+            Boolean(h.dematAccountId);
+          if (matchesMember && isStockOrMutualFund) {
             this.db
               .prepare('DELETE FROM holding_owners WHERE holding_id = ?;')
               .run(h.holdingId);
