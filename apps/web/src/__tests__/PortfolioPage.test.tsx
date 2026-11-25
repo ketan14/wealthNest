@@ -3,6 +3,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PortfolioPage } from '../pages/PortfolioPage';
+import { PortfolioOverviewCards } from '../components/portfolio/PortfolioOverviewCards';
+import { computePortfolioSummary } from '../components/portfolio/portfolio-calculations';
 import { AuthProvider } from '../lib/supabase/auth-context';
 
 describe('PortfolioPage Component', () => {
@@ -229,5 +231,74 @@ describe('PortfolioPage Component', () => {
     const sortSelect = screen.getByLabelText('Sort holdings');
     fireEvent.change(sortSelect, { target: { value: 'name_asc' } });
     expect((sortSelect as HTMLSelectElement).value).toBe('name_asc');
+  });
+
+  it('Phase 6 edge cases: handles zero/empty portfolio, negative returns, unverified cost basis, and crore valuations', () => {
+    // 1. Empty portfolio (zero values) -> neutral 0.00%, no fake contributors
+    const emptySummary = computePortfolioSummary([]);
+    const { unmount } = render(
+      <PortfolioOverviewCards
+        summary={emptySummary}
+        positionsCount={0}
+        selectedClassFilter={null}
+        onToggleClassFilter={() => {}}
+        members={[]}
+        activeHoldings={[]}
+      />
+    );
+    expect(screen.getByText('Overall: 0.00%')).toBeInTheDocument();
+    expect(screen.getByText('No holdings to display asset allocation.')).toBeInTheDocument();
+    expect(screen.getByText('No entity holdings yet')).toBeInTheDocument();
+    unmount();
+
+    // 2. Negative return & large Crore value & unverified CAS holding
+    const edgeHoldings = [
+      {
+        holdingId: 'h-crore-loss',
+        assetId: 'a-crore',
+        name: 'Large Cap Equity Basket',
+        ticker: 'LCEB',
+        assetClassId: 'equity',
+        assetClassName: 'Equities & Stocks',
+        assetClassColor: '#3b82f6',
+        quantity: 1000,
+        unitCostCents: 1500000, // ₹15,000/unit -> ₹1.50Cr cost
+        currentValueCents: 1274582000, // ₹1,27,45,820 (₹1.27Cr) -> negative return
+        currency: 'INR',
+        costBasisVerified: true,
+        updatedAt: '2026-11-20T00:00:00Z',
+        memberId: 'mem-self',
+      },
+      {
+        holdingId: 'h-unverified',
+        assetId: 'a-unv',
+        name: 'Unverified CAS Mutual Fund',
+        assetClassId: 'mutual_fund',
+        assetClassName: 'Mutual Funds',
+        assetClassColor: '#06b6d4',
+        quantity: 500,
+        unitCostCents: 0,
+        currentValueCents: 2200000, // ₹22,000 (₹22.00K)
+        currency: 'INR',
+        costBasisVerified: false,
+        updatedAt: '2026-11-20T00:00:00Z',
+        memberId: 'mem-self',
+      },
+    ];
+    const lossSummary = computePortfolioSummary(edgeHoldings);
+    render(
+      <PortfolioOverviewCards
+        summary={lossSummary}
+        positionsCount={2}
+        selectedClassFilter={null}
+        onToggleClassFilter={() => {}}
+        members={[{ id: 'mem-self', name: 'Ketan Vaghela', relationship: 'self', colorHex: '#3b82f6' }]}
+        activeHoldings={edgeHoldings}
+      />
+    );
+
+    expect(screen.getAllByText('₹1.28Cr').length).toBeGreaterThan(0);
+    expect(screen.getByText('1 unverified cost')).toBeInTheDocument();
+    expect(screen.getByText(/Overall: -14\.88%/i)).toBeInTheDocument();
   });
 });

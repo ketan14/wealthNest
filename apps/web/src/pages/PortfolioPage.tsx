@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PortfolioSummary, filterRecordsByPrivacy } from '@wealthnest/domain';
+import { PortfolioSummary, filterRecordsByPrivacy, allocateBigIntByShares } from '@wealthnest/domain';
 import {
   GetPortfolioSummaryUseCase,
   AddHoldingUseCase,
@@ -49,7 +49,14 @@ export function PortfolioPage() {
   const { activeHouseholdId, canEditFinancials } = useHousehold();
   const { mode } = useRepositories();
   const queryClient = useQueryClient();
-  const { selectedMemberId, selectedAccountId, members, accounts, privacyRules } = useFamily();
+  const {
+    selectedMemberId,
+    selectedAccountId,
+    members,
+    accounts,
+    privacyRules,
+    refreshFamilyData,
+  } = useFamily();
   const { isSupportModeActive, supportData } = useSupportSession();
   const { currencySymbol, preferences } = usePreferences();
   const locale = preferences.numberFormat || 'en-IN';
@@ -168,23 +175,71 @@ export function PortfolioPage() {
     return shouldAllowDemoData(isDemoMode) ? localDemoHoldings : [];
   }, [isSupportModeActive, supportData, hasLiveBackend, dbPortfolioData, localDemoHoldings, isDemoMode]);
 
-  // Active holdings filtered by Family Member / Legal Entity, Demat Account & Privacy Rules
+  // Active holdings filtered by Family Member / Legal Entity, Demat Account & Privacy Rules.
+  // Scales joint holdings proportionally by ownershipShare when viewing a specific member so joint assets are never double-counted.
   const activeHoldings: HoldingDetailDto[] = useMemo(() => {
-    const memberAccountFiltered = allHoldings.filter((h) => {
-      if (selectedMemberId !== 'all') {
-        const belongs =
-          h.memberId === selectedMemberId ||
-          h.owners?.some((o) => o.familyMemberId === selectedMemberId) ||
-          (!h.memberId && !h.owners?.length && selectedMemberId === 'mem-self');
-        if (!belongs) return false;
+    const primaryMemberId = members.find((m) => m.isPrimary)?.id || members[0]?.id || 'mem-self';
+    const knownMemberIds = new Set(members.map((m) => m.id));
+    const memberAccountFiltered: HoldingDetailDto[] = [];
+
+    for (const h of allHoldings) {
+      if (selectedAccountId !== 'all' && h.accountId !== selectedAccountId) {
+        continue;
       }
-      if (selectedAccountId !== 'all') {
-        if (h.accountId !== selectedAccountId) return false;
+
+      if (selectedMemberId === 'all') {
+        memberAccountFiltered.push(h);
+        continue;
       }
-      return true;
-    });
+
+      if (h.owners && h.owners.length > 0) {
+        const ownerEntry = h.owners.find((o) => {
+          const resolvedId = knownMemberIds.has(o.familyMemberId)
+            ? o.familyMemberId
+            : primaryMemberId;
+          return resolvedId === selectedMemberId || o.familyMemberId === selectedMemberId;
+        });
+        if (!ownerEntry || ownerEntry.ownershipShare <= 0) continue;
+
+        if (h.owners.length > 1 && ownerEntry.ownershipShare < 100) {
+          const splits = allocateBigIntByShares(
+            BigInt(Math.round(h.currentValueCents || 0)),
+            h.owners.map((o) => ({
+              familyMemberId: knownMemberIds.has(o.familyMemberId)
+                ? o.familyMemberId
+                : primaryMemberId,
+              sharePercentage: o.ownershipShare,
+              isPrimary: Boolean(o.isPrimaryOwner),
+            }))
+          );
+          const allocatedValCents = Number(
+            splits.find((s) => s.familyMemberId === selectedMemberId)?.allocatedCents ??
+              BigInt(Math.round((h.currentValueCents * ownerEntry.ownershipShare) / 100))
+          );
+          memberAccountFiltered.push({
+            ...h,
+            quantity: Number(((h.quantity * ownerEntry.ownershipShare) / 100).toFixed(6)),
+            currentValueCents: allocatedValCents,
+          });
+        } else {
+          memberAccountFiltered.push(h);
+        }
+        continue;
+      }
+
+      const resolvedOwnerId =
+        h.memberId && knownMemberIds.has(h.memberId) ? h.memberId : primaryMemberId;
+      const belongs =
+        h.memberId === selectedMemberId ||
+        resolvedOwnerId === selectedMemberId ||
+        (!h.memberId && selectedMemberId === 'mem-self');
+      if (belongs) {
+        memberAccountFiltered.push(h);
+      }
+    }
+
     return filterRecordsByPrivacy(memberAccountFiltered, selectedMemberId, privacyRules);
-  }, [allHoldings, selectedMemberId, selectedAccountId, privacyRules]);
+  }, [allHoldings, members, selectedMemberId, selectedAccountId, privacyRules]);
 
   // Real-time market quote synchronization and live stock polling
   const handleQuotesUpdated = useCallback((quoteList: readonly MarketQuoteDto[]) => {
@@ -315,6 +370,8 @@ export function PortfolioPage() {
         queryClient.invalidateQueries({ queryKey: ['portfolio-summary'] });
         queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] });
         queryClient.invalidateQueries({ queryKey: ['holdings'] });
+        queryClient.invalidateQueries({ queryKey: ['net-worth-summary'] });
+        void refreshFamilyData();
       }
     },
   });
@@ -405,6 +462,8 @@ export function PortfolioPage() {
         queryClient.invalidateQueries({ queryKey: ['portfolio-summary'] });
         queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] });
         queryClient.invalidateQueries({ queryKey: ['holdings'] });
+        queryClient.invalidateQueries({ queryKey: ['net-worth-summary'] });
+        void refreshFamilyData();
       }
     },
   });
@@ -518,7 +577,10 @@ export function PortfolioPage() {
 
       {/* 4. Family Ownership & PAN Entities Section (Compact / Expandable at bottom) */}
       <div className="pt-2 border-t border-border/50">
-        <FamilyDistributionWidget />
+        <FamilyDistributionWidget
+          holdings={allHoldings}
+          onManageEntities={() => setIsManageFamilyOpen(true)}
+        />
       </div>
 
       <PortfolioModals

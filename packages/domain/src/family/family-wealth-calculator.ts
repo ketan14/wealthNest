@@ -41,12 +41,24 @@ export function calculateFamilyPortfolioSummary(
   // 2. Identify default primary member (or create a fallback if empty)
   const primaryMember = members.find((m) => m.isPrimary) || members[0];
   const primaryMemberId = primaryMember?.id || 'default-primary-member';
+  const knownMemberIds = new Set(members.map((m) => m.id));
 
   // Map account -> owning member for fallback attribution
   const accountOwnerMap = new Map<string, string>();
   for (const acc of accounts) {
     accountOwnerMap.set(acc.id, acc.memberId);
   }
+
+  const resolveKnownMemberId = (candidateId?: string, accountId?: string): string => {
+    if (candidateId && knownMemberIds.has(candidateId)) {
+      return candidateId;
+    }
+    const accountMemberId = accountId ? accountOwnerMap.get(accountId) : undefined;
+    if (accountMemberId && knownMemberIds.has(accountMemberId)) {
+      return accountMemberId;
+    }
+    return primaryMemberId;
+  };
 
   // Track exact BigInt paise wealth, holding count, and unrealized LTCG/STCG per member
   // using proportional largest-remainder splitting for joint holdings.
@@ -69,16 +81,13 @@ export function calculateFamilyPortfolioSummary(
     const resolvedShares =
       h.owners && h.owners.length > 0
         ? h.owners.map((o) => ({
-            familyMemberId: o.familyMemberId,
+            familyMemberId: resolveKnownMemberId(o.familyMemberId, h.accountId),
             sharePercentage: o.ownershipShare,
             isPrimary: Boolean(o.isPrimaryOwner),
           }))
         : [
             {
-              familyMemberId:
-                h.memberId ||
-                (h.accountId ? accountOwnerMap.get(h.accountId) : undefined) ||
-                primaryMemberId,
+              familyMemberId: resolveKnownMemberId(h.memberId, h.accountId),
               sharePercentage: 100,
               isPrimary: true,
             },

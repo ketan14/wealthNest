@@ -42,9 +42,15 @@ export function MutualFundsHoldingsTable({
         <thead>
           <tr className="border-y border-border/80 bg-cyan-500/5 text-muted-foreground">
             <th className="py-3 px-4 font-semibold uppercase tracking-wider">Scheme / Fund Name</th>
-            <th className="py-3 px-4 font-semibold uppercase tracking-wider">AMC</th>
-            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Folio No.</th>
-            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Plan</th>
+            <th className="py-3 px-4 font-semibold uppercase tracking-wider hidden lg:table-cell">
+              AMC
+            </th>
+            <th className="py-3 px-4 font-semibold uppercase tracking-wider hidden xl:table-cell">
+              Folio No.
+            </th>
+            <th className="py-3 px-4 font-semibold uppercase tracking-wider hidden lg:table-cell">
+              Plan
+            </th>
             <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Units</th>
             <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">NAV</th>
             <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
@@ -90,13 +96,13 @@ export function MutualFundsHoldingsTable({
                       accounts={accounts}
                     />
                   </td>
-                  <td className="py-3.5 px-4 font-sans text-muted-foreground text-[11px]">
+                  <td className="py-3.5 px-4 font-sans text-muted-foreground text-[11px] hidden lg:table-cell">
                     {h.amcName || '—'}
                   </td>
-                  <td className="py-3.5 px-4 font-mono text-[11px] text-cyan-400 font-semibold">
+                  <td className="py-3.5 px-4 font-mono text-[11px] text-cyan-400 font-semibold hidden xl:table-cell">
                     {h.folioNumber || '—'}
                   </td>
-                  <td className="py-3.5 px-4 font-sans text-muted-foreground text-[11px]">
+                  <td className="py-3.5 px-4 font-sans text-muted-foreground text-[11px] hidden lg:table-cell">
                     <span className="px-1.5 py-0.5 rounded bg-secondary/80 border border-border">
                       {h.schemePlan || 'Direct'}
                     </span>
@@ -191,9 +197,12 @@ export function MutualFundsHoldingsTable({
         {mutualFundHoldings.length > 0 && (
           <tfoot>
             <tr className="border-t-2 border-border/80 bg-cyan-500/5 font-mono text-xs font-semibold">
-              <td colSpan={4} className="py-3 px-4 text-foreground font-sans">
+              <td className="py-3 px-4 text-foreground font-sans">
                 Subtotal ({mutualFundHoldings.length} Mutual Fund Folios)
               </td>
+              <td className="hidden lg:table-cell" />
+              <td className="hidden xl:table-cell" />
+              <td className="hidden lg:table-cell" />
               <td className="py-3 px-4 text-right text-foreground font-bold">
                 {mfSubtotals.totalUnits.toLocaleString('en-IN', {
                   maximumFractionDigits: 3,

@@ -173,4 +173,40 @@ describe('Family Portfolio Domain Calculator', () => {
     expect(primaryDist?.totalWealthPaise).toBe(50_000_000n);
     expect(primaryDist?.holdingCount).toBe(1);
   });
+
+  it('splits jointly owned holdings across members without double-counting and resolves unknown memberId fallbacks', () => {
+    const holdings = [
+      {
+        id: 'h-joint',
+        currentValuePaise: 100_000_000n,
+        costBasisPaise: 80_000_000n,
+        owners: [
+          { familyMemberId: 'mem-1', ownershipShare: 60, isPrimaryOwner: true },
+          { familyMemberId: 'mem-2', ownershipShare: 40, isPrimaryOwner: false },
+        ],
+      },
+      {
+        id: 'h-fallback-self',
+        memberId: 'mem-self', // fallback string not matching UUID 'mem-1'
+        currentValuePaise: 20_000_000n,
+        costBasisPaise: 15_000_000n,
+      },
+    ];
+
+    const summary = calculateFamilyPortfolioSummary(mockMembers, mockAccounts, holdings);
+    expect(summary.totalFamilyWealthPaise).toBe(120_000_000n);
+
+    const m1 = summary.memberDistributions.find((m) => m.memberId === 'mem-1');
+    const m2 = summary.memberDistributions.find((m) => m.memberId === 'mem-2');
+    const m3 = summary.memberDistributions.find((m) => m.memberId === 'mem-3');
+
+    expect(m1?.totalWealthPaise).toBe(80_000_000n); // 60% of 100M + 20M fallback
+    expect(m2?.totalWealthPaise).toBe(40_000_000n); // 40% of 100M
+    expect(m3?.totalWealthPaise).toBe(0n);
+
+    // Sum of member wealth equals 100% of totalFamilyWealthPaise (zero double-counting)
+    const sumMembers =
+      (m1?.totalWealthPaise ?? 0n) + (m2?.totalWealthPaise ?? 0n) + (m3?.totalWealthPaise ?? 0n);
+    expect(sumMembers).toBe(summary.totalFamilyWealthPaise);
+  });
 });

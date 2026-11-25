@@ -92,7 +92,13 @@ export function PortfolioOverviewCards({
 
   const totalValueRupees = summary.totalValue.toDecimal();
   const totalCostBasisRupees = summary.totalCostBasis.toDecimal();
-  const unrealizedGainLossRupees = summary.unrealizedGainLoss.toDecimal();
+  const rawGainLossMagnitude = summary.unrealizedGainLoss.toDecimal();
+  const unrealizedGainLossRupees =
+    rawGainLossMagnitude === 0
+      ? 0
+      : summary.isProfitable
+        ? rawGainLossMagnitude
+        : -rawGainLossMagnitude;
   const returnPercentage = summary.returnPercentage;
 
   const overallTone = getPolarityTone(unrealizedGainLossRupees);

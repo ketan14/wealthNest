@@ -45,8 +45,12 @@ export function EquitiesHoldingsTable({
           <tr className="border-y border-border/80 bg-blue-500/5 text-muted-foreground">
             <th className="py-3 px-4 font-semibold uppercase tracking-wider">Security</th>
             <th className="py-3 px-4 font-semibold uppercase tracking-wider">Ticker</th>
-            <th className="py-3 px-4 font-semibold uppercase tracking-wider">ISIN</th>
-            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Demat Account</th>
+            <th className="py-3 px-4 font-semibold uppercase tracking-wider hidden lg:table-cell">
+              ISIN
+            </th>
+            <th className="py-3 px-4 font-semibold uppercase tracking-wider hidden xl:table-cell">
+              Demat Account
+            </th>
             <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">
               Quantity
             </th>
@@ -99,10 +103,10 @@ export function EquitiesHoldingsTable({
                       '—'
                     )}
                   </td>
-                  <td className="py-3.5 px-4 font-mono text-[11px] text-muted-foreground">
+                  <td className="py-3.5 px-4 font-mono text-[11px] text-muted-foreground hidden lg:table-cell">
                     {h.isin || '—'}
                   </td>
-                  <td className="py-3.5 px-4 font-mono text-[11px] text-muted-foreground">
+                  <td className="py-3.5 px-4 font-mono text-[11px] text-muted-foreground hidden xl:table-cell">
                     {h.dematAccountId || 'Demat Main'}
                   </td>
                   <td className="py-3.5 px-4 text-right text-foreground font-semibold">
@@ -179,9 +183,11 @@ export function EquitiesHoldingsTable({
         {equitiesHoldings.length > 0 && (
           <tfoot>
             <tr className="border-t-2 border-border/80 bg-blue-500/5 font-mono text-xs font-semibold">
-              <td colSpan={4} className="py-3 px-4 text-foreground font-sans">
-                Subtotal ({equitiesHoldings.length} Equities & ETFs)
+              <td colSpan={2} className="py-3 px-4 text-foreground font-sans">
+                Subtotal ({equitiesHoldings.length} Equities &amp; ETFs)
               </td>
+              <td className="hidden lg:table-cell" />
+              <td className="hidden xl:table-cell" />
               <td className="py-3 px-4 text-right text-foreground font-bold">
                 {equitiesSubtotals.totalShares.toLocaleString('en-IN', {
                   maximumFractionDigits: 2,
