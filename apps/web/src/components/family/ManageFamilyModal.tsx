@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useFamily } from '@/lib/family/family-context';
 import { useHousehold } from '@/lib/supabase/household-context';
 import { FamilyMemberDto } from '@wealthnest/application';
-import { FamilyEntityType } from '@wealthnest/domain';
+import { FamilyEntityType, evaluatePlanQuota } from '@wealthnest/domain';
 import { X, Users, Shield, Briefcase, Plus, Trash2, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ResponsiveModalShell } from '@/components/ui/ResponsiveModalShell';
+import { PlanQuotaBadge } from '@/components/plans/PlanQuotaBadge';
+import { PlanLimitModal } from '@/components/plans/PlanLimitModal';
 import { ManageFamilyAccountsTab } from './ManageFamilyAccountsTab';
 
 interface ManageFamilyModalProps {
@@ -25,10 +27,11 @@ const COLOR_PRESETS = [
 
 export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
   const { members, accounts, createMember, deleteMember } = useFamily();
-  const { canEditFinancials, activeHousehold } = useHousehold();
+  const { canEditFinancials, activeHousehold, planTier, customLimits } = useHousehold();
 
   const [activeTab, setActiveTab] = useState<'members' | 'accounts'>('members');
   const [isAddingMember, setIsAddingMember] = useState(false);
+  const [isPlanLimitOpen, setIsPlanLimitOpen] = useState(false);
 
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberRel, setNewMemberRel] = useState<FamilyMemberDto['relationship']>('spouse');
@@ -39,6 +42,16 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
   const [newMemberPrimary, setNewMemberPrimary] = useState(false);
 
   if (!isOpen) return null;
+
+  const memberQuota = evaluatePlanQuota(planTier, 'familyMembers', members.length, 1, customLimits);
+
+  const handleOpenAddMember = () => {
+    if (!memberQuota.allowed) {
+      setIsPlanLimitOpen(true);
+      return;
+    }
+    setIsAddingMember(true);
+  };
 
   const handleRelationshipChange = (rel: FamilyMemberDto['relationship']) => {
     setNewMemberRel(rel);
@@ -73,6 +86,7 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
   };
 
   return (
+    <>
     <ResponsiveModalShell
       variant="sheet"
       role="dialog"
@@ -86,8 +100,13 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
               <Users className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h2 id="manage-family-title" className="text-base font-semibold text-white">
-                Family Entities &amp; Demat Accounts
+              <h2 id="manage-family-title" className="text-base font-semibold text-white flex flex-wrap items-center gap-2">
+                <span>Family Entities &amp; Demat Accounts</span>
+                <PlanQuotaBadge
+                  resource={activeTab === 'members' ? 'familyMembers' : 'accounts'}
+                  currentCount={activeTab === 'members' ? members.length : accounts.length}
+                  onLimitClick={() => setIsPlanLimitOpen(true)}
+                />
               </h2>
               <p className="text-xs text-slate-400 truncate">
                 {activeHousehold?.name || 'Household'} — organize family members, HUF entities, and
@@ -365,7 +384,7 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setIsAddingMember(true)}
+                onClick={handleOpenAddMember}
                 className="w-full text-xs border-dashed border-slate-700 hover:border-slate-600 text-slate-300 py-2.5"
               >
                 <Plus className="w-4 h-4 mr-1.5" />
@@ -377,5 +396,13 @@ export function ManageFamilyModal({ isOpen, onClose }: ManageFamilyModalProps) {
         <ManageFamilyAccountsTab />
       )}
     </ResponsiveModalShell>
+
+    <PlanLimitModal
+      isOpen={isPlanLimitOpen}
+      onClose={() => setIsPlanLimitOpen(false)}
+      resource={activeTab === 'members' ? 'familyMembers' : 'accounts'}
+      currentCount={activeTab === 'members' ? members.length : accounts.length}
+    />
+    </>
   );
 }

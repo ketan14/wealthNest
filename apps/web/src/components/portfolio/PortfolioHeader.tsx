@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/Button';
 import { SyncingIndicator } from '@/components/ui/SyncingIndicator';
 import { EntitySelectorChips } from '@/components/family/EntitySelectorChips';
+import { PlanQuotaBadge } from '@/components/plans/PlanQuotaBadge';
 import { useFamily } from '@/lib/family/family-context';
 import { Plus, RefreshCw, FileSpreadsheet } from 'lucide-react';
 
@@ -15,6 +16,8 @@ interface PortfolioHeaderProps {
   readonly onOpenAddModal: () => void;
   readonly onOpenManageFamily: () => void;
   readonly navRefreshMessage: string | null;
+  readonly nonRealEstateCount?: number;
+  readonly onOpenPlanLimit?: () => void;
 }
 
 /**
@@ -34,6 +37,8 @@ export function PortfolioHeader({
   onOpenAddModal,
   onOpenManageFamily,
   navRefreshMessage,
+  nonRealEstateCount = 0,
+  onOpenPlanLimit,
 }: PortfolioHeaderProps) {
   const { members, selectedMemberId, setSelectedMemberId } = useFamily();
 
@@ -42,11 +47,16 @@ export function PortfolioHeader({
       {/* 1. Heading & Compact Single-Row Actions */}
       <div className="flex items-center justify-between gap-2 sm:gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
             <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-foreground truncate">
               Portfolio
             </h1>
             <SyncingIndicator isSyncing={isSyncing} />
+            <PlanQuotaBadge
+              resource="holdings"
+              currentCount={nonRealEstateCount}
+              onLimitClick={onOpenPlanLimit}
+            />
           </div>
           <p className="hidden sm:block text-xs sm:text-sm text-muted-foreground mt-0.5">
             Track investments and asset allocation across your family

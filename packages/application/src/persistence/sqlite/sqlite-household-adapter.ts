@@ -11,10 +11,14 @@ import {
   FamilyMemberAccessGrant,
   RestrictedRecordGrant,
   RestrictedRecordTargetType,
+  PlanTier,
+  PlanUsageCounts,
+  normalizePlanTier,
 } from '@wealthnest/domain';
 import { SqliteDatabase } from './sqlite-connection.js';
 import {
   HouseholdRepositoryPort,
+  HouseholdPlanUsageSummary,
   CreateHouseholdInvitationParams,
   CreatedHouseholdInvitationResult,
   AcceptHouseholdInvitationResult,
@@ -137,12 +141,13 @@ export class SqliteHouseholdAdapter implements HouseholdRepositoryPort {
           id: string;
           name: string;
           created_by?: string;
+          plan_tier?: string;
           role: HouseholdRole;
           status: HouseholdMembershipStatus;
           created_at: string;
           updated_at: string;
         }>(
-          `SELECT h.id, h.name, h.created_by, hm.household_role as role, hm.status, h.created_at, h.updated_at
+          `SELECT h.id, h.name, h.created_by, h.plan_tier, hm.household_role as role, hm.status, h.created_at, h.updated_at
            FROM households h
            JOIN household_members hm ON hm.household_id = h.id
            WHERE hm.user_id = ? AND hm.status = 'active'
@@ -161,6 +166,7 @@ export class SqliteHouseholdAdapter implements HouseholdRepositoryPort {
           id: r.id,
           name: r.name,
           createdBy: r.created_by || undefined,
+          planTier: (r.plan_tier ? normalizePlanTier(r.plan_tier) : 'family') as PlanTier,
           role: r.role,
           status: r.status,
           isDefault: index === 0,
@@ -950,6 +956,64 @@ export class SqliteHouseholdAdapter implements HouseholdRepositoryPort {
           };
         })
       );
+    } catch (errEx) {
+      return err(errEx instanceof Error ? errEx : new Error(String(errEx)));
+    }
+  }
+
+  async getPlanUsage(householdId: string): Promise<Result<HouseholdPlanUsageSummary>> {
+    try {
+      const holdingsRow = this.db
+        .prepare<{ cnt: number }>(
+          `SELECT COUNT(*) as cnt FROM holdings h JOIN assets a ON a.id = h.asset_id
+           WHERE h.household_id = ? AND COALESCE(a.asset_class_id, '') <> 'real_estate';`
+        )
+        .get(householdId);
+      const realEstateRow = this.db
+        .prepare<{ cnt: number }>(
+          `SELECT COUNT(*) as cnt FROM holdings h JOIN assets a ON a.id = h.asset_id
+           WHERE h.household_id = ? AND a.asset_class_id = 'real_estate';`
+        )
+        .get(householdId);
+      const loansRow = this.db
+        .prepare<{ cnt: number }>(
+          `SELECT COUNT(*) as cnt FROM liabilities WHERE household_id = ? AND COALESCE(status, 'active') <> 'closed';`
+        )
+        .get(householdId);
+      const goalsRow = this.db
+        .prepare<{ cnt: number }>(`SELECT COUNT(*) as cnt FROM financial_goals WHERE household_id = ?;`)
+        .get(householdId);
+      const membersRow = this.db
+        .prepare<{ cnt: number }>(`SELECT COUNT(*) as cnt FROM family_members WHERE household_id = ?;`)
+        .get(householdId);
+      const accountsRow = this.db
+        .prepare<{ cnt: number }>(`SELECT COUNT(*) as cnt FROM portfolio_accounts WHERE household_id = ?;`)
+        .get(householdId);
+      const docsRow = this.db
+        .prepare<{ cnt: number }>(`SELECT COUNT(*) as cnt FROM family_documents WHERE household_id = ?;`)
+        .get(householdId);
+
+      const hhRow = this.db
+        .prepare<{ plan_tier?: string }>(`SELECT plan_tier FROM households WHERE id = ?;`)
+        .get(householdId);
+
+      const usage: PlanUsageCounts = {
+        holdings: holdingsRow?.cnt ?? 0,
+        realEstate: realEstateRow?.cnt ?? 0,
+        activeLoans: loansRow?.cnt ?? 0,
+        goals: goalsRow?.cnt ?? 0,
+        familyMembers: membersRow?.cnt ?? 0,
+        accounts: accountsRow?.cnt ?? 0,
+        documents: docsRow?.cnt ?? 0,
+      };
+
+      return ok({
+        usage,
+        planTier: (hhRow?.plan_tier ? normalizePlanTier(hhRow.plan_tier) : 'family') as PlanTier,
+        customLimits: null,
+        planExpiresAt: null,
+        pendingRequest: null,
+      });
     } catch (errEx) {
       return err(errEx instanceof Error ? errEx : new Error(String(errEx)));
     }

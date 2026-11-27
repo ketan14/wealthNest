@@ -81,6 +81,10 @@ export function AdminAuditLogsPage() {
               <option value="PASSWORD_RESET_REQUESTED">PASSWORD_RESET_REQUESTED</option>
               <option value="ROLE_GRANTED">ROLE_GRANTED</option>
               <option value="ROLE_REVOKED">ROLE_REVOKED</option>
+              <option value="PLAN_TIER_CHANGED">PLAN_TIER_CHANGED</option>
+              <option value="PLAN_UPGRADE_APPROVED">PLAN_UPGRADE_APPROVED</option>
+              <option value="PLAN_UPGRADE_REJECTED">PLAN_UPGRADE_REJECTED</option>
+              <option value="PLAN_CUSTOM_LIMITS_UPDATED">PLAN_CUSTOM_LIMITS_UPDATED</option>
               <option value="USER_INVITED">USER_INVITED</option>
               <option value="SYSTEM_BOOTSTRAP">SYSTEM_BOOTSTRAP</option>
             </select>

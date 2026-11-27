@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '../lib/supabase/auth-context';
@@ -154,6 +154,10 @@ describe('Phase 7: Complete Admin Portal, User Management & Security Verificatio
       expect(screen.getByText(/Manage Users & Invitations/i)).toBeInTheDocument();
       expect(screen.getByText(/Platform Roles & RBAC/i)).toBeInTheDocument();
       expect(screen.getByText(/Immutable Audit Explorer/i)).toBeInTheDocument();
+
+      // Phase 2: Plan Tier Distribution & Pending Upgrade Queue
+      expect(screen.getByText(/Plan Tier Distribution & Upgrade Queue/i)).toBeInTheDocument();
+      expect(screen.getByText(/Pending Upgrade Requests:/i)).toBeInTheDocument();
     });
   });
 
@@ -411,6 +415,145 @@ describe('Phase 7: Complete Admin Portal, User Management & Security Verificatio
       expect(pwdInput.value).toMatch(/[a-z]/);
       expect(pwdInput.value).toMatch(/[0-9]/);
       expect(pwdInput.value).toMatch(/[^A-Za-z0-9]/);
+    });
+  });
+
+  describe('Plan Tier & Entitlement Management', () => {
+    it('allows super_admin to change a user plan tier from AdminUsersPage', async () => {
+      renderWithProviders(<AdminUsersPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Shamalbhai Vaghela HUF')).toBeInTheDocument();
+      });
+
+      const changePlanBtn = screen.getByRole('button', {
+        name: /Change Plan for Shamalbhai Vaghela HUF/i,
+      });
+      fireEvent.click(changePlanBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText('Change User Plan Tier')).toBeInTheDocument();
+      });
+
+      const dialog = screen.getByRole('dialog');
+      const proOptionBtn = within(dialog).getByText('Pro Investor').closest('button');
+      expect(proOptionBtn).not.toBeNull();
+      fireEvent.click(proOptionBtn!);
+
+      fireEvent.click(within(dialog).getByRole('button', { name: /Save Plan Tier/i }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Updated user "Shamalbhai Vaghela HUF" to Pro Investor/i)
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('displays Subscription Plan card and lets admin change plan on AdminUserDetailPage', async () => {
+      renderWithProviders(
+        <Routes>
+          <Route path="/admin/users/:userId" element={<AdminUserDetailPage />} />
+        </Routes>,
+        '/admin/users/usr-parul-vaghela-02'
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/User: Parul Vaghela/i)).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/Subscription Plan & Quota Entitlements/i)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /Change User Plan/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Change User Plan Tier')).toBeInTheDocument();
+      });
+
+      const familyOptionBtn = screen.getByText('Family Office').closest('button');
+      fireEvent.click(familyOptionBtn!);
+      fireEvent.click(screen.getByRole('button', { name: /Save Plan Tier/i }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Updated user "Parul Vaghela" to Family Office/i)
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('displays household plan tier and allows admin to change it from AdminHouseholdsPage', async () => {
+      renderWithProviders(<AdminHouseholdsPage />);
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Vaghela Household').length).toBeGreaterThan(0);
+      });
+
+      const changePlanBtns = screen.getAllByRole('button', { name: /Change Plan/i });
+      expect(changePlanBtns.length).toBeGreaterThan(0);
+      fireEvent.click(changePlanBtns[0]!);
+
+      await waitFor(() => {
+        expect(screen.getByText('Change Household Plan Tier')).toBeInTheDocument();
+      });
+
+      const proOptionBtn = screen.getByText('Pro Investor').closest('button');
+      fireEvent.click(proOptionBtn!);
+      fireEvent.click(screen.getByRole('button', { name: /Save Plan Tier/i }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Updated household "Vaghela Household" to Pro Investor/i)
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('lets super_admin set custom quota overrides & trial expiry in AdminUserPlanModal', async () => {
+      renderWithProviders(<AdminUsersPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Ramilaben Vaghela')).toBeInTheDocument();
+      });
+
+      fireEvent.click(
+        screen.getByRole('button', { name: /Change Plan for Ramilaben Vaghela/i })
+      );
+
+      const dialog = await screen.findByRole('dialog');
+      fireEvent.click(
+        within(dialog).getByRole('button', {
+          name: /Custom Quota Overrides & Trial Expiry/i,
+        })
+      );
+
+      const holdingsOverride = within(dialog).getByLabelText(
+        /Override Investment Holdings/i
+      ) as HTMLInputElement;
+      fireEvent.change(holdingsOverride, { target: { value: '15' } });
+      fireEvent.click(within(dialog).getByRole('button', { name: /Save Plan Tier/i }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Updated user "Ramilaben Vaghela" to Free Starter/i)
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('lets super_admin review and approve pending Upgrade Requests in AdminUsersPage', async () => {
+      renderWithProviders(<AdminUsersPage />);
+
+      const requestsTab = await screen.findByRole('button', { name: /Upgrade Requests/i });
+      fireEvent.click(requestsTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('Plan Upgrade Request Queue')).toBeInTheDocument();
+        expect(screen.getByText(/Shamalbhai HUF Portfolio/i)).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Approve & Upgrade/i }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Approved upgrade for "Shamalbhai Vaghela HUF" to Pro Investor/i)
+        ).toBeInTheDocument();
+      });
     });
   });
 });

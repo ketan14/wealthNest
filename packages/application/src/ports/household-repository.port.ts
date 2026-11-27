@@ -10,7 +10,19 @@ import {
   FamilyMemberAccessGrant,
   RestrictedRecordGrant,
   RestrictedRecordTargetType,
+  PlanTier,
+  CustomPlanLimits,
+  PlanUsageCounts,
+  PlanUpgradeRequest,
 } from '@wealthnest/domain';
+
+export interface HouseholdPlanUsageSummary {
+  readonly usage: PlanUsageCounts;
+  readonly planTier: PlanTier;
+  readonly customLimits?: CustomPlanLimits | null;
+  readonly planExpiresAt?: string | null;
+  readonly pendingRequest?: PlanUpgradeRequest | null;
+}
 
 export interface CreateHouseholdInvitationParams {
   readonly householdId: string;
@@ -104,4 +116,11 @@ export interface HouseholdRepositoryPort {
     householdId: string,
     limit?: number
   ): Promise<Result<readonly HouseholdAuditLogEntry[]>>;
+
+  getPlanUsage?(householdId: string): Promise<Result<HouseholdPlanUsageSummary>>;
+  submitPlanUpgradeRequest?(
+    householdId: string,
+    requestedPlan: Exclude<PlanTier, 'free'>,
+    userNotes?: string
+  ): Promise<Result<PlanUpgradeRequest>>;
 }

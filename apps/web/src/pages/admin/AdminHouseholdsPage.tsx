@@ -8,17 +8,34 @@ import {
   Lock,
   ChevronLeft,
   ChevronRight,
+  Crown,
+  CheckCircle2,
 } from 'lucide-react';
 import { AdminHeader } from '../../components/admin/AdminHeader';
+import { AdminUserPlanModal, AdminPlanTarget } from '../../components/admin/AdminUserPlanModal';
 import { adminAdapter } from '../../lib/supabase/admin.adapter';
-import { AdminHouseholdSummary } from '@wealthnest/domain';
+import { useAdmin } from '../../lib/admin/admin-context';
+import {
+  AdminHouseholdSummary,
+  PLAN_ENTITLEMENTS,
+  hasCustomLimitOverrides,
+  normalizePlanTier,
+} from '@wealthnest/domain';
 
 export function AdminHouseholdsPage() {
+  const { isSuperAdmin, isSupportAdmin } = useAdmin();
   const [households, setHouseholds] = useState<AdminHouseholdSummary[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [planModalTarget, setPlanModalTarget] = useState<AdminPlanTarget | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
 
   const fetchHouseholds = useCallback(async () => {
     setLoading(true);
@@ -45,6 +62,13 @@ export function AdminHouseholdsPage() {
         title="Multi-User Household Tenants"
         subtitle="Oversight of family collectives, primary owners, and seat membership quotas"
       />
+
+      {toastMessage && (
+        <div className="fixed top-5 right-5 z-50 bg-slate-900 border border-emerald-500/40 text-emerald-300 px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 text-xs backdrop-blur-md animate-fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
       <div className="p-8 space-y-6 max-w-7xl w-full mx-auto">
         {/* Financial Confidentiality Callout */}
@@ -93,47 +117,91 @@ export function AdminHouseholdsPage() {
               No households found matching query.
             </div>
           ) : (
-            households.map((h) => (
-              <div
-                key={h.id}
-                className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-md flex flex-col justify-between hover:border-cyan-500/30 transition-all"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center font-bold">
-                      <Home className="w-5 h-5" />
+            households.map((h) => {
+              const hhPlan = normalizePlanTier(h.planTier);
+              const hhPlanDef = PLAN_ENTITLEMENTS[hhPlan];
+              return (
+                <div
+                  key={h.id}
+                  className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-md flex flex-col justify-between hover:border-cyan-500/30 transition-all"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-4 gap-2">
+                      <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center font-bold shrink-0">
+                        <Home className="w-5 h-5" />
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                        {hasCustomLimitOverrides(h.customLimits) && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                            Custom Limits
+                          </span>
+                        )}
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase border ${
+                            hhPlan === 'family'
+                              ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                              : hhPlan === 'pro'
+                                ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30'
+                                : 'bg-slate-800 text-slate-300 border-slate-700'
+                          }`}
+                        >
+                          <Crown className="w-3 h-3" />
+                          {hhPlanDef.shortLabel}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          <ShieldCheck className="w-3 h-3" />
+                          Active
+                        </span>
+                      </div>
                     </div>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      <ShieldCheck className="w-3 h-3" />
-                      Active Tenant
-                    </span>
+
+                    <h3 className="text-base font-bold text-white tracking-tight">{h.name}</h3>
+                    <div className="text-xs text-slate-400 mt-1">
+                      Primary Owner:{' '}
+                      <span className="text-slate-200 font-medium">{h.createdByName}</span>
+                    </div>
                   </div>
 
-                  <h3 className="text-base font-bold text-white tracking-tight">{h.name}</h3>
-                  <div className="text-xs text-slate-400 mt-1">
-                    Primary Owner:{' '}
-                    <span className="text-slate-200 font-medium">{h.createdByName}</span>
+                  <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400 gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-slate-500" />
+                        <span>{h.memberCount} members</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-500">
+                        <Calendar className="w-3 h-3" />
+                        <span>
+                          {new Date(h.createdAt).toLocaleDateString('en-IN', {
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                    </div>
+
+                    {(isSuperAdmin || isSupportAdmin) && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPlanModalTarget({
+                            mode: 'household',
+                            id: h.id,
+                            name: h.name,
+                            subtitle: `Owner: ${h.createdByName}`,
+                            currentPlan: hhPlan,
+                            currentCustomLimits: h.customLimits ?? null,
+                            currentPlanExpiresAt: h.planExpiresAt ?? null,
+                          })
+                        }
+                        className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 text-[11px] font-medium border border-slate-700 transition-colors shrink-0"
+                      >
+                        Change Plan
+                      </button>
+                    )}
                   </div>
                 </div>
-
-                <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-                  <div className="flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-slate-500" />
-                    <span>{h.memberCount} members</span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-500">
-                    <Calendar className="w-3 h-3" />
-                    <span>
-                      {new Date(h.createdAt).toLocaleDateString('en-IN', {
-                        month: 'short',
-                        year: 'numeric',
-                      })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
@@ -162,6 +230,15 @@ export function AdminHouseholdsPage() {
           </div>
         )}
       </div>
+
+      <AdminUserPlanModal
+        target={planModalTarget}
+        onClose={() => setPlanModalTarget(null)}
+        onSuccess={(message) => {
+          showToast(message);
+          fetchHouseholds();
+        }}
+      />
     </div>
   );
 }

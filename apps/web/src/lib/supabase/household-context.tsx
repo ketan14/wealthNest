@@ -9,11 +9,19 @@ import React, {
 } from 'react';
 import { QueryClientContext } from '@tanstack/react-query';
 import {
+  CustomPlanLimits,
   HouseholdRole,
   HouseholdSummary,
+  PlanDefinition,
+  PlanFeatures,
+  PlanLimits,
+  PlanTier,
   canHouseholdRoleEditFinancials,
   canHouseholdRoleManageAdminsOrTransfer,
   canHouseholdRoleManageMembers,
+  getPlanDefinition,
+  resolveEffectivePlanLimits,
+  resolveEffectivePlanTier,
 } from '@wealthnest/domain';
 import { isOk } from '@wealthnest/shared';
 import { useAuth } from './auth-context';
@@ -31,6 +39,7 @@ export const DEMO_HOUSEHOLD_SUMMARY: HouseholdSummary = {
   status: 'active',
   isDefault: true,
   memberCount: 5,
+  planTier: 'family',
 };
 
 interface HouseholdContextType {
@@ -38,6 +47,12 @@ interface HouseholdContextType {
   activeHousehold: HouseholdSummary | null;
   activeHouseholdId: string | undefined;
   householdRole: HouseholdRole | undefined;
+  planTier: PlanTier;
+  planDefinition: PlanDefinition;
+  planLimits: PlanLimits;
+  planFeatures: PlanFeatures;
+  customLimits: CustomPlanLimits | null;
+  planExpiresAt: string | null;
   isLoading: boolean;
   error: string | null;
   canEditFinancials: boolean;
@@ -49,11 +64,19 @@ interface HouseholdContextType {
   renameHousehold: (householdId: string, name: string) => Promise<boolean>;
 }
 
+const DEFAULT_FAMILY_PLAN_DEFINITION = getPlanDefinition('family');
+
 const HouseholdContext = createContext<HouseholdContextType>({
   households: [DEMO_HOUSEHOLD_SUMMARY],
   activeHousehold: DEMO_HOUSEHOLD_SUMMARY,
   activeHouseholdId: DEMO_HOUSEHOLD_SUMMARY.id,
   householdRole: 'primary_owner',
+  planTier: 'family',
+  planDefinition: DEFAULT_FAMILY_PLAN_DEFINITION,
+  planLimits: DEFAULT_FAMILY_PLAN_DEFINITION.limits,
+  planFeatures: DEFAULT_FAMILY_PLAN_DEFINITION.features,
+  customLimits: null,
+  planExpiresAt: null,
   isLoading: false,
   error: null,
   canEditFinancials: true,
@@ -268,6 +291,15 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   );
 
   const householdRole = activeHousehold?.role;
+  const customLimits = activeHousehold?.customLimits ?? null;
+  const planExpiresAt = activeHousehold?.planExpiresAt ?? null;
+  const planTier = resolveEffectivePlanTier(activeHousehold?.planTier, planExpiresAt);
+  const planDefinition = useMemo(() => getPlanDefinition(planTier), [planTier]);
+  const planLimits = useMemo(
+    () => resolveEffectivePlanLimits(planTier, customLimits),
+    [planTier, customLimits]
+  );
+  const planFeatures = planDefinition.features;
   const canEditFinancials = canHouseholdRoleEditFinancials(householdRole);
   const canManageMembers = canHouseholdRoleManageMembers(householdRole);
   const canManageAdminsOrTransfer = canHouseholdRoleManageAdminsOrTransfer(householdRole);
@@ -278,6 +310,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       activeHousehold,
       activeHouseholdId: activeHousehold?.id,
       householdRole,
+      planTier,
+      planDefinition,
+      planLimits,
+      planFeatures,
+      customLimits,
+      planExpiresAt,
       isLoading,
       error,
       canEditFinancials,
@@ -294,10 +332,16 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       canManageAdminsOrTransfer,
       canManageMembers,
       createHousehold,
+      customLimits,
       error,
       householdRole,
       households,
       isLoading,
+      planDefinition,
+      planExpiresAt,
+      planFeatures,
+      planLimits,
+      planTier,
       refreshHouseholds,
       renameHousehold,
       switchHousehold,

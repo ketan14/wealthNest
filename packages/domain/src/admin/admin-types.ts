@@ -1,3 +1,5 @@
+import type { CustomPlanLimits, PlanTier } from '../plans/plan-entitlements.js';
+
 export type PlatformRole = 'super_admin' | 'support_admin' | 'auditor';
 
 export type UserAccessStatus = 'invited' | 'active' | 'suspended' | 'deactivated';
@@ -10,6 +12,10 @@ export type AdminAuditAction =
   | 'PASSWORD_RESET_REQUESTED'
   | 'ROLE_GRANTED'
   | 'ROLE_REVOKED'
+  | 'PLAN_TIER_CHANGED'
+  | 'PLAN_UPGRADE_APPROVED'
+  | 'PLAN_UPGRADE_REJECTED'
+  | 'PLAN_CUSTOM_LIMITS_UPDATED'
   | 'HOUSEHOLD_CREATED'
   | 'SYSTEM_BOOTSTRAP'
   | 'SECURITY_ALERT';
@@ -22,6 +28,8 @@ export interface AdminUserSummary {
   reasonCode?: string;
   reasonDetails?: string;
   platformRole?: PlatformRole;
+  planTier?: PlanTier;
+  planExpiresAt?: string | null;
   createdAt: string;
   lastSignInAt?: string;
   householdCount: number;
@@ -30,9 +38,12 @@ export interface AdminUserSummary {
 export interface AdminHouseholdMembership {
   id: string;
   name: string;
-  householdRole: 'primary_owner' | 'member' | 'viewer';
+  householdRole: 'primary_owner' | 'admin' | 'member' | 'viewer';
   joinedAt: string;
   totalMembers: number;
+  planTier?: PlanTier;
+  customLimits?: CustomPlanLimits | null;
+  planExpiresAt?: string | null;
 }
 
 export interface AdminAuditLogEntry {
@@ -63,6 +74,9 @@ export interface AdminHouseholdSummary {
   createdByName: string;
   createdAt: string;
   memberCount: number;
+  planTier?: PlanTier;
+  customLimits?: CustomPlanLimits | null;
+  planExpiresAt?: string | null;
 }
 
 export interface AdminDashboardStats {
@@ -72,6 +86,12 @@ export interface AdminDashboardStats {
   invitedUsers: number;
   totalHouseholds: number;
   totalAuditEvents: number;
+  planBreakdown?: {
+    free: number;
+    pro: number;
+    family: number;
+  };
+  pendingUpgradeRequests?: number;
 }
 
 export interface AdminPaginationParams {

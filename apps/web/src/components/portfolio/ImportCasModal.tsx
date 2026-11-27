@@ -6,8 +6,9 @@ import {
   ImportCasItemDto,
   ImportCasTransactionDto,
   CasPreviewDto,
+  HoldingDetailDto,
 } from '@wealthnest/application';
-import { ImportSummaryResult, RecordVisibility } from '@wealthnest/domain';
+import { ImportSummaryResult, RecordVisibility, evaluatePlanQuota } from '@wealthnest/domain';
 import { PdfJsTextExtractorAdapter } from '@/lib/pdf/pdfjs-extractor.adapter';
 import { validateCsvTextBounds, validateFinancialImportFile } from '@/lib/validation/import-file';
 import { useCasImportRepository } from '@/lib/persistence/repository-context';
@@ -31,6 +32,7 @@ import { CasSummaryStep } from '@/components/portfolio/CasSummaryStep';
 interface ImportCasModalProps {
   isOpen: boolean;
   onClose: () => void;
+  existingHoldings?: readonly HoldingDetailDto[];
   onSuccess?: (
     importedItems?: ImportCasItemDto[],
     memberId?: string,
@@ -39,9 +41,14 @@ interface ImportCasModalProps {
   ) => void;
 }
 
-export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalProps) {
+export function ImportCasModal({
+  isOpen,
+  onClose,
+  existingHoldings = [],
+  onSuccess,
+}: ImportCasModalProps) {
   const { user } = useAuth();
-  const { activeHouseholdId, canEditFinancials } = useHousehold();
+  const { activeHouseholdId, canEditFinancials, planTier, customLimits } = useHousehold();
   const queryClient = useQueryClient();
   const { members, accounts, selectedMemberId, selectedAccountId } = useFamily();
   const casImportRepo = useCasImportRepository();
@@ -361,6 +368,30 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
   const selectedCount = selectedEquities.length + selectedMutualFunds.length;
   const selectedTransactionsCount = selectedTransactions.length;
 
+  const casQuota = useMemo(() => {
+    const nonRealEstateHoldings = existingHoldings.filter((h) => h.assetClassId !== 'real_estate');
+    const wipedCount = wipeExistingForMember
+      ? nonRealEstateHoldings.filter((h) => {
+          const belongsToMember =
+            h.memberId === importMemberId ||
+            ((importMemberId === 'mem-self' || !importMemberId) && !h.memberId);
+          const isStockOrMf =
+            h.assetClassId === 'equity' ||
+            h.assetClassId === 'mutual_fund' ||
+            Boolean(h.folioNumber) ||
+            Boolean(h.dematAccountId);
+          return belongsToMember && isStockOrMf;
+        }).length
+      : 0;
+    const baseCount = Math.max(0, nonRealEstateHoldings.length - wipedCount);
+    return evaluatePlanQuota(planTier, 'holdings', baseCount, selectedCount, customLimits);
+  }, [existingHoldings, importMemberId, planTier, selectedCount, wipeExistingForMember, customLimits]);
+
+  const quotaExceeded = !casQuota.isUnlimited && !casQuota.allowed && selectedCount > 0;
+  const quotaMessage = quotaExceeded
+    ? `Your current plan allows up to ${casQuota.limit} investment holdings (${casQuota.remaining ?? 0} slot(s) remaining${wipeExistingForMember ? ' after wipe' : ''}). Deselect ${selectedCount - (casQuota.remaining ?? 0)} holding(s), enable wipe for existing holdings, or upgrade to Pro/Family for unlimited imports.`
+    : null;
+
   if (!isOpen) return null;
 
   return (
@@ -476,6 +507,8 @@ export function ImportCasModal({ isOpen, onClose, onSuccess }: ImportCasModalPro
           isConfirmPending={confirmMutation.isPending}
           wipeExistingForMember={wipeExistingForMember}
           onWipeExistingChange={setWipeExistingForMember}
+          quotaExceeded={quotaExceeded}
+          quotaMessage={quotaMessage}
           onMemberChange={(memberId, firstAccountId) => {
             setImportMemberId(memberId);
             setImportAccountId(firstAccountId);

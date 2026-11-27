@@ -27,6 +27,7 @@ interface ProfileSecurityTabProps {
   readonly onUpdateDisplayName: (value: string) => Promise<void> | void;
   readonly onUpdateLegalName?: (value: string) => Promise<void> | void;
   readonly onSignOut: () => void;
+  readonly onOpenPlanTab?: () => void;
 }
 
 type ActiveEditField = 'displayName' | 'legalName' | null;
@@ -46,9 +47,10 @@ export function ProfileSecurityTab({
   onUpdateDisplayName,
   onUpdateLegalName,
   onSignOut,
+  onOpenPlanTab,
 }: ProfileSecurityTabProps) {
   const { user } = useAuth();
-  const { activeHousehold, householdRole } = useHousehold();
+  const { activeHousehold, householdRole, planDefinition, planLimits } = useHousehold();
   const { showToast } = useToast();
 
   const [editField, setEditField] = useState<ActiveEditField>(null);
@@ -283,14 +285,60 @@ export function ProfileSecurityTab({
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0 space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-bold text-sm shrink-0">
-                {(displayName || 'WN').slice(0, 2).toUpperCase()}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-bold text-sm shrink-0">
+                  {(displayName || 'WN').slice(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-white truncate">{displayName}</div>
+                  <div className="text-[11px] text-indigo-300">Self-Hosted Private Vault</div>
+                </div>
               </div>
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-white truncate">{displayName}</div>
-                <div className="text-[11px] text-indigo-300">Self-Hosted Private Vault</div>
+              <Badge
+                variant="outline"
+                className={
+                  planDefinition.tier === 'family'
+                    ? 'text-[10px] border-amber-500/40 bg-amber-500/15 text-amber-300 shrink-0'
+                    : planDefinition.tier === 'pro'
+                      ? 'text-[10px] border-indigo-500/40 bg-indigo-500/15 text-indigo-300 shrink-0'
+                      : 'text-[10px] border-slate-600 bg-slate-800/80 text-slate-300 shrink-0'
+                }
+              >
+                {planDefinition.name}
+              </Badge>
+            </div>
+
+            <div className="rounded-lg bg-slate-950/70 border border-slate-800/80 p-2.5 text-[11px] text-slate-300 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Holdings Quota</span>
+                <span className="font-mono text-white">
+                  {planLimits.holdings ?? 'Unlimited'}
+                </span>
               </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Real Estate / Loans</span>
+                <span className="font-mono text-white">
+                  {planLimits.realEstate ?? 'Unlimited'} /{' '}
+                  {planLimits.activeLoans ?? 'Unlimited'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Family Profiles / Accounts</span>
+                <span className="font-mono text-white">
+                  {planLimits.familyMembers ?? 'Unlimited'} /{' '}
+                  {planLimits.accounts ?? 'Unlimited'}
+                </span>
+              </div>
+              {onOpenPlanTab && (
+                <button
+                  type="button"
+                  onClick={onOpenPlanTab}
+                  className="w-full mt-2 pt-2 border-t border-slate-800/80 text-center text-[11px] font-medium text-indigo-300 hover:text-indigo-200 transition-colors"
+                >
+                  View Live Usage &amp; Plans &rarr;
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80 text-xs">

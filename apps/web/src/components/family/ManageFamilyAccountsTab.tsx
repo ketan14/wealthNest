@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useFamily } from '@/lib/family/family-context';
 import { useHousehold } from '@/lib/supabase/household-context';
 import { PortfolioAccountDto } from '@wealthnest/application';
-import { RecordVisibility } from '@wealthnest/domain';
+import { RecordVisibility, evaluatePlanQuota } from '@wealthnest/domain';
 import { Plus, Trash2, Building, Lock, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { PlanQuotaBadge } from '@/components/plans/PlanQuotaBadge';
+import { PlanLimitModal } from '@/components/plans/PlanLimitModal';
 
 const BROKER_OPTIONS = [
   'Zerodha',
@@ -26,7 +28,7 @@ const BROKER_OPTIONS = [
  * creating, and deleting demat/MF folio/bank accounts across family members.
  */
 export function ManageFamilyAccountsTab() {
-  const { canEditFinancials } = useHousehold();
+  const { canEditFinancials, planTier, customLimits } = useHousehold();
   const {
     members,
     accounts,
@@ -38,6 +40,8 @@ export function ManageFamilyAccountsTab() {
   } = useFamily();
 
   const [isAddingAccount, setIsAddingAccount] = useState(false);
+  const [isPlanLimitOpen, setIsPlanLimitOpen] = useState(false);
+  const accountQuota = evaluatePlanQuota(planTier, 'accounts', accounts.length, 1, customLimits);
   const [newAccMemberId, setNewAccMemberId] = useState(members[0]?.id || '');
   const [newAccName, setNewAccName] = useState('');
   const [newAccBroker, setNewAccBroker] = useState('Zerodha');
@@ -312,17 +316,39 @@ export function ManageFamilyAccountsTab() {
           </div>
         </form>
       ) : canEditFinancials ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setIsAddingAccount(true)}
-          className="w-full text-xs border-dashed border-slate-700 hover:border-slate-600 text-slate-300 py-2.5"
-        >
-          <Plus className="w-4 h-4 mr-1.5" />
-          Add Demat, MF Folio, or Bank Account
-        </Button>
+        <div className="space-y-2">
+          <div className="flex items-center justify-end">
+            <PlanQuotaBadge
+              resource="accounts"
+              currentCount={accounts.length}
+              onLimitClick={() => setIsPlanLimitOpen(true)}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (!accountQuota.allowed) {
+                setIsPlanLimitOpen(true);
+                return;
+              }
+              setIsAddingAccount(true);
+            }}
+            className="w-full text-xs border-dashed border-slate-700 hover:border-slate-600 text-slate-300 py-2.5"
+          >
+            <Plus className="w-4 h-4 mr-1.5" />
+            Add Demat, MF Folio, or Bank Account
+          </Button>
+        </div>
       ) : null}
+
+      <PlanLimitModal
+        isOpen={isPlanLimitOpen}
+        onClose={() => setIsPlanLimitOpen(false)}
+        resource="accounts"
+        currentCount={accounts.length}
+      />
     </div>
   );
 }

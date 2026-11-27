@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS households (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   created_by TEXT REFERENCES profiles(id) ON DELETE SET NULL,
+  plan_tier TEXT NOT NULL DEFAULT 'family' CHECK (plan_tier IN ('free', 'pro', 'family')),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -404,6 +405,12 @@ export const DEFAULT_ASSET_CLASSES = [
 export function initializeSqliteSchema(db: SqliteDatabase): void {
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec(SQLITE_SCHEMA_V1);
+
+  try {
+    db.exec(`ALTER TABLE households ADD COLUMN plan_tier TEXT NOT NULL DEFAULT 'family';`);
+  } catch {
+    // Column already exists on initialized databases
+  }
 
   const insertClass = db.prepare(
     `INSERT OR IGNORE INTO asset_classes (id, name, color_hex, display_order) VALUES (?, ?, ?, ?)`

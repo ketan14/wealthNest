@@ -51,3 +51,4 @@ export * from './tax/section-112a-harvesting.js';
 export * from './vault/document-vault.js';
 export * from './real-estate/real-estate-metrics.js';
 export * from './reconciliation/cas-broker-reconciler.js';
+export * from './plans/plan-entitlements.js';

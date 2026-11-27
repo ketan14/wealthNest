@@ -15,6 +15,7 @@ import {
   FamilyDocument,
   summarizeDocumentVault,
   formatFileSize,
+  evaluatePlanQuota,
 } from '@wealthnest/domain';
 import { ManageDocumentVaultUseCase, FamilyDocumentDto } from '@wealthnest/application';
 import { useAuth } from '@/lib/supabase/auth-context';
@@ -36,10 +37,12 @@ import {
 import { DEMO_DOCUMENTS } from '@/components/vault/documents-demo-data';
 import { shouldAllowDemoData } from '@/lib/config/mobile-runtime';
 import { DocumentVaultList } from '@/components/vault/DocumentVaultList';
+import { PlanQuotaBadge } from '@/components/plans/PlanQuotaBadge';
+import { PlanLimitModal } from '@/components/plans/PlanLimitModal';
 
 export function DocumentsPage() {
   const { user } = useAuth();
-  const { activeHouseholdId, canEditFinancials } = useHousehold();
+  const { activeHouseholdId, canEditFinancials, planTier, customLimits } = useHousehold();
   const { mode } = useRepositories();
   const { members, selectedMemberId, setSelectedMemberId } = useFamily();
   const { isSupportModeActive } = useSupportSession();
@@ -61,6 +64,7 @@ export function DocumentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isPlanLimitOpen, setIsPlanLimitOpen] = useState(false);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [docPendingDelete, setDocPendingDelete] = useState<FamilyDocumentDto | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -246,6 +250,20 @@ export function DocumentsPage() {
   const nowMs = Date.now();
   const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
 
+  const documentQuota = useMemo(
+    () => evaluatePlanQuota(planTier, 'documents', documents.length, 1, customLimits),
+    [planTier, documents.length, customLimits]
+  );
+
+  const handleOpenUploadModal = () => {
+    if (!canEditFinancials || isSupportModeActive) return;
+    if (!documentQuota.allowed) {
+      setIsPlanLimitOpen(true);
+      return;
+    }
+    setIsUploadModalOpen(true);
+  };
+
   return (
     <div className="space-y-4 sm:space-y-5 pb-20 md:pb-8">
       {/* Compact Header */}
@@ -264,11 +282,15 @@ export function DocumentsPage() {
           </div>
         </div>
 
+        <div className="flex items-center gap-2 shrink-0">
+          <PlanQuotaBadge
+            resource="documents"
+            currentCount={documents.length}
+            onLimitClick={() => setIsPlanLimitOpen(true)}
+          />
         <Button
           size="sm"
-          onClick={() => {
-            if (canEditFinancials && !isSupportModeActive) setIsUploadModalOpen(true);
-          }}
+          onClick={handleOpenUploadModal}
           disabled={isSupportModeActive || !canEditFinancials}
           title={
             isSupportModeActive
@@ -282,6 +304,7 @@ export function DocumentsPage() {
           <Upload className="w-3.5 h-3.5 stroke-[2.5]" />
           <span>Upload Document</span>
         </Button>
+        </div>
       </div>
 
       {/* Compact Single-Row "MY FAMILY" Chip Strip */}
@@ -477,9 +500,7 @@ export function DocumentsPage() {
         thirtyDaysMs={thirtyDaysMs}
         isSupportModeActive={isSupportModeActive}
         canEditFinancials={canEditFinancials}
-        onOpenUploadModal={() => {
-          if (canEditFinancials && !isSupportModeActive) setIsUploadModalOpen(true);
-        }}
+        onOpenUploadModal={handleOpenUploadModal}
         onDownload={handleDownload}
         onRequestDelete={(doc) => {
           if (canEditFinancials && !isSupportModeActive) setDocPendingDelete(doc);
@@ -510,6 +531,13 @@ export function DocumentsPage() {
         isLoading={isDeleting}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDocPendingDelete(null)}
+      />
+
+      <PlanLimitModal
+        isOpen={isPlanLimitOpen}
+        onClose={() => setIsPlanLimitOpen(false)}
+        resource="documents"
+        currentCount={documents.length}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AlertCircle, Users, Briefcase, RotateCcw, Loader2, Trash2 } from 'lucide-react';
+import { AlertCircle, Users, Briefcase, RotateCcw, Loader2, Trash2, Lock } from 'lucide-react';
 import { CasPreviewDto, ImportCasItemDto, ImportCasTransactionDto } from '@wealthnest/application';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -42,6 +42,8 @@ interface CasPreviewStepProps {
   isConfirmPending: boolean;
   wipeExistingForMember?: boolean;
   onWipeExistingChange?: (wipe: boolean) => void;
+  quotaExceeded?: boolean;
+  quotaMessage?: string | null;
   onMemberChange: (memberId: string, firstAccountId: string) => void;
   onAccountChange: (accountId: string) => void;
   onTabChange: (tab: 'equities' | 'mutual_funds' | 'transactions') => void;
@@ -79,6 +81,8 @@ export function CasPreviewStep({
   isConfirmPending,
   wipeExistingForMember = false,
   onWipeExistingChange,
+  quotaExceeded = false,
+  quotaMessage = null,
   onMemberChange,
   onAccountChange,
   onTabChange,
@@ -236,6 +240,16 @@ export function CasPreviewStep({
           )}
         </div>
 
+        {quotaExceeded && quotaMessage && (
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 flex items-start gap-2.5">
+            <Lock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-semibold text-amber-300">Plan Holding Quota Exceeded</div>
+              <p className="text-[11px] text-amber-200/90 mt-0.5">{quotaMessage}</p>
+            </div>
+          </div>
+        )}
+
         {/* Tab Navigation: Direct Equities, Mutual Funds, Historical Transactions */}
         <div className="flex flex-wrap items-center gap-2 border-b border-border/80 pb-2">
           <button
@@ -331,7 +345,11 @@ export function CasPreviewStep({
         </Button>
         <Button
           size="sm"
-          disabled={(selectedCount === 0 && selectedTransactionsCount === 0) || isConfirmPending}
+          disabled={
+            quotaExceeded ||
+            (selectedCount === 0 && selectedTransactionsCount === 0) ||
+            isConfirmPending
+          }
           onClick={onConfirm}
           className="order-1 sm:order-3 w-full sm:w-auto h-auto min-h-[36px] py-2 gap-2 whitespace-normal text-center leading-snug"
         >

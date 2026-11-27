@@ -11,6 +11,9 @@ import {
   ArrowRight,
   Lock,
   RefreshCw,
+  Crown,
+  Sparkles,
+  User,
 } from 'lucide-react';
 
 import { AdminHeader } from '../../components/admin/AdminHeader';
@@ -145,6 +148,54 @@ export function AdminDashboardPage() {
               {stats?.totalAuditEvents ?? '...'}
             </div>
             <span className="text-[11px] text-slate-500 mt-1 block">Append-only log</span>
+          </div>
+        </div>
+
+        {/* Subscription Plan Breakdown & Pending Upgrade Queue */}
+        <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+              <Crown className="w-4 h-4 text-amber-400" />
+              <span>Plan Tier Distribution &amp; Upgrade Queue</span>
+            </h4>
+            <p className="text-xs text-slate-400">
+              Live breakdown of registered accounts across Starter, Pro, and Family Office tiers.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center gap-2 text-xs">
+              <User className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-slate-400">Free Starter:</span>
+              <span className="font-mono font-bold text-white">
+                {stats?.planBreakdown?.free ?? 0}
+              </span>
+            </div>
+            <div className="px-3 py-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center gap-2 text-xs">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="text-indigo-300">Pro Investor:</span>
+              <span className="font-mono font-bold text-white">
+                {stats?.planBreakdown?.pro ?? 0}
+              </span>
+            </div>
+            <div className="px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-2 text-xs">
+              <Crown className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-amber-300">Family Office:</span>
+              <span className="font-mono font-bold text-white">
+                {stats?.planBreakdown?.family ?? 0}
+              </span>
+            </div>
+
+            <Link
+              to="/admin/users?view=requests"
+              className="px-3.5 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-xs font-semibold flex items-center gap-2 transition-colors"
+            >
+              <span>Pending Upgrade Requests:</span>
+              <span className="font-mono font-bold text-white">
+                {stats?.pendingUpgradeRequests ?? 0}
+              </span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
         </div>
 

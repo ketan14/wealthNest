@@ -1,7 +1,12 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PortfolioSummary, filterRecordsByPrivacy, allocateBigIntByShares } from '@wealthnest/domain';
+import {
+  PortfolioSummary,
+  filterRecordsByPrivacy,
+  allocateBigIntByShares,
+  evaluatePlanQuota,
+} from '@wealthnest/domain';
 import {
   GetPortfolioSummaryUseCase,
   AddHoldingUseCase,
@@ -43,10 +48,12 @@ import { useFamily } from '@/lib/family/family-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { FamilyDistributionWidget } from '@/components/family/FamilyDistributionWidget';
+import { PlanLimitModal } from '@/components/plans/PlanLimitModal';
 
 export function PortfolioPage() {
   const { user } = useAuth();
-  const { activeHouseholdId, canEditFinancials } = useHousehold();
+  const { activeHouseholdId, canEditFinancials, planTier, customLimits, planFeatures } =
+    useHousehold();
   const { mode } = useRepositories();
   const queryClient = useQueryClient();
   const {
@@ -61,6 +68,8 @@ export function PortfolioPage() {
   const { currencySymbol, preferences } = usePreferences();
   const locale = preferences.numberFormat || 'en-IN';
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPlanLimitOpen, setIsPlanLimitOpen] = useState(false);
+  const [isAutoPollGateOpen, setIsAutoPollGateOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
@@ -495,6 +504,24 @@ export function PortfolioPage() {
     refetch();
   };
 
+  const nonRealEstateCount = useMemo(
+    () => allHoldings.filter((h) => h.assetClassId !== 'real_estate').length,
+    [allHoldings]
+  );
+  const holdingQuota = useMemo(
+    () => evaluatePlanQuota(planTier, 'holdings', nonRealEstateCount, 1, customLimits),
+    [planTier, nonRealEstateCount, customLimits]
+  );
+
+  const handleOpenAddModal = () => {
+    if (!canEditFinancials || isSupportModeActive) return;
+    if (!holdingQuota.allowed) {
+      setIsPlanLimitOpen(true);
+      return;
+    }
+    setIsModalOpen(true);
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       <PortfolioHeader
@@ -507,11 +534,11 @@ export function PortfolioPage() {
         onOpenImportModal={() => {
           if (canEditFinancials) setIsImportModalOpen(true);
         }}
-        onOpenAddModal={() => {
-          if (canEditFinancials) setIsModalOpen(true);
-        }}
+        onOpenAddModal={handleOpenAddModal}
         onOpenManageFamily={() => setIsManageFamilyOpen(true)}
         navRefreshMessage={navRefreshMessage}
+        nonRealEstateCount={nonRealEstateCount}
+        onOpenPlanLimit={() => setIsPlanLimitOpen(true)}
       />
 
       <PortfolioOverviewCards
@@ -527,7 +554,13 @@ export function PortfolioPage() {
         isRefreshing={isRefreshingNavs}
         isSyncing={isFetchingDb}
         isPolling={isPolling}
-        onTogglePolling={() => setIsPolling((prev) => !prev)}
+        onTogglePolling={() => {
+          if (!planFeatures.autoPollQuotes) {
+            setIsAutoPollGateOpen(true);
+            return;
+          }
+          setIsPolling((prev) => !prev);
+        }}
         lastUpdatedAt={lastFeedUpdated}
         liveQuotesMap={liveQuotesMap}
       />
@@ -560,9 +593,7 @@ export function PortfolioPage() {
         currencySymbol={currencySymbol}
         locale={locale}
         deletingId={deletingId}
-        onOpenAddModal={() => {
-          if (canEditFinancials) setIsModalOpen(true);
-        }}
+        onOpenAddModal={handleOpenAddModal}
         onOpenImportModal={() => {
           if (canEditFinancials) setIsImportModalOpen(true);
         }}
@@ -643,6 +674,23 @@ export function PortfolioPage() {
           }
         }}
         onCancelDelete={() => setHoldingToDelete(null)}
+        allHoldings={allHoldings}
+      />
+
+      <PlanLimitModal
+        isOpen={isPlanLimitOpen}
+        onClose={() => setIsPlanLimitOpen(false)}
+        resource="holdings"
+        currentCount={nonRealEstateCount}
+      />
+
+      <PlanLimitModal
+        isOpen={isAutoPollGateOpen}
+        onClose={() => setIsAutoPollGateOpen(false)}
+        mode="feature"
+        requiredTier="pro"
+        featureTitle="Live 25-Second Auto-Poll"
+        featureDescription="Automatic 25-second NSE & AMFI live quote polling is available on Pro Investor and Family Office plans. Manual Refresh Quotes remains free anytime."
       />
     </div>
   );

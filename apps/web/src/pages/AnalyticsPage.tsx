@@ -28,12 +28,14 @@ import { BenchmarkAndRebalanceSection } from '@/components/analytics/BenchmarkAn
 import { TaxHarvestingIntelligenceCard } from '@/components/analytics/TaxHarvestingIntelligenceCard';
 import { Card } from '@/components/ui/Card';
 import { formatInr } from '@/utils/formatInr';
-import { AlertTriangle, CheckCircle2, ChevronRight, Sparkles, TrendingUp } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronRight, Lock, Sparkles, TrendingUp } from 'lucide-react';
 import { useFamily } from '@/lib/family/family-context';
 import { shouldAllowDemoData } from '@/lib/config/mobile-runtime';
 import { usePreferences } from '@/lib/preferences/preferences-context';
 import { usePrivacy } from '@/lib/preferences/privacy-context';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
+import { PlanLimitModal } from '@/components/plans/PlanLimitModal';
+import { Button } from '@/components/ui/Button';
 
 // Demo initial positions tailored for Indian investors (matches Portfolio demo)
 const DEMO_HOLDINGS: HoldingDetailDto[] = [
@@ -173,7 +175,7 @@ const DEMO_TRANSACTIONS: TransactionDetailDto[] = [
 
 export function AnalyticsPage() {
   const { user } = useAuth();
-  const { activeHouseholdId } = useHousehold();
+  const { activeHouseholdId, planFeatures } = useHousehold();
   const {
     selectedMemberId,
     setSelectedMemberId,
@@ -188,6 +190,7 @@ export function AnalyticsPage() {
   const { maskAmount } = usePrivacy();
   const locale = preferences.numberFormat || 'en-IN';
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
+  const [isTaxGateModalOpen, setIsTaxGateModalOpen] = useState(false);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
   const { holdingRepo, transactionRepo, liabilityRepo, mode } = useRepositories();
 
@@ -756,13 +759,46 @@ export function AnalyticsPage() {
       />
 
       {/* Union Budget 2024 Tax Intelligence & Loss Harvesting */}
-      <TaxHarvestingIntelligenceCard
-        taxSummary={taxSummary}
-        harvestingPlan={harvestingPlan}
-        activeMemberRelationship={activeMember?.relationship}
-        currencySymbol={currencySymbol}
-        locale={locale}
-      />
+      {planFeatures.taxHarvestingFull ? (
+        <TaxHarvestingIntelligenceCard
+          taxSummary={taxSummary}
+          harvestingPlan={harvestingPlan}
+          activeMemberRelationship={activeMember?.relationship}
+          currencySymbol={currencySymbol}
+          locale={locale}
+        />
+      ) : (
+        <Card className="border-indigo-500/30 bg-gradient-to-br from-indigo-950/30 via-card to-card p-5 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 shrink-0">
+                <Lock className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                  <span>Capital Gains Tax &amp; Section 112A Harvesting Intelligence</span>
+                  <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    Pro Feature
+                  </span>
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Unlock Section 112A ₹1.25L exemption tracking, STCG/LTCG tax estimates, and
+                  entity-level tax-loss harvesting simulations with Pro Investor or Family Office.
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setIsTaxGateModalOpen(true)}
+              className="h-8 text-xs gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white shrink-0 self-start sm:self-auto"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Unlock Full Tax Harvesting</span>
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* CAS <-> Broker Tradebook Auto-Reconciliation */}
       <CasReconciliationCard holdings={holdings} />
@@ -785,6 +821,15 @@ export function AnalyticsPage() {
 
       {/* Phase 6A: Manage Family Entities & Demat Accounts Modal */}
       <ManageFamilyModal isOpen={isManageFamilyOpen} onClose={() => setIsManageFamilyOpen(false)} />
+
+      <PlanLimitModal
+        isOpen={isTaxGateModalOpen}
+        onClose={() => setIsTaxGateModalOpen(false)}
+        mode="feature"
+        requiredTier="pro"
+        featureTitle="Section 112A Tax Harvesting & Analytics"
+        featureDescription="Full Indian Budget 2024 capital gains breakdown, Section 112A exemption utilization, and multi-entity harvesting recommendations are included in Pro Investor and Family Office plans."
+      />
     </div>
   );
 }

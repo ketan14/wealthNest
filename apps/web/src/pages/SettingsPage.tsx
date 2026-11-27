@@ -24,11 +24,13 @@ import {
   HardDrive,
   Users,
   ChevronRight,
+  Crown,
 } from 'lucide-react';
 import { useFamily } from '@/lib/family/family-context';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 import { ServerConnectionSettings } from '@/components/settings/ServerConnectionSettings';
 import { ProfileSecurityTab } from '@/components/settings/ProfileSecurityTab';
+import { PlanUsageTab } from '@/components/settings/PlanUsageTab';
 import { FamilyDematsTab } from '@/components/settings/FamilyDematsTab';
 import { LocalizationTaxTab } from '@/components/settings/LocalizationTaxTab';
 import { DataPortabilityTab } from '@/components/settings/DataPortabilityTab';
@@ -37,7 +39,7 @@ import { saveTextFile, openTextFile } from '@/lib/tauri/tauri-file-dialog';
 import { isTauri } from '@/lib/tauri/tauri-runtime';
 import { useToast } from '@/components/ui/Toast';
 
-type SettingsTab = 'profile' | 'family' | 'connection' | 'localization' | 'data' | 'system';
+type SettingsTab = 'profile' | 'plan' | 'family' | 'connection' | 'localization' | 'data' | 'system';
 
 export function SettingsPage() {
   const { showToast } = useToast();
@@ -59,6 +61,7 @@ export function SettingsPage() {
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const resolvedTab: SettingsTab =
+    tabParam === 'plan' ||
     tabParam === 'family' ||
     tabParam === 'connection' ||
     tabParam === 'localization' ||
@@ -72,6 +75,7 @@ export function SettingsPage() {
 
   useEffect(() => {
     if (
+      tabParam === 'plan' ||
       tabParam === 'family' ||
       tabParam === 'connection' ||
       tabParam === 'localization' ||
@@ -373,6 +377,19 @@ export function SettingsPage() {
 
           <button
             type="button"
+            onClick={() => setActiveTab('plan')}
+            className={`flex items-center gap-1.5 py-2.5 px-3 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap shrink-0 ${
+              activeTab === 'plan'
+                ? 'border-primary text-primary bg-primary/5'
+                : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
+            }`}
+          >
+            <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
+            <span>Plan & Usage</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab('family')}
             className={`flex items-center gap-1.5 py-2.5 px-3 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap shrink-0 ${
               activeTab === 'family'
@@ -455,8 +472,12 @@ export function SettingsPage() {
           onUpdateDisplayName={updateDisplayName}
           onUpdateLegalName={updateLegalName}
           onSignOut={() => signOut()}
+          onOpenPlanTab={() => setActiveTab('plan')}
         />
       )}
+
+      {/* TAB: Plan & Usage */}
+      {activeTab === 'plan' && <PlanUsageTab />}
 
       {/* TAB: Family & Demats */}
       {activeTab === 'family' && (

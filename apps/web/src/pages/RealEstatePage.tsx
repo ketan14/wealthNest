@@ -5,6 +5,7 @@ import {
   PropertyType,
   RealEstatePropertyInput,
   summarizeRealEstatePortfolio,
+  evaluatePlanQuota,
 } from '@wealthnest/domain';
 import { AddHoldingUseCase, HoldingDetailDto, LiabilityDto } from '@wealthnest/application';
 import { useAuth } from '@/lib/supabase/auth-context';
@@ -23,6 +24,8 @@ import {
   PropertyMetricsOverride,
 } from '@/components/real-estate/PropertyMetricsModal';
 import { RealEstatePropertyList } from '@/components/real-estate/RealEstatePropertyList';
+import { PlanQuotaBadge } from '@/components/plans/PlanQuotaBadge';
+import { PlanLimitModal } from '@/components/plans/PlanLimitModal';
 import { shouldAllowDemoData } from '@/lib/config/mobile-runtime';
 import { formatCompactRupees } from '@/lib/formatters/currency';
 import { getPolarityTone } from '@/components/ui/DashboardPrimitives';
@@ -165,7 +168,7 @@ function saveOverrides(userId: string, overrides: Record<string, PropertyMetrics
 
 export function RealEstatePage() {
   const { user } = useAuth();
-  const { activeHouseholdId, canEditFinancials } = useHousehold();
+  const { activeHouseholdId, canEditFinancials, planTier, customLimits } = useHousehold();
   const { members, selectedMemberId, setSelectedMemberId } = useFamily();
   const { holdingRepo, liabilityRepo, mode } = useRepositories();
   const { isSupportModeActive } = useSupportSession();
@@ -183,6 +186,7 @@ export function RealEstatePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [isAddPropertyOpen, setIsAddPropertyOpen] = useState(false);
+  const [isPlanLimitOpen, setIsPlanLimitOpen] = useState(false);
   const [isAddingProperty, setIsAddingProperty] = useState(false);
   const [editingProperty, setEditingProperty] = useState<RealEstatePropertyInput | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | PropertyType>('all');
@@ -375,6 +379,21 @@ export function RealEstatePage() {
     saveOverrides(effectiveUserId, next);
   };
 
+  const totalPropertiesCount = baseProperties.length;
+  const realEstateQuota = useMemo(
+    () => evaluatePlanQuota(planTier, 'realEstate', totalPropertiesCount, 1, customLimits),
+    [planTier, totalPropertiesCount, customLimits]
+  );
+
+  const handleOpenAddProperty = () => {
+    if (!canEditFinancials || isSupportModeActive) return;
+    if (!realEstateQuota.allowed) {
+      setIsPlanLimitOpen(true);
+      return;
+    }
+    setIsAddPropertyOpen(true);
+  };
+
   return (
     <div className="space-y-4 sm:space-y-5 pb-20 md:pb-8">
       {/* Compact Header */}
@@ -384,9 +403,16 @@ export function RealEstatePage() {
             <Building2 className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">
-              Real Estate Equity & Yield
-            </h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">
+                Real Estate Equity & Yield
+              </h1>
+              <PlanQuotaBadge
+                resource="realEstate"
+                currentCount={totalPropertiesCount}
+                onLimitClick={() => setIsPlanLimitOpen(true)}
+              />
+            </div>
             <p className="hidden sm:block text-xs text-slate-400">
               Property valuations, linked home loan LTV, net equity &amp; rental cashflow
             </p>
@@ -410,9 +436,7 @@ export function RealEstatePage() {
             to="/portfolio?action=new"
             onClick={(e) => {
               e.preventDefault();
-              if (canEditFinancials && !isSupportModeActive) {
-                setIsAddPropertyOpen(true);
-              }
+              handleOpenAddProperty();
             }}
           >
             <Button
@@ -573,11 +597,7 @@ export function RealEstatePage() {
         formatInr={formatMaskedInr}
         getPropertyTypeLabel={getPropertyTypeLabel}
         onEditProperty={setEditingProperty}
-        onAddProperty={() => {
-          if (canEditFinancials && !isSupportModeActive) {
-            setIsAddPropertyOpen(true);
-          }
-        }}
+        onAddProperty={handleOpenAddProperty}
       />
 
       {/* Modals */}
@@ -597,6 +617,13 @@ export function RealEstatePage() {
       />
 
       <ManageFamilyModal isOpen={isManageFamilyOpen} onClose={() => setIsManageFamilyOpen(false)} />
+
+      <PlanLimitModal
+        isOpen={isPlanLimitOpen}
+        onClose={() => setIsPlanLimitOpen(false)}
+        resource="realEstate"
+        currentCount={totalPropertiesCount}
+      />
     </div>
   );
 }

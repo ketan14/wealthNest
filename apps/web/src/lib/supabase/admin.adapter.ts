@@ -6,15 +6,29 @@ import {
   AdminPaginationParams,
   PaginatedResult,
   PlatformRole,
+  PlanTier,
+  CustomPlanLimits,
+  PlanUpgradeRequest,
+  PlanUpgradeRequestStatus,
   UserAccessStatus,
   AdminAuditLogEntry,
+  normalizePlanTier,
 } from '@wealthnest/domain';
-import { AdminRepositoryPort, AdminAuditLogPort } from '@wealthnest/application';
+import {
+  AdminRepositoryPort,
+  AdminAuditLogPort,
+  AdminPlanUpdateOptions,
+} from '@wealthnest/application';
 import { resolveAppRedirectUrl } from '../config/app-redirect-url';
 import { supabase } from './client';
-import { DEMO_ADMIN_USERS, DEMO_HOUSEHOLDS, demoAuditLogsStore } from './admin-demo-data';
+import {
+  DEMO_ADMIN_USERS,
+  DEMO_HOUSEHOLDS,
+  DEMO_UPGRADE_REQUESTS,
+  demoAuditLogsStore,
+} from './admin-demo-data';
 
-export { DEMO_ADMIN_USERS, DEMO_HOUSEHOLDS };
+export { DEMO_ADMIN_USERS, DEMO_HOUSEHOLDS, DEMO_UPGRADE_REQUESTS };
 
 const isTestEnv = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
 
@@ -41,6 +55,8 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
         reasonCode: u.reason_code,
         reasonDetails: u.reason_details,
         platformRole: u.platform_role,
+        planTier: normalizePlanTier(u.plan_tier),
+        planExpiresAt: u.plan_expires_at ? String(u.plan_expires_at) : null,
         createdAt: u.created_at,
         lastSignInAt: u.last_sign_in_at,
         householdCount: Number(u.household_count || 0),
@@ -108,6 +124,8 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
         reasonDetails: u.reason_details,
         statusUpdatedAt: u.status_updated_at,
         platformRole: u.platform_role,
+        planTier: normalizePlanTier(u.plan_tier),
+        planExpiresAt: u.plan_expires_at ? String(u.plan_expires_at) : null,
         roleGrantedAt: u.role_granted_at,
         createdAt: u.created_at,
         lastSignInAt: u.last_sign_in_at,
@@ -118,6 +136,12 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
           householdRole: h.household_role,
           joinedAt: h.joined_at,
           totalMembers: Number(h.total_members || 1),
+          planTier: normalizePlanTier(h.plan_tier),
+          customLimits:
+            h.custom_limits && typeof h.custom_limits === 'object'
+              ? (h.custom_limits as CustomPlanLimits)
+              : null,
+          planExpiresAt: h.plan_expires_at ? String(h.plan_expires_at) : null,
         })),
         recentAudits: (data.recent_audits || []).map((a: any) => ({
           id: a.id,
@@ -146,6 +170,8 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
         reasonCode: user.reasonCode,
         reasonDetails: user.reasonDetails,
         platformRole: user.platformRole,
+        planTier: normalizePlanTier(user.planTier),
+        planExpiresAt: user.planExpiresAt ?? null,
         createdAt: user.createdAt,
         lastSignInAt: user.lastSignInAt,
         householdCount: user.householdCount,
@@ -158,6 +184,9 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
               user.id === '4c4fa116-57d5-4fc8-af89-be56b5069b50' ? 'primary_owner' : 'member',
             joinedAt: user.createdAt,
             totalMembers: 5,
+            planTier: normalizePlanTier(DEMO_HOUSEHOLDS[0]?.planTier ?? user.planTier),
+            customLimits: DEMO_HOUSEHOLDS[0]?.customLimits ?? null,
+            planExpiresAt: DEMO_HOUSEHOLDS[0]?.planExpiresAt ?? user.planExpiresAt ?? null,
           },
         ],
         recentAudits: demoAuditLogsStore.filter((l) => l.targetUserId === user.id),
@@ -223,6 +252,204 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
       if (err?.message && !err.message.includes('fetch')) {
         throw err;
       }
+    }
+  }
+
+  async setUserPlan(
+    targetUserId: string,
+    planTier: PlanTier,
+    reasonDetails?: string,
+    options?: AdminPlanUpdateOptions
+  ): Promise<{
+    userId: string;
+    previousPlan: PlanTier;
+    newPlan: PlanTier;
+    householdsUpdated: number;
+    customLimits?: CustomPlanLimits | null;
+    planExpiresAt?: string | null;
+  }> {
+    const normalizedPlan = normalizePlanTier(planTier);
+    const customLimits =
+      options?.customLimits && Object.keys(options.customLimits).length > 0
+        ? options.customLimits
+        : null;
+    const planExpiresAt = options?.planExpiresAt || null;
+
+    try {
+      const { data, error } = await supabase.rpc('admin_set_user_plan', {
+        p_target_user_id: targetUserId,
+        p_plan_tier: normalizedPlan,
+        p_reason_details: reasonDetails || null,
+        p_custom_limits: customLimits,
+        p_plan_expires_at: planExpiresAt,
+      });
+
+      if (error) throw error;
+      if (data && typeof data === 'object' && 'new_plan' in data) {
+        return {
+          userId: String(data.user_id || targetUserId),
+          previousPlan: normalizePlanTier(data.previous_plan),
+          newPlan: normalizePlanTier(data.new_plan),
+          householdsUpdated: Number(data.households_updated ?? 0),
+          customLimits: (data.custom_limits as CustomPlanLimits | null) ?? null,
+          planExpiresAt: data.plan_expires_at ? String(data.plan_expires_at) : null,
+        };
+      }
+      if (!isTestEnv) {
+        throw new Error('No response returned from admin_set_user_plan');
+      }
+      throw new Error('Test fallback');
+    } catch (err: any) {
+      if (!isTestEnv) {
+        throw err instanceof Error ? err : new Error(String(err));
+      }
+
+      const target = DEMO_ADMIN_USERS.find((u) => u.id === targetUserId);
+      const previousPlan = normalizePlanTier(target?.planTier);
+      if (target) {
+        target.planTier = normalizedPlan;
+        target.planExpiresAt = planExpiresAt;
+      }
+
+      let householdsUpdated = 0;
+      if (targetUserId === '4c4fa116-57d5-4fc8-af89-be56b5069b50' && DEMO_HOUSEHOLDS[0]) {
+        DEMO_HOUSEHOLDS[0].planTier = normalizedPlan;
+        DEMO_HOUSEHOLDS[0].customLimits = customLimits;
+        DEMO_HOUSEHOLDS[0].planExpiresAt = planExpiresAt;
+        householdsUpdated = 1;
+      }
+
+      demoAuditLogsStore.unshift({
+        id: `audit-plan-${Date.now()}`,
+        actorUserId: '4c4fa116-57d5-4fc8-af89-be56b5069b50',
+        actorName: 'Ketan Vaghela',
+        targetUserId,
+        targetName: target?.displayName || targetUserId,
+        action: 'PLAN_TIER_CHANGED',
+        outcome: 'success',
+        reasonCode: customLimits ? 'PLAN_CUSTOM_LIMITS_UPDATED' : 'ADMIN_PLAN_UPDATE',
+        safeMetadata: {
+          scope: 'user',
+          previous_plan: previousPlan,
+          new_plan: normalizedPlan,
+          households_updated: householdsUpdated,
+          custom_limits: customLimits,
+          plan_expires_at: planExpiresAt,
+          reason_details: reasonDetails || null,
+        },
+        createdAt: new Date().toISOString(),
+      });
+
+      if (
+        err?.message &&
+        err.message !== 'Test fallback' &&
+        !err.message.includes('fetch')
+      ) {
+        throw err;
+      }
+
+      return {
+        userId: targetUserId,
+        previousPlan,
+        newPlan: normalizedPlan,
+        householdsUpdated,
+        customLimits,
+        planExpiresAt,
+      };
+    }
+  }
+
+  async setHouseholdPlan(
+    householdId: string,
+    planTier: PlanTier,
+    reasonDetails?: string,
+    options?: AdminPlanUpdateOptions
+  ): Promise<{
+    householdId: string;
+    previousPlan: PlanTier;
+    newPlan: PlanTier;
+    customLimits?: CustomPlanLimits | null;
+    planExpiresAt?: string | null;
+  }> {
+    const normalizedPlan = normalizePlanTier(planTier);
+    const customLimits =
+      options?.customLimits && Object.keys(options.customLimits).length > 0
+        ? options.customLimits
+        : null;
+    const planExpiresAt = options?.planExpiresAt || null;
+
+    try {
+      const { data, error } = await supabase.rpc('admin_set_household_plan', {
+        p_household_id: householdId,
+        p_plan_tier: normalizedPlan,
+        p_reason_details: reasonDetails || null,
+        p_custom_limits: customLimits,
+        p_plan_expires_at: planExpiresAt,
+      });
+
+      if (error) throw error;
+      if (data && typeof data === 'object' && 'new_plan' in data) {
+        return {
+          householdId: String(data.household_id || householdId),
+          previousPlan: normalizePlanTier(data.previous_plan),
+          newPlan: normalizePlanTier(data.new_plan),
+          customLimits: (data.custom_limits as CustomPlanLimits | null) ?? null,
+          planExpiresAt: data.plan_expires_at ? String(data.plan_expires_at) : null,
+        };
+      }
+      if (!isTestEnv) {
+        throw new Error('No response returned from admin_set_household_plan');
+      }
+      throw new Error('Test fallback');
+    } catch (err: any) {
+      if (!isTestEnv) {
+        throw err instanceof Error ? err : new Error(String(err));
+      }
+
+      const target = DEMO_HOUSEHOLDS.find((h) => h.id === householdId);
+      const previousPlan = normalizePlanTier(target?.planTier);
+      if (target) {
+        target.planTier = normalizedPlan;
+        target.customLimits = customLimits;
+        target.planExpiresAt = planExpiresAt;
+      }
+
+      demoAuditLogsStore.unshift({
+        id: `audit-hh-plan-${Date.now()}`,
+        actorUserId: '4c4fa116-57d5-4fc8-af89-be56b5069b50',
+        actorName: 'Ketan Vaghela',
+        targetName: target?.name || householdId,
+        action: 'PLAN_TIER_CHANGED',
+        outcome: 'success',
+        reasonCode: customLimits ? 'PLAN_CUSTOM_LIMITS_UPDATED' : 'ADMIN_HOUSEHOLD_PLAN_UPDATE',
+        safeMetadata: {
+          scope: 'household',
+          household_id: householdId,
+          household_name: target?.name || householdId,
+          previous_plan: previousPlan,
+          new_plan: normalizedPlan,
+          custom_limits: customLimits,
+          plan_expires_at: planExpiresAt,
+          reason_details: reasonDetails || null,
+        },
+        createdAt: new Date().toISOString(),
+      });
+
+      if (
+        err?.message &&
+        err.message !== 'Test fallback' &&
+        !err.message.includes('fetch')
+      ) {
+        throw err;
+      }
+
+      return {
+        householdId,
+        previousPlan,
+        newPlan: normalizedPlan,
+        customLimits,
+        planExpiresAt,
+      };
     }
   }
 
@@ -347,6 +574,14 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
         invitedUsers: Number(data.invited_users || 0),
         totalHouseholds: Number(data.total_households || 0),
         totalAuditEvents: Number(data.total_audit_events || 0),
+        planBreakdown: data.plan_breakdown
+          ? {
+              free: Number(data.plan_breakdown.free || 0),
+              pro: Number(data.plan_breakdown.pro || 0),
+              family: Number(data.plan_breakdown.family || 0),
+            }
+          : undefined,
+        pendingUpgradeRequests: Number(data.pending_upgrade_requests ?? 0),
       };
     } catch (err: unknown) {
       if (!isTestEnv) {
@@ -360,6 +595,13 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
         invitedUsers: DEMO_ADMIN_USERS.filter((u) => u.status === 'invited').length,
         totalHouseholds: DEMO_HOUSEHOLDS.length,
         totalAuditEvents: demoAuditLogsStore.length,
+        planBreakdown: {
+          free: DEMO_ADMIN_USERS.filter((u) => normalizePlanTier(u.planTier) === 'free').length,
+          pro: DEMO_ADMIN_USERS.filter((u) => normalizePlanTier(u.planTier) === 'pro').length,
+          family: DEMO_ADMIN_USERS.filter((u) => normalizePlanTier(u.planTier) === 'family')
+            .length,
+        },
+        pendingUpgradeRequests: DEMO_UPGRADE_REQUESTS.filter((r) => r.status === 'pending').length,
       };
     }
   }
@@ -382,6 +624,12 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
         createdByName: h.created_by_name,
         createdAt: h.created_at,
         memberCount: Number(h.member_count || 1),
+        planTier: normalizePlanTier(h.plan_tier),
+        customLimits:
+          h.custom_limits && typeof h.custom_limits === 'object'
+            ? (h.custom_limits as CustomPlanLimits)
+            : null,
+        planExpiresAt: h.plan_expires_at ? String(h.plan_expires_at) : null,
       }));
 
       return {
@@ -421,6 +669,147 @@ export class SupabaseAdminAdapter implements AdminRepositoryPort, AdminAuditLogP
         throw err instanceof Error ? err : new Error(String(err));
       }
       return DEMO_ADMIN_USERS.filter((u) => u.platformRole === 'super_admin').length || 1;
+    }
+  }
+
+  async listUpgradeRequests(status?: PlanUpgradeRequestStatus): Promise<PlanUpgradeRequest[]> {
+    try {
+      const { data, error } = await supabase.rpc('admin_get_upgrade_requests', {
+        p_status: status || null,
+      });
+
+      if (error || !data) throw error || new Error('No upgrade requests returned');
+
+      const rows = Array.isArray(data) ? data : [];
+      return rows.map((r: any) => ({
+        id: String(r.id),
+        userId: String(r.user_id),
+        householdId: String(r.household_id),
+        householdName: String(r.household_name || 'Household'),
+        requesterName: String(r.requester_name || 'Investor'),
+        requesterEmail: String(r.requester_email || ''),
+        currentPlan: normalizePlanTier(r.current_plan),
+        requestedPlan: (r.requested_plan === 'family' ? 'family' : 'pro') as Exclude<
+          PlanTier,
+          'free'
+        >,
+        status: (r.status || 'pending') as PlanUpgradeRequestStatus,
+        userNotes: r.user_notes ? String(r.user_notes) : undefined,
+        adminNotes: r.admin_notes ? String(r.admin_notes) : undefined,
+        createdAt: String(r.created_at || new Date().toISOString()),
+        reviewedAt: r.reviewed_at ? String(r.reviewed_at) : undefined,
+        reviewedByName: r.reviewed_by_name ? String(r.reviewed_by_name) : undefined,
+      }));
+    } catch (err: unknown) {
+      if (!isTestEnv) {
+        throw err instanceof Error ? err : new Error(String(err));
+      }
+      return status
+        ? DEMO_UPGRADE_REQUESTS.filter((r) => r.status === status)
+        : [...DEMO_UPGRADE_REQUESTS];
+    }
+  }
+
+  async reviewUpgradeRequest(
+    requestId: string,
+    decision: 'approved' | 'rejected',
+    adminNotes?: string
+  ): Promise<PlanUpgradeRequest> {
+    try {
+      const { data, error } = await supabase.rpc('admin_review_upgrade_request', {
+        p_request_id: requestId,
+        p_decision: decision,
+        p_admin_notes: adminNotes || null,
+      });
+
+      if (error) throw error;
+      if (data && typeof data === 'object' && 'id' in data) {
+        return {
+          id: String(data.id),
+          userId: String(data.user_id),
+          householdId: String(data.household_id),
+          householdName: String(data.household_name || 'Household'),
+          requesterName: String(data.requester_name || 'Investor'),
+          requesterEmail: String(data.requester_email || ''),
+          currentPlan: normalizePlanTier(data.current_plan),
+          requestedPlan: (data.requested_plan === 'family' ? 'family' : 'pro') as Exclude<
+            PlanTier,
+            'free'
+          >,
+          status: (data.status || decision) as PlanUpgradeRequestStatus,
+          userNotes: data.user_notes ? String(data.user_notes) : undefined,
+          adminNotes: data.admin_notes ? String(data.admin_notes) : undefined,
+          createdAt: String(data.created_at || new Date().toISOString()),
+          reviewedAt: data.reviewed_at ? String(data.reviewed_at) : new Date().toISOString(),
+          reviewedByName: data.reviewed_by_name ? String(data.reviewed_by_name) : undefined,
+        };
+      }
+      if (!isTestEnv) {
+        throw new Error('No response returned from admin_review_upgrade_request');
+      }
+      throw new Error('Test fallback');
+    } catch (err: any) {
+      if (!isTestEnv) {
+        throw err instanceof Error ? err : new Error(String(err));
+      }
+
+      const idx = DEMO_UPGRADE_REQUESTS.findIndex((r) => r.id === requestId);
+      const existing = idx >= 0 ? DEMO_UPGRADE_REQUESTS[idx]! : DEMO_UPGRADE_REQUESTS[0];
+      if (!existing) {
+        throw new Error('Upgrade request not found');
+      }
+
+      const updated: PlanUpgradeRequest = {
+        ...existing,
+        status: decision,
+        adminNotes: adminNotes?.trim() || undefined,
+        reviewedAt: new Date().toISOString(),
+        reviewedByName: 'Ketan Vaghela',
+      };
+      if (idx >= 0) {
+        DEMO_UPGRADE_REQUESTS[idx] = updated;
+      }
+
+      if (decision === 'approved') {
+        const targetUser = DEMO_ADMIN_USERS.find((u) => u.id === existing.userId);
+        if (targetUser) {
+          targetUser.planTier = existing.requestedPlan;
+          targetUser.planExpiresAt = null;
+        }
+        const targetHh = DEMO_HOUSEHOLDS.find((h) => h.id === existing.householdId);
+        if (targetHh) {
+          targetHh.planTier = existing.requestedPlan;
+          targetHh.planExpiresAt = null;
+        }
+      }
+
+      demoAuditLogsStore.unshift({
+        id: `audit-req-${Date.now()}`,
+        actorUserId: '4c4fa116-57d5-4fc8-af89-be56b5069b50',
+        actorName: 'Ketan Vaghela',
+        targetUserId: existing.userId,
+        targetName: existing.requesterName,
+        action: decision === 'approved' ? 'PLAN_UPGRADE_APPROVED' : 'PLAN_UPGRADE_REJECTED',
+        outcome: 'success',
+        reasonCode: 'ADMIN_UPGRADE_REVIEW',
+        safeMetadata: {
+          request_id: requestId,
+          household_id: existing.householdId,
+          requested_plan: existing.requestedPlan,
+          decision,
+        },
+        createdAt: new Date().toISOString(),
+      });
+
+      if (
+        err?.message &&
+        err.message !== 'Test fallback' &&
+        !err.message.includes('fetch')
+      ) {
+        throw err;
+      }
+
+      return updated;
     }
   }
 

@@ -29,6 +29,7 @@ interface PortfolioModalsProps {
   readonly isDeleting: boolean;
   readonly onConfirmDelete: () => void;
   readonly onCancelDelete: () => void;
+  readonly allHoldings?: readonly HoldingDetailDto[];
 }
 
 /**
@@ -52,6 +53,7 @@ export function PortfolioModals({
   isDeleting,
   onConfirmDelete,
   onCancelDelete,
+  allHoldings = [],
 }: PortfolioModalsProps) {
   return (
     <>
@@ -70,7 +72,12 @@ export function PortfolioModals({
         isLoading={isEditLoading}
       />
 
-      <ImportCasModal isOpen={isImportOpen} onClose={onCloseImport} onSuccess={onImportSuccess} />
+      <ImportCasModal
+        isOpen={isImportOpen}
+        onClose={onCloseImport}
+        onSuccess={onImportSuccess}
+        existingHoldings={allHoldings}
+      />
 
       <ManageFamilyModal isOpen={isManageFamilyOpen} onClose={onCloseManageFamily} />
 

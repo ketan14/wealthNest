@@ -1,3 +1,5 @@
+import type { CustomPlanLimits, PlanTier } from '../plans/plan-entitlements.js';
+
 export type HouseholdRole = 'primary_owner' | 'admin' | 'member' | 'viewer';
 
 export type HouseholdMembershipStatus = 'active' | 'revoked';
@@ -33,6 +35,9 @@ export interface HouseholdSummary {
   readonly status: HouseholdMembershipStatus;
   readonly isDefault?: boolean;
   readonly memberCount?: number;
+  readonly planTier?: PlanTier;
+  readonly customLimits?: CustomPlanLimits | null;
+  readonly planExpiresAt?: string | null;
   readonly createdAt?: string;
   readonly updatedAt?: string;
 }

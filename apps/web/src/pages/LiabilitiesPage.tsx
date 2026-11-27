@@ -12,7 +12,12 @@ import {
   CreateLiabilityParams,
   UpdateLiabilityParams,
 } from '@wealthnest/application';
-import { NetWorthSummary, Money, PropertyEquityDetail } from '@wealthnest/domain';
+import {
+  NetWorthSummary,
+  Money,
+  PropertyEquityDetail,
+  evaluatePlanQuota,
+} from '@wealthnest/domain';
 import { AddLiabilityModal } from '@/components/liabilities/AddLiabilityModal';
 import { UpdateBalanceModal } from '@/components/liabilities/UpdateBalanceModal';
 import { RecordEmiPaymentModal } from '@/components/liabilities/RecordEmiPaymentModal';
@@ -33,6 +38,8 @@ import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
 import { CurrencyDisplay } from '@/components/ui/CurrencyDisplay';
 import { SyncingIndicator } from '@/components/ui/SyncingIndicator';
 import { EntitySelectorChips } from '@/components/family/EntitySelectorChips';
+import { PlanQuotaBadge } from '@/components/plans/PlanQuotaBadge';
+import { PlanLimitModal } from '@/components/plans/PlanLimitModal';
 import {
   Plus,
   RefreshCw,
@@ -43,7 +50,7 @@ import {
 
 export function LiabilitiesPage() {
   const { user } = useAuth();
-  const { activeHouseholdId, canEditFinancials } = useHousehold();
+  const { activeHouseholdId, canEditFinancials, planTier, customLimits } = useHousehold();
   const { mode } = useRepositories();
   const isDemoMode = mode === 'supabase' && (!user?.id || user.id.startsWith('demo-'));
   const hasLiveBackend = !isDemoMode && Boolean(activeHouseholdId || user?.id);
@@ -57,6 +64,7 @@ export function LiabilitiesPage() {
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isPlanLimitOpen, setIsPlanLimitOpen] = useState(false);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
   const [editingLiability, setEditingLiability] = useState<LiabilityDto | null>(null);
   const [balanceModalLiability, setBalanceModalLiability] = useState<LiabilityDto | null>(null);
@@ -363,12 +371,35 @@ export function LiabilitiesPage() {
 
   const activeLoansCount = effectiveLiabilities.filter((l) => l.status === 'active').length;
 
+  const allHouseholdLiabilities = hasLiveBackend
+    ? liabilities
+    : shouldAllowDemoData(isDemoMode)
+      ? localDemoLiabilities
+      : [];
+  const totalActiveHouseholdLoans = allHouseholdLiabilities.filter(
+    (l) => l.status !== 'closed'
+  ).length;
+  const liabilityQuota = useMemo(
+    () => evaluatePlanQuota(planTier, 'activeLoans', totalActiveHouseholdLoans, 1, customLimits),
+    [planTier, totalActiveHouseholdLoans, customLimits]
+  );
+
+  const handleOpenAddLiability = () => {
+    if (!canEditFinancials || isSupportModeActive) return;
+    if (!liabilityQuota.allowed) {
+      setIsPlanLimitOpen(true);
+      return;
+    }
+    setEditingLiability(null);
+    setIsAddModalOpen(true);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* 1. Header Title Row */}
       <div className="flex items-center justify-between gap-2 sm:gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-foreground truncate">
               Loans & Liabilities
             </h1>
@@ -376,6 +407,11 @@ export function LiabilitiesPage() {
               Loans & Liabilities Engine
             </span>
             <SyncingIndicator isSyncing={isFetchingLiabilities || isFetchingSummary} />
+            <PlanQuotaBadge
+              resource="activeLoans"
+              currentCount={totalActiveHouseholdLoans}
+              onLimitClick={() => setIsPlanLimitOpen(true)}
+            />
           </div>
           <p className="hidden sm:block text-xs sm:text-sm text-muted-foreground mt-0.5">
             Track mortgages, EMIs, property equity, LTV ratios, and dated balance repayments.
@@ -401,11 +437,7 @@ export function LiabilitiesPage() {
 
           <Button
             size="sm"
-            onClick={() => {
-              if (!canEditFinancials || isSupportModeActive) return;
-              setEditingLiability(null);
-              setIsAddModalOpen(true);
-            }}
+            onClick={handleOpenAddLiability}
             disabled={isSupportModeActive || !canEditFinancials}
             title={
               isSupportModeActive
@@ -526,11 +558,7 @@ export function LiabilitiesPage() {
         currencySymbol={currencySymbol}
         locale={locale}
         canEditFinancials={canEditFinancials}
-        onAddFirstLoan={() => {
-          if (!canEditFinancials || isSupportModeActive) return;
-          setEditingLiability(null);
-          setIsAddModalOpen(true);
-        }}
+        onAddFirstLoan={handleOpenAddLiability}
         onPayEmi={(l) => {
           if (canEditFinancials && !isSupportModeActive) setEmiModalLiability(l);
         }}
@@ -619,6 +647,13 @@ export function LiabilitiesPage() {
           }
         }}
         onCancel={() => setLiabilityToDelete(null)}
+      />
+
+      <PlanLimitModal
+        isOpen={isPlanLimitOpen}
+        onClose={() => setIsPlanLimitOpen(false)}
+        resource="activeLoans"
+        currentCount={totalActiveHouseholdLoans}
       />
     </div>
   );

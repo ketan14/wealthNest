@@ -10,9 +10,16 @@ import {
   FamilyMemberAccessGrant,
   RestrictedRecordGrant,
   RestrictedRecordTargetType,
+  PlanTier,
+  CustomPlanLimits,
+  PlanUsageCounts,
+  PlanUpgradeRequest,
+  PlanUpgradeRequestStatus,
+  normalizePlanTier,
 } from '@wealthnest/domain';
 import {
   HouseholdRepositoryPort,
+  HouseholdPlanUsageSummary,
   CreateHouseholdInvitationParams,
   CreatedHouseholdInvitationResult,
   AcceptHouseholdInvitationResult,
@@ -39,6 +46,12 @@ export class SupabaseHouseholdAdapter implements HouseholdRepositoryPort {
         status: (row.status || 'active') as HouseholdMembershipStatus,
         isDefault: index === 0,
         memberCount: Number(row.active_member_count ?? 1),
+        planTier: normalizePlanTier(row.plan_tier),
+        customLimits:
+          row.custom_limits && typeof row.custom_limits === 'object'
+            ? (row.custom_limits as CustomPlanLimits)
+            : null,
+        planExpiresAt: row.plan_expires_at ? String(row.plan_expires_at) : null,
         createdAt: row.joined_at ? String(row.joined_at) : undefined,
       }));
 
@@ -82,6 +95,7 @@ export class SupabaseHouseholdAdapter implements HouseholdRepositoryPort {
         status: 'active',
         isDefault: false,
         memberCount: 1,
+        planTier: normalizePlanTier(data.plan_tier),
         createdAt: new Date().toISOString(),
       });
     } catch (e: any) {
@@ -558,6 +572,100 @@ export class SupabaseHouseholdAdapter implements HouseholdRepositoryPort {
       return ok(logs);
     } catch (e: any) {
       return err(new Error(e?.message || 'Failed to list household audit logs'));
+    }
+  }
+
+  async getPlanUsage(householdId: string): Promise<Result<HouseholdPlanUsageSummary>> {
+    try {
+      const { data, error } = await supabase.rpc('get_household_plan_usage', {
+        p_household_id: householdId,
+      });
+
+      if (error || !data) {
+        return err(new Error(error?.message || 'Failed to load household plan usage'));
+      }
+
+      const rawUsage = (data.usage || {}) as Record<string, unknown>;
+      const usage: PlanUsageCounts = {
+        holdings: Number(rawUsage.holdings ?? 0),
+        realEstate: Number(rawUsage.realEstate ?? 0),
+        activeLoans: Number(rawUsage.activeLoans ?? 0),
+        goals: Number(rawUsage.goals ?? 0),
+        familyMembers: Number(rawUsage.familyMembers ?? 0),
+        accounts: Number(rawUsage.accounts ?? 0),
+        documents: Number(rawUsage.documents ?? 0),
+      };
+
+      const rawReq = data.pending_request as Record<string, unknown> | null | undefined;
+      const pendingRequest: PlanUpgradeRequest | null = rawReq
+        ? {
+            id: String(rawReq.id),
+            userId: String(rawReq.user_id),
+            householdId: String(rawReq.household_id || householdId),
+            householdName: String(rawReq.household_name || 'Household'),
+            requesterName: String(rawReq.requester_name || 'Investor'),
+            requesterEmail: String(rawReq.requester_email || ''),
+            currentPlan: normalizePlanTier(rawReq.current_plan),
+            requestedPlan: (rawReq.requested_plan === 'family' ? 'family' : 'pro') as Exclude<
+              PlanTier,
+              'free'
+            >,
+            status: (rawReq.status || 'pending') as PlanUpgradeRequestStatus,
+            userNotes: rawReq.user_notes ? String(rawReq.user_notes) : undefined,
+            adminNotes: rawReq.admin_notes ? String(rawReq.admin_notes) : undefined,
+            createdAt: String(rawReq.created_at || new Date().toISOString()),
+          }
+        : null;
+
+      return ok({
+        usage,
+        planTier: normalizePlanTier(data.effective_plan_tier ?? data.plan_tier),
+        customLimits:
+          data.custom_limits && typeof data.custom_limits === 'object'
+            ? (data.custom_limits as CustomPlanLimits)
+            : null,
+        planExpiresAt: data.plan_expires_at ? String(data.plan_expires_at) : null,
+        pendingRequest,
+      });
+    } catch (e: any) {
+      return err(new Error(e?.message || 'Failed to load household plan usage'));
+    }
+  }
+
+  async submitPlanUpgradeRequest(
+    householdId: string,
+    requestedPlan: Exclude<PlanTier, 'free'>,
+    userNotes?: string
+  ): Promise<Result<PlanUpgradeRequest>> {
+    try {
+      const { data, error } = await supabase.rpc('submit_plan_upgrade_request', {
+        p_household_id: householdId,
+        p_requested_plan: requestedPlan,
+        p_user_notes: userNotes?.trim() || null,
+      });
+
+      if (error || !data) {
+        return err(new Error(error?.message || 'Failed to submit upgrade request'));
+      }
+
+      return ok({
+        id: String(data.id),
+        userId: String(data.user_id),
+        householdId: String(data.household_id || householdId),
+        householdName: String(data.household_name || 'Household'),
+        requesterName: String(data.requester_name || 'Investor'),
+        requesterEmail: String(data.requester_email || ''),
+        currentPlan: normalizePlanTier(data.current_plan),
+        requestedPlan: (data.requested_plan === 'family' ? 'family' : 'pro') as Exclude<
+          PlanTier,
+          'free'
+        >,
+        status: (data.status || 'pending') as PlanUpgradeRequestStatus,
+        userNotes: data.user_notes ? String(data.user_notes) : undefined,
+        createdAt: String(data.created_at || new Date().toISOString()),
+      });
+    } catch (e: any) {
+      return err(new Error(e?.message || 'Failed to submit upgrade request'));
     }
   }
 }

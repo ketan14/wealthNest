@@ -20,6 +20,7 @@ export function executeRelationalRead<T>(
           id: h.id,
           name: h.name,
           created_by: h.created_by,
+          plan_tier: h.plan_tier ?? 'family',
           role: hm.household_role,
           status: hm.status,
           created_at: h.created_at,

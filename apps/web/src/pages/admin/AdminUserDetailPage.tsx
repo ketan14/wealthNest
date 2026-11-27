@@ -12,13 +12,21 @@ import {
   FileText,
   CheckCircle2,
   Eye,
+  Crown,
 } from 'lucide-react';
 import { AdminHeader } from '../../components/admin/AdminHeader';
 import { AdminUserStatusModal } from '../../components/admin/AdminUserStatusModal';
+import { AdminUserPlanModal, AdminPlanTarget } from '../../components/admin/AdminUserPlanModal';
 import { ViewAsUserModal } from '../../components/admin/ViewAsUserModal';
 import { adminAdapter } from '../../lib/supabase/admin.adapter';
 import { useAdmin } from '../../lib/admin/admin-context';
-import { AdminUserDetail, PlatformRole } from '@wealthnest/domain';
+import {
+  AdminUserDetail,
+  PlatformRole,
+  PLAN_ENTITLEMENTS,
+  hasCustomLimitOverrides,
+  normalizePlanTier,
+} from '@wealthnest/domain';
 
 export function AdminUserDetailPage() {
   const { userId } = useParams<{ userId: string }>();
@@ -30,6 +38,7 @@ export function AdminUserDetailPage() {
 
   // Modals state
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [planModalTarget, setPlanModalTarget] = useState<AdminPlanTarget | null>(null);
   const [showViewAsUserModal, setShowViewAsUserModal] = useState(false);
 
   // Role management state
@@ -201,6 +210,18 @@ export function AdminUserDetailPage() {
                       {userDetail.platformRole.replace('_', ' ')}
                     </span>
                   )}
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border ${
+                      normalizePlanTier(userDetail.planTier) === 'family'
+                        ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                        : normalizePlanTier(userDetail.planTier) === 'pro'
+                          ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30'
+                          : 'bg-slate-800 text-slate-300 border-slate-700'
+                    }`}
+                  >
+                    <Crown className="w-3 h-3" />
+                    {PLAN_ENTITLEMENTS[normalizePlanTier(userDetail.planTier)].name}
+                  </span>
                 </div>
                 <div className="text-xs text-slate-400 font-mono mt-1">{userDetail.email}</div>
                 {userDetail.reasonCode && (
@@ -311,6 +332,83 @@ export function AdminUserDetailPage() {
           </div>
         </div>
 
+        {/* Subscription Plan & Quota Entitlements */}
+        {(() => {
+          const activePlan = normalizePlanTier(userDetail.planTier);
+          const planDef = PLAN_ENTITLEMENTS[activePlan];
+          return (
+            <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-md">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                <div className="flex items-center gap-2.5">
+                  <Crown className="w-4 h-4 text-amber-400" />
+                  <div>
+                    <h4 className="text-sm font-semibold text-white">
+                      Subscription Plan &amp; Quota Entitlements
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Active tier:{' '}
+                      <span className="text-white font-semibold">{planDef.name}</span> &mdash;{' '}
+                      {planDef.tagline}
+                    </p>
+                  </div>
+                </div>
+                {(isSuperAdmin || isSupportAdmin) && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPlanModalTarget({
+                        mode: 'user',
+                        id: userDetail.id,
+                        name: userDetail.displayName,
+                        subtitle: userDetail.email,
+                        currentPlan: activePlan,
+                        currentCustomLimits: userDetail.households[0]?.customLimits ?? null,
+                        currentPlanExpiresAt:
+                          userDetail.planExpiresAt ??
+                          userDetail.households[0]?.planExpiresAt ??
+                          null,
+                      })
+                    }
+                    className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-all shadow-sm self-start sm:self-auto"
+                  >
+                    <Crown className="w-3.5 h-3.5" />
+                    <span>Change User Plan</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                  <div className="text-slate-500 text-[11px]">Holdings Limit</div>
+                  <div className="text-white font-mono font-semibold mt-0.5">
+                    {planDef.limits.holdings ?? 'Unlimited'}
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                  <div className="text-slate-500 text-[11px]">Properties / Active Loans</div>
+                  <div className="text-white font-mono font-semibold mt-0.5">
+                    {planDef.limits.realEstate ?? 'Unlimited'} /{' '}
+                    {planDef.limits.activeLoans ?? 'Unlimited'}
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                  <div className="text-slate-500 text-[11px]">Financial Goals</div>
+                  <div className="text-white font-mono font-semibold mt-0.5">
+                    {planDef.limits.goals ?? 'Unlimited'}
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                  <div className="text-slate-500 text-[11px]">Family Profiles / Accounts</div>
+                  <div className="text-white font-mono font-semibold mt-0.5">
+                    {planDef.limits.familyMembers ?? 'Unlimited'} /{' '}
+                    {planDef.limits.accounts ?? 'Unlimited'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Household Tenancy */}
         <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-md">
           <div className="flex items-center gap-2 mb-4">
@@ -330,7 +428,17 @@ export function AdminUserDetailPage() {
                   className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between"
                 >
                   <div>
-                    <div className="text-xs font-semibold text-white">{h.name}</div>
+                    <div className="text-xs font-semibold text-white flex flex-wrap items-center gap-2">
+                      <span>{h.name}</span>
+                      <span className="px-2 py-0.2 rounded-full text-[10px] font-semibold uppercase bg-slate-800 text-slate-300 border border-slate-700">
+                        {PLAN_ENTITLEMENTS[normalizePlanTier(h.planTier)].shortLabel}
+                      </span>
+                      {hasCustomLimitOverrides(h.customLimits) && (
+                        <span className="px-2 py-0.2 rounded-full text-[10px] font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
+                          Custom Limits
+                        </span>
+                      )}
+                    </div>
                     <div className="text-[11px] text-slate-400 mt-0.5">
                       Household ID: <span className="font-mono text-slate-500">{h.id}</span>
                     </div>
@@ -471,6 +579,16 @@ export function AdminUserDetailPage() {
         user={showStatusModal ? userDetail : null}
         adminActor={adminActor}
         onClose={() => setShowStatusModal(false)}
+        onSuccess={(message) => {
+          showToast(message);
+          loadUser();
+        }}
+      />
+
+      {/* Plan Modal */}
+      <AdminUserPlanModal
+        target={planModalTarget}
+        onClose={() => setPlanModalTarget(null)}
         onSuccess={(message) => {
           showToast(message);
           loadUser();

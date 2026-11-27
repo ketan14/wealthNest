@@ -20,6 +20,7 @@ import {
   GoalDefinition,
   GoalsSummary,
   calculateGoalsSummary,
+  evaluatePlanQuota,
 } from '@wealthnest/domain';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -40,6 +41,8 @@ import { useFamily } from '@/lib/family/family-context';
 import { useSupportSession } from '@/lib/admin/support-session-context';
 import { EntitySelectorChips } from '@/components/family/EntitySelectorChips';
 import { ManageFamilyModal } from '@/components/family/ManageFamilyModal';
+import { PlanQuotaBadge } from '@/components/plans/PlanQuotaBadge';
+import { PlanLimitModal } from '@/components/plans/PlanLimitModal';
 import { ArrowUpDown, Plus } from 'lucide-react';
 
 type GoalSortOption = 'target_date' | 'pct_complete' | 'monthly_gap';
@@ -47,7 +50,7 @@ type GoalSortOption = 'target_date' | 'pct_complete' | 'monthly_gap';
 export function GoalsPage() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { activeHouseholdId, canEditFinancials } = useHousehold();
+  const { activeHouseholdId, canEditFinancials, planTier, customLimits } = useHousehold();
   const queryClient = useQueryClient();
   const { members, selectedMemberId, setSelectedMemberId } = useFamily();
   const { isSupportModeActive } = useSupportSession();
@@ -59,6 +62,7 @@ export function GoalsPage() {
   const effectiveUserId = user?.id || scopeId;
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isPlanLimitOpen, setIsPlanLimitOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<GoalDetailDto | null>(null);
   const [topUpGoal, setTopUpGoal] = useState<TopUpTargetGoal | null>(null);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
@@ -100,6 +104,21 @@ export function GoalsPage() {
   });
 
   const activeGoalsList: GoalDetailDto[] = hasLiveBackend ? dbGoals || [] : demoGoalsState;
+  const totalGoalsInHousehold = activeGoalsList.length;
+  const goalQuota = useMemo(
+    () => evaluatePlanQuota(planTier, 'goals', totalGoalsInHousehold, 1, customLimits),
+    [planTier, totalGoalsInHousehold, customLimits]
+  );
+
+  const handleOpenCreateGoal = () => {
+    if (!canEditFinancials || isSupportModeActive) return;
+    if (!goalQuota.allowed) {
+      setIsPlanLimitOpen(true);
+      return;
+    }
+    setEditingGoal(null);
+    setIsAddModalOpen(true);
+  };
 
   // Filter goals by selected family member entity
   const filteredGoalsList = useMemo(() => {
@@ -363,14 +382,14 @@ export function GoalsPage() {
 
         {/* Action Button */}
         <div className="flex items-center gap-2 shrink-0 pt-0.5 sm:pt-0">
+          <PlanQuotaBadge
+            resource="goals"
+            currentCount={totalGoalsInHousehold}
+            onLimitClick={() => setIsPlanLimitOpen(true)}
+          />
           <Button
             size="sm"
-            onClick={() => {
-              if (canEditFinancials && !isSupportModeActive) {
-                setEditingGoal(null);
-                setIsAddModalOpen(true);
-              }
-            }}
+            onClick={handleOpenCreateGoal}
             disabled={isSupportModeActive || !canEditFinancials}
             title={
               isSupportModeActive
@@ -485,12 +504,7 @@ export function GoalsPage() {
         onDeleteGoal={(goal) => {
           if (canEditFinancials && !isSupportModeActive) setGoalToDelete(goal);
         }}
-        onCreateGoal={() => {
-          if (canEditFinancials && !isSupportModeActive) {
-            setEditingGoal(null);
-            setIsAddModalOpen(true);
-          }
-        }}
+        onCreateGoal={handleOpenCreateGoal}
         onResetFilters={() => {
           setStatusFilter('all');
           setCategoryFilter('all');
@@ -549,6 +563,13 @@ export function GoalsPage() {
           }
         }}
         onCancel={() => setGoalToDelete(null)}
+      />
+
+      <PlanLimitModal
+        isOpen={isPlanLimitOpen}
+        onClose={() => setIsPlanLimitOpen(false)}
+        resource="goals"
+        currentCount={totalGoalsInHousehold}
       />
     </div>
   );

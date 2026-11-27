@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Search,
   UserPlus,
@@ -11,28 +11,49 @@ import {
   ChevronRight,
   CheckCircle2,
   Mail,
+  Crown,
+  XCircle,
+  Clock,
+  ArrowRight,
 } from 'lucide-react';
 import { AdminHeader } from '../../components/admin/AdminHeader';
 import { AdminUserStatusModal } from '../../components/admin/AdminUserStatusModal';
 import { AdminUserProvisionModal } from '../../components/admin/AdminUserProvisionModal';
+import { AdminUserPlanModal, AdminPlanTarget } from '../../components/admin/AdminUserPlanModal';
 import { adminAdapter } from '../../lib/supabase/admin.adapter';
 import { useAdmin } from '../../lib/admin/admin-context';
-import { AdminUserSummary, UserAccessStatus, PlatformRole } from '@wealthnest/domain';
+import {
+  AdminUserSummary,
+  UserAccessStatus,
+  PlatformRole,
+  PLAN_ENTITLEMENTS,
+  PlanTier,
+  PlanUpgradeRequest,
+  normalizePlanTier,
+} from '@wealthnest/domain';
 
 export function AdminUsersPage() {
   const { adminActor, isSuperAdmin, isSupportAdmin } = useAdmin();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialView = searchParams.get('view') === 'requests' ? 'requests' : 'directory';
+  const [activeView, setActiveView] = useState<'directory' | 'requests'>(initialView);
 
   const [users, setUsers] = useState<AdminUserSummary[]>([]);
+  const [upgradeRequests, setUpgradeRequests] = useState<PlanUpgradeRequest[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [reviewingRequestId, setReviewingRequestId] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [roleFilter, setRoleFilter] = useState<string>('');
+  const [planFilter, setPlanFilter] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
   // Modals state
   const [statusModalUser, setStatusModalUser] = useState<AdminUserSummary | null>(null);
+  const [planModalTarget, setPlanModalTarget] = useState<AdminPlanTarget | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'invite'>('create');
 
@@ -60,9 +81,46 @@ export function AdminUsersPage() {
     }
   }, [page, limit, search, statusFilter, roleFilter]);
 
+  const fetchUpgradeRequests = useCallback(async () => {
+    setLoadingRequests(true);
+    try {
+      const list = await adminAdapter.listUpgradeRequests();
+      setUpgradeRequests(list);
+    } catch {
+      setUpgradeRequests([]);
+    } finally {
+      setLoadingRequests(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  useEffect(() => {
+    fetchUpgradeRequests();
+  }, [fetchUpgradeRequests]);
+
+  const handleReviewUpgradeRequest = async (
+    req: PlanUpgradeRequest,
+    decision: 'approved' | 'rejected'
+  ) => {
+    setReviewingRequestId(req.id);
+    try {
+      await adminAdapter.reviewUpgradeRequest(req.id, decision);
+      const targetPlanName = PLAN_ENTITLEMENTS[req.requestedPlan].name;
+      showToast(
+        decision === 'approved'
+          ? `Approved upgrade for "${req.requesterName}" to ${targetPlanName}`
+          : `Declined upgrade request for "${req.requesterName}"`
+      );
+      await Promise.all([fetchUpgradeRequests(), fetchUsers()]);
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to process upgrade request');
+    } finally {
+      setReviewingRequestId(null);
+    }
+  };
 
   const handleOpenStatusModal = (user: AdminUserSummary) => {
     setStatusModalUser(user);
@@ -140,6 +198,150 @@ export function AdminUsersPage() {
       )}
 
       <div className="p-8 space-y-6 max-w-7xl w-full mx-auto">
+        {/* Directory / Upgrade Requests View Switcher */}
+        {(() => {
+          const pendingCount = upgradeRequests.filter((r) => r.status === 'pending').length;
+          return (
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveView('directory');
+                  setSearchParams({}, { replace: true });
+                }}
+                className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border ${
+                  activeView === 'directory'
+                    ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+                    : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:text-white'
+                }`}
+              >
+                User Directory ({total})
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveView('requests');
+                  setSearchParams({ view: 'requests' }, { replace: true });
+                }}
+                className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border flex items-center gap-2 ${
+                  activeView === 'requests'
+                    ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30'
+                    : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:text-white'
+                }`}
+              >
+                <Crown className="w-3.5 h-3.5 text-amber-400" />
+                <span>Upgrade Requests</span>
+                {pendingCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-mono">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          );
+        })()}
+
+        {activeView === 'requests' ? (
+          <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl overflow-hidden backdrop-blur-md">
+            <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-white">Plan Upgrade Request Queue</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Review user-submitted plan upgrades and approve or decline with audit tracking.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void fetchUpgradeRequests()}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700"
+              >
+                Refresh
+              </button>
+            </div>
+
+            <div className="divide-y divide-slate-800/70">
+              {loadingRequests ? (
+                <div className="p-8 text-center text-xs text-slate-500">
+                  Loading upgrade requests...
+                </div>
+              ) : upgradeRequests.length === 0 ? (
+                <div className="p-8 text-center text-xs text-slate-500">
+                  No plan upgrade requests found.
+                </div>
+              ) : (
+                upgradeRequests.map((req) => (
+                  <div
+                    key={req.id}
+                    className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-800/20 transition-colors"
+                  >
+                    <div className="space-y-1.5 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-white">
+                          {req.requesterName}
+                        </span>
+                        <span className="text-xs text-slate-400 font-mono">
+                          {req.requesterEmail}
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase border ${
+                            req.status === 'approved'
+                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                              : req.status === 'rejected'
+                                ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                                : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                          }`}
+                        >
+                          {req.status === 'pending' && <Clock className="w-3 h-3" />}
+                          {req.status}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-300 flex flex-wrap items-center gap-2">
+                        <span>Household: {req.householdName}</span>
+                        <span>&middot;</span>
+                        <span className="inline-flex items-center gap-1 font-medium text-indigo-300">
+                          {PLAN_ENTITLEMENTS[req.currentPlan].name}
+                          <ArrowRight className="w-3 h-3" />
+                          <strong className="text-amber-300">
+                            {PLAN_ENTITLEMENTS[req.requestedPlan].name}
+                          </strong>
+                        </span>
+                      </div>
+                      {req.userNotes && (
+                        <p className="text-xs text-slate-400 italic">
+                          &ldquo;{req.userNotes}&rdquo;
+                        </p>
+                      )}
+                    </div>
+
+                    {req.status === 'pending' && (isSuperAdmin || isSupportAdmin) && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          disabled={reviewingRequestId === req.id}
+                          onClick={() => void handleReviewUpgradeRequest(req, 'approved')}
+                          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all disabled:opacity-50"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Approve &amp; Upgrade</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={reviewingRequestId === req.id}
+                          onClick={() => void handleReviewUpgradeRequest(req, 'rejected')}
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-rose-950/60 text-rose-400 border border-rose-500/30 text-xs font-semibold transition-all disabled:opacity-50"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                          <span>Decline</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        ) : (
+          <>
         {/* Filters and Search Toolbar */}
         <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3 flex-1 min-w-[280px]">
@@ -187,6 +389,21 @@ export function AdminUsersPage() {
               <option value="support_admin">Support Admin</option>
               <option value="auditor">Auditor</option>
             </select>
+
+            <select
+              aria-label="Filter by plan"
+              value={planFilter}
+              onChange={(e) => {
+                setPlanFilter(e.target.value);
+                setPage(1);
+              }}
+              className="bg-slate-950 border border-slate-800 text-slate-300 text-xs rounded-xl px-3 py-2 outline-none focus:border-cyan-500"
+            >
+              <option value="">All Plans</option>
+              <option value="free">Free Starter</option>
+              <option value="pro">Pro Investor</option>
+              <option value="family">Family Office</option>
+            </select>
           </div>
         </div>
 
@@ -198,6 +415,7 @@ export function AdminUsersPage() {
                 <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400 font-medium">
                   <th className="py-3.5 pl-6">Investor / User</th>
                   <th className="py-3.5">Status</th>
+                  <th className="py-3.5">Plan</th>
                   <th className="py-3.5">Platform Role</th>
                   <th className="py-3.5">Households</th>
                   <th className="py-3.5">Registered</th>
@@ -208,18 +426,27 @@ export function AdminUsersPage() {
               <tbody className="divide-y divide-slate-800/60 text-slate-300">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-500">
+                    <td colSpan={8} className="py-12 text-center text-slate-500">
                       Loading user records...
                     </td>
                   </tr>
-                ) : users.length === 0 ? (
+                ) : (planFilter
+                    ? users.filter((u) => normalizePlanTier(u.planTier) === planFilter)
+                    : users
+                  ).length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-500">
+                    <td colSpan={8} className="py-12 text-center text-slate-500">
                       No users match the active search or filter criteria.
                     </td>
                   </tr>
                 ) : (
-                  users.map((u) => (
+                  (planFilter
+                    ? users.filter((u) => normalizePlanTier(u.planTier) === planFilter)
+                    : users
+                  ).map((u) => {
+                    const userPlan: PlanTier = normalizePlanTier(u.planTier);
+                    const planDef = PLAN_ENTITLEMENTS[userPlan];
+                    return (
                     <tr key={u.id} className="hover:bg-slate-800/30 transition-colors">
                       <td className="py-3.5 pl-6">
                         <div className="flex items-center gap-3">
@@ -259,6 +486,20 @@ export function AdminUsersPage() {
                             }`}
                           />
                           {u.status}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border ${
+                            userPlan === 'family'
+                              ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                              : userPlan === 'pro'
+                                ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30'
+                                : 'bg-slate-800/80 text-slate-300 border-slate-700'
+                          }`}
+                        >
+                          {planDef.shortLabel}
                         </span>
                       </td>
 
@@ -312,6 +553,24 @@ export function AdminUsersPage() {
                           {(isSuperAdmin || isSupportAdmin) && (
                             <>
                               <button
+                                onClick={() =>
+                                  setPlanModalTarget({
+                                    mode: 'user',
+                                    id: u.id,
+                                    name: u.displayName,
+                                    subtitle: u.email,
+                                    currentPlan: userPlan,
+                                    currentPlanExpiresAt: u.planExpiresAt ?? null,
+                                  })
+                                }
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-400 hover:text-indigo-300 transition-all"
+                                title="Change Plan"
+                                aria-label={`Change Plan for ${u.displayName}`}
+                              >
+                                <Crown className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
                                 onClick={() => handleOpenStatusModal(u)}
                                 className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 transition-all"
                                 title="Change Status / Suspend"
@@ -335,7 +594,8 @@ export function AdminUsersPage() {
                         </div>
                       </td>
                     </tr>
-                  ))
+                  );
+                  })
                 )}
               </tbody>
             </table>
@@ -369,6 +629,8 @@ export function AdminUsersPage() {
             </div>
           </div>
         </div>
+          </>
+        )}
       </div>
 
       {/* Status Change Modal */}
@@ -376,6 +638,16 @@ export function AdminUsersPage() {
         user={statusModalUser}
         adminActor={adminActor}
         onClose={() => setStatusModalUser(null)}
+        onSuccess={(message) => {
+          showToast(message);
+          fetchUsers();
+        }}
+      />
+
+      {/* Plan Change Modal */}
+      <AdminUserPlanModal
+        target={planModalTarget}
+        onClose={() => setPlanModalTarget(null)}
         onSuccess={(message) => {
           showToast(message);
           fetchUsers();
