@@ -71,14 +71,6 @@ export function PortfolioPage() {
   const [isPlanLimitOpen, setIsPlanLimitOpen] = useState(false);
   const [isAutoPollGateOpen, setIsAutoPollGateOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
-
-  useEffect(() => {
-    if (searchParams.get('action') === 'new' && canEditFinancials && !isSupportModeActive) {
-      setIsModalOpen(true);
-      searchParams.delete('action');
-      setSearchParams(searchParams, { replace: true });
-    }
-  }, [searchParams, setSearchParams, canEditFinancials, isSupportModeActive]);
   const [editingHolding, setEditingHolding] = useState<HoldingDetailDto | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isManageFamilyOpen, setIsManageFamilyOpen] = useState(false);
@@ -512,6 +504,29 @@ export function PortfolioPage() {
     () => evaluatePlanQuota(planTier, 'holdings', nonRealEstateCount, 1, customLimits),
     [planTier, nonRealEstateCount, customLimits]
   );
+
+  useEffect(() => {
+    if (searchParams.get('action') !== 'new') return;
+    if (hasLiveBackend && isLoadingDb) return;
+    if (canEditFinancials && !isSupportModeActive) {
+      if (!holdingQuota.allowed) {
+        setIsPlanLimitOpen(true);
+      } else {
+        setIsModalOpen(true);
+      }
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('action');
+    setSearchParams(next, { replace: true });
+  }, [
+    searchParams,
+    setSearchParams,
+    canEditFinancials,
+    isSupportModeActive,
+    hasLiveBackend,
+    isLoadingDb,
+    holdingQuota.allowed,
+  ]);
 
   const handleOpenAddModal = () => {
     if (!canEditFinancials || isSupportModeActive) return;

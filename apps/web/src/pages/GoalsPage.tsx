@@ -75,21 +75,8 @@ export function GoalsPage() {
     shouldAllowDemoData(isDemoMode) ? DEMO_GOALS : []
   );
 
-  // Support global quick-add navigation (/goals?action=new)
-  useEffect(() => {
-    if (searchParams.get('action') === 'new') {
-      if (canEditFinancials && !isSupportModeActive) {
-        setEditingGoal(null);
-        setIsAddModalOpen(true);
-      }
-      const next = new URLSearchParams(searchParams);
-      next.delete('action');
-      setSearchParams(next, { replace: true });
-    }
-  }, [searchParams, setSearchParams, canEditFinancials, isSupportModeActive]);
-
   // 1. Query Goals from DB (or fallback to demoGoalsState ONLY in demo preview on web)
-  const { data: dbGoals } = useQuery<GoalDetailDto[]>({
+  const { data: dbGoals, isLoading: isLoadingGoals } = useQuery<GoalDetailDto[]>({
     queryKey: ['user-goals', scopeId || 'demo'],
     queryFn: async () => {
       if (!hasLiveBackend || !scopeId) {
@@ -109,6 +96,31 @@ export function GoalsPage() {
     () => evaluatePlanQuota(planTier, 'goals', totalGoalsInHousehold, 1, customLimits),
     [planTier, totalGoalsInHousehold, customLimits]
   );
+
+  // Support global quick-add navigation (/goals?action=new) with frontend quota check
+  useEffect(() => {
+    if (searchParams.get('action') !== 'new') return;
+    if (hasLiveBackend && isLoadingGoals) return;
+    if (canEditFinancials && !isSupportModeActive) {
+      if (!goalQuota.allowed) {
+        setIsPlanLimitOpen(true);
+      } else {
+        setEditingGoal(null);
+        setIsAddModalOpen(true);
+      }
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('action');
+    setSearchParams(next, { replace: true });
+  }, [
+    searchParams,
+    setSearchParams,
+    canEditFinancials,
+    isSupportModeActive,
+    hasLiveBackend,
+    isLoadingGoals,
+    goalQuota.allowed,
+  ]);
 
   const handleOpenCreateGoal = () => {
     if (!canEditFinancials || isSupportModeActive) return;

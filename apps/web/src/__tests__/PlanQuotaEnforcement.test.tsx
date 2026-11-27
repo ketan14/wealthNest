@@ -15,6 +15,7 @@ import { LiabilitiesPage } from '../pages/LiabilitiesPage';
 import { RealEstatePage } from '../pages/RealEstatePage';
 import { AnalyticsPage } from '../pages/AnalyticsPage';
 import { SettingsPage } from '../pages/SettingsPage';
+import { DocumentsPage } from '../pages/DocumentsPage';
 import { AuthProvider } from '../lib/supabase/auth-context';
 import { PreferencesProvider } from '../lib/preferences/preferences-context';
 
@@ -64,7 +65,7 @@ vi.mock('../lib/supabase/household-context', async () => {
   };
 });
 
-function renderWithAppProviders(ui: React.ReactElement) {
+function renderWithAppProviders(ui: React.ReactElement, initialEntries: string[] = ['/']) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -75,7 +76,7 @@ function renderWithAppProviders(ui: React.ReactElement) {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <PreferencesProvider>
-          <MemoryRouter>{ui}</MemoryRouter>
+          <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
         </PreferencesProvider>
       </AuthProvider>
     </QueryClientProvider>
@@ -211,5 +212,32 @@ describe('Phase 1: Plan Entitlements & Quota Enforcement UI', () => {
     expect(
       await screen.findByText(/Upgrade request for Pro Investor submitted/i)
     ).toBeInTheDocument();
+  });
+
+  it('shows PlanLimitModal immediately when opening ?action=new quick-add URLs at Free quota', async () => {
+    mockPlanTier = 'free';
+
+    const { unmount: unmountPortfolio } = renderWithAppProviders(<PortfolioPage />, [
+      '/portfolio?action=new',
+    ]);
+    expect(await screen.findByText('Free Starter Limit Reached')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Add Holding/i })).not.toBeInTheDocument();
+    unmountPortfolio();
+
+    const { unmount: unmountGoals } = renderWithAppProviders(<GoalsPage />, [
+      '/goals?action=new',
+    ]);
+    expect(await screen.findByText('Free Starter Limit Reached')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Create Financial Goal' })
+    ).not.toBeInTheDocument();
+    unmountGoals();
+
+    const { unmount: unmountDocs } = renderWithAppProviders(<DocumentsPage />, [
+      '/documents?action=new',
+    ]);
+    expect(await screen.findByText('Free Starter Limit Reached')).toBeInTheDocument();
+    expect(screen.queryByText('Upload to Family Vault')).not.toBeInTheDocument();
+    unmountDocs();
   });
 });

@@ -92,14 +92,6 @@ export function DocumentsPage() {
     loadDocuments();
   }, [loadDocuments]);
 
-  useEffect(() => {
-    if (searchParams.get('action') === 'new' && !isSupportModeActive && canEditFinancials) {
-      setIsUploadModalOpen(true);
-      searchParams.delete('action');
-      setSearchParams(searchParams, { replace: true });
-    }
-  }, [searchParams, setSearchParams, isSupportModeActive]);
-
   const memberNameMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const m of members) {
@@ -254,6 +246,28 @@ export function DocumentsPage() {
     () => evaluatePlanQuota(planTier, 'documents', documents.length, 1, customLimits),
     [planTier, documents.length, customLimits]
   );
+
+  useEffect(() => {
+    if (searchParams.get('action') !== 'new') return;
+    if (isLoading) return;
+    if (canEditFinancials && !isSupportModeActive) {
+      if (!documentQuota.allowed) {
+        setIsPlanLimitOpen(true);
+      } else {
+        setIsUploadModalOpen(true);
+      }
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('action');
+    setSearchParams(next, { replace: true });
+  }, [
+    searchParams,
+    setSearchParams,
+    canEditFinancials,
+    isSupportModeActive,
+    isLoading,
+    documentQuota.allowed,
+  ]);
 
   const handleOpenUploadModal = () => {
     if (!canEditFinancials || isSupportModeActive) return;

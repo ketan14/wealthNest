@@ -46,6 +46,11 @@ SELECT set_config(
   true
 );
 
+-- Provision Family Office entitlement for multi-entity governance test fixtures
+UPDATE public.households
+SET plan_tier = 'family'
+WHERE id IN (current_setting('test.hh_marital')::uuid, current_setting('test.hh_parental')::uuid);
+
 -- Create pre-existing unlinked family_members in marital household (wife, minor child, HUF) and pre-linked/unlinked wife in parental household
 INSERT INTO public.family_members (id, household_id, entity_type, name, relationship, pan_masked, is_primary)
 VALUES

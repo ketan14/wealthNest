@@ -350,9 +350,9 @@ BEGIN
   DELETE FROM public.households WHERE id IN (v_hh_vaghela, v_hh_shinde);
 
   -- 3. Provision Households & Multi-Role Memberships
-  INSERT INTO public.households (id, name, created_by) VALUES
-    (v_hh_vaghela, 'Vaghela Marital Household', v_ketan_id),
-    (v_hh_shinde,  'Shinde Parental Household', v_suresh_id);
+  INSERT INTO public.households (id, name, plan_tier, created_by) VALUES
+    (v_hh_vaghela, 'Vaghela Marital Household', 'family', v_ketan_id),
+    (v_hh_shinde,  'Shinde Parental Household', 'family', v_suresh_id);
 
   INSERT INTO public.household_members (household_id, user_id, household_role, status) VALUES
     (v_hh_vaghela, v_ketan_id,  'primary_owner', 'active'),
@@ -634,6 +634,8 @@ BEGIN
     SELECT public.ensure_user_default_household(v_user_id, NULL) INTO v_household_id;
   END IF;
 
+  UPDATE public.households SET plan_tier = 'family' WHERE id = v_household_id;
+
   SELECT id INTO v_self_fm_id
   FROM public.family_members
   WHERE household_id = v_household_id AND linked_user_id = v_user_id
@@ -815,6 +817,8 @@ BEGIN
   IF v_household_id IS NULL THEN
     SELECT public.ensure_user_default_household(v_user_id, NULL) INTO v_household_id;
   END IF;
+
+  UPDATE public.households SET plan_tier = 'family' WHERE id = v_household_id;
 
   SELECT id INTO v_self_fm_id
   FROM public.family_members
